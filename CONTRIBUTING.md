@@ -46,7 +46,8 @@ HOME="$SANDBOX" PATH=/usr/bin:/bin CC_PROFILES_INSTALL_DRYRUN=1 .venv/bin/cc-pro
 ```
 src/cc_profiles/server.py        HTTP server and all the logic, organized in sections
 src/cc_profiles/static/index.html the whole UI: one file, inline CSS and vanilla JS
-tests/                           end-to-end tests on a fake home
+tests/                           end-to-end tests on a fake home, plus documentation link checks
+docs/                            user guide and developer reference (start at docs/README.md)
 DESIGN.md                        the UI's visual system: read it before touching index.html
 CLAUDE.md                        notes for AI coding assistants (also useful for humans)
 ```
@@ -56,7 +57,7 @@ CLAUDE.md                        notes for AI coding assistants (also useful for
 1. Open an issue first for anything bigger than a small fix, so we can agree on the approach.
 2. Keep each PR focused on one change.
 3. Add or update tests. A new operation needs a test that runs it and then restores it.
-4. Update `CHANGELOG.md` under **Unreleased**.
+4. Update `CHANGELOG.md` under **Unreleased**, and the relevant page in `docs/` if behavior changes.
 5. Make sure `python -m pytest` passes.
 
 ## Commit messages

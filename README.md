@@ -30,6 +30,10 @@ cc-profiles does all of this for you, from a page in your browser.
 - **Health.** Check login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - **About.** See the Claude Code version, account and plan for each profile, and everything installed. If Claude Code is missing, you can install it with the official installer.
 
+## Documentation
+
+The full guide is in [docs/](docs/README.md): [getting started](docs/getting-started.md), [concepts](docs/concepts.md), a guide for every tab, the [configuration reference](docs/configuration.md) and [troubleshooting](docs/troubleshooting.md). For contributors: [architecture](docs/architecture.md), [Claude Code's on-disk formats](docs/claude-code-formats.md) and the [HTTP API](docs/api.md).
+
 ## Requirements
 
 - macOS or Linux (Windows is not supported yet)
