@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cc-profiles"
+dynamic = ["version"]
+description = "A local web UI to manage multiple Claude Code profiles: move projects and memories between them, share skills, edit settings, undo anything."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Andrea Iannarone" }]
+keywords = ["claude", "claude-code", "profiles", "cli", "developer-tools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+cc-profiles = "cc_profiles.server:main"
+
+[project.urls]
+Homepage = "https://github.com/andreaiannarone/cc-profiles"
+Issues = "https://github.com/andreaiannarone/cc-profiles/issues"
+Changelog = "https://github.com/andreaiannarone/cc-profiles/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = { attr = "cc_profiles.server.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cc_profiles = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

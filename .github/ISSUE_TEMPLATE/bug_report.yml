@@ -1,0 +1,49 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please do **not** paste conversation contents, memories or credentials: describe the shape of the problem instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Projects tab
+        2. Click "Move to Work" on …
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: cc-profiles version
+      description: Output of `cc-profiles --version`
+    validations:
+      required: true
+  - type: input
+    id: claude
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version`, or from the About panel
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: backup
+    attributes:
+      label: Backup operation log (optional)
+      description: If an operation went wrong, the `operation.txt` file of its backup folder in `~/.cc-profiles/backups/` helps a lot. Check it does not contain anything private.

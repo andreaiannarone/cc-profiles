@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cc-profiles</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --line: #e2dfd8;
+  --text: #1d1c1a; --muted: #6e6a62; --faint: #9b968c;
+  --accent: #c2410c; --accent-soft: #fbe9df; --on-accent: #ffffff;
+  /* profile palette, assigned in config order; "shared" has its own color */
+  --p0: #047857; --p0-soft: #ddf3ea; --p1: #1d4ed8; --p1-soft: #e3ebfd; --p2: #be185d; --p2-soft: #fbe2ee;
+  --p3: #0f766e; --p3-soft: #d5f2ee; --p4: #4338ca; --p4-soft: #e5e6fb; --p5: #854d0e; --p5-soft: #fbf0d4;
+  --shared: #6d28d9; --shared-soft: #ede5fb;
+  --ok: #15803d; --warn: #b45309; --warn-soft: #fdf1dc; --err: #b91c1c; --err-soft: #fbe3e3;
+  --radius: 10px; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
+    --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
+    --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
+    --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
+    --p3: #5eead4; --p3-soft: #123430; --p4: #a5b4fc; --p4-soft: #1f2147; --p5: #fcd34d; --p5-soft: #362a0c;
+    --shared: #c4a5ff; --shared-soft: #2a2140;
+    --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.wrap { padding: 24px 28px 80px; }
+header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+header .sub { color: var(--muted); }
+.profiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.pcard .top { display: flex; align-items: center; gap: 8px; }
+.pcard .name { font-weight: 650; font-size: 15px; }
+.pcard .meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.pcard .nums { display: flex; gap: 16px; margin-top: 10px; }
+.pcard .nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.pcard .nums span { color: var(--muted); font-size: 12px; }
+.live { font-size: 11.5px; color: var(--warn); background: var(--warn-soft); padding: 1px 7px; border-radius: 99px; margin-left: auto; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+nav.tabs button { background: none; border: 0; padding: 9px 14px; cursor: pointer; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 550; }
+nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+nav.tabs .count { font-size: 11px; background: var(--err-soft); color: var(--err); border-radius: 99px; padding: 0 6px; margin-left: 4px; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+.chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+input.search, input.text, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+input.search { min-width: 240px; margin-left: auto; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--panel-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.danger { color: var(--err); }
+.btn.small { padding: 3px 9px; font-size: 12.5px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.table { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 550; font-size: 12px; color: var(--muted); padding: 9px 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.path { word-break: break-all; }
+td.nums { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+td.acts { text-align: right; white-space: nowrap; }
+td.acts .btn + .btn { margin-left: 6px; }
+.badge { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.b-p0 { background: var(--p0-soft); color: var(--p0); } .b-p1 { background: var(--p1-soft); color: var(--p1); }
+.b-p2 { background: var(--p2-soft); color: var(--p2); } .b-p3 { background: var(--p3-soft); color: var(--p3); }
+.b-p4 { background: var(--p4-soft); color: var(--p4); } .b-p5 { background: var(--p5-soft); color: var(--p5); }
+.b-shared { background: var(--shared-soft); color: var(--shared); }
+.b-none { background: var(--panel-2); color: var(--muted); }
+.b-warn { background: var(--warn-soft); color: var(--warn); }
+.b-err { background: var(--err-soft); color: var(--err); }
+.issue { font-size: 12.5px; color: var(--warn); }
+.issue.err { color: var(--err); }
+.okmark { color: var(--ok); font-size: 12.5px; }
+.empty { padding: 36px; text-align: center; color: var(--muted); }
+
+.memgrid { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.side { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.side .head { padding: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--panel); padding: 6px; cursor: pointer; }
+.seg button.on { background: var(--text); color: var(--bg); }
+.plist { max-height: 62vh; overflow: auto; }
+.plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
+.plist button:hover { background: var(--panel-2); }
+.plist button.on { background: var(--accent-soft); }
+.plist .p { flex: 1; word-break: break-all; font-family: var(--mono); font-size: 12px; }
+.plist .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.cards { display: grid; gap: 10px; }
+.mcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; }
+.mcard:hover { border-color: var(--faint); }
+.mcard.on { border-color: var(--accent); }
+.mcard .t { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.mcard .d { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.editor { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+.editor textarea { width: 100%; min-height: 340px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
+.editor .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+.editor .row .grow { flex: 1; color: var(--muted); font-size: 12px; }
+.hint { color: var(--muted); font-size: 12.5px; }
+
+.health { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.hcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.hcard h3 { margin: 0 0 10px; font-size: 15px; }
+.hcard h4 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.check { display: flex; gap: 8px; padding: 3px 0; font-size: 13px; }
+.check .i { width: 16px; flex: none; text-align: center; }
+.check.ok .i { color: var(--ok); } .check.warn .i { color: var(--warn); } .check.error .i { color: var(--err); }
+.orphan { border-top: 1px solid var(--line); padding: 9px 0; }
+.orphan .p { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+.orphan .c { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 10; }
+.modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(560px, 100%); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal h2 { margin: 0 0 4px; font-size: 16px; }
+.modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
+.modal .foot { display: flex; justify-content: flex-end; gap: 8px; }
+.modal .opt { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; }
+.switch { position: relative; width: 38px; height: 22px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; cursor: pointer; transition: background .15s; }
+.switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: var(--panel); border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::before { transform: translateX(16px); }
+.switch input:disabled + span { opacity: .5; cursor: default; }
+.share { display: flex; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+.share .txt { flex: 1; }
+.share .txt b { font-weight: 600; font-family: var(--mono); font-size: 12.5px; }
+.share .txt div { color: var(--muted); font-size: 12.5px; }
+.pcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; cursor: pointer; color: var(--muted); font-weight: 550; min-height: 110px; background: transparent; }
+.pcard.add:hover { color: var(--text); border-color: var(--faint); }
+.form { display: grid; gap: 12px; }
+.form label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.form .radio { display: grid; gap: 6px; }
+.form .radio label, .form .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13.5px; }
+.form .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.prow { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.prow:last-child { border-bottom: 0; }
+.prow .txt { flex: 1; min-width: 0; }
+.prow .t { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.prow .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.prow .acts { display: flex; gap: 6px; flex: none; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--muted); margin: 22px 0 8px; }
+.danger-box { border: 1px solid var(--err); background: var(--err-soft); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.setgrid { display: grid; gap: 16px; }
+.sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.sec > .h { display: flex; gap: 10px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.sec > .h h3 { margin: 0; font-size: 15px; }
+.sec > .h .hint { flex: 1; }
+.sec > .b { padding: 12px 16px; }
+.srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.srow:last-child { border-bottom: 0; }
+.srow .l b { display: block; font-weight: 600; }
+.srow .l span { color: var(--muted); font-size: 12.5px; }
+.srow .v { display: flex; gap: 6px; align-items: center; }
+.srow .v input.text { flex: 1; min-width: 0; }
+.srow .v .src { font-size: 11.5px; }
+.srow .o { font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
+.srow .o div { display: flex; gap: 6px; align-items: center; }
+.srow .o code { color: var(--text); }
+textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
+.perm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
+.row-end { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 10px; }
+.row-end .grow { flex: 1; color: var(--muted); font-size: 12px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.shared-note { font-size: 12px; color: var(--shared); background: var(--shared-soft); border-radius: 99px; padding: 1px 8px; }
+@media (max-width: 820px) { .srow { grid-template-columns: 1fr; } .perm { grid-template-columns: 1fr; } }
+.iconbtn { margin-left: auto; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); align-self: center; }
+.iconbtn:hover { color: var(--text); border-color: var(--faint); }
+.iconbtn svg { width: 18px; height: 18px; }
+.drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
+.drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
+.drawer .dh h2 { margin: 0; font-size: 16px; flex: 1; }
+.drawer .db { padding: 16px 20px 40px; display: grid; gap: 14px; }
+.drawer .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.drawer .card h3 { margin: 0 0 10px; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.drawer .card h4 { margin: 14px 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.drawer .kv { grid-template-columns: minmax(150px, max-content) 1fr; }
+.drawer .kv dd { word-break: break-all; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-family: var(--mono); font-size: 11.5px; background: var(--panel-2); border-radius: 6px; padding: 1px 6px; }
+.citem { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.citem:first-of-type { border-top: 0; }
+.citem .k { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .drawer { animation: slidein .18s ease-out; } @keyframes slidein { from { transform: translateX(30px); opacity: 0; } } }
+.notice { display: flex; gap: 14px; align-items: center; padding: 14px 16px; border-radius: var(--radius); margin-bottom: 16px; border: 1px solid var(--warn); background: var(--warn-soft); }
+.notice .txt { flex: 1; }
+.notice .txt b { display: block; }
+.notice .txt span { color: var(--muted); font-size: 13px; }
+.method { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.method:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.method.off { opacity: .55; cursor: default; }
+.method .top { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.method code { font-size: 12px; word-break: break-all; }
+pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px; font-family: var(--mono); font-size: 12px; line-height: 1.5; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
+.bk { display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.bk:last-child { border-bottom: 0; }
+.bk .txt { flex: 1; min-width: 0; }
+.bk .t { font-weight: 600; }
+.bk .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.bk .acts { display: flex; gap: 6px; flex: none; }
+.toasts { position: fixed; bottom: 18px; right: 18px; display: grid; gap: 8px; z-index: 20; max-width: min(440px, calc(100vw - 36px)); }
+.toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+.toast.err { background: var(--err); color: #fff; }
+.toast small { display: block; opacity: .75; margin-top: 2px; font-family: var(--mono); font-size: 11px; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 820px) {
+  .wrap { padding: 20px 16px 60px; }
+  .memgrid { grid-template-columns: 1fr; }
+  input.search { margin-left: 0; min-width: 0; width: 100%; }
+  .table { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+    <button class="iconbtn" id="about-btn" title="About Claude Code on this computer" aria-label="About Claude Code on this computer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    </button></header>
+  <div id="notice"></div>
+  <section class="profiles" id="profiles"></section>
+  <nav class="tabs" id="tabs">
+    <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
+    <button data-tab="memories">Memories</button>
+    <button data-tab="profiles">Profiles</button>
+    <button data-tab="backups">Backups</button>
+    <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
+            mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
+            health: null };
+
+// ---------- helpers ----------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function badge(id) {
+  if (!id) return `<span class="badge b-none">unassigned</span>`;
+  if (id === "shared") return `<span class="badge b-shared">All profiles</span>`;
+  const i = S.profiles.findIndex(p => p.id === id);
+  return `<span class="badge ${i < 0 ? "b-none" : "b-p" + (i % 6)}">${esc(label(id))}</span>`;
+}
+const basename = p => (p || "").replace(/\/+$/, "").split("/").pop();
+
+async function api(path, body) {
+  const r = await fetch(path, { method: body ? "POST" : "GET",
+    headers: { "X-Token": TOKEN, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({ error: "Invalid response from the server" }));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg, sub, err) {
+  const t = document.createElement("div");
+  t.className = "toast" + (err ? " err" : "");
+  t.setAttribute("role", err ? "alert" : "status");
+  t.innerHTML = esc(msg) + (sub ? `<small>${esc(sub)}</small>` : "");
+  $("#toasts").append(t);
+  setTimeout(() => t.remove(), err ? 9000 : 6000);
+}
+async function run(fn) {
+  try { const r = await fn(); if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : ""); return r; }
+  catch (e) { toast(e.message, "", true); throw e; }
+}
+
+// ---------- modal ----------
+function modal({ title, sub, body = "", actions = [] }) {
+  return new Promise(resolve => {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <h2>${esc(title)}</h2>${sub ? `<div class="hint">${sub}</div>` : ""}
+      <div class="body">${body}</div>
+      <div class="foot">${actions.map((a, i) => a.label ? `<button class="btn ${a.kind || ""}" data-i="${i}">${esc(a.label)}</button>` : "").join("")}
+        <button class="btn" data-close>Cancel</button></div></div>`;
+    const close = v => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
+    const onKey = e => { if (e.key === "Escape") close(null); };
+    document.addEventListener("keydown", onKey);
+    bg.addEventListener("click", e => {
+      if (e.target === bg || e.target.hasAttribute("data-close")) return close(null);
+      const i = e.target.closest("[data-i]")?.dataset.i;
+      if (i !== undefined) close({ action: actions[i].value, el: bg });
+      const pick = e.target.closest("[data-pick]");
+      if (pick) { const inp = $("input.text", bg); if (inp) { inp.value = pick.dataset.pick; inp.focus(); } }
+    });
+    document.body.append(bg);
+    ($("input, select", bg) || $("[data-i]", bg))?.focus();
+  });
+}
+async function confirmBox(title, sub, okLabel = "Confirm", kind = "primary") {
+  const r = await modal({ title, sub, actions: [{ label: okLabel, kind, value: true }] });
+  return !!r;
+}
+
+// ---------- data ----------
+async function loadProfiles() {
+  S.profiles = await api("/api/profiles");
+  $("#profiles").innerHTML = S.profiles.map(p => `
+    <div class="pcard">
+      <div class="top"><span class="name">${esc(p.label)}</span>${badge(p.id)}
+        ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
+      <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code>${p.email ? " · " + esc(p.email) : ""}</div>
+      <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
+        <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
+    </div>`).join("") + `<button class="pcard add" data-newprofile>+ New profile</button>`;
+}
+async function loadProjects() {
+  S.projects = await api("/api/projects");
+  const n = S.projects.filter(r => r.issues.length).length;
+  const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n;
+}
+async function refresh() { await Promise.all([loadProfiles(), loadProjects()]); render(); }
+
+// ---------- projects ----------
+function filtered() {
+  const q = S.q.toLowerCase();
+  return S.projects.filter(r => {
+    if (q && !r.pretty.toLowerCase().includes(q)) return false;
+    if (S.filter === "issues") return r.issues.length > 0;
+    if (S.filter === "all") return true;
+    return r.expected === S.filter;
+  });
+}
+function renderProjects() {
+  const ids = S.profiles.map(p => p.id);
+  const chips = [["issues", "Needs attention"], ["all", "All"], ...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared"]];
+  const rows = filtered();
+  $("#main").innerHTML = `
+    <div class="toolbar">
+      ${chips.map(([k, l]) => `<button class="chip ${S.filter === k ? "on" : ""}" data-filter="${k}">${esc(l)}</button>`).join("")}
+      <input class="search" placeholder="Search a path…" value="${esc(S.q)}" id="q" aria-label="Search projects">
+    </div>
+    <div class="table">${rows.length ? `<table>
+      <thead><tr><th>Project</th><th>Belongs to</th>${S.profiles.map(p => `<th>${esc(p.label)}</th>`).join("")}<th>Status</th><th></th></tr></thead>
+      <tbody>${rows.map(r => {
+        const pi = r.issues.find(i => i.kind === "profile");
+        const main = pi ? { a: "fixmove", l: `Move to ${label(pi.to)}` }
+                   : r.issues.find(i => i.kind === "orphan") ? { a: "relink", l: "Relink…" }
+                   : r.issues.find(i => i.kind === "unclassified") ? { a: "rule", l: "Assign…" } : null;
+        return `<tr>
+          <td class="path mono">${esc(r.pretty)}</td>
+          <td>${badge(r.expected)}</td>
+          ${ids.map(id => { const s = r.in[id]; return `<td class="nums">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
+          <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
+          <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
+            <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
+      }).join("")}</tbody></table>` : `<div class="empty">${S.filter === "issues" ? "Nothing needs attention. ✓" : "No projects."}</div>`}
+    </div>`;
+  $("#q").oninput = e => { S.q = e.target.value; const pos = e.target.selectionStart; renderProjects(); const i = $("#q"); i.focus(); i.setSelectionRange(pos, pos); };
+}
+const byName = n => S.projects.find(r => r.name === n);
+
+async function doMove(r, from, to) {
+  const s = r.in[from];
+  if (!(await confirmBox(`Move to ${label(to)}?`,
+      `<code>${esc(r.pretty)}</code><br>From ${esc(label(from))} to ${esc(label(to))}: ${plural(s.conv, "conversation", "conversations")}, ${plural(s.mem, "memory", "memories")}, the prompt history and the project settings. Anything ${esc(label(to))} already has goes to the backup.`, "Move"))) return;
+  await run(() => api("/api/projects/move", { project: r.name, from, to })); await refresh();
+}
+async function doRelink(r, pid) {
+  pid = pid || Object.keys(r.in)[0];
+  let cands = [];
+  try { cands = r.path ? await api("/api/candidates?name=" + encodeURIComponent(basename(r.path))) : []; } catch {}
+  const res = await modal({ title: "Relink to a folder", sub: `<code>${esc(r.pretty)}</code> no longer exists. Tell where the project is now: conversations, memories, history and settings will follow${Object.keys(r.in).length > 1 ? ` (profile ${esc(label(pid))})` : ""}.`,
+    body: `${cands.length ? `<div class="hint">Folders with the same name:</div>${cands.map(c => `<button class="btn small" data-pick="${esc(c)}" style="text-align:left;white-space:normal"><code>${esc(c)}</code></button>`).join("")}` : `<div class="hint">No folder with the same name was found.</div>`}
+      <input class="text" placeholder="~/code/…" value="${esc(cands[0] || "")}" aria-label="New folder">`,
+    actions: [{ label: "Relink", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  const path = $("input.text", res.el)?.value || "";
+  await run(() => api("/api/projects/relink", { project: r.name, profile: pid, path })); await refresh();
+}
+async function doDelete(r, pid) {
+  const s = r.in[pid];
+  if (!(await confirmBox(`Delete from ${label(pid)}?`, `<code>${esc(r.pretty)}</code><br>${plural(s.conv, "conversation", "conversations")} and ${plural(s.mem, "memory", "memories")} are moved to the backup, not erased.`, "Delete"))) return;
+  await run(() => api("/api/projects/delete", { project: r.name, profile: pid })); await refresh();
+}
+async function doRule(r) {
+  const guess = r.path ? r.path.replace(/^~\//, "") : "";
+  const res = await modal({ title: "Assign to a profile",
+    sub: "Creates a rule: every project whose path contains this text belongs to the chosen profile. New rules win over older ones.",
+    body: `<input class="text" value="${esc(guess)}" placeholder="e.g. code/work" aria-label="Path text">
+      <select id="rp" aria-label="Profile">${[...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared (all profiles)"]].map(([k, l]) => `<option value="${k}" ${k === r.expected ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`,
+    actions: [{ label: "Save rule", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  await run(() => api("/api/rules", { match: $("input.text", res.el).value, profile: $("#rp", res.el).value })); await refresh();
+}
+async function doManage(r) {
+  const ids = S.profiles.map(p => p.id);
+  const opts = [];
+  for (const pid of Object.keys(r.in)) {
+    const s = r.in[pid];
+    for (const to of ids.filter(x => x !== pid)) opts.push({ label: `Move from ${label(pid)} to ${label(to)}`, info: `${s.conv} conv · ${s.mem} mem`, v: ["move", pid, to] });
+    if (!r.exists) opts.push({ label: `Relink to a folder (${label(pid)})`, info: "", v: ["relink", pid] });
+    opts.push({ label: `Delete from ${label(pid)}`, info: "goes to the backup", v: ["delete", pid], danger: true });
+  }
+  opts.push({ label: "Assign to a profile (rule)", info: r.expected ? "now: " + label(r.expected) : "unassigned", v: ["rule"] });
+  const res = await modal({ title: "Manage project", sub: `<code>${esc(r.pretty)}</code>`,
+    body: opts.map((o, i) => `<div class="opt"><span>${esc(o.label)} <span class="hint">${esc(o.info)}</span></span>
+      <button class="btn small ${o.danger ? "danger" : ""}" data-i="${i}">Choose</button></div>`).join(""),
+    actions: opts.map(o => ({ label: "", value: o.v })) });
+  if (!res) return;
+  const [a, p1, p2] = res.action;
+  if (a === "move") return doMove(r, p1, p2);
+  if (a === "relink") return doRelink(r, p1);
+  if (a === "delete") return doDelete(r, p1);
+  if (a === "rule") return doRule(r);
+}
+
+// ---------- memories ----------
+async function loadMemProjects() {
+  S.mem.projects = await api("/api/memory/projects?profile=" + S.mem.profile);
+}
+async function openMemProject(name) {
+  S.mem.project = name; S.mem.file = null; S.mem.list = null; renderMemories();
+  S.mem.list = await api(`/api/memory/list?profile=${S.mem.profile}&project=${encodeURIComponent(name)}`);
+  renderMemories();
+}
+async function openMemFile(f) {
+  S.mem.file = f;
+  const r = await api(`/api/memory/file?profile=${S.mem.profile}&project=${encodeURIComponent(S.mem.project)}&file=${encodeURIComponent(f)}`);
+  S.mem.content = r.content; renderMemories();
+}
+function renderMemories() {
+  const m = S.mem;
+  const q = m.q.toLowerCase();
+  const plist = m.projects.filter(p => (m.all || p.count > 0) && (!q || p.pretty.toLowerCase().includes(q)));
+  const cur = m.projects.find(p => p.name === m.project);
+  $("#main").innerHTML = `<div class="memgrid">
+    <aside class="side"><div class="head">
+      <div class="seg">${S.profiles.map(p => `<button data-mprof="${p.id}" class="${m.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>
+      <input class="search" style="min-width:0;margin:0" placeholder="Filter projects…" value="${esc(m.q)}" id="mq" aria-label="Filter projects">
+      <label class="check"><input type="checkbox" id="mall" ${m.all ? "checked" : ""}> also show projects without memories</label></div>
+      <div class="plist">${plist.map(p => `<button data-mproj="${esc(p.name)}" class="${p.name === m.project ? "on" : ""}">
+        <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No projects.</div>`}</div>
+    </aside>
+    <section>${!cur ? `<div class="empty">Pick a project on the left.</div>` : `
+      <div class="hint" style="margin-bottom:8px"><code>${esc(cur.pretty)}</code> · ${esc(label(m.profile))}</div>
+      ${!m.list ? `<div class="empty"><span class="spinner"></span></div>` : `
+        ${m.list.missing.length ? `<div class="issue err" style="margin-bottom:8px">MEMORY.md lists files that do not exist: ${m.list.missing.map(esc).join(", ")}</div>` : ""}
+        <div class="cards">${m.list.items.map(it => `<div class="mcard ${it.file === m.file ? "on" : ""}" data-mfile="${esc(it.file)}" tabindex="0" role="button">
+          <div class="t">${esc(it.name)} ${it.type ? `<span class="badge b-none">${esc(it.type)}</span>` : ""}
+            ${it.indexed ? "" : `<span class="badge b-warn">not in MEMORY.md</span>`}</div>
+          <div class="d">${esc(it.description)}</div></div>`).join("") || `<div class="empty">No memories in this project.</div>`}</div>
+        ${m.file ? `<div class="editor"><div class="hint" style="margin-bottom:6px"><code>${esc(m.file)}</code></div>
+          <textarea id="mtext" spellcheck="false" aria-label="Memory content">${esc(m.content)}</textarea>
+          <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
+            <button class="btn danger" id="mdel">Delete</button><button class="btn" id="mmove">Move…</button>
+            <button class="btn primary" id="msave">Save</button></div></div>` : ""}`}`}
+    </section></div>`;
+  $("#mq").oninput = e => { m.q = e.target.value; const pos = e.target.selectionStart; renderMemories(); const i = $("#mq"); i.focus(); i.setSelectionRange(pos, pos); };
+  $("#mall").onchange = e => { m.all = e.target.checked; renderMemories(); };
+  if ($("#msave")) {
+    const ctx = () => ({ profile: m.profile, project: m.project, file: m.file });
+    $("#msave").onclick = async () => { await run(() => api("/api/memory/save", { ...ctx(), content: $("#mtext").value })); m.content = $("#mtext").value; };
+    $("#mdel").onclick = async () => {
+      if (!(await confirmBox("Delete this memory?", `<code>${esc(m.file)}</code> is removed from MEMORY.md and moved to the backup.`, "Delete"))) return;
+      await run(() => api("/api/memory/delete", ctx())); m.file = null; await loadMemProjects(); await openMemProject(m.project); loadProfiles();
+    };
+    $("#mmove").onclick = () => moveMemory(ctx());
+  }
+}
+async function moveMemory(ctx) {
+  const projFor = async pid => (await api("/api/memory/projects?profile=" + pid));
+  let list = await projFor(ctx.profile);
+  const opts = l => l.map(p => `<option value="${esc(p.name)}">${esc(p.pretty)}${p.count ? ` (${p.count})` : ""}</option>`).join("");
+  const resP = modal({ title: "Move memory", sub: `<code>${esc(ctx.file)}</code>`,
+    body: `<select id="mvp" aria-label="Target profile">${S.profiles.map(p => `<option value="${p.id}" ${p.id === ctx.profile ? "selected" : ""}>${esc(p.label)}</option>`).join("")}</select>
+      <select id="mvj" aria-label="Target project">${opts(list)}</select>`,
+    actions: [{ label: "Move", kind: "primary", value: "ok" }] });
+  const sel = $("#mvp");
+  sel.onchange = async () => { list = await projFor(sel.value); $("#mvj").innerHTML = opts(list); };
+  const res = await resP;
+  if (!res) return;
+  await run(() => api("/api/memory/move", { ...ctx, to_profile: $("#mvp", res.el).value, to_project: $("#mvj", res.el).value }));
+  S.mem.file = null; await loadMemProjects(); await openMemProject(ctx.project); loadProfiles();
+}
+
+// ---------- health ----------
+async function loadHealth() {
+  S.health = null; renderHealth();
+  S.health = await api("/api/health");
+  const n = S.health.reduce((a, h) => a + h.checks.filter(c => c.level === "error").length + h.orphans.length, 0);
+  const c = $("#cnt-health"); c.hidden = !n; c.textContent = n;
+  renderHealth();
+}
+function renderHealth() {
+  if (S.tab !== "health") return;
+  if (!S.health) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Checking login, files, links, skills, plugins, memories and folders…</div>`; return; }
+  const icon = { ok: "✓", warn: "!", error: "✕" };
+  $("#main").innerHTML = `<div class="toolbar"><button class="btn" id="rehealth">Run the checks again</button></div>
+    <div class="health">${S.health.map(h => `<div class="hcard"><h3>${esc(h.label)}</h3>
+      ${h.checks.map(c => `<div class="check ${c.level}"><span class="i" aria-hidden="true">${icon[c.level]}</span><span>${esc(c.text)}</span></div>`).join("")}
+      <h4>Projects whose folder is gone (${h.orphans.length})</h4>
+      ${h.orphans.map(o => `<div class="orphan"><div class="p">${esc(o.pretty)}</div>
+        <div class="hint">${plural(o.conv, "conversation", "conversations")} · ${plural(o.mem, "memory", "memories")}</div>
+        <div class="c">${o.candidates.map(c => `<button class="btn small primary" data-hlink="${esc(o.name)}" data-prof="${h.id}" data-path="${esc(c)}">Relink to ${esc(c)}</button>`).join("")}
+          <button class="btn small" data-hrelink="${esc(o.name)}" data-prof="${h.id}">Relink…</button>
+          <button class="btn small danger" data-hdel="${esc(o.name)}" data-prof="${h.id}">Delete</button></div></div>`).join("") || `<div class="hint">None. ✓</div>`}
+    </div>`).join("")}</div>`;
+  $("#rehealth").onclick = loadHealth;
+}
+
+// ---------- profiles and sharing ----------
+async function loadSharing() {
+  S.sharing = null; renderSharing();
+  S.sharing = await api("/api/sharing"); renderSharing();
+}
+function renderSharing() {
+  if (S.tab !== "profiles") return;
+  if (!S.sharing) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span></div>`; return; }
+  const src = S.profiles[0];
+  $("#main").innerHTML = `
+    <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
+      <button class="btn primary" data-newprofile style="margin-left:auto">+ New profile</button></div>
+    <div class="section-title">Your profiles</div>
+    <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
+        <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
+          ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
+        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code>${p.email ? " · " + esc(p.email) : ""} · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
+      <div class="acts"><button class="btn small" data-pedit="${p.id}">Edit</button>
+        ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
+    <div class="section-title">Sharing</div>
+    <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
+      ${p.items.map(it => `<div class="share">
+        <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
+          ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
+        <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
+      </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>`;
+  document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
+    const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
+    const on = cb.checked;
+    const sub = on
+      ? `${esc(p.label)} will use <code>${esc(it.item)}</code> from ${esc(p.source)}.` + (it.own ? ` Its current copy goes to the backup${it.only_own.length ? `, including <b>${plural(it.only_own.length, "item", "items")} ${esc(p.source)} does not have</b>: ${it.only_own.slice(0, 8).map(esc).join(", ")}` : ""}.` : "")
+      : `${esc(p.label)} gets its own copy of <code>${esc(it.item)}</code>: from then on, changes no longer flow between profiles.`;
+    if (!(await confirmBox(on ? "Share?" : "Separate?", sub, on ? "Share" : "Separate"))) { cb.checked = !on; return; }
+    try { await run(() => api("/api/sharing", { profile: p.id, item: it.item, shared: on })); } catch {}
+    loadSharing();
+  });
+}
+async function newProfile() {
+  const opts = S.profiles.map(p => `<label><input type="radio" name="base" value="${p.id}" ${p.id === S.profiles[0].id ? "checked" : ""}> Copy of ${esc(p.label)} <span class="hint">(settings, MCP servers; you log in again)</span></label>`).join("");
+  const resP = modal({ title: "New profile", sub: "Creates the folder <code>~/.claude-&lt;id&gt;</code> and a <code>claude-&lt;id&gt;</code> command in <code>~/.local/bin</code> that starts Claude Code in it.",
+    body: `<div class="form">
+      <label class="f">Name<input class="text" id="np-label" placeholder="e.g. Work"></label>
+      <label class="f">Id (folder and command)<input class="text" id="np-id" placeholder="e.g. work"></label>
+      <div class="hint" id="np-cmd"></div>
+      <div class="radio">${opts}<label><input type="radio" name="base" value=""> Empty</label></div>
+      <label class="check" id="np-projwrap"><input type="checkbox" id="np-proj"> also copy project conversations, history and memories</label>
+      <div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
+      <div class="checks">${["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"].map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div>
+    </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
+  const L = $("#np-label"), I = $("#np-id"); let touched = false;
+  const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+  const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
+  L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
+  I.oninput = () => { touched = true; upd(); };
+  document.querySelectorAll('input[name="base"]').forEach(r => r.onchange = () => { $("#np-projwrap").style.display = r.value ? "" : "none"; });
+  const res = await resP;
+  if (!res) return;
+  const v = sel => $(sel, res.el);
+  const body = { label: v("#np-label").value, id: v("#np-id").value,
+    base: v('input[name="base"]:checked').value, include_projects: v("#np-proj").checked,
+    share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value) };
+  try { await run(() => api("/api/profiles/create", body)); } catch { return; }
+  await refresh(); if (S.tab === "profiles") loadSharing();
+}
+async function editProfile(id) {
+  const p = S.profiles.find(x => x.id === id);
+  const res = await modal({ title: `Edit ${p.label}`,
+    sub: `The folder <code>${esc(p.dir)}</code> does not change: renaming it would break the paths stored inside the profile.`,
+    body: `<div class="form">
+      <label class="f">Name (UI and status line)<input class="text" id="pe-label" value="${esc(p.label)}"></label>
+      <label class="f">Command${p.primary ? " (this is Claude Code itself and cannot change)" : " (launcher in ~/.local/bin)"}
+        <input class="text" id="pe-cmd" value="${esc(p.command)}" ${p.primary ? "disabled" : ""}></label></div>`,
+    actions: [{ label: "Save", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  try { await run(() => api("/api/profiles/update", { id, label: $("#pe-label", res.el).value, command: $("#pe-cmd", res.el).value })); } catch { return; }
+  await refresh(); loadSharing();
+}
+async function deleteProfile(id) {
+  const p = S.profiles.find(x => x.id === id);
+  const others = S.profiles.filter(x => x.id !== id);
+  const resP = modal({ title: `Delete ${p.label}?`,
+    sub: `<code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}`,
+    body: `<div class="form">
+      ${p.active ? `<div class="danger-box">A session is open in this profile. Close it first: a running Claude Code would keep writing to a folder that is gone.</div>` : ""}
+      <div class="radio">
+        <label><input type="radio" name="pd" value="" checked> Delete everything <span class="hint">(the folder goes to the backup)</span></label>
+        ${others.map(o => `<label><input type="radio" name="pd" value="${o.id}"> First move conversations, memories and history to ${esc(o.label)}</label>`).join("")}
+      </div>
+      <div class="hint">The profile is also removed from the configuration, together with its <code>${esc(p.command)}</code> command. Everything can be undone from the Backups tab.</div>
+      <label class="f">Type <b>${esc(p.label)}</b> to confirm<input class="text" id="pd-confirm" autocomplete="off"></label>
+    </div>`,
+    actions: [{ label: "Delete profile", kind: "primary", value: "ok" }] });
+  const btn = document.querySelector('.modal [data-i="0"]'), inp = $("#pd-confirm");
+  btn.disabled = true;
+  inp.oninput = () => { btn.disabled = inp.value.trim() !== p.label; };
+  const res = await resP;
+  if (!res) return;
+  const merge_into = res.el.querySelector('input[name="pd"]:checked').value;
+  try { await run(() => api("/api/profiles/delete", { id, merge_into })); } catch { return; }
+  if (S.mem.profile === id) { S.mem.profile = null; S.mem.project = null; }
+  await refresh(); loadSharing();
+}
+
+// ---------- settings ----------
+async function loadSettings(pid) {
+  S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings" }; renderSettings();
+  try { S.set.data = await api("/api/settings?profile=" + pid); } catch (e) { toast(e.message, "", true); }
+  renderSettings();
+}
+const fmt = v => v === null || v === undefined ? "default" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
+const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
+  : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-none src" style="opacity:.7">default</span>`;
+function fieldInput(f) {
+  if (f.type === "select") return `<select data-sfield="${f.key}" style="flex:1;min-width:0" aria-label="${esc(f.label)}">
+      <option value="" ${f.value == null ? "selected" : ""}>— default —</option>
+      ${f.options.map(o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select>`;
+  if (f.type === "bool" && f.value != null && typeof f.value !== "boolean") return `<span class="hint">custom value: edit it in the advanced editor</span>`;
+  if (f.type === "bool") return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value === true ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>`;
+  const list = f.suggest?.length ? `list="dl-${f.key}"` : "";
+  return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="default" ${list} aria-label="${esc(f.label)}">
+    ${f.suggest?.length ? `<datalist id="dl-${f.key}">${f.suggest.map(v => `<option value="${esc(v)}">`).join("")}</datalist>` : ""}
+    <button class="btn small" data-ssave="${f.key}" hidden>Save</button>`;
+}
+function renderSettings() {
+  if (S.tab !== "settings") return;
+  const st = S.set, d = st?.data;
+  const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-setprof="${p.id}" class="${st?.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
+  if (!d) { $("#main").innerHTML = `<div class="toolbar">${seg}</div><div class="empty"><span class="spinner"></span></div>`; return; }
+  const sh = f => f.shared ? `<span class="shared-note">shared with ${esc(S.profiles[0].label)}</span>` : "";
+  const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
+  $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
+  <div class="setgrid">${errs}
+    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
+      ${d.fields.map(f => `<div class="srow">
+        <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
+        <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
+          ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}</div>
+        <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
+          ${JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}</div>
+      </div>`).join("")}
+    </section>
+
+    <section class="sec"><div class="h"><h3>Global instructions · CLAUDE.md</h3><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
+      <div class="b"><textarea class="code" id="cmd-text" spellcheck="false" aria-label="CLAUDE.md" placeholder="# Context&#10;&#10;In this profile you work on …">${esc(d.claude_md.content)}</textarea>
+        <div class="row-end"><span class="grow">${plural(d.claude_md.content ? d.claude_md.content.split("\n").length : 0, "line", "lines")}</span><button class="btn primary" id="cmd-save">Save CLAUDE.md</button></div></div>
+    </section>
+
+    <section class="sec"><div class="h"><h3>Permissions</h3><span class="hint">One rule per line, in <code>settings.json</code>. E.g. <code>Bash(npm run test:*)</code>, <code>Read(~/Documents/**)</code>, <code>mcp__claude_ai_Gmail</code></span></div>
+      <div class="b"><div class="perm">${[["allow", "Allow without asking"], ["ask", "Always ask"], ["deny", "Block"]].map(([k, l]) => `<label class="f">${l} <code>${k}</code>
+          <textarea class="text" id="perm-${k}" spellcheck="false">${esc((d.permissions[k] || []).join("\n"))}</textarea>
+          ${(d.permissions_local[k] || []).length ? `<span class="hint">+ ${d.permissions_local[k].length} in settings.local.json (edit them in the advanced editor)</span>` : ""}</label>`).join("")}</div>
+        <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn primary" id="perm-save">Save permissions</button></div></div>
+    </section>
+
+    <section class="sec"><div class="h"><h3>Advanced editor</h3><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
+      <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
+        <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
+        <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save</button></div></div>
+    </section>
+
+    <section class="sec"><div class="h"><h3>Global</h3><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
+      <div class="b"><div class="srow" style="padding:0 0 10px;border:0"><div class="l"><b>Auto-updates</b><span>autoUpdates</span></div>
+        <div class="v"><label class="switch"><input type="checkbox" id="g-auto" ${d.global.autoUpdates ? "checked" : ""} aria-label="Auto-updates"><span></span></label></div><div></div></div>
+        <dl class="kv">${Object.entries(d.global.info).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+    </section>
+  </div>`;
+  bindSettings();
+}
+function bindSettings() {
+  const st = S.set, d = st.data, pid = st.profile;
+  const save = async (key, value) => { try { await run(() => api("/api/settings/field", { profile: pid, key, value })); } catch {} loadSettings(pid); };
+  document.querySelectorAll("[data-sfield]").forEach(el => {
+    const f = d.fields.find(x => x.key === el.dataset.sfield);
+    if (f.type === "bool") { el.onchange = () => save(f.key, el.checked); return; }
+    if (f.type === "select") { el.onchange = () => save(f.key, el.value === "" ? null : el.value); return; }
+    const btn = document.querySelector(`[data-ssave="${f.key}"]`);
+    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null);
+    el.oninput = () => { btn.hidden = JSON.stringify(val()) === JSON.stringify(f.value ?? null); };
+    el.onkeydown = e => { if (e.key === "Enter" && !btn.hidden) btn.click(); };
+    btn.onclick = () => save(f.key, val());
+  });
+  document.querySelectorAll("[data-sreset]").forEach(b => b.onclick = async () => {
+    const f = d.fields.find(x => x.key === b.dataset.sreset);
+    if (await confirmBox("Back to the default?", `<b>${esc(f.label)}</b> is removed from <code>${f.source === "local" ? "settings.local.json" : "settings.json"}</code>.${f.source === "local" ? " If settings.json also has it, that value applies." : ""}`, "Remove")) save(f.key, null);
+  });
+  document.querySelectorAll("[data-scopy]").forEach(b => b.onclick = () => {
+    const f = d.fields.find(x => x.key === b.dataset.scopy), o = f.others.find(x => x.id === b.dataset.from);
+    save(f.key, o.value);
+  });
+  document.querySelectorAll("[data-setprof]").forEach(b => b.onclick = () => loadSettings(b.dataset.setprof));
+  document.querySelectorAll("[data-rawfile]").forEach(b => b.onclick = () => { st.rawFile = b.dataset.rawfile; renderSettings(); });
+  $("#cmd-save").onclick = async () => { try { await run(() => api("/api/settings/claude-md", { profile: pid, content: $("#cmd-text").value })); } catch {} loadSettings(pid); };
+  $("#perm-save").onclick = async () => {
+    const rules = Object.fromEntries(["allow", "ask", "deny"].map(k => [k, $("#perm-" + k).value.split("\n")]));
+    try { await run(() => api("/api/settings/permissions", { profile: pid, rules })); } catch {} loadSettings(pid);
+  };
+  const raw = $("#raw-text"), status = $("#raw-status");
+  const check = () => { try { const v = JSON.parse(raw.value); if (typeof v !== "object" || Array.isArray(v) || v === null) throw new Error("must be an object { … }"); status.textContent = "Valid JSON"; status.style.color = "var(--ok)"; return true; }
+    catch (e) { status.textContent = e.message; status.style.color = "var(--err)"; return false; } };
+  raw.oninput = check; check();
+  $("#raw-format").onclick = () => { if (check()) { raw.value = JSON.stringify(JSON.parse(raw.value), null, 2) + "\n"; } };
+  $("#raw-save").onclick = async () => { if (!check()) return; try { await run(() => api("/api/settings/raw", { profile: pid, file: st.rawFile, content: raw.value })); } catch {} loadSettings(pid); };
+  $("#g-auto").onchange = async e => { try { await run(() => api("/api/settings/global", { profile: pid, key: "autoUpdates", value: e.target.checked })); } catch {} loadSettings(pid); };
+}
+
+// ---------- about Claude Code ----------
+async function openAbout() {
+  const bg = document.createElement("div"); bg.className = "drawer-bg";
+  const dr = document.createElement("aside"); dr.className = "drawer"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true"); dr.setAttribute("aria-label", "About Claude Code");
+  const loading = `<div class="empty"><span class="spinner"></span> Collecting version, accounts and profile contents…</div>`;
+  dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
+    <div class="db" id="ab-body">${loading}</div>`;
+  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); $("#about-btn").focus(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  bg.onclick = close; document.addEventListener("keydown", onKey);
+  document.body.append(bg, dr);
+  $("#ab-close", dr).onclick = close; $("#ab-close", dr).focus();
+  const load = async () => {
+    $("#ab-body", dr).innerHTML = loading;
+    try { renderAbout(dr, await api("/api/about")); } catch (e) { $("#ab-body", dr).innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+  };
+  $("#ab-reload", dr).onclick = load; load();
+}
+function renderAbout(dr, a) {
+  const kv = o => `<dl class="kv">${Object.entries(o).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${/disk usage/i.test(k) ? esc(size(v)) : esc(v)}</dd>`).join("")}</dl>`;
+  const list = items => items.length ? `<div class="tags">${items.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>` : `<span class="hint">none</span>`;
+  $("#ab-body", dr).innerHTML = `
+    <div class="card"><h3>Claude Code</h3>${kv(a.claude)}
+      ${S.cc && !S.cc.installed && S.cc.supported ? `<div style="margin-top:10px"><button class="btn primary" data-install>Install Claude Code…</button></div>` : ""}</div>
+    ${a.profiles.map(p => `<div class="card"><h3>${esc(p.label)} ${badge(p.id)} <code class="hint" style="font-weight:400">${esc(p.command)}</code></h3>
+      ${kv(p.account)}
+      <h4>Usage</h4>${kv(p.usage)}
+      <h4>Contents</h4>
+      ${Object.entries(p.contents).map(([k, v]) => `<div class="citem"><span class="k">${esc(k)} (${v.length})</span>${list(v)}</div>`).join("")}
+      <div class="citem"><span class="k">CLAUDE.md</span><span>${p.claude_md ? "present" : `<span class="hint">not present</span>`}</span></div>
+      ${p.shared.length ? `<div class="citem"><span class="k">Shared with ${esc(a.profiles[0].label)}</span>${list(p.shared)}</div>` : ""}
+      <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
+    </div>`).join("")}
+    <div class="card"><h3>cc-profiles</h3>${kv(a.app)}</div>`;
+}
+
+// ---------- installing Claude Code ----------
+async function loadClaudeStatus() {
+  try { S.cc = await api("/api/claude/status"); } catch { return; }
+  const c = S.cc, el = $("#notice");
+  if (c.job?.running) el.innerHTML = `<div class="notice"><span class="spinner"></span><div class="txt"><b>Installing Claude Code…</b><span>${esc(c.job.method)}</span></div><button class="btn" data-install-log>Show</button></div>`;
+  else if (!c.installed) el.innerHTML = `<div class="notice"><div class="txt"><b>Claude Code is not installed on this computer</b>
+      <span>Without it profiles cannot be used: login, sessions and health checks do not work.</span></div>
+      ${c.supported ? `<button class="btn primary" data-install>Install Claude Code…</button>` : `<span class="hint">Installing from here is supported on macOS and Linux.</span>`}</div>`;
+  else if (!c.in_path) el.innerHTML = `<div class="notice"><div class="txt"><b>Claude Code is installed, but your terminal cannot find it</b>
+      <span>It is in <code>${esc(c.path)}</code>. Add this line to your shell startup file (e.g. <code>~/.zshrc</code>) and open a new terminal: <code>export PATH="$HOME/.local/bin:$PATH"</code></span></div></div>`;
+  else el.innerHTML = "";
+}
+async function installClaude() {
+  const c = S.cc || await api("/api/claude/status");
+  const first = c.methods.find(m => m.available);
+  if (!first) return toast("No install method is available on this computer.", "", true);
+  const res = await modal({ title: "Install Claude Code",
+    sub: `Official commands from the Claude Code documentation. You need an internet connection; after installing, log in with a Pro, Max, Team or Enterprise account.`,
+    body: c.methods.map(m => `<label class="method ${m.available ? "" : "off"}">
+        <span class="top"><input type="radio" name="im" value="${m.id}" ${m.id === first.id ? "checked" : ""} ${m.available ? "" : "disabled"}> ${esc(m.label)}</span>
+        <code>${esc(m.command)}</code>
+        <span class="hint">${esc(m.available ? m.note : m.why)}</span></label>`).join(""),
+    actions: [{ label: "Install", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  const method = res.el.querySelector('input[name="im"]:checked').value;
+  try { await run(() => api("/api/claude/install", { method })); } catch { return; }
+  showInstallLog();
+}
+async function showInstallLog() {
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:min(720px,100%)"><h2 id="il-title"><span class="spinner"></span> Installing…</h2>
+    <div class="body"><pre class="log" id="il-log" aria-live="polite"></pre><div id="il-result"></div></div>
+    <div class="foot"><button class="btn" id="il-close">Close</button></div></div>`;
+  document.body.append(bg);
+  let stop = false;
+  const close = () => { stop = true; bg.remove(); loadClaudeStatus(); };
+  $("#il-close", bg).onclick = close;
+  while (!stop) {
+    const c = await api("/api/claude/status").catch(() => null);
+    if (!c) break;
+    const log = $("#il-log", bg); log.textContent = c.job.lines.join("\n"); log.scrollTop = log.scrollHeight;
+    if (!c.job.running) {
+      S.cc = c;
+      const ok = c.job.code === 0 && c.installed;
+      $("#il-title", bg).textContent = ok ? "Claude Code installed" : "Installation failed";
+      $("#il-result", bg).innerHTML = ok
+        ? `<div class="okmark">✓ Version ${esc(c.version)} in <code>${esc(c.path)}</code>.</div>
+           <div class="hint" style="margin-top:6px">Open a new terminal and run <code>claude</code>: it asks you to log in the first time.${c.in_path ? "" : " Your terminal cannot find it yet: add <code>export PATH=\"$HOME/.local/bin:$PATH\"</code> to your shell startup file."}</div>`
+        : `<div class="danger-box">The command ended with code ${esc(c.job.code)}${c.job.code === 0 ? ", but Claude Code does not show up as installed" : ""}. Check the log above; the official guide covers the common errors: code.claude.com/docs/en/troubleshoot-install</div>`;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  refresh();
+}
+
+// ---------- backups ----------
+async function loadBackups() {
+  S.backups = null; renderBackups();
+  S.backups = await api("/api/backups"); renderBackups();
+}
+const size = n => n > 1e9 ? (n / 1e9).toFixed(1) + " GB" : n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : n > 1e3 ? Math.round(n / 1e3) + " KB" : n + " B";
+const when = t => new Date(t * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+function renderBackups() {
+  if (S.tab !== "backups") return;
+  if (!S.backups) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span></div>`; return; }
+  const tot = S.backups.reduce((a, b) => a + b.size, 0);
+  const where = S.backups[0]?.path.replace(/\/[^/]+$/, "") || "~/.cc-profiles/backups";
+  $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span></div>
+    <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
+        <div class="t">${esc(b.title)} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
+        <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
+      <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
+        <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
+}
+async function restoreBackup(name) {
+  const b = S.backups.find(x => x.name === name);
+  const newer = S.backups.filter(x => x.created > b.created && x.restorable && !x.title.startsWith("Before restoring"));
+  const warn = newer.length ? `<br><br><span class="issue">${plural(newer.length, "newer operation has", "newer operations have")} not been undone yet (${newer.slice(0, 3).map(x => esc(x.title)).join(" · ")}${newer.length > 3 ? "…" : ""}). If they touched the same files, undo them first, newest first.</span>` : "";
+  if (!(await confirmBox("Restore?", `<b>${esc(b.title)}</b><br>Undoes this operation by putting the files back as they were. Later changes to the same files are overwritten (but saved in the restore's own backup).${warn}`, "Restore"))) return;
+  const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
+  if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
+  await refresh(); loadBackups();
+}
+async function deleteBackup(name) {
+  const b = S.backups.find(x => x.name === name);
+  if (!(await confirmBox("Delete this backup?", `<b>${esc(b.title)}</b> (${size(b.size)})<br>This is the only action that really erases something: it cannot be restored afterwards.`, "Delete permanently"))) return;
+  await run(() => api("/api/backups/delete", { name })).catch(() => {});
+  loadBackups();
+}
+
+// ---------- events ----------
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.tab) {
+    S.tab = t.dataset.tab;
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b === t));
+    if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
+    if (S.tab === "health" && !S.health) return loadHealth();
+    if (S.tab === "profiles") return loadSharing();
+    if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
+    if (S.tab === "backups") return loadBackups();
+    return render();
+  }
+  if (t.hasAttribute("data-newprofile")) return newProfile();
+  if (t.hasAttribute("data-install")) return installClaude();
+  if (t.hasAttribute("data-install-log")) return showInstallLog();
+  if (t.dataset.pedit) return editProfile(t.dataset.pedit);
+  if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
+  if (t.dataset.restore) return restoreBackup(t.dataset.restore);
+  if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
+  if (t.dataset.filter) { S.filter = t.dataset.filter; return renderProjects(); }
+  if (t.dataset.act) {
+    const r = byName(t.dataset.name);
+    if (t.dataset.act === "fixmove") { const i = r.issues.find(x => x.kind === "profile"); return doMove(r, i.from, i.to); }
+    if (t.dataset.act === "relink") return doRelink(r);
+    if (t.dataset.act === "rule") return doRule(r);
+    if (t.dataset.act === "manage") return doManage(r);
+  }
+  if (t.dataset.mprof) { S.mem.profile = t.dataset.mprof; S.mem.project = null; S.mem.file = null; await loadMemProjects(); return renderMemories(); }
+  if (t.dataset.mproj) return openMemProject(t.dataset.mproj);
+  if (t.dataset.hlink) {
+    if (!(await confirmBox("Relink to this folder?", `<code>${esc(t.dataset.path)}</code>`, "Relink"))) return;
+    await run(() => api("/api/projects/relink", { project: t.dataset.hlink, profile: t.dataset.prof, path: t.dataset.path }));
+    await refresh(); return loadHealth();
+  }
+  if (t.dataset.hrelink) { await doRelink(byName(t.dataset.hrelink), t.dataset.prof); return S.tab === "health" && loadHealth(); }
+  if (t.dataset.hdel) { await doDelete(byName(t.dataset.hdel), t.dataset.prof); return S.tab === "health" && loadHealth(); }
+});
+document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openMemFile(c.dataset.mfile); });
+document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openMemFile(c.dataset.mfile); } });
+
+function render() {
+  if (S.tab === "projects") renderProjects();
+  else if (S.tab === "memories") renderMemories();
+  else if (S.tab === "settings") renderSettings();
+  else if (S.tab === "profiles") renderSharing();
+  else if (S.tab === "backups") renderBackups();
+  else renderHealth();
+}
+$("#about-btn").onclick = openAbout;
+loadClaudeStatus();
+refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
