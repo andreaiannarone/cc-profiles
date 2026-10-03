@@ -4,20 +4,29 @@
 
 - macOS or Linux
 - Python 3.9 or later (the one that ships with macOS works)
+- [pipx](https://pipx.pypa.io) or [uv](https://docs.astral.sh/uv/)
 - Claude Code, or let cc-profiles install it for you (see [Health and About](guides/health.md#installing-claude-code))
 
 ## Install
 
 ```sh
-pipx install cc-profiles
+curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
+```
+
+The script installs cc-profiles with `pipx` or `uv`, whichever you have, then adds the `/cc-profiles` command to Claude Code (see [Open it from Claude Code](#open-it-from-claude-code)). Run it again to update. To install the app only, end the command with `sh -s -- --no-command`.
+
+Or install it by hand:
+
+```sh
+pipx install git+https://github.com/andreaiannarone/cc-profiles.git
 # or
-uv tool install cc-profiles
+uv tool install git+https://github.com/andreaiannarone/cc-profiles.git
 ```
 
 Both put a `cc-profiles` command in `~/.local/bin`, in an isolated environment, so nothing else on your system is affected. To try it once without installing:
 
 ```sh
-uvx cc-profiles
+uvx --from git+https://github.com/andreaiannarone/cc-profiles.git cc-profiles
 ```
 
 ## First run
@@ -34,6 +43,29 @@ On the very first run, cc-profiles writes `~/.cc-profiles/config.json` with:
 - **rules**: only the defaults that mark your home folder and temporary folders as *shared* (see [Concepts](concepts.md#rules)).
 
 Rename profiles from the **Profiles** tab. The first profile in the list is the [source profile](concepts.md#the-source-profile).
+
+## Open it from Claude Code
+
+Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on. Stop the server with the `kill <pid>` command it prints.
+
+The [install script](../install.sh) adds the command for you. Otherwise run:
+
+```sh
+cc-profiles install-command
+```
+
+It writes `commands/cc-profiles.md` in every profile, skips profiles that share `commands` with the [source profile](concepts.md#the-source-profile) (they get it through the link), and never overwrites a `cc-profiles.md` it did not create. Like every change cc-profiles makes, it is saved in a backup you can restore from the **Backups** tab. Sessions that are already open see the command after a restart.
+
+### As a plugin
+
+The repository is also a Claude Code plugin marketplace. Install the plugin once:
+
+```
+/plugin marketplace add andreaiannarone/cc-profiles
+/plugin install cc-profiles@cc-profiles
+```
+
+The plugin's command is `/cc-profiles:open`, because Claude Code always prefixes plugin commands with the plugin's name; it does the same as `/cc-profiles`. The plugin only opens the app: install `cc-profiles` first. To get it in every profile, install it in the source profile and share `plugins` from the **Profiles** tab.
 
 ## Starting Claude Code in a profile
 

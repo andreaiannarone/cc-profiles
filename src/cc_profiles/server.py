@@ -14,11 +14,13 @@ Standard library only, Python >= 3.9.
 """
 import argparse
 import glob
+import http.client
 import json
 import os
 import re
 import secrets
 import shutil
+import socketserver
 import subprocess
 import sys
 import threading
@@ -1131,6 +1133,68 @@ def command_conflict(command, others):
 
 
 # ---------------------------------------------------------------------------
+# Slash command (/cc-profiles inside Claude Code)
+# ---------------------------------------------------------------------------
+# A personal command in <profile>/commands/, so the name is just /cc-profiles
+# (plugin commands always get a "plugin:" prefix). The mark is a YAML comment in
+# the frontmatter: Claude Code does not show it to the model, and only files with
+# it may be rewritten. plugin/commands/open.md is the same text without the mark.
+COMMAND_MARK = "# managed by cc-profiles"
+COMMAND_NAME = "cc-profiles.md"
+COMMAND_TEXT = f"""---
+{COMMAND_MARK}
+description: Open the cc-profiles web UI to manage your Claude Code profiles
+allowed-tools: Bash(cc-profiles open:*)
+---
+!`cc-profiles open`
+
+Tell the user, in one short line, what the output above says: the URL where cc-profiles is open, or why it did not start.
+
+If the `cc-profiles` command was not found, say that this command only opens the app and does not install it, and give this install command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
+```
+"""
+
+
+def is_our_command(path):
+    try:
+        with open(path) as f:
+            return COMMAND_MARK in f.read(200)
+    except OSError:
+        return False
+
+
+def install_command():
+    """Write /cc-profiles into every profile that does not get it through sharing.
+    Returns (lines to print, backup path or None)."""
+    src, lines, bk = primary(), [], None
+    for p in profiles():
+        if p["id"] != src["id"] and share_state(p, "commands", "dir")["shared"]:
+            lines.append(f"{p['label']}: shares commands with {src['label']}")
+            continue
+        if not os.path.isdir(p["dir_abs"]):
+            lines.append(f"{p['label']}: skipped, {pretty(p['dir_abs'])} does not exist")
+            continue
+        path = os.path.join(p["dir_abs"], "commands", COMMAND_NAME)
+        if os.path.lexists(path) and not is_our_command(path):
+            lines.append(f"{p['label']}: skipped, {pretty(path)} exists and was not created by cc-profiles")
+            continue
+        if os.path.exists(path) and open(path).read() == COMMAND_TEXT:
+            lines.append(f"{p['label']}: already up to date")
+            continue
+        if bk is None:
+            bk = Backup("slash-command", "Add the /cc-profiles command")
+        bk.mkdir(os.path.dirname(path))
+        bk.copy(path, f"command-{p['id']}")
+        write_text(path, COMMAND_TEXT)
+        bk.note(f"{p['label']}: {pretty(path)}")
+        lines.append(f"{p['label']}: added {pretty(path)}")
+    return lines, (bk.close() if bk else None)
+
+
+# ---------------------------------------------------------------------------
 # New profile
 # ---------------------------------------------------------------------------
 RUNTIME = {"daemon", "ide", "sessions", "session-env", "shell-snapshots", "cache",
@@ -1766,6 +1830,14 @@ def op_install(method):
 # ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        # HTTPServer.server_bind also calls socket.getfqdn(), a reverse DNS lookup
+        # that can take 30 s on some Macs. The name is never used: skip it.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = f"cc-profiles/{__version__}"
 
@@ -1894,7 +1966,7 @@ def serve(port, open_browser):
     ALLOWED_HOSTS = {f"127.0.0.1:{port}", f"localhost:{port}"}
     load_config()
     try:
-        srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        srv = Server(("127.0.0.1", port), Handler)
     except OSError:
         print(f"Port {port} is busy: cc-profiles may already be running.")
         print(f"Open http://127.0.0.1:{port} or use --port {port + 1}.")
@@ -1909,6 +1981,45 @@ def serve(port, open_browser):
         print("\nStopped.")
 
 
+def is_running(port):
+    """True if cc-profiles answers on the port (another program there does not count).
+    http.client talks to 127.0.0.1 directly, without urllib's proxy handling."""
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=1)
+    try:
+        conn.request("GET", "/")
+        return (conn.getresponse().getheader("Server") or "").startswith("cc-profiles/")
+    except (OSError, http.client.HTTPException):
+        return False
+    finally:
+        conn.close()
+
+
+def open_app(port, open_browser):
+    """Start the server in the background unless it is running, then open the browser.
+
+    Returns at once, so it can run from a Claude Code slash command."""
+    url = f"http://127.0.0.1:{port}"
+    if is_running(port):
+        print(f"cc-profiles is already running on {url}")
+    else:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        log = os.path.join(DATA_DIR, "server.log")
+        with open(log, "wb") as out:
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "cc_profiles", "--port", str(port), "--no-browser"],
+                stdin=subprocess.DEVNULL, stdout=out, stderr=out, start_new_session=True)
+        deadline = time.time() + 15
+        while time.time() < deadline and proc.poll() is None and not is_running(port):
+            time.sleep(0.1)
+        if not is_running(port):
+            print(f"cc-profiles did not start. See {pretty(log)}:")
+            print(open(log, errors="replace").read().strip())
+            sys.exit(1)
+        print(f"cc-profiles started in the background on {url} (pid {proc.pid}). Stop it with: kill {proc.pid}")
+    if open_browser:
+        webbrowser.open(url)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="cc-profiles", description="A local web UI to manage Claude Code profiles.")
     ap.add_argument("--version", action="version", version=f"cc-profiles {__version__}")
@@ -1916,6 +2027,10 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true", help="do not open the browser")
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("label", help="print the label of the active profile (for status lines)")
+    sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile")
+    op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
+    op.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port to listen on")
+    op.add_argument("--no-browser", action="store_true", default=argparse.SUPPRESS, help="do not open the browser")
     args = ap.parse_args(argv)
     if args.cmd == "label":
         print(current_label())
@@ -1923,6 +2038,16 @@ def main(argv=None):
     if os.name == "nt":
         print("cc-profiles supports macOS and Linux only for now.")
         sys.exit(1)
+    if args.cmd == "install-command":
+        lines, backup = install_command()
+        print("\n".join(lines))
+        if backup:
+            print(f"Backup: {backup} (undo it from the Backups tab)")
+        print("Restart Claude Code sessions that are already open to see /cc-profiles.")
+        return
+    if args.cmd == "open":
+        open_app(args.port, not args.no_browser)
+        return
     serve(args.port, not args.no_browser)
 
 

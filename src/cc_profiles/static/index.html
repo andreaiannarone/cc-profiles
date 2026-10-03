@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cc-profiles</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 126 84%22 width=%22126%22 height=%2284%22 role=%22img%22 aria-label=%22cc-profiles%22 shape-rendering=%22crispEdges%22%3E %3Cstyle%3E .back %7B fill: %23e9a98c; %7D .front %7B fill: %23d97757; %7D .eye %7B fill: %231d1c1a; %7D %40media (prefers-color-scheme: dark) %7B .back %7B fill: %238a4a33; %7D %7D %3C/style%3E %3Crect class=%22back%22 x=%2284%22 y=%220%22 width=%227%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2277%22 y=%227%22 width=%227%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2256%22 y=%2214%22 width=%2256%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2277%22 y=%2221%22 width=%2242%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2228%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%22105%22 y=%2228%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2235%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%22105%22 y=%2235%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2242%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2249%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2256%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2298%22 y=%2263%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2242%22 y=%2214%22 width=%227%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2235%22 y=%2221%22 width=%227%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2214%22 y=%2228%22 width=%2256%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2235%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2242%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2228%22 y=%2242%22 width=%2228%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2263%22 y=%2242%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2249%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2228%22 y=%2249%22 width=%2228%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2263%22 y=%2249%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2256%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2263%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2270%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2214%22 y=%2277%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2256%22 y=%2277%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2298%22 y=%2228%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2298%22 y=%2235%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2221%22 y=%2242%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2256%22 y=%2242%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2221%22 y=%2249%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2256%22 y=%2249%22 width=%227%22 height=%227%22/%3E %3C/svg%3E">
 <style>
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --line: #e2dfd8;
@@ -14,6 +15,7 @@
   --p3: #0f766e; --p3-soft: #d5f2ee; --p4: #4338ca; --p4-soft: #e5e6fb; --p5: #854d0e; --p5-soft: #fbf0d4;
   --shared: #6d28d9; --shared-soft: #ede5fb;
   --ok: #15803d; --warn: #b45309; --warn-soft: #fdf1dc; --err: #b91c1c; --err-soft: #fbe3e3;
+  --logo: #d97757; --logo-back: #e9a98c; --logo-eye: #1d1c1a;
   --radius: 10px; --mono: ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: light;
 }
@@ -26,6 +28,7 @@
     --p3: #5eead4; --p3-soft: #123430; --p4: #a5b4fc; --p4-soft: #1f2147; --p5: #fcd34d; --p5-soft: #362a0c;
     --shared: #c4a5ff; --shared-soft: #2a2140;
     --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
+    --logo-back: #8a4a33;
     color-scheme: dark;
   }
 }
@@ -34,8 +37,10 @@ body { margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
 button, input, select, textarea { font: inherit; color: inherit; }
 .wrap { padding: 24px 28px 80px; }
-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
-h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+.logo { width: 45px; height: 30px; flex: none; }
+.lg-front { fill: var(--logo); } .lg-back { fill: var(--logo-back); } .lg-eye { fill: var(--logo-eye); }
 header .sub { color: var(--muted); }
 .profiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
@@ -237,7 +242,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 </head>
 <body>
 <div class="wrap">
-  <header><h1>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><rect class="lg-back" x="84" y="0" width="7" height="7"/><rect class="lg-back" x="77" y="7" width="7" height="7"/><rect class="lg-back" x="56" y="14" width="56" height="7"/><rect class="lg-back" x="77" y="21" width="42" height="7"/><rect class="lg-back" x="84" y="28" width="14" height="7"/><rect class="lg-back" x="105" y="28" width="14" height="7"/><rect class="lg-back" x="84" y="35" width="14" height="7"/><rect class="lg-back" x="105" y="35" width="14" height="7"/><rect class="lg-back" x="84" y="42" width="35" height="7"/><rect class="lg-back" x="84" y="49" width="35" height="7"/><rect class="lg-back" x="84" y="56" width="35" height="7"/><rect class="lg-back" x="98" y="63" width="14" height="7"/><rect class="lg-front" x="42" y="14" width="7" height="7"/><rect class="lg-front" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-eye" x="98" y="28" width="7" height="7"/><rect class="lg-eye" x="98" y="35" width="7" height="7"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
     <button class="iconbtn" id="about-btn" title="About Claude Code on this computer" aria-label="About Claude Code on this computer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
     </button></header>

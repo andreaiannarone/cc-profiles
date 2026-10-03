@@ -29,6 +29,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--ok` | `#15803d` | `#4ade80` | passed checks, "✓ all good" |
 | `--warn` / `--warn-soft` | `#b45309` / `#fdf1dc` | `#fbbf24` / `#3a2c10` | fixable problems, "session open" |
 | `--err` / `--err-soft` | `#b91c1c` / `#fbe3e3` | `#f87171` / `#3d1a1a` | errors, missing folders, destructive actions, tab counters |
+| `--logo` / `--logo-back` / `--logo-eye` | `#d97757` / `#e9a98c` / `#1d1c1a` | `#d97757` / `#8a4a33` / `#1d1c1a` | the two pixel mascots next to the page title, nothing else (same colors as `docs/assets/logo.svg`) |
 
 Rules:
 - **Orange `--accent` is reserved for action.** Do not use it for states or badges: if something is orange, it can be clicked or it is the current selection.

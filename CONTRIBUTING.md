@@ -34,6 +34,13 @@ mkdir -p "$SANDBOX/.claude" "$SANDBOX/.claude-work"
 HOME="$SANDBOX" .venv/bin/cc-profiles --port 4799
 ```
 
+For a sandbox with sample profiles, projects, memories and a moved folder, so every tab has something to show:
+
+```sh
+SANDBOX=$(.venv/bin/python .claude/skills/sandbox/make_home.py)
+HOME="$SANDBOX" .venv/bin/cc-profiles open --port 4799
+```
+
 To try the Claude Code installer flow without installing anything:
 
 ```sh
@@ -50,7 +57,21 @@ tests/                           end-to-end tests on a fake home, plus documenta
 docs/                            user guide and developer reference (start at docs/README.md)
 DESIGN.md                        the UI's visual system: read it before touching index.html
 CLAUDE.md                        notes for AI coding assistants (also useful for humans)
+.claude/                         Claude Code project setup: permissions, a hook, two skills (see below)
+plugin/, .claude-plugin/         the Claude Code plugin and its marketplace
+install.sh                       the curl | sh installer
 ```
+
+### Working with Claude Code
+
+The repository ships a `.claude/` folder for contributors who use Claude Code:
+
+- `settings.json` pre-approves the test suite, `claude plugin validate` and read-only git commands.
+- `hooks/sandbox_guard.py` blocks any command that would start cc-profiles on your real home folder: only `label`, `--version` and `--help` may run there. Use a sandbox `HOME` instead.
+- `/sandbox` builds a fake home with sample data and starts the app on it.
+- `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release.
+
+Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
 ## Pull requests
 

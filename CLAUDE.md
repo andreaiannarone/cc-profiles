@@ -17,6 +17,11 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
 | `tests/test_app.py` | end-to-end tests |
 | `DESIGN.md` | the UI's visual system: read it before touching `index.html` |
+| `.claude-plugin/marketplace.json` | makes the repo a Claude Code plugin marketplace |
+| `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `server.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
+| `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |
+| `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command`. POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
+| `docs/assets/` | the logo (`logo.svg`) and the mark alone (`logo-mark.svg`, also inlined as the favicon in `index.html`) |
 
 User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
 
@@ -28,7 +33,7 @@ User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules,
 .venv/bin/cc-profiles --port 4799      # run the app (use HOME=<sandbox> unless you mean it)
 ```
 
-Only ever run write operations against a sandbox `HOME`, never against real profiles.
+Only ever run write operations against a sandbox `HOME`, never against real profiles. The `sandbox_guard.py` hook blocks starting the app without one; the `/sandbox` skill builds one with sample data.
 
 ## Hard rules
 
@@ -55,7 +60,7 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 - **Per-project settings**: the `projects` key of `.claude.json`. For the default profile this file is `~/.claude.json`, outside `~/.claude`; for other profiles it is `<dir>/.claude.json`.
 - **Memories**: `projects/<name>/memory/*.md` with frontmatter (`name`, `description`, `metadata.type`), plus a `MEMORY.md` index with one `- [Title](file.md) — description` line per memory.
 - **Settings precedence**: `settings.local.json` wins over `settings.json`. `effective()` finds where a value lives, and writes go to that file.
-- **Settings schema**: dropdown options in `SETTING_FIELDS` come from the schema inside the Claude Code binary (`SCHEMA_VERSION`). To check them after a Claude Code update, run `strings -n 6 "$(readlink -f "$(which claude)")"` and search for `<key>:()=>`. For example `effortLevel:()=>B(["low",…])` is an enum, while `o()` means any string, which gets a free text field. Lists referenced by name, like `B(vZe)`, are defined elsewhere as `vZe=[…]`. Always keep a current value that is not in the list as an option; never drop it.
+- **Settings schema**: dropdown options in `SETTING_FIELDS` come from the schema inside the Claude Code binary (`SCHEMA_VERSION`); the `/check-settings-schema` skill walks through the check. To check them after a Claude Code update, run `strings -n 6 "$(readlink -f "$(which claude)")"` and search for `<key>:()=>`. For example `effortLevel:()=>B(["low",…])` is an enum, while `o()` means any string, which gets a free text field. Lists referenced by name, like `B(vZe)`, are defined elsewhere as `vZe=[…]`. Always keep a current value that is not in the list as an option; never drop it.
 - **Sharing**: relative symlinks (`../.claude/skills`) to the first profile in `config.json`, the source. Never chain links through secondary profiles.
 - **Installer**: the commands in `INSTALL_METHODS` come from the official docs (code.claude.com/docs/en/setup). For tests, `CC_PROFILES_INSTALL_DRYRUN=1` (plus `CC_PROFILES_INSTALL_DRYRUN_CODE=7` to simulate a failure) runs `echo` instead of installing.
 
@@ -65,7 +70,7 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 - A `projects/` folder may hold only memories and no conversation: "no conversations" does not mean "empty".
 - `settings.local.json` and `plugins/installed_plugins.json` contain absolute paths to the profile folder. When copying a profile, rewrite them unless that part is shared.
 - External programs (`claude`, `brew`, `npm`, `node`) are looked up with `find_tool()`, which adds `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` to `PATH`. The app may have been started from a terminal that does not have them yet.
-- New profiles get a launcher in `~/.local/bin` marked with `LAUNCHER_MARK`. Only files with that mark may be rewritten or removed. Aliases from older setups in `~/.zshrc`, `~/.bashrc` and `~/.bash_profile` are handled by `rewrite_alias()`, which touches only the alias line and the `# Claude Code:` comment above it.
+- New profiles get a launcher in `~/.local/bin` marked with `LAUNCHER_MARK`. Only files with that mark may be rewritten or removed. The same goes for `commands/cc-profiles.md` and `COMMAND_MARK`. Aliases from older setups in `~/.zshrc`, `~/.bashrc` and `~/.bash_profile` are handled by `rewrite_alias()`, which touches only the alias line and the `# Claude Code:` comment above it.
 
 ## Style
 

@@ -4,6 +4,8 @@
 
 ```
 cc-profiles [--port PORT] [--no-browser]
+cc-profiles open [--port PORT] [--no-browser]
+cc-profiles install-command
 cc-profiles label
 cc-profiles --version
 ```
@@ -12,6 +14,8 @@ cc-profiles --version
 |---|---|---|
 | `--port PORT` | `4777`, or `CC_PROFILES_PORT` | port to listen on (always on `127.0.0.1`) |
 | `--no-browser` | off | do not open the browser |
+| `open` | | start the server in the background unless it is already running, open the browser and return at once. Prints the server's pid (stop it with `kill <pid>`); its output goes to `~/.cc-profiles/server.log`. Used by the Claude Code plugin (see [Getting started](getting-started.md#open-it-from-claude-code)) |
+| `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date |
 | `label` | | print the active profile's name and exit (see [Status line](status-line.md)) |
 | `--version` | | print the version and exit |
 

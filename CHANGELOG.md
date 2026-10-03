@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - Documentation in `docs/`: getting started, concepts, a guide per tab, status line, configuration reference, troubleshooting, architecture, Claude Code's on-disk formats, HTTP API.
 - Tests that check every relative link and anchor in the documentation.
+- `cc-profiles open`: starts the server in the background if needed, opens the browser and returns.
+- `cc-profiles install-command`: adds the `/cc-profiles` command to Claude Code in every profile, with a backup.
+- `install.sh`: installs cc-profiles with pipx or uv and adds the `/cc-profiles` command.
+- `.claude/` folder for contributors using Claude Code: permissions, a hook that blocks starting the app on the real home folder, and the `/sandbox` and `/check-settings-schema` skills.
+- CI runs `install.sh` on Linux and macOS and lints it with shellcheck.
+- Claude Code plugin marketplace in this repository, with the `/cc-profiles:open` command that runs `cc-profiles open`.
+- Project logo, also used as the web UI's favicon, and technology badges in the README.
 
 ## [0.1.0] - 2026-10-02
 

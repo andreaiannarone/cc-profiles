@@ -30,6 +30,36 @@ jobs:
       - name: Test
         run: python -m pytest -v
 
+  install-script:
+    name: install.sh on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lint
+        if: runner.os == 'Linux'
+        run: shellcheck install.sh
+      - name: Install into a sandbox home
+        run: |
+          python -m pip install pipx
+          # runners point pipx to /opt: install into the sandbox home, as for a user
+          unset PIPX_HOME PIPX_BIN_DIR
+          SB="$(mktemp -d)"
+          mkdir -p "$SB/.claude" "$SB/.claude-work"
+          echo '{}' > "$SB/.claude/settings.json"
+          echo '{}' > "$SB/.claude-work/settings.json"
+          HOME="$SB" CC_PROFILES_SOURCE="$PWD" sh install.sh
+          HOME="$SB" sh install.sh --help > /dev/null
+          test -x "$SB/.local/bin/cc-profiles"
+          grep -q "managed by cc-profiles" "$SB/.claude/commands/cc-profiles.md"
+          grep -q "managed by cc-profiles" "$SB/.claude-work/commands/cc-profiles.md"
+
   package:
     name: Build the package
     runs-on: ubuntu-latest

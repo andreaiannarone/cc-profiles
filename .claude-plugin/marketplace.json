@@ -1,0 +1,12 @@
+{
+  "name": "cc-profiles",
+  "description": "cc-profiles: a local web UI to manage multiple Claude Code profiles",
+  "owner": { "name": "Andrea Iannarone" },
+  "plugins": [
+    {
+      "name": "cc-profiles",
+      "source": "./plugin",
+      "description": "Open the cc-profiles web UI from inside Claude Code with /cc-profiles:open"
+    }
+  ]
+}

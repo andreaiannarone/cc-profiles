@@ -6,11 +6,15 @@ byte-for-byte identical to how it started.
 """
 import json
 import os
+import re
+import signal
+import socket
 import subprocess
 import sys
 import time
+import urllib.request
 
-from conftest import SRC, san
+from conftest import SRC, free_port, san
 
 
 def basic_home(home):
@@ -242,6 +246,72 @@ def test_label_command(home, app_factory):
     app_factory()  # first run writes the config
     assert run_cli(home, "label").stdout.strip() == "Default"
     assert run_cli(home, "label", CLAUDE_CONFIG_DIR=str(home.path(".claude-work"))).stdout.strip() == "Work"
+
+
+def test_open_command(home):
+    port = free_port()
+    first = run_cli(home, "open", "--no-browser", "--port", str(port))
+    assert first.returncode == 0, first.stdout + first.stderr
+    pid = int(re.search(r"pid (\d+)", first.stdout).group(1))
+    try:
+        assert "started in the background" in first.stdout
+        assert urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5).status == 200
+        again = run_cli(home, "open", "--no-browser", "--port", str(port))
+        assert again.returncode == 0 and "already running" in again.stdout
+    finally:
+        os.kill(pid, signal.SIGTERM)
+
+
+def test_open_command_port_taken(home):
+    with socket.socket() as other:  # another program on the port
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        r = run_cli(home, "open", "--no-browser", "--port", str(other.getsockname()[1]))
+    assert r.returncode == 1
+    assert "did not start" in r.stdout and "is busy" in r.stdout
+
+
+def test_install_command(home, app_factory):
+    basic_home(home)
+    home.profile("client")
+    home.write(".claude-client/commands/cc-profiles.md", "my own command\n")  # not ours: left alone
+    home.profile("shared")
+    app = app_factory()
+    app.post("/api/sharing", {"profile": "shared", "item": "commands", "shared": True})
+    before = home.snapshot()
+
+    out = run_cli(home, "install-command").stdout
+    assert "Default: added ~/.claude/commands/cc-profiles.md" in out
+    assert "Work: added ~/.claude-work/commands/cc-profiles.md" in out
+    assert "Client: skipped" in out and "Shared: shares commands with Default" in out
+    text = home.path(".claude/commands/cc-profiles.md").read_text()
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+    assert home.path(".claude-client/commands/cc-profiles.md").read_text() == "my own command\n"
+    assert home.path(".claude-shared/commands/cc-profiles.md").read_text() == text  # through the link
+
+    again = run_cli(home, "install-command").stdout
+    assert "Backup:" not in again and again.count("already up to date") == 2
+
+    newest = app.get("/api/backups")[0]
+    assert newest["title"] == "Add the /cc-profiles command"
+    app.post("/api/backups/restore", {"name": newest["name"]})
+    assert home.snapshot() == before
+
+
+def test_plugin_command_matches_installed_command():
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    plugin = (SRC.parent / "plugin" / "commands" / "open.md").read_text()
+    assert plugin == server.COMMAND_TEXT.replace(server.COMMAND_MARK + "\n", "", 1)
+
+
+def test_install_script_options():
+    script = str(SRC.parent / "install.sh")
+    assert subprocess.run(["sh", "-n", script]).returncode == 0
+    with open(script) as f:  # piped, as with curl | sh
+        r = subprocess.run(["sh", "-s", "--", "--help"], stdin=f, capture_output=True, text=True)
+    assert r.returncode == 0 and "--no-command" in r.stdout
+    assert subprocess.run(["sh", script, "--nope"], capture_output=True).returncode == 2
 
 
 def test_version_command(home):

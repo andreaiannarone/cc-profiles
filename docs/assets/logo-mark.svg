@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 84" width="126" height="84" role="img" aria-label="cc-profiles" shape-rendering="crispEdges">
+  <style>
+    .back { fill: #e9a98c; }
+    .front { fill: #d97757; }
+    .eye { fill: #1d1c1a; }
+    @media (prefers-color-scheme: dark) {
+      .back { fill: #8a4a33; }
+    }
+  </style>
+  <rect class="back" x="84" y="0" width="7" height="7"/>
+  <rect class="back" x="77" y="7" width="7" height="7"/>
+  <rect class="back" x="56" y="14" width="56" height="7"/>
+  <rect class="back" x="77" y="21" width="42" height="7"/>
+  <rect class="back" x="84" y="28" width="14" height="7"/>
+  <rect class="back" x="105" y="28" width="14" height="7"/>
+  <rect class="back" x="84" y="35" width="14" height="7"/>
+  <rect class="back" x="105" y="35" width="14" height="7"/>
+  <rect class="back" x="84" y="42" width="35" height="7"/>
+  <rect class="back" x="84" y="49" width="35" height="7"/>
+  <rect class="back" x="84" y="56" width="35" height="7"/>
+  <rect class="back" x="98" y="63" width="14" height="7"/>
+  <rect class="front" x="42" y="14" width="7" height="7"/>
+  <rect class="front" x="35" y="21" width="7" height="7"/>
+  <rect class="front" x="14" y="28" width="56" height="7"/>
+  <rect class="front" x="7" y="35" width="70" height="7"/>
+  <rect class="front" x="7" y="42" width="14" height="7"/>
+  <rect class="front" x="28" y="42" width="28" height="7"/>
+  <rect class="front" x="63" y="42" width="14" height="7"/>
+  <rect class="front" x="7" y="49" width="14" height="7"/>
+  <rect class="front" x="28" y="49" width="28" height="7"/>
+  <rect class="front" x="63" y="49" width="14" height="7"/>
+  <rect class="front" x="7" y="56" width="70" height="7"/>
+  <rect class="front" x="7" y="63" width="70" height="7"/>
+  <rect class="front" x="7" y="70" width="70" height="7"/>
+  <rect class="front" x="14" y="77" width="14" height="7"/>
+  <rect class="front" x="56" y="77" width="14" height="7"/>
+  <rect class="eye" x="98" y="28" width="7" height="7"/>
+  <rect class="eye" x="98" y="35" width="7" height="7"/>
+  <rect class="eye" x="21" y="42" width="7" height="7"/>
+  <rect class="eye" x="56" y="42" width="7" height="7"/>
+  <rect class="eye" x="21" y="49" width="7" height="7"/>
+  <rect class="eye" x="56" y="49" width="7" height="7"/>
+</svg>
