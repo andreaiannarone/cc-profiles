@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" alt="macOS">
   <img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" alt="Linux">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
+  <a href="https://buymeacoffee.com/andreaiannarone"><img src="https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 Keep work and personal contexts apart, move projects and memories between profiles, share skills and plugins, edit settings with safe dropdowns, and undo anything you do.
@@ -166,6 +167,10 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run
 - translations (the UI is English only for now)
 - Windows support
 - a "dry run" preview for big operations
+
+## Support
+
+cc-profiles is free and open source. If it saves you time, you can [buy me a coffee](https://buymeacoffee.com/andreaiannarone).
 
 ## License
 
