@@ -14,7 +14,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `.claude/` folder for contributors using Claude Code: permissions, a hook that blocks starting the app on the real home folder, and the `/sandbox` and `/check-settings-schema` skills.
 - CI runs `install.sh` on Linux and macOS and lints it with shellcheck.
 - Claude Code plugin marketplace in this repository, with the `/cc-profiles:open` command that runs `cc-profiles open`.
-- Project logo, also used as the web UI's favicon, and technology badges in the README.
+- Project logo, also next to the web UI's title, a one-mascot favicon, and technology badges in the README.
+- Skills & MCP tab: for each profile, browse, create, edit, copy and delete skills, and add, edit, copy and remove MCP servers (user or project scope). Values of environment variables and headers stay out of the list.
+- Profile cards and the Profiles tab show the account each profile is signed in with.
+
+### Changed
+- License: GPL-3.0-or-later instead of MIT, from this release on. Version 0.1.0 stays available under MIT.
+- Settings: output styles use Claude Code's own descriptions, shown under the menu, are grouped into built-in and custom, and the duplicate "Default" entry is gone.
 
 ## [0.1.0] - 2026-10-02
 

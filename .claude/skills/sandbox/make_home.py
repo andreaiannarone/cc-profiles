@@ -16,11 +16,17 @@ root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(tempfile.mkdtemp(prefix=
 root.mkdir(parents=True, exist_ok=True)
 home = FakeHome(root)
 
-# Three profiles: Default (~/.claude), Work and Client.
+# Three profiles: Default (~/.claude), Work and Client. Default has two MCP servers.
 for name in ("", "work", "client"):
     home.profile(name)
-home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
-                           "projects": {str(home.path("code/work/api")): {"allowedTools": ["Bash"]}}})
+home.json(".claude.json", {
+    "oauthAccount": {"emailAddress": "me@example.com"},
+    "mcpServers": {"filesystem": {"type": "stdio", "command": "npx",
+                                  "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/code"]}},
+    "projects": {str(home.path("code/work/api")): {
+        "allowedTools": ["Bash"],
+        "mcpServers": {"api-docs": {"type": "http", "url": "https://example.com/mcp",
+                                    "headers": {"Authorization": "Bearer not-a-real-token"}}}}}})
 home.json(".claude-work/.claude.json", {"projects": {}})
 home.json(".claude-client/.claude.json", {"projects": {}})
 home.json(".claude/settings.json", {"model": "sonnet", "effortLevel": "high", "theme": "dark"})

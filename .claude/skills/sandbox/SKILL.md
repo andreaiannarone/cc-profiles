@@ -12,7 +12,7 @@ The app writes into Claude Code's own files, so it never runs on the real home f
    .venv/bin/python .claude/skills/sandbox/make_home.py
    ```
 
-   It holds three profiles (Default, Work, Client), projects with conversations, memories and prompt history, one project in two profiles, and one whose folder was moved, so every tab has something to show. Pass a folder as argument to build it there instead of a new temporary one.
+   It holds three profiles (Default, Work, Client), skills and MCP servers, projects with conversations, memories and prompt history, one project in two profiles, and one whose folder was moved, so every tab has something to show. Pass a folder as argument to build it there instead of a new temporary one.
 
 2. Start the app on it, in the background, on port 4799 (4777 is the user's real instance):
 

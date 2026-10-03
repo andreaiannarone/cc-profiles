@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andrea Iannarone
 """PreToolUse hook: never start cc-profiles on the real home folder.
 
 CLAUDE.md says to run the app only against a sandbox HOME, because even a first

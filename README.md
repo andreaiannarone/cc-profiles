@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white" alt="pytest">
   <img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" alt="macOS">
   <img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" alt="Linux">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <a href="https://buymeacoffee.com/andreaiannarone"><img src="https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
@@ -38,7 +38,8 @@ cc-profiles does all of this for you, from a page in your browser.
 
 - **Projects.** See which profile each project belongs to and what it holds in each one. Move a project to another profile (conversations, memories, file snapshots, prompt history and per-project settings move together). Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - **Memories.** Browse, edit, move and delete the memories of every project. `MEMORY.md` indexes stay in sync.
-- **Profiles.** Create a profile, empty or copied from another one. Rename it, change its command, or delete it, optionally merging its content into another profile first.
+- **Profiles.** See the account each profile is signed in with. Create a profile, empty or copied from another one. Rename it, change its command, or delete it, optionally merging its content into another profile first.
+- **Skills and MCP servers.** For each profile, browse, create, edit, copy and delete skills, and add, edit, copy and remove MCP servers, for every project or for one.
 - **Sharing.** Share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere.
 - **Settings.** Edit model, effort, output style, theme and more. Dropdowns offer only the values Claude Code accepts, and the UI shows which file each value comes from. You can also edit `CLAUDE.md`, permissions (`allow` / `ask` / `deny`) and the raw JSON, with validation.
 - **Backups.** Every operation is journaled. **Restore** undoes it, and a restore can itself be undone.
@@ -174,7 +175,9 @@ cc-profiles is free and open source. If it saves you time, you can [buy me a cof
 
 ## License
 
-[MIT](LICENSE) © Andrea Iannarone
+[GNU General Public License v3.0 or later](LICENSE) © Andrea Iannarone
+
+You can use, study, change and share cc-profiles freely. If you distribute it, modified or not, you must do so under the same license and with the source code.
 
 ---
 

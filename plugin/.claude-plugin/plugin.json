@@ -4,5 +4,5 @@
   "description": "Open the cc-profiles web UI from inside Claude Code with /cc-profiles:open",
   "author": { "name": "Andrea Iannarone" },
   "homepage": "https://github.com/andreaiannarone/cc-profiles",
-  "license": "MIT"
+  "license": "GPL-3.0-or-later"
 }

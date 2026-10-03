@@ -165,6 +165,86 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert home.snapshot() == before
 
 
+# --- skills and MCP servers --------------------------------------------------
+def test_skills_are_managed_and_undoable(home, app_factory):
+    basic_home(home)
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\ndescription: Review a diff\n---\nReview it.\n")
+    home.write(".claude/skills/review/checklist.md", "- tests\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    listed = app.get("/api/skills?profile=default")
+    assert [(s["name"], s["description"], s["files"]) for s in listed["skills"]] == [("review", "Review a diff", 1)]
+    assert app.get("/api/skills/file?profile=default&name=review")["files"] == ["checklist.md"]
+
+    app.post("/api/skills/create", {"profile": "default", "name": "deploy", "description": "Deploy the app"})
+    text = home.path(".claude/skills/deploy/SKILL.md").read_text()
+    assert "name: deploy" in text and 'description: "Deploy the app"' in text
+    app.post("/api/skills/save", {"profile": "default", "name": "deploy", "content": "---\nname: deploy\n---\nedited"})
+    app.post("/api/skills/copy", {"profile": "default", "name": "review", "to": "work"})
+    assert home.path(".claude-work/skills/review/checklist.md").read_text() == "- tests\n"
+    app.post("/api/skills/delete", {"profile": "default", "name": "review"})
+    assert not home.path(".claude/skills/review").exists()
+    assert "already has" in app.post_error("/api/skills/create", {"profile": "default", "name": "deploy",
+                                                                  "description": "x"})
+    for bad in ("../x", "Bad Name", ""):
+        assert app.request("/api/skills/create", {"profile": "default", "name": bad, "description": "x"})[0] == 400
+    assert app.request("/api/skills/file?profile=default&name=..")[0] == 400
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_skill_copy_refused_when_skills_are_shared(home, app_factory):
+    basic_home(home)
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\n")
+    app = app_factory()
+    app.post("/api/sharing", {"profile": "work", "item": "skills", "shared": True})
+    assert "shared with Work" in app.get("/api/skills?profile=default")["shared"]
+    assert "share their skills" in app.post_error("/api/skills/copy", {"profile": "default", "name": "review",
+                                                                        "to": "work"})
+
+
+def test_mcp_servers_are_managed_and_undoable(home, app_factory):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory()
+    api_path = str(home.path("code/work/api"))
+    stdio = {"type": "stdio", "command": "npx", "args": ["-y", "some-server"], "env": {"API_KEY": "secret-123"}}
+
+    app.post("/api/mcp/save", {"profile": "default", "scope": "user", "name": "files", "config": stdio})
+    app.post("/api/mcp/save", {"profile": "default", "scope": api_path, "name": "docs",
+                               "config": {"type": "http", "url": "https://example.com/mcp"}})
+    listed = app.get("/api/mcp?profile=default")
+    assert [(s["name"], s["scope"], s["type"]) for s in listed["servers"]] == [
+        ("files", "user", "stdio"), ("docs", api_path, "http")]
+    assert listed["servers"][0]["env"] == ["API_KEY"] and "secret-123" not in json.dumps(listed)
+    assert app.get("/api/mcp/server?profile=default&scope=user&name=files")["config"] == stdio
+
+    app.post("/api/mcp/save", {"profile": "default", "scope": "user", "name": "files2", "old_name": "files",
+                               "config": {**stdio, "args": ["-y", "other"]}})
+    cfg = json.loads(home.path(".claude.json").read_text())
+    assert list(cfg["mcpServers"]) == ["files2"] and cfg["oauthAccount"]  # the rest of the file is kept
+    r = app.post("/api/mcp/copy", {"profile": "default", "scope": api_path, "name": "docs", "to": "work"})
+    assert "authenticate" in r["message"]
+    assert json.loads(home.path(".claude-work/.claude.json").read_text())["mcpServers"]["docs"]["url"]
+    app.post("/api/mcp/delete", {"profile": "default", "scope": api_path, "name": "docs"})
+
+    assert "needs a command" in app.post_error("/api/mcp/save", {"profile": "default", "scope": "user",
+                                                                 "name": "x", "config": {"type": "stdio"}})
+    assert "URL" in app.post_error("/api/mcp/save", {"profile": "default", "scope": "user", "name": "x",
+                                                     "config": {"type": "http", "url": "ftp://x"}})
+    assert "already a server" in app.post_error("/api/mcp/save", {"profile": "work", "scope": "user",
+                                                                  "name": "docs", "config": stdio})
+    assert "Invalid server name" in app.post_error("/api/mcp/save", {"profile": "default", "scope": "user",
+                                                                     "name": "a b", "config": stdio})
+    assert "Unknown project" in app.post_error("/api/mcp/save", {"profile": "default", "scope": "/nope",
+                                                                 "name": "x", "config": stdio})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 # --- profiles -----------------------------------------------------------------
 def test_create_edit_delete_profile(home, app_factory):
     basic_home(home)

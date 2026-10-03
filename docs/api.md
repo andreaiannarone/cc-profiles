@@ -22,6 +22,10 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
 | `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries |
 | `GET /api/memory/file` | `profile`, `project`, `file` | `{content}` |
+| `GET /api/skills` | `profile` | `{skills: [{name, title, description, files, linked}], dir, shared}` |
+| `GET /api/skills/file` | `profile`, `name` | `{content}` of `SKILL.md` and the other `files` in the folder |
+| `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
+| `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
@@ -42,6 +46,13 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |
 | `POST /api/memory/move` | `profile`, `project`, `file`, `to_profile`, `to_project` |
 | `POST /api/memory/delete` | `profile`, `project`, `file` |
+| `POST /api/skills/create` | `profile`, `name`, `description` |
+| `POST /api/skills/save` | `profile`, `name`, `content` (the whole `SKILL.md`) |
+| `POST /api/skills/copy` | `profile`, `name`, `to` |
+| `POST /api/skills/delete` | `profile`, `name` |
+| `POST /api/mcp/save` | `profile`, `scope`, `name`, `config` (object), `old_name` (to rename or edit) |
+| `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
+| `POST /api/mcp/delete` | `profile`, `scope`, `name` |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |

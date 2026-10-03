@@ -21,7 +21,7 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `server.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
 | `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |
 | `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command`. POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
-| `docs/assets/` | the logo (`logo.svg`) and the mark alone (`logo-mark.svg`, also inlined as the favicon in `index.html`) |
+| `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon) |
 
 User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
 

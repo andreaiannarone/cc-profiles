@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "A local web UI to manage multiple Claude Code profiles: move projects and memories between them, share skills, edit settings, undo anything."
 readme = "README.md"
 requires-python = ">=3.9"
-license = "MIT"
+license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Andrea Iannarone" }]
 keywords = ["claude", "claude-code", "profiles", "cli", "developer-tools"]

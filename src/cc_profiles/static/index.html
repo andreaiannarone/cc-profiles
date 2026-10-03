@@ -1,10 +1,11 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Andrea Iannarone -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cc-profiles</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 126 84%22 width=%22126%22 height=%2284%22 role=%22img%22 aria-label=%22cc-profiles%22 shape-rendering=%22crispEdges%22%3E %3Cstyle%3E .back %7B fill: %23e9a98c; %7D .front %7B fill: %23d97757; %7D .eye %7B fill: %231d1c1a; %7D %40media (prefers-color-scheme: dark) %7B .back %7B fill: %238a4a33; %7D %7D %3C/style%3E %3Crect class=%22back%22 x=%2284%22 y=%220%22 width=%227%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2277%22 y=%227%22 width=%227%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2256%22 y=%2214%22 width=%2256%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2277%22 y=%2221%22 width=%2242%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2228%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%22105%22 y=%2228%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2235%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%22105%22 y=%2235%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2242%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2249%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2284%22 y=%2256%22 width=%2235%22 height=%227%22/%3E %3Crect class=%22back%22 x=%2298%22 y=%2263%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2242%22 y=%2214%22 width=%227%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2235%22 y=%2221%22 width=%227%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2214%22 y=%2228%22 width=%2256%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2235%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2242%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2228%22 y=%2242%22 width=%2228%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2263%22 y=%2242%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2249%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2228%22 y=%2249%22 width=%2228%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2263%22 y=%2249%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2256%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2263%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%227%22 y=%2270%22 width=%2270%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2214%22 y=%2277%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22front%22 x=%2256%22 y=%2277%22 width=%2214%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2298%22 y=%2228%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2298%22 y=%2235%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2221%22 y=%2242%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2256%22 y=%2242%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2221%22 y=%2249%22 width=%227%22 height=%227%22/%3E %3Crect class=%22eye%22 x=%2256%22 y=%2249%22 width=%227%22 height=%227%22/%3E %3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 12%22 width=%2232%22 height=%2232%22 shape-rendering=%22crispEdges%22%3E %3Cstyle%3E.body %7B fill: %23d97757; %7D .eye %7B fill: %231d1c1a; %7D%3C/style%3E %3Crect class=%22body%22 x=%226%22 y=%221%22 width=%221%22 height=%221%22/%3E %3Crect class=%22body%22 x=%225%22 y=%222%22 width=%221%22 height=%221%22/%3E %3Crect class=%22body%22 x=%222%22 y=%223%22 width=%228%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%224%22 width=%2210%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%225%22 width=%222%22 height=%221%22/%3E %3Crect class=%22body%22 x=%224%22 y=%225%22 width=%224%22 height=%221%22/%3E %3Crect class=%22body%22 x=%229%22 y=%225%22 width=%222%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%226%22 width=%222%22 height=%221%22/%3E %3Crect class=%22body%22 x=%224%22 y=%226%22 width=%224%22 height=%221%22/%3E %3Crect class=%22body%22 x=%229%22 y=%226%22 width=%222%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%227%22 width=%2210%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%228%22 width=%2210%22 height=%221%22/%3E %3Crect class=%22body%22 x=%221%22 y=%229%22 width=%2210%22 height=%221%22/%3E %3Crect class=%22body%22 x=%222%22 y=%2210%22 width=%222%22 height=%221%22/%3E %3Crect class=%22body%22 x=%228%22 y=%2210%22 width=%222%22 height=%221%22/%3E %3Crect class=%22eye%22 x=%223%22 y=%225%22 width=%221%22 height=%221%22/%3E %3Crect class=%22eye%22 x=%228%22 y=%225%22 width=%221%22 height=%221%22/%3E %3Crect class=%22eye%22 x=%223%22 y=%226%22 width=%221%22 height=%221%22/%3E %3Crect class=%22eye%22 x=%228%22 y=%226%22 width=%221%22 height=%221%22/%3E %3C/svg%3E">
 <style>
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --line: #e2dfd8;
@@ -33,6 +34,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -47,6 +49,13 @@ header .sub { color: var(--muted); }
 .pcard .top { display: flex; align-items: center; gap: 8px; }
 .pcard .name { font-weight: 650; font-size: 15px; }
 .pcard .meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.pcard .acct, .prow .acct { font-size: 13px; margin-top: 4px; overflow-wrap: anywhere; }
+.pcard .acct.none, .prow .acct.none { color: var(--muted); }
+.ext-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 8px; }
+.ext-head h3 { margin: 0; font-size: 15px; }
+.ext-head .hint { flex: 1; min-width: 200px; }
+.cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.mcp-target { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .pcard .nums { display: flex; gap: 16px; margin-top: 10px; }
 .pcard .nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pcard .nums span { color: var(--muted); font-size: 12px; }
@@ -132,7 +141,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .orphan .p { font-family: var(--mono); font-size: 12px; word-break: break-all; }
 .orphan .c { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 10; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 10; overflow-y: auto; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(560px, 100%); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .modal h2 { margin: 0 0 4px; font-size: 16px; }
 .modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
@@ -174,7 +183,9 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .srow:last-child { border-bottom: 0; }
 .srow .l b { display: block; font-weight: 600; }
 .srow .l span { color: var(--muted); font-size: 12.5px; }
-.srow .v { display: flex; gap: 6px; align-items: center; }
+.srow .v { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.srow .v .sdesc { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.srow .v .sdesc:empty { display: none; }
 .srow .v input.text { flex: 1; min-width: 0; }
 .srow .v .src { font-size: 11.5px; }
 .srow .o { font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
@@ -252,6 +263,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
     <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
     <button data-tab="memories">Memories</button>
     <button data-tab="profiles">Profiles</button>
+    <button data-tab="ext">Skills &amp; MCP</button>
     <button data-tab="backups">Backups</button>
     <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
     <button data-tab="settings">Settings</button>
@@ -264,7 +276,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
-            health: null };
+            health: null, ext: { profile: null, skills: null, mcp: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 const $ = (s, el = document) => el.querySelector(s);
@@ -336,7 +348,8 @@ async function loadProfiles() {
     <div class="pcard">
       <div class="top"><span class="name">${esc(p.label)}</span>${badge(p.id)}
         ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
-      <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code>${p.email ? " · " + esc(p.email) : ""}</div>
+      <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+      <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code></div>
       <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
         <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
     </div>`).join("") + `<button class="pcard add" data-newprofile>+ New profile</button>`;
@@ -552,8 +565,9 @@ function renderSharing() {
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code>${p.email ? " · " + esc(p.email) : ""} · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
-      <div class="acts"><button class="btn small" data-pedit="${p.id}">Edit</button>
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
+      <div class="acts"><button class="btn small" data-pext="${p.id}">Skills &amp; MCP</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
@@ -639,6 +653,138 @@ async function deleteProfile(id) {
   await refresh(); loadSharing();
 }
 
+// ---------- skills and MCP servers ----------
+async function loadExt(pid) {
+  const x = S.ext;
+  if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; }
+  x.profile = x.profile || S.profiles[0]?.id;
+  x.skills = null; x.mcp = null; renderExt();
+  [x.skills, x.mcp] = await Promise.all([api("/api/skills?profile=" + x.profile), api("/api/mcp?profile=" + x.profile)]);
+  if (x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
+  renderExt();
+}
+async function openSkill(name) {
+  const x = S.ext;
+  const r = await api(`/api/skills/file?profile=${x.profile}&name=${encodeURIComponent(name)}`);
+  Object.assign(x, { skill: name, content: r.content, files: r.files }); renderExt();
+}
+const otherProfiles = pid => S.profiles.filter(p => p.id !== pid);
+async function pickProfile(title, sub, pid, okLabel) {
+  const res = await modal({ title, sub, body: `<select id="pp" aria-label="Target profile">${otherProfiles(pid).map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join("")}</select>`,
+    actions: [{ label: okLabel, kind: "primary", value: "ok" }] });
+  return res && $("#pp", res.el).value;
+}
+const scopeLabel = s => s === "user" ? "All projects" : basename(s);
+function renderExt() {
+  if (S.tab !== "ext") return;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile);
+  const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
+  if (!x.skills || !x.mcp) { $("#main").innerHTML = `<div class="toolbar">${seg}</div><div class="empty"><span class="spinner"></span></div>`; return; }
+  const q = x.q.toLowerCase();
+  const skills = x.skills.skills.filter(k => !q || (k.name + " " + k.description).toLowerCase().includes(q));
+  const cur = x.skills.skills.find(k => k.name === x.skill);
+  $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>
+
+    <div class="ext-head"><h3>Skills</h3><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
+      <input class="search" style="margin:0" placeholder="Filter skills…" value="${esc(x.q)}" id="extq" aria-label="Filter skills">
+      <button class="btn primary" id="sknew">New skill…</button></div>
+    <div class="cards skgrid">${skills.map(k => `<div class="mcard ${k.name === x.skill ? "on" : ""}" data-skill="${esc(k.name)}" tabindex="0" role="button">
+        <div class="t">${esc(k.title)}${k.linked ? ` <span class="badge b-none" title="A link to a folder elsewhere">linked</span>` : ""}${k.files ? ` <span class="badge b-none">${plural(k.files + 1, "file", "files")}</span>` : ""}</div>
+        <div class="d">${esc(k.description) || "No description"}</div></div>`).join("") || `<div class="empty">${x.skills.skills.length ? "No skills match the filter." : "No skills in this profile yet."}</div>`}</div>
+    ${cur ? `<div class="editor"><div class="hint" style="margin-bottom:6px"><code>${esc(x.skill)}/SKILL.md</code>${x.files.length ? ` · also in the folder: ${x.files.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(", ")}${x.files.length > 8 ? "…" : ""}` : ""}</div>
+      <textarea id="sktext" spellcheck="false" aria-label="SKILL.md">${esc(x.content)}</textarea>
+      <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
+        <button class="btn danger" id="skdel">Delete</button><button class="btn" id="skcopy">Copy to…</button>
+        <button class="btn primary" id="sksave">Save</button></div></div>` : ""}
+
+    <div class="ext-head"><h3>MCP servers</h3><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
+      <button class="btn primary" id="mcpnew">Add server…</button></div>
+    <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
+        <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
+        <div class="mcp-target">${esc(m.target)}</div>
+        ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
+      <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button>
+        <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>`;
+
+  $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
+  $("#sknew").onclick = newSkill;
+  $("#mcpnew").onclick = () => editMcp(null);
+  document.querySelectorAll("[data-mcpedit]").forEach(b => b.onclick = () => editMcp(x.mcp.servers[b.dataset.mcpedit]));
+  document.querySelectorAll("[data-mcpcopy]").forEach(b => b.onclick = async () => {
+    const m = x.mcp.servers[b.dataset.mcpcopy];
+    const to = await pickProfile("Copy MCP server", `<code>${esc(m.name)}</code> is added to the other profile for every project. Its sign-in, if any, is not copied.`, x.profile, "Copy");
+    if (to) { try { await run(() => api("/api/mcp/copy", { profile: x.profile, scope: m.scope, name: m.name, to })); } catch {} }
+  });
+  document.querySelectorAll("[data-mcpdel]").forEach(b => b.onclick = async () => {
+    const m = x.mcp.servers[b.dataset.mcpdel];
+    if (!(await confirmBox(`Remove ${m.name}?`, `It is removed from <code>${esc(x.mcp.config)}</code> (${esc(scopeLabel(m.scope))}). The file goes to the backup first.`, "Remove", "danger"))) return;
+    try { await run(() => api("/api/mcp/delete", { profile: x.profile, scope: m.scope, name: m.name })); } catch {}
+    loadExt();
+  });
+  if (cur) {
+    $("#sksave").onclick = async () => { try { await run(() => api("/api/skills/save", { profile: x.profile, name: x.skill, content: $("#sktext").value })); x.content = $("#sktext").value; } catch {} };
+    $("#skdel").onclick = async () => {
+      const sub = cur.linked ? `Only the link <code>${esc(x.skill)}</code> is removed; the folder it points to is untouched.` : `The folder <code>${esc(x.skill)}</code> goes to the backup.`;
+      if (!(await confirmBox(`Delete ${x.skill}?`, sub + (x.skills.shared ? ` The skills are ${esc(x.skills.shared)}: it disappears there too.` : ""), "Delete", "danger"))) return;
+      try { await run(() => api("/api/skills/delete", { profile: x.profile, name: x.skill })); } catch { return; }
+      x.skill = null; loadExt();
+    };
+    $("#skcopy").onclick = async () => {
+      const to = await pickProfile("Copy skill", `The folder <code>${esc(x.skill)}</code> is copied with all its files.`, x.profile, "Copy");
+      if (to) { try { await run(() => api("/api/skills/copy", { profile: x.profile, name: x.skill, to })); } catch {} }
+    };
+  }
+}
+async function newSkill() {
+  const x = S.ext;
+  const res = await modal({ title: "New skill", sub: `Creates <code>${esc(x.skills.dir)}/&lt;name&gt;/SKILL.md</code>, ready to fill in.`,
+    body: `<div class="form"><label class="f">Name (lowercase letters, digits and dashes)<input class="text" id="skn" placeholder="e.g. release-notes"></label>
+      <label class="f">Description: what it does and when Claude should use it<input class="text" id="skd" placeholder="e.g. Write release notes from the merged pull requests"></label></div>`,
+    actions: [{ label: "Create skill", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  const name = $("#skn", res.el).value.trim();
+  try { await run(() => api("/api/skills/create", { profile: x.profile, name, description: $("#skd", res.el).value })); } catch { return; }
+  await loadExt(); openSkill(name);
+}
+const lines = t => t.split("\n").map(l => l.trim()).filter(Boolean);
+const pairs = (t, sep) => Object.fromEntries(lines(t).map(l => { const i = l.indexOf(sep); return i < 0 ? [l, ""] : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
+async function editMcp(m) {
+  const x = S.ext;
+  const conf = m ? (await api(`/api/mcp/server?profile=${x.profile}&scope=${encodeURIComponent(m.scope)}&name=${encodeURIComponent(m.name)}`)).config : { type: "stdio" };
+  const type = conf.type || (conf.command ? "stdio" : "http");
+  const scopes = m ? [m.scope] : ["user", ...x.mcp.projects];
+  const resP = modal({ title: m ? `Edit ${m.name}` : "Add MCP server",
+    sub: `Saved in <code>${esc(x.mcp.config)}</code>, like <code>claude mcp add</code> does.`,
+    body: `<div class="form">
+      <label class="f">Name<input class="text" id="mn" value="${esc(m?.name || "")}" placeholder="e.g. github"></label>
+      <label class="f">Available in<select id="ms" ${m ? "disabled" : ""}>${scopes.map(s => `<option value="${esc(s)}">${s === "user" ? "All projects" : esc(s)}</option>`).join("")}</select></label>
+      <label class="f">Type<select id="mt">${["stdio", "http", "sse"].map(t => `<option value="${t}" ${t === type ? "selected" : ""}>${{ stdio: "stdio: a local command", http: "http: a remote server", sse: "sse: a remote server (older protocol)" }[t]}</option>`).join("")}</select></label>
+      <label class="f" data-for="stdio">Command<input class="text" id="mc" value="${esc(conf.command || "")}" placeholder="e.g. npx"></label>
+      <label class="f" data-for="stdio">Arguments, one per line<textarea class="code" id="ma" style="min-height:70px">${esc((conf.args || []).join("\n"))}</textarea></label>
+      <label class="f" data-for="stdio">Environment variables, one NAME=value per line<textarea class="code" id="me" style="min-height:60px">${esc(Object.entries(conf.env || {}).map(([k, v]) => `${k}=${v}`).join("\n"))}</textarea></label>
+      <label class="f" data-for="remote">URL<input class="text" id="mu" value="${esc(conf.url || "")}" placeholder="https://…"></label>
+      <label class="f" data-for="remote">Headers, one Name: value per line<textarea class="code" id="mh" style="min-height:60px">${esc(Object.entries(conf.headers || {}).map(([k, v]) => `${k}: ${v}`).join("\n"))}</textarea></label>
+    </div>`, actions: [{ label: m ? "Save" : "Add server", kind: "primary", value: "ok" }] });
+  const show = () => { const t = $("#mt").value; document.querySelectorAll(".modal [data-for]").forEach(el => { el.hidden = (el.dataset.for === "stdio") !== (t === "stdio"); }); };
+  $("#mt").onchange = show; show();
+  const res = await resP;
+  if (!res) return;
+  const v = id => $(id, res.el).value;
+  const t = v("#mt");
+  const out = { ...conf, type: t };  // keeps fields this form does not show
+  for (const k of ["command", "args", "env", "url", "headers"]) delete out[k];
+  if (t === "stdio") {
+    out.command = v("#mc").trim();
+    if (lines(v("#ma")).length) out.args = lines(v("#ma"));
+    if (lines(v("#me")).length) out.env = pairs(v("#me"), "=");
+  } else {
+    out.url = v("#mu").trim();
+    if (lines(v("#mh")).length) out.headers = pairs(v("#mh"), ":");
+  }
+  try { await run(() => api("/api/mcp/save", { profile: x.profile, scope: m ? m.scope : v("#ms"), name: v("#mn").trim(), old_name: m?.name, config: out })); } catch { return; }
+  loadExt();
+}
+
 // ---------- settings ----------
 async function loadSettings(pid) {
   S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings" }; renderSettings();
@@ -648,10 +794,18 @@ async function loadSettings(pid) {
 const fmt = v => v === null || v === undefined ? "default" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
 const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
   : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-none src" style="opacity:.7">default</span>`;
+function selectOptions(f) {
+  const opt = o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`;
+  const groups = [...new Set(f.options.map(o => o.group))];
+  if (groups.length < 2) return f.options.map(opt).join("");
+  return groups.map(g => g ? `<optgroup label="${esc(g)}">${f.options.filter(o => o.group === g).map(opt).join("")}</optgroup>`
+                           : f.options.filter(o => !o.group).map(opt).join("")).join("");
+}
+const optionDesc = (f, v) => v == null || v === "" ? f.default_desc || "" : f.options?.find(o => o.value === v)?.desc || "";
 function fieldInput(f) {
   if (f.type === "select") return `<select data-sfield="${f.key}" style="flex:1;min-width:0" aria-label="${esc(f.label)}">
       <option value="" ${f.value == null ? "selected" : ""}>— default —</option>
-      ${f.options.map(o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select>`;
+      ${selectOptions(f)}</select>`;
   if (f.type === "bool" && f.value != null && typeof f.value !== "boolean") return `<span class="hint">custom value: edit it in the advanced editor</span>`;
   if (f.type === "bool") return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value === true ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>`;
   const list = f.suggest?.length ? `list="dl-${f.key}"` : "";
@@ -672,7 +826,8 @@ function renderSettings() {
       ${d.fields.map(f => `<div class="srow">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
         <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
-          ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}</div>
+          ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
+          ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, f.value))}</div>` : ""}</div>
         <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
           ${JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}</div>
       </div>`).join("")}
@@ -710,7 +865,14 @@ function bindSettings() {
   document.querySelectorAll("[data-sfield]").forEach(el => {
     const f = d.fields.find(x => x.key === el.dataset.sfield);
     if (f.type === "bool") { el.onchange = () => save(f.key, el.checked); return; }
-    if (f.type === "select") { el.onchange = () => save(f.key, el.value === "" ? null : el.value); return; }
+    if (f.type === "select") {
+      el.onchange = () => {
+        const dsc = document.querySelector(`[data-sdesc="${f.key}"]`);
+        if (dsc) dsc.textContent = optionDesc(f, el.value);
+        save(f.key, el.value === "" ? null : el.value);
+      };
+      return;
+    }
     const btn = document.querySelector(`[data-ssave="${f.key}"]`);
     const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null);
     el.oninput = () => { btn.hidden = JSON.stringify(val()) === JSON.stringify(f.value ?? null); };
@@ -877,6 +1039,7 @@ document.addEventListener("click", async e => {
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
     if (S.tab === "profiles") return loadSharing();
+    if (S.tab === "ext") return loadExt();
     if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
     if (S.tab === "backups") return loadBackups();
     return render();
@@ -885,6 +1048,8 @@ document.addEventListener("click", async e => {
   if (t.hasAttribute("data-install")) return installClaude();
   if (t.hasAttribute("data-install-log")) return showInstallLog();
   if (t.dataset.pedit) return editProfile(t.dataset.pedit);
+  if (t.dataset.pext) { S.tab = "ext"; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === "ext")); return loadExt(t.dataset.pext); }
+  if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
@@ -906,14 +1071,16 @@ document.addEventListener("click", async e => {
   if (t.dataset.hrelink) { await doRelink(byName(t.dataset.hrelink), t.dataset.prof); return S.tab === "health" && loadHealth(); }
   if (t.dataset.hdel) { await doDelete(byName(t.dataset.hdel), t.dataset.prof); return S.tab === "health" && loadHealth(); }
 });
-document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openMemFile(c.dataset.mfile); });
-document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openMemFile(c.dataset.mfile); } });
+const openCard = c => c.dataset.skill ? openSkill(c.dataset.skill) : openMemFile(c.dataset.mfile);
+document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openCard(c); });
+document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(c); } });
 
 function render() {
   if (S.tab === "projects") renderProjects();
   else if (S.tab === "memories") renderMemories();
   else if (S.tab === "settings") renderSettings();
   else if (S.tab === "profiles") renderSharing();
+  else if (S.tab === "ext") renderExt();
   else if (S.tab === "backups") renderBackups();
   else renderHealth();
 }
