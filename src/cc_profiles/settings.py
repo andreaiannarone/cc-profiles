@@ -125,12 +125,12 @@ SETTING_FIELDS = [
     {"group": "Notifications and updates", "key": "autoUpdatesChannel", "type": "select", "default": "latest", "label": "Auto-update channel",
      "help": "Latest releases, or the stable ones that have been out for a while",
      "options": [("latest", "Latest"), ("stable", "Stable")]},
-    # commits and pull requests: an empty text is a value of its own, Claude Code then adds nothing
-    {"group": "Commits and pull requests", "key": "attribution.commit", "type": "text", "blank": True,
-     "label": "Commit attribution",
-     "help": "Text Claude adds to its commits, trailers included (e.g. Co-Authored-By: …). Empty: none"},
-    {"group": "Commits and pull requests", "key": "attribution.pr", "type": "text", "blank": True,
-     "label": "Pull request attribution", "help": "Text Claude adds to the pull requests it opens. Empty: none"},
+    # commits and pull requests: a switch. Off is an empty text, which Claude Code reads as
+    # "no attribution"; on is the key's absence, its own attribution. A custom text counts as on and is kept.
+    {"group": "Commits and pull requests", "key": "attribution.commit", "type": "bool", "default": True, "off_value": "",
+     "label": "Commit attribution", "help": "Claude adds itself to its commits (Co-Authored-By)"},
+    {"group": "Commits and pull requests", "key": "attribution.pr", "type": "bool", "default": True, "off_value": "",
+     "label": "Pull request attribution", "help": "Claude mentions itself in the pull requests it opens"},
     {"group": "Commits and pull requests", "key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits",
      "deprecated": True, "only_if_set": True,
      "help": "Replaced by Commit attribution and Pull request attribution: remove it with ×"},
@@ -329,13 +329,17 @@ def check_setting_value(fd, prof, value):
     """The value to write (None removes the setting), checked against the field's type."""
     if value is None:
         return None
+    if "off_value" in fd:
+        if not isinstance(value, bool):
+            raise ApiError("Invalid value: expected true or false")
+        return None if value else fd["off_value"]
     if fd["type"] == "bool" and not isinstance(value, bool):
         raise ApiError("Invalid value: expected true or false")
     if fd["type"] == "number":
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ApiError("Invalid value: expected a whole number greater than zero")
     if fd["type"] == "text":
-        value = str(value).strip() or ("" if fd.get("blank") else None)
+        value = str(value).strip() or None
     if fd.get("drop_default") and value == fd.get("default"):
         return None  # as /config does: the default is the key's absence
     if fd["type"] == "select":
@@ -367,6 +371,8 @@ def op_setting(pid, key, value):
 def show_value(fd, prof, value):
     if value is None:
         return "the default"
+    if "off_value" in fd:
+        return "off" if value == fd["off_value"] else "custom text"
     if value == "":
         return "none"
     if isinstance(value, bool):
@@ -404,7 +410,8 @@ def setting_all_plan(pid, key):
     fd = setting_field(key)
     value, _ = effective(prof, key)
     try:  # the type only: whether an option exists is checked in each profile
-        value = check_setting_value(dict(fd, type="text" if fd["type"] == "select" else fd["type"]), prof, value)
+        if "off_value" not in fd:  # a switch stored as text: its stored value is copied as it is
+            value = check_setting_value(dict(fd, type="text" if fd["type"] == "select" else fd["type"]), prof, value)
     except ApiError:
         raise ApiError(f"The value in {prof['label']} is not valid: fix it there first")
     apply, skip = [], []

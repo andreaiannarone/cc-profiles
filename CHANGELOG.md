@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 - Automatic backup cleanup: pick 15, 30, 60 or 90 days. A 180 or 365 already set keeps working until you change it.
-- Settings: the **General** section now has the same settings as Claude Code's `/config` panel, in groups (Model and replies, Interface, Editor and files, Notifications and updates, Commits and pull requests), plus the commit and pull request attribution. The keys `/config` keeps in `.claude.json` (Auto-compact, Verbose output, Diff tool, Editor mode and more) are written there, so Editor mode now goes where Claude Code reads it. Dropdowns name their default value. Effort level, Renderer, Days to keep conversations and Session link are no longer listed: they are not in `/config` (edit them in the advanced editor).
+- Settings: the **General** section now has the same settings as Claude Code's `/config` panel, in groups (Model and replies, Interface, Editor and files, Notifications and updates, Commits and pull requests), plus the commit and pull request attribution as on/off switches. The keys `/config` keeps in `.claude.json` (Auto-compact, Verbose output, Diff tool, Editor mode and more) are written there, so Editor mode now goes where Claude Code reads it. Dropdowns name their default value. Effort level, Renderer, Days to keep conversations and Session link are no longer listed: they are not in `/config` (edit them in the advanced editor).
 
 ## [0.4.1] - 2026-10-05
 

@@ -297,8 +297,9 @@ def test_settings_write_where_the_value_lives(home, app_factory):
 
 
 def test_attribution_keys_live_inside_their_object(home, app_factory):
-    """attribution is an object: each of its keys is a field, an empty text means none,
-    and the deprecated includeCoAuthoredBy shows only where a profile still has it."""
+    """attribution is an object: commit and pr are switches, off is an empty text (no
+    attribution), on is the key's absence; a custom text counts as on and is kept. The
+    deprecated includeCoAuthoredBy shows only where a profile still has it."""
     basic_home(home)
     home.json(".claude/settings.json", {"includeCoAuthoredBy": False, "attribution": {"pr": "via Claude"}})
     before = home.snapshot()
@@ -309,17 +310,20 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
     assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
 
-    app.post(P, {"profile": "default", "key": "attribution.commit", "value": "  "})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": "text"})
+    app.post(P, {"profile": "default", "key": "attribution.commit", "value": False})
     app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
     data = json.loads(home.path(".claude/settings.json").read_text())
     assert data == {"attribution": {"pr": "via Claude", "commit": ""}}
     assert "includeCoAuthoredBy" not in keys("work")
+    plan = app.get("/api/settings/field/all/preview?profile=default&key=attribution.commit")
+    assert plan["shown"] == "off" and [a["id"] for a in plan["apply"]] == ["work"]
     for k in ("attribution.pr", "attribution.commit"):
-        app.post(P, {"profile": "default", "key": k, "value": None})
+        app.post(P, {"profile": "default", "key": k, "value": True})
     assert json.loads(home.path(".claude/settings.json").read_text()) == {}  # the empty object goes too
 
     home.json(".claude-work/settings.json", {"attribution": "text"})
-    assert "not an object" in app.post_error(P, {"profile": "work", "key": "attribution.pr", "value": "x"})
+    assert "not an object" in app.post_error(P, {"profile": "work", "key": "attribution.pr", "value": False})
     app.restore_all()
     home.json(".claude-work/settings.json", {})
     assert home.snapshot() == before

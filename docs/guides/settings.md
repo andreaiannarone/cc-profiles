@@ -47,8 +47,8 @@ The same settings as the `/config` panel of Claude Code, in five groups, plus th
 | Notifications | `preferredNotifChannel` ¹ | `auto`, `iterm2`, `terminal_bell`, `iterm2_with_bell`, `kitty`, `ghostty`, `notifications_disabled` |
 | Auto-update channel | `autoUpdatesChannel` | `latest`, `stable` |
 | **Commits and pull requests** | | |
-| Commit attribution | `attribution.commit` | free text; empty means no attribution |
-| Pull request attribution | `attribution.pr` | free text; empty means no attribution |
+| Commit attribution | `attribution.commit` | on/off, on by default: off saves an empty text (no attribution), on removes the key; a custom text counts as on and is kept |
+| Pull request attribution | `attribution.pr` | on/off, the same way |
 | Co-authored-by in commits | `includeCoAuthoredBy` | shown only while a profile has it: deprecated by Claude Code, remove it with × |
 
 ¹ Kept in the profile's `.claude.json`, as `/config` does, not in `settings.json`. Claude Code re-reads that file before it writes it, so a change made here is not lost; an open session picks it up when it restarts.

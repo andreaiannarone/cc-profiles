@@ -1282,10 +1282,11 @@ function fieldInput(f) {
   if (f.type === "select") return `<select data-sfield="${f.key}" style="flex:1;min-width:0" aria-label="${esc(f.label)}">
       <option value="" ${f.value == null ? "selected" : ""}>— default${f.default != null && f.options?.find(o => o.value === f.default) ? ": " + esc(f.options.find(o => o.value === f.default).label) : ""} —</option>
       ${selectOptions(f)}</select>`;
+  if (f.off_value !== undefined) return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value !== f.off_value ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>${typeof f.value === "string" && f.value !== f.off_value ? `<span class="hint" title="${esc(f.value)}">custom text, kept</span>` : ""}`;
   if (f.type === "bool" && f.value != null && typeof f.value !== "boolean") return `<span class="hint">custom value: edit it in the advanced editor</span>`;
   if (f.type === "bool") return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value === true || (f.value == null && f.default === true) ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>`;
   const list = f.suggest?.length ? `list="dl-${f.key}"` : "";
-  return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="${f.value === "" ? "none: no attribution" : "default"}" ${list} aria-label="${esc(f.label)}">
+  return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="default" ${list} aria-label="${esc(f.label)}">
     ${f.suggest?.length ? `<datalist id="dl-${f.key}">${f.suggest.map(v => `<option value="${esc(v)}">`).join("")}</datalist>` : ""}
     <button class="btn small" data-ssave="${f.key}" hidden>Save</button>`;
 }
@@ -1304,7 +1305,7 @@ function renderSettings() {
         <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
           ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, f.value))}</div>` : ""}</div>
-        <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
+        <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.off_value !== undefined ? (o.value === f.off_value ? "off" : o.value == null ? "on" : "custom") : f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
           ${f.deprecated ? "" : JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}
           ${!f.deprecated && f.others.some(o => JSON.stringify(o.value) !== JSON.stringify(f.value)) ? `<div><button class="btn small" data-sall="${f.key}" title="Give every other profile the value of this one">Apply to all…</button></div>` : ""}</div>
       </div>`).join("")}
@@ -1354,7 +1355,7 @@ function bindSettings() {
       return;
     }
     const btn = document.querySelector(`[data-ssave="${f.key}"]`);
-    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || (f.blank ? "" : null));
+    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null);
     el.oninput = () => { btn.hidden = JSON.stringify(val()) === JSON.stringify(f.value ?? null); };
     el.onkeydown = e => { if (e.key === "Enter" && !btn.hidden) btn.click(); };
     btn.onclick = () => save(f.key, val());
