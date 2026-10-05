@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Settings → Status line: a **Tokens** piece shows `question:12k session:1.2M`, the tokens since your last prompt and in the whole session, read from the conversation file at each refresh. **Rate limits: Used / Left** shows the 5-hour and weekly limits as the share left, with the time until the reset once half or less is left (`5h:22%→1h20m 7d:59%`). Status lines saved before keep showing the share used.
+
 ## [0.4.3] - 2026-10-06
 
 ### Changed
