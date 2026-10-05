@@ -42,6 +42,10 @@ DIR_PLACEHOLDER = "__CC_PROFILES_PROFILE_DIR__"
 IMPORT_MAX = 500 * 1024 * 1024          # size of the uploaded zip
 IMPORT_MAX_UNPACKED = 5 * 1024 ** 3     # size once unpacked: refuse zip bombs
 NEVER_EXPORT = {".credentials.json"}    # at any depth
+# A template (see templates.py) is an export with only these top-level items, and with
+# only the MCP servers from .claude.json: no conversations, memories or credentials.
+TEMPLATE_ITEMS = {"settings.json", "settings.local.json", "CLAUDE.md", "skills", "agents", "commands",
+                  "output-styles"}
 
 
 def holds_profile_paths(rel):
@@ -59,12 +63,14 @@ def share_note(prof, item):
     return f"shared with {', '.join(users)}" if users else ""
 
 
-def export_profile(pid, projects):
-    """Write the profile into a temporary zip. Returns (path, download name)."""
+def export_profile(pid, projects, template=False):
+    """Write the profile into a temporary zip. Returns (path, download name).
+    template: only TEMPLATE_ITEMS and the MCP servers (projects is ignored)."""
     prof = profile(pid)
     d = prof["dir_abs"]
     if not os.path.isdir(d):
         raise ApiError(f"{pretty(d)} does not exist")
+    projects = projects and not template
     skip = RUNTIME | NEVER_EXPORT | (set() if projects else PROJECT_DATA)
     shared = [i for i, _, _ in SHARE_ITEMS if os.path.islink(os.path.join(d, i))]
     dirs = sorted({d, os.path.realpath(d)}, key=len, reverse=True)
@@ -91,7 +97,9 @@ def export_profile(pid, projects):
                     return
                 seen.add(real)
                 for name in sorted(os.listdir(src)):
-                    if (rel == "" and name in skip) or name in NEVER_EXPORT or name == ".trash":
+                    if rel == "" and (name in skip or (template and name not in TEMPLATE_ITEMS)):
+                        continue
+                    if name in NEVER_EXPORT or name == ".trash":
                         continue
                     p = os.path.join(src, name)
                     if os.path.islink(p) and not os.path.realpath(p).startswith(os.path.realpath(HOME) + os.sep):
@@ -107,9 +115,11 @@ def export_profile(pid, projects):
                 cfg.pop(k, None)
             if not projects:
                 cfg.pop("projects", None)  # per-project settings go with the projects
+            if template:
+                cfg = {"mcpServers": cfg["mcpServers"]} if isinstance(cfg.get("mcpServers"), dict) else {}
             z.writestr("claude.json", json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
             home_memory = os.path.join(d, "projects", san(HOME), "memory")
-            has_home_memory = not projects and os.path.isdir(home_memory)
+            has_home_memory = not projects and not template and os.path.isdir(home_memory)
             if has_home_memory:
                 for f in sorted(os.listdir(home_memory)):
                     if os.path.isfile(os.path.join(home_memory, f)):
@@ -117,7 +127,7 @@ def export_profile(pid, projects):
             z.writestr(EXPORT_MANIFEST, json.dumps({
                 "app": "cc-profiles", "format": EXPORT_FORMAT, "version": __version__,
                 "label": prof["label"], "id": prof["id"], "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "projects": bool(projects), "home_memory": has_home_memory,
+                "projects": bool(projects), "home_memory": has_home_memory, "template": bool(template),
                 "shared": shared, "files": count[0]}, indent=2) + "\n")
     except Exception:
         os.unlink(tmp)
@@ -137,7 +147,8 @@ def check_zip_entry(info):
         raise ApiError(f"Unexpected entry in the archive: {name}. Nothing was imported.")
 
 
-def op_import_profile(zip_path, label, pid):
+def op_import_profile(zip_path, label, pid, template=None):
+    """Create a profile from an export. template: the name of the template it comes from."""
     try:
         z = zipfile.ZipFile(zip_path)
     except (zipfile.BadZipFile, OSError):
@@ -154,8 +165,12 @@ def op_import_profile(zip_path, label, pid):
             raise ApiError("This export was made by a newer cc-profiles: update cc-profiles and try again.")
         if sum(i.file_size for i in infos) > IMPORT_MAX_UNPACKED:
             raise ApiError("The archive is too big once unpacked (over 5 GB).")
-        label, pid, new, command = check_new_profile(label or man.get("label"), pid or man.get("id"))
-        bk = Backup("import-profile", f"Import profile {label} ({pretty(new)})")
+        if template:  # the template's own label and id belong to the profile it was saved from
+            label, pid, new, command = check_new_profile(label, pid)
+            bk = Backup("new-profile", f"New profile {label} from template {template} ({pretty(new)})")
+        else:
+            label, pid, new, command = check_new_profile(label or man.get("label"), pid or man.get("id"))
+            bk = Backup("import-profile", f"Import profile {label} ({pretty(new)})")
         bk.copy(CONFIG_FILE, "config.json")
         bk.created(new)  # journaled first: a failure while unpacking leaves a folder that Restore removes
         os.makedirs(new)
@@ -187,9 +202,13 @@ def op_import_profile(zip_path, label, pid):
             shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
             raise
     add_profile_to_config(label, pid, command)
-    bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
-            f"conversations: {'yes' if man.get('projects') else 'no'}")
-    msg = f"Profile {label} imported. It is not logged in: run {command} and log in with /login."
+    if template:
+        bk.note(f"from the template {template}, saved from {man.get('label')} ({man.get('created', '?')})")
+        msg = f"Profile {label} created from the template {template}. Run {command} and log in with /login."
+    else:
+        bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
+                f"conversations: {'yes' if man.get('projects') else 'no'}")
+        msg = f"Profile {label} imported. It is not logged in: run {command} and log in with /login."
     if not launcher_dir_in_path():
         msg += f" Note: {pretty(LAUNCHER_DIR)} is not in your PATH yet."
     return {"message": msg, "backup": bk.close()}

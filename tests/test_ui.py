@@ -140,4 +140,35 @@ def test_no_serious_accessibility_violations(page_on_sandbox, theme):
     found["phone width"] = axe_violations(page)
     found = {t: v for t, v in found.items() if v}
     assert found == {}, "\n".join(f"{t}: {x}" for t, vs in found.items() for x in vs)
+
+
+def cancel(page):
+    page.click(".modal [data-close]")
+    page.wait_for_selector(".modal", state="detached")
+
+
+def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.click('[data-pdel="work"]')
+    page.click('.modal input[name="pd"][value="default"]')
+    page.wait_for_selector("#pd-plan details")
+    assert "Moves to Default" in page.inner_text("#pd-plan")
+    cancel(page)
+    page.click('label.switch:has([data-share="agents"][data-prof="work"])')
+    page.wait_for_selector(".modal details")
+    cancel(page)
+    page.click("#ptemplates")
+    page.wait_for_selector("#tp-name")
+    cancel(page)
+    page.click("[data-newprofile]")
+    page.wait_for_selector("#np-label")
+    cancel(page)
+
+    open_tab(page, "settings")
+    page.click("[data-sall]")
+    page.wait_for_selector(".modal ul.plan")
+    cancel(page)
+    open_tab(page, "backups")
+    assert page.query_selector("#bk-auto") is not None
     assert errors == []

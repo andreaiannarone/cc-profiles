@@ -69,6 +69,8 @@ Rules:
 | Health check | `.check.ok` `.warn` `.error` | ✓ ! ✕ icon in a 16px column |
 | Modal | `modal({ title, sub, body, actions })` | closes with Esc, a click outside, or Cancel; the first field gets focus; actions without a `label` do not appear in the footer |
 | Typed confirmation | "Type *Name* to confirm" field | only for the biggest operations (deleting a profile): the button stays disabled until the text matches |
+| Plan preview | `planDetails(items, to)` → `<details>` with `ul.plan` | "Show the N files and folders it touches", one line per item with its action; `li.conflict` in amber. Used by move, delete profile, share and separate |
+| Apply to all | `applyAll(title, preview, intro, okLabel, post)` | confirmation listing the profiles that change (with the old → new detail) and the ones skipped with the reason; says that one Restore undoes it all |
 | Danger box | `.danger-box` | red border and background, for a risk to read before confirming (e.g. an open session) |
 | Notice | `.notice` | a bar above the profiles for a system-level state (Claude Code missing, installing, not in `PATH`) |
 | Drawer | `.drawer` | right side panel for the About information; sticky header with Refresh and Close |

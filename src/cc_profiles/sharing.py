@@ -5,7 +5,7 @@
 import os
 import shutil
 
-from .core import ApiError, Backup, profile, profiles, write_text
+from .core import ApiError, Backup, pretty, profile, profiles, write_text
 
 # ---------------------------------------------------------------------------
 # Sharing between profiles
@@ -49,14 +49,45 @@ def list_sharing():
     return out
 
 
-def op_share(pid, item, on):
+def check_share(pid, item):
     kinds = {i: k for i, k, _ in SHARE_ITEMS}
     if item not in kinds:
         raise ApiError("This item cannot be shared")
     prof, src = profile(pid), primary()
     if prof["id"] == src["id"]:
         raise ApiError(f"{src['label']} is the source profile: the others share from it")
-    kind = kinds[item]
+    return prof, src, kinds[item]
+
+
+def share_plan(pid, item, on):
+    """What sharing (on) or separating an item would do, without doing it: the same rules as op_share."""
+    prof, src, kind = check_share(pid, item)
+    t = os.path.join(prof["dir_abs"], item)
+    s = os.path.join(src["dir_abs"], item)
+    st = share_state(prof, item, kind)
+    items = []
+    if on:
+        if st["shared"]:
+            raise ApiError("Already shared")
+        if not os.path.lexists(s):
+            items.append({"action": "create", "item": item, "from": "", "to": pretty(s)})
+        if st["own"]:
+            items.append({"action": "stash", "item": item, "from": pretty(t), "to": "backup"})
+            for n in st["only_own"]:
+                items.append({"action": "only-here", "item": f"{item}/{n}", "from": pretty(os.path.join(t, n)),
+                              "to": "backup"})
+        items.append({"action": "link", "item": item, "from": pretty(t), "to": pretty(s)})
+    else:
+        if not st["shared"]:
+            raise ApiError("Not shared")
+        items.append({"action": "stash", "item": f"{item} (the link)", "from": pretty(t), "to": "backup"})
+        n = sum(len(fs) for _, _, fs in os.walk(s)) if kind == "dir" else 1
+        items.append({"action": "copy", "item": item, "from": pretty(s), "to": pretty(t), "files": n})
+    return {"items": items, "source": src["label"], "profile": prof["label"], "only_own": st["only_own"] if on else []}
+
+
+def op_share(pid, item, on):
+    prof, src, kind = check_share(pid, item)
     t = os.path.join(prof["dir_abs"], item)
     s = os.path.join(src["dir_abs"], item)
     st = share_state(prof, item, kind)

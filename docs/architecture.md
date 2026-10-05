@@ -20,24 +20,25 @@ The code is one module per area. Each module imports only from the ones above it
 | `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
 | `projects.py` | list, move (with preview), relink, delete, rules |
 | `memories.py` | list, read, save, move, delete |
-| `sharing.py` | symlinks to the source profile |
-| `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md` |
+| `sharing.py` | symlinks to the source profile, with a preview |
+| `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `health.py` | profile summaries, candidate folders, health checks |
-| `backups.py` | list, restore (journal replayed backwards), delete, prune |
+| `backups.py` | list, restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
 | `info.py` | the About panel |
-| `extensions.py` | skills and MCP servers |
+| `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
+| `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
 | `plugins.py` | installed plugins, enable and disable |
-| `editprofile.py` | rename, change command, delete with optional merge |
+| `editprofile.py` | rename, change command, delete with optional merge, with a preview |
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
-| `cli.py` | `serve`, `open`, `install-command`, `label`, argument parsing |
+| `cli.py` | `serve` (with the automatic backup cleanup at start and daily), `open`, `install-command`, `label`, argument parsing |
 
 `server.py` re-exports every public name, so `from cc_profiles import server` and the `cc-profiles` console script keep working. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.
 

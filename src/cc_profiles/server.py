@@ -22,6 +22,7 @@ from .command import *  # noqa: F401,F403
 from .launchers import *  # noqa: F401,F403
 from .newprofile import *  # noqa: F401,F403
 from .transfer import *  # noqa: F401,F403
+from .templates import *  # noqa: F401,F403
 from .plugins import *  # noqa: F401,F403
 from .editprofile import *  # noqa: F401,F403
 from .installer import *  # noqa: F401,F403

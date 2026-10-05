@@ -14,6 +14,7 @@ import webbrowser
 from . import __version__
 from . import core
 from .core import CONFIG_FILE, DATA_DIR, expand, load_config, pretty, read_json
+from .backups import AUTO_PRUNE, auto_prune
 from .command import install_command
 from .web import Handler, Server
 
@@ -31,10 +32,28 @@ def current_label():
     return base[len(".claude-"):] if base.startswith(".claude-") else "default"
 
 
+def cleanup_backups():
+    """The automatic backup cleanup, if it is on (see backups.auto_prune)."""
+    try:
+        with core._lock:
+            if auto_prune():
+                print(f"Automatic backup cleanup: {AUTO_PRUNE['message']}")
+    except Exception as e:  # noqa: BLE001 - a failed cleanup must not stop the server
+        print(f"Automatic backup cleanup failed: {e}")
+
+
+def cleanup_daily():
+    while True:
+        time.sleep(86400)
+        cleanup_backups()
+
+
 def serve(port, open_browser):
     core.PORT = port
     core.ALLOWED_HOSTS = {f"127.0.0.1:{port}", f"localhost:{port}"}
     load_config()
+    cleanup_backups()
+    threading.Thread(target=cleanup_daily, daemon=True).start()
     try:
         srv = Server(("127.0.0.1", port), Handler)
     except OSError:

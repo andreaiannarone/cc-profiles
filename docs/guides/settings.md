@@ -26,6 +26,18 @@ For each setting you see:
 - **where the value comes from**: `settings.local.json` (amber, because it wins over `settings.json`), `settings.json`, or *default*. Saving writes to the file the value comes from, so a change is never hidden by a local override.
 - **×** to remove the setting and go back to the default.
 - **the other profiles' values**, with *copy* to take one.
+- **Apply to all…**, when another profile has a different value: gives every other profile the value saved in this one.
+
+### Apply a setting to every profile
+
+**Apply to all…** first shows which profiles change (old value → new value, and the file) and which are skipped, with the reason:
+
+- the profile already has that value;
+- it shares the file with a profile that is already being changed (for example a shared `settings.json`);
+- the value is not available there (a custom output style the profile does not have);
+- its settings file has a JSON error.
+
+Each profile is written where its value lives, as with a normal save. If the value is the default, the setting is removed wherever it is set. It is **one operation with one backup** covering every profile: one Restore in the Backups tab undoes it all.
 
 ## CLAUDE.md
 
@@ -48,6 +60,8 @@ mcp__claude_ai_Gmail
 ```
 
 Other keys of `permissions` (such as `defaultMode`) are preserved. Rules in `settings.local.json` are shown as a count; edit them in the advanced editor.
+
+**Add a rule to every profile…** adds one rule to one list (`allow`, `ask` or `deny`) in the `settings.json` of every profile. The confirmation lists the profiles that change and the ones skipped: those that already have the rule in that list, those sharing `settings.json` with a profile already changed, and those whose `settings.json` has an error. If a profile has the same rule in another list, the confirmation says so. One backup covers every profile.
 
 ## Advanced editor
 

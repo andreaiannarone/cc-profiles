@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 
-from .core import ApiError, BACKUP_DIR, Backup, pretty, read_json, write_json
+from .core import ApiError, BACKUP_DIR, Backup, CONFIG_FILE, load_config, pretty, read_json, write_json
 
 # ---------------------------------------------------------------------------
 # Backups and restore
@@ -111,16 +111,71 @@ def op_backup_delete(name):
     return {"message": "Backup permanently deleted."}
 
 
-def op_backup_prune(days):
-    """Permanently delete the backups created more than `days` days ago."""
-    if not isinstance(days, int) or isinstance(days, bool) or days < 1:
-        raise ApiError("Pick a number of days, 1 or more")
+def prune(days, keep_incomplete=False):
+    """Permanently delete the backups created more than `days` days ago. Returns (count, bytes)."""
     limit = time.time() - days * 86400
-    old = [b for b in list_backups() if b["created"] < limit]
+    old = [b for b in list_backups() if b["created"] < limit
+           and not (keep_incomplete and b["failed"] and not b["restored"])]
     freed = sum(b["size"] for b in old)
     for b in old:
         shutil.rmtree(backup_path(b["name"]))
-    if not old:
+    return len(old), freed
+
+
+def op_backup_prune(days):
+    if not isinstance(days, int) or isinstance(days, bool) or days < 1:
+        raise ApiError("Pick a number of days, 1 or more")
+    n, freed = prune(days)
+    if not n:
         return {"message": f"No backups older than {days} days."}
-    n = len(old)
     return {"message": f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."}
+
+
+# Automatic cleanup, off by default: "backup_keep_days" in config.json. The server prunes
+# when it starts and once a day while it runs. It never deletes a backup from the last
+# 24 hours, nor an incomplete one (a failed operation) that has not been restored yet.
+AUTO_PRUNE_CHOICES = (30, 90, 180, 365)
+AUTO_PRUNE = {"last": None, "message": ""}  # the last automatic cleanup in this process
+
+
+def keep_days():
+    days = load_config().get("backup_keep_days")
+    return days if days in AUTO_PRUNE_CHOICES else None
+
+
+def auto_prune():
+    """Run the automatic cleanup if it is on. Returns the number of backups deleted."""
+    days = keep_days()
+    if not days:
+        return 0
+    n, freed = prune(max(days, 1), keep_incomplete=True)
+    AUTO_PRUNE["last"] = time.time()
+    AUTO_PRUNE["message"] = (f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."
+                             if n else f"No backups older than {days} days.")
+    return n
+
+
+def backup_auto():
+    return {"days": keep_days(), "choices": list(AUTO_PRUNE_CHOICES), "last": AUTO_PRUNE["last"],
+            "message": AUTO_PRUNE["message"], "config": pretty(CONFIG_FILE)}
+
+
+def op_backup_auto(days):
+    if days is not None and days not in AUTO_PRUNE_CHOICES:
+        raise ApiError("Pick 30, 90, 180 or 365 days, or turn the cleanup off")
+    if days == keep_days():
+        raise ApiError("Nothing to change")
+    bk = Backup("backup-cleanup", "Automatic backup cleanup: " + (f"older than {days} days" if days else "off"))
+    bk.copy(CONFIG_FILE, "config.json")
+    cfg = load_config()
+    if days:
+        cfg["backup_keep_days"] = days
+    else:
+        cfg.pop("backup_keep_days", None)
+    write_json(CONFIG_FILE, cfg)
+    backup = bk.close()
+    if not days:
+        return {"message": "Automatic cleanup off: backups are kept until you delete them.", "backup": backup}
+    auto_prune()
+    return {"message": f"Backups older than {days} days are deleted automatically. {AUTO_PRUNE['message']}",
+            "backup": backup}

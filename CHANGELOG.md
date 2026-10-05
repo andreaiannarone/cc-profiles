@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - Keyboard shortcuts: `/` focuses the search, `g` then a letter opens a tab (`g p` Projects, `g h` Health…), `?` lists them all. A keyboard button in the header shows the same list.
 - The browser smoke test runs axe-core on every tab, the shortcuts dialog, the About panel and phone width, in light and dark themes, and fails on serious or critical accessibility problems (`axe-playwright-python` in the `ui` extra).
+- Previews for deleting a profile (what is merged where, the launcher or alias removed, the config entry, the folder that goes to the backup) and for sharing or separating an item (the own copy and the items only it has, the link, what is created in the source), shown in their confirmations. New read-only endpoints `GET /api/profiles/delete/preview` and `GET /api/sharing/preview`.
+- Apply to all profiles: a setting's value (Settings, **Apply to all…**), a permission rule (**Add a rule to every profile…**), a skill and an MCP server (**Copy to all…**). Each is one operation with one backup covering every profile, and the confirmation lists the profiles changed and the ones skipped, with the reason.
+- Automatic backup cleanup, off by default: in the Backups tab, delete backups older than 30, 90, 180 or 365 days when the app starts and once a day. It never deletes a backup from the last 24 hours, nor an incomplete one that has not been restored. Stored as `backup_keep_days` in `config.json`.
+- Profile templates: save a profile's settings, `CLAUDE.md`, permissions, skills, agents, commands, output styles and MCP servers as `~/.cc-profiles/templates/<name>.zip` (never conversations, memories or credentials) and pick *From template: …* in New profile. **Templates…** in the Profiles tab lists, saves and deletes them.
 
 ### Changed
 - The eleven tabs are grouped: Content, Extensions, Profiles and System. From 1100px they form a sidebar; on narrower windows a group switcher shows one group's tabs at a time, with a red dot on a group that needs attention.

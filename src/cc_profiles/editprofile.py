@@ -15,10 +15,17 @@ from .core import (
     profile,
     write_json,
 )
-from .paths import memory_files, path_index
-from .projects import move_history, move_project_into
+from .paths import history_lines, memory_files, path_index
+from .projects import move_history, move_plan, move_project_into
 from .sharing import primary
-from .launchers import command_conflict, is_our_launcher, launcher_path, rewrite_alias, write_launcher
+from .launchers import (
+    alias_files,
+    command_conflict,
+    is_our_launcher,
+    launcher_path,
+    rewrite_alias,
+    write_launcher,
+)
 
 # ---------------------------------------------------------------------------
 # Edit and delete profiles
@@ -72,24 +79,68 @@ def op_update_profile(pid, label, command):
     return {"message": msg, "backup": bk.close()}
 
 
-def op_delete_profile(pid, merge_into=None, force=False):
+def check_delete(pid, merge_into):
     prof = profile(pid)
     if pid == primary()["id"]:
         raise ApiError(f"{prof['label']} is the source profile: the others share from it, so it cannot be deleted")
-    if active_session(prof) and not force:
-        raise ApiError(f"A session is open in {prof['label']}: close it before deleting the profile", 409)
     dst = profile(merge_into) if merge_into else None
     if dst and dst["id"] == pid:
         raise ApiError("A profile cannot be merged into itself")
+    return prof, dst
+
+
+def mergeable_projects(prof):
+    """Project folders a merge moves: those with conversations or memories."""
+    out = []
+    for d in sorted(glob.glob(os.path.join(prof["dir_abs"], "projects", "*", ""))):
+        if glob.glob(os.path.join(d, "*.jsonl")) or memory_files(d):
+            out.append(os.path.basename(d.rstrip("/")))
+    return out
+
+
+def delete_plan(pid, merge_into=None):
+    """What deleting a profile would do, without doing it: the same rules as op_delete_profile."""
+    prof, dst = check_delete(pid, merge_into)
+    items = []
+    out = {"items": items, "projects": 0, "conversations": 0, "memories": 0, "prompts": 0, "settings": 0,
+           "active": bool(active_session(prof)), "folder": pretty(prof["dir_abs"]),
+           "config": pretty(CONFIG_FILE), "into": dst["label"] if dst else None}
+    if dst:
+        idx = path_index()
+        for name in mergeable_projects(prof):
+            plan = move_plan(name, pid, dst["id"], idx)
+            where = os.path.basename(idx[name]) if idx.get(name) else name
+            for i in plan["items"]:
+                items.append(dict(i, item=f"{where}/{i['item']}"))
+                out["conversations"] += i["item"].endswith(".jsonl") and "/" not in i["item"]
+                out["memories"] += i["item"].startswith("memory/") and i["item"] != "memory/MEMORY.md"
+            out["projects"] += 1
+            out["settings"] += plan["settings"]
+        out["prompts"] = len(history_lines(prof))  # the whole history goes, without duplicates
+        if out["prompts"]:
+            h = os.path.join(prof["dir_abs"], "history.jsonl")
+            items.append({"action": "merge", "item": "history.jsonl", "from": pretty(h),
+                          "to": pretty(os.path.join(dst["dir_abs"], "history.jsonl"))})
+    cmd = prof.get("command", "")
+    if cmd and is_our_launcher(launcher_path(cmd)):
+        items.append({"action": "stash", "item": "launcher", "from": pretty(launcher_path(cmd)), "to": "backup"})
+    for rc in alias_files(cmd) if cmd else []:
+        items.append({"action": "edit", "item": "shell alias", "from": pretty(rc), "to": f"alias {cmd} removed"})
+    items.append({"action": "edit", "item": "config entry", "from": pretty(CONFIG_FILE), "to": f"{prof['label']} removed"})
+    items.append({"action": "stash", "item": "profile folder", "from": pretty(prof["dir_abs"]), "to": "backup"})
+    return out
+
+
+def op_delete_profile(pid, merge_into=None, force=False):
+    prof, dst = check_delete(pid, merge_into)
+    if active_session(prof) and not force:
+        raise ApiError(f"A session is open in {prof['label']}: close it before deleting the profile", 409)
     bk = Backup(f"delete-profile-{pid}", f"Delete profile {prof['label']} ({pretty(prof['dir_abs'])})")
     bk.copy(CONFIG_FILE, "config.json")
     moved = conv = hist = 0
     if dst:
         idx = path_index()
-        for d in sorted(glob.glob(os.path.join(prof["dir_abs"], "projects", "*", ""))):
-            name = os.path.basename(d.rstrip("/"))
-            if not glob.glob(os.path.join(d, "*.jsonl")) and not memory_files(d):
-                continue
+        for name in mergeable_projects(prof):
             c, _, h, _ = move_project_into(name, prof, dst, bk, idx.get(name))
             moved, conv, hist = moved + 1, conv + c, hist + h
         hist += move_history(prof, dst, None, bk)  # prompts of projects without a folder

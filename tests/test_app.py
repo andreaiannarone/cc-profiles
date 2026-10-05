@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -832,3 +833,226 @@ def test_install_script_options():
 def test_version_command(home):
     out = run_cli(home, "--version").stdout
     assert out.startswith("cc-profiles ")
+
+
+# --- previews of the big operations (read-only) ---------------------------------
+def test_delete_preview_lists_what_goes_and_changes_nothing(home, app_factory):
+    basic_home(home)
+    home.write(".zshrc", "# Claude Code: work profile\nalias claude-work='CLAUDE_CONFIG_DIR=~/.claude-work claude'\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    plan = app.get("/api/profiles/delete/preview?id=work&merge_into=default")
+    actions = {(i["action"], i["item"]) for i in plan["items"]}
+    assert ("move", "api/s-api-work.jsonl") in actions and ("move", "api/file-history/s-api-work") in actions
+    assert ("merge", "history.jsonl") in actions and ("edit", "shell alias") in actions
+    assert ("edit", "config entry") in actions and ("stash", "profile folder") in actions
+    assert (plan["projects"], plan["conversations"], plan["prompts"], plan["into"]) == (1, 1, 1, "Default")
+
+    alone = app.get("/api/profiles/delete/preview?id=work")
+    assert [i["action"] for i in alone["items"]] == ["edit", "edit", "stash"]  # alias, config, folder
+    assert "source profile" in app.request("/api/profiles/delete/preview?id=default")[1]["error"]
+    assert "into itself" in app.request("/api/profiles/delete/preview?id=work&merge_into=work")[1]["error"]
+    assert home.snapshot() == before
+
+    app.post("/api/profiles/delete", {"id": "work", "merge_into": "default"})  # does what the preview said
+    assert home.path(f".claude/projects/{san(home.path('code/work/api'))}/s-api-work.jsonl").exists()
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_share_preview_lists_what_the_link_replaces(home, app_factory):
+    basic_home(home)
+    home.write(".claude-work/skills/only-work/SKILL.md", "x")
+    before = home.snapshot()
+    app = app_factory()
+
+    plan = app.get("/api/sharing/preview?profile=work&item=skills&shared=1")
+    assert [(i["action"], i["item"]) for i in plan["items"]] == [
+        ("create", "skills"), ("stash", "skills"), ("only-here", "skills/only-work"), ("link", "skills")]
+    assert "Not shared" in app.request("/api/sharing/preview?profile=work&item=skills&shared=0")[1]["error"]
+    assert "source profile" in app.request("/api/sharing/preview?profile=default&item=skills&shared=1")[1]["error"]
+    assert home.snapshot() == before
+
+    app.post("/api/sharing", {"profile": "work", "item": "skills", "shared": True})
+    off = app.get("/api/sharing/preview?profile=work&item=skills&shared=0")
+    assert [i["action"] for i in off["items"]] == ["stash", "copy"]
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+# --- apply to all profiles: one operation, one backup ------------------------------
+def all_home(home):
+    """default; lab shares settings.json and skills with default; solo and work have their own."""
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus", "effortLevel": "high"})
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\nReview it.\n")
+    cfg = json.loads(home.path(".claude.json").read_text())
+    cfg["mcpServers"] = {"files": {"type": "stdio", "command": "npx", "args": ["files"]}}
+    home.json(".claude.json", cfg)
+    home.path(".claude-lab").mkdir()
+    os.symlink("../.claude/settings.json", home.path(".claude-lab/settings.json"))
+    os.symlink("../.claude/skills", home.path(".claude-lab/skills"))
+    home.json(".claude-solo/settings.json", {"model": "haiku"})
+    home.json(".claude-solo/.claude.json", {"mcpServers": {"files": {"type": "stdio", "command": "other"}}})
+    home.write(".claude-solo/skills/review/SKILL.md", "my own review\n")
+    home.json(".claude-work/settings.local.json", {"model": "sonnet"})
+
+
+def restore_newest(app):
+    newest = app.get("/api/backups")[0]
+    app.post("/api/backups/restore", {"name": newest["name"]})
+
+
+def test_apply_a_setting_to_all_profiles_is_undone_by_one_restore(home, app_factory):
+    all_home(home)
+    before = home.snapshot()
+    app = app_factory()
+
+    plan = app.get("/api/settings/field/all/preview?profile=work&key=model")
+    assert [(a["id"], a["detail"]) for a in plan["apply"]] == [
+        ("default", '"opus" → "sonnet" in settings.json'), ("solo", '"haiku" → "sonnet" in settings.json')]
+    assert plan["skip"] == [{"id": "lab", "label": "Lab", "reason": "shares settings.json with Default"}]
+    assert home.snapshot() == before
+    n = len(app.get("/api/backups"))
+    r = app.post("/api/settings/field/all", {"profile": "work", "key": "model"})
+    assert r["message"] == 'Model set to "sonnet" in 2 profiles, 1 skipped.'
+    assert len(app.get("/api/backups")) == n + 1
+    assert json.loads(home.path(".claude/settings.json").read_text())["model"] == "sonnet"
+    assert json.loads(home.path(".claude-solo/settings.json").read_text())["model"] == "sonnet"
+    assert home.path(".claude-lab/settings.json").is_symlink()
+    assert "No profile to change" in app.post_error("/api/settings/field/all", {"profile": "work", "key": "model"})
+    restore_newest(app)
+    assert home.snapshot() == before
+
+    # the default value (work has no effort level) removes it where it is set
+    app.post("/api/settings/field/all", {"profile": "work", "key": "effortLevel"})
+    assert "effortLevel" not in json.loads(home.path(".claude/settings.json").read_text())
+    restore_newest(app)
+    assert home.snapshot() == before
+
+
+def test_add_a_permission_rule_to_all_profiles_is_undone_by_one_restore(home, app_factory):
+    all_home(home)
+    before = home.snapshot()
+    app = app_factory()
+
+    plan = app.get("/api/settings/permissions/all/preview?list=deny&rule=" + urllib.parse.quote("Bash(rm -rf:*)"))
+    assert [a["id"] for a in plan["apply"]] == ["default", "solo", "work"]
+    assert plan["skip"] == [{"id": "lab", "label": "Lab", "reason": "shares settings.json with Default"}]
+    app.post("/api/settings/permissions/all", {"list": "deny", "rule": " Bash(rm -rf:*) "})
+    for p in (".claude", ".claude-solo", ".claude-work"):
+        assert json.loads(home.path(f"{p}/settings.json").read_text())["permissions"]["deny"] == ["Bash(rm -rf:*)"]
+    assert json.loads(home.path(".claude/settings.json").read_text())["model"] == "opus"  # the rest is kept
+    assert "already in deny" in app.post_error("/api/settings/permissions/all", {"list": "deny", "rule": "Bash(rm -rf:*)"})
+    assert "allow, ask or deny" in app.post_error("/api/settings/permissions/all", {"list": "nope", "rule": "x"})
+    assert "one rule" in app.post_error("/api/settings/permissions/all", {"list": "deny", "rule": "a\nb"})
+    restore_newest(app)
+    assert home.snapshot() == before
+
+
+def test_copy_a_skill_and_a_server_to_all_profiles_is_undone_by_one_restore(home, app_factory):
+    all_home(home)
+    before = home.snapshot()
+    app = app_factory()
+
+    plan = app.get("/api/skills/copy-all/preview?profile=default&name=review")
+    assert [a["id"] for a in plan["apply"]] == ["work"]
+    assert {s["id"]: s["reason"] for s in plan["skip"]} == {
+        "lab": "shares its skills with Default", "solo": "already has a skill called review"}
+    app.post("/api/skills/copy-all", {"profile": "default", "name": "review"})
+    assert home.path(".claude-work/skills/review/SKILL.md").read_text() == "---\nname: review\n---\nReview it.\n"
+    assert home.path(".claude-solo/skills/review/SKILL.md").read_text() == "my own review\n"
+    restore_newest(app)
+    assert home.snapshot() == before
+
+    plan = app.get("/api/mcp/copy-all/preview?profile=default&scope=user&name=files")
+    assert [a["id"] for a in plan["apply"]] == ["work"]
+    assert {s["id"]: s["reason"].split(":")[0] for s in plan["skip"]} == {
+        "lab": "~/.claude-lab/.claude.json cannot be read", "solo": "already has a server called files"}
+    app.post("/api/mcp/copy-all", {"profile": "default", "scope": "user", "name": "files"})
+    assert json.loads(home.path(".claude-work/.claude.json").read_text())["mcpServers"]["files"]["command"] == "npx"
+    assert len(app.get("/api/backups")) == 3  # skill copy, its restore, server copy
+    restore_newest(app)
+    assert home.snapshot() == before
+
+
+# --- automatic backup cleanup ---------------------------------------------------
+def age_backup(home, name, days, **extra):
+    man = home.path(f".cc-profiles/backups/{name}/manifest.json")
+    data = json.loads(man.read_text())
+    data["created"] -= days * 86400
+    data.update(extra)
+    man.write_text(json.dumps(data))
+
+
+def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    assert app.get("/api/backups/auto")["days"] is None  # off by default
+    for match in ("code/a", "code/b", "code/c", "code/d"):
+        app.post("/api/rules", {"match": match, "profile": "default"})
+    names = [b["name"] for b in app.get("/api/backups")]  # newest first: d, c, b, a
+    age_backup(home, names[3], 100)                                # old: deleted
+    age_backup(home, names[2], 100, failed="boom")                 # old and incomplete: kept
+    age_backup(home, names[1], 100, failed="boom", restored=1.0)   # old, incomplete but restored: deleted
+    age_backup(home, names[0], 20)                                 # younger than the limit: kept
+    assert app.request("/api/backups/auto", {"days": 7})[0] == 400
+    r = app.post("/api/backups/auto", {"days": 30})
+    assert "Deleted 2 backups older than 30 days" in r["message"]
+    left = [b["name"] for b in app.get("/api/backups")]
+    assert names[2] in left and names[0] in left and names[3] not in left and names[1] not in left
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["backup_keep_days"] == 30
+
+    # the server prunes again when it starts; the backup of the last 24 hours stays
+    app.stop()
+    age_backup(home, names[0], 20)  # now 40 days old
+    app = app_factory()
+    left = [b["name"] for b in app.get("/api/backups")]
+    assert names[0] not in left and names[2] in left and len(left) == 2  # the incomplete one and the setting's
+    assert app.get("/api/backups/auto")["days"] == 30
+    app.post("/api/backups/auto", {"days": None})
+    assert "backup_keep_days" not in json.loads(home.path(".cc-profiles/config.json").read_text())
+
+
+# --- profile templates ------------------------------------------------------------
+def test_templates_hold_no_credentials_and_create_profiles(home, app_factory):
+    export_home(home)
+    home.write(".claude/agents/reviewer.md", "an agent\n")
+    home.write(".claude/output-styles/terse.md", "---\nname: Terse\n---\n")
+    cfg = json.loads(home.path(".claude.json").read_text())
+    cfg.update({"userID": "u-1", "mcpServers": {"files": {"type": "stdio", "command": "npx"}}})
+    home.json(".claude.json", cfg)
+    before = home.snapshot()
+    app = app_factory()
+
+    app.post("/api/templates/save", {"profile": "default", "name": "Base setup"})
+    z = zipfile.ZipFile(home.path(".cc-profiles/templates/Base setup.zip"))
+    names = z.namelist()
+    assert {"profile/settings.json", "profile/skills/review/SKILL.md", "profile/agents/reviewer.md",
+            "profile/output-styles/terse.md", "profile/settings.local.json"} <= set(names)
+    assert not any(".credentials.json" in n for n in names), "templates never hold credentials"
+    assert not any(n.startswith(("profile/projects/", "profile/plugins/", "profile/history", "home-memory/"))
+                   for n in names), "templates hold no conversations, memories or plugins"
+    assert json.loads(z.read("claude.json")) == {"mcpServers": {"files": {"type": "stdio", "command": "npx"}}}
+    listed = app.get("/api/templates")["templates"]
+    assert [(t["name"], t["from"], t["skills"], t["mcp"]) for t in listed] == [("Base setup", "Default", 2, 1)]
+    assert "already a template" in app.post_error("/api/templates/save", {"profile": "default", "name": "Base setup"})
+    for bad in ("../x", "a/b", "", ".hidden"):
+        assert app.request("/api/templates/save", {"profile": "default", "name": bad})[0] == 400
+    assert app.request("/api/templates/delete", {"name": "../config"})[0] == 400
+
+    r = app.post("/api/templates/create", {"name": "Base setup", "label": "Client", "id": "client"})
+    assert "from the template Base setup" in r["message"]
+    new = home.path(".claude-client")
+    assert (new / "skills/review/SKILL.md").exists() and (new / "agents/reviewer.md").exists()
+    assert f"{new}/hooks/stop.sh" in (new / "settings.local.json").read_text()
+    assert not (new / ".credentials.json").exists() and not (new / "projects").exists()
+    assert json.loads((new / ".claude.json").read_text()) == {"mcpServers": {"files": {"type": "stdio", "command": "npx"}}}
+    assert os.access(home.path(".local/bin/claude-client"), os.X_OK)
+
+    app.post("/api/templates/delete", {"name": "Base setup"})
+    assert app.get("/api/templates")["templates"] == []
+    app.restore_all()
+    assert home.snapshot() == before
+    assert app.get("/api/templates")["templates"] == []  # restoring the save removes the template too
