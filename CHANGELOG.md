@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Conversations tab: read the conversations of each project (title, dates, prompt and reply counts, a read-only viewer), and move one to another profile with its file snapshots, or delete it.
+
 ## [0.2.2] - 2026-10-05
 
 ### Added

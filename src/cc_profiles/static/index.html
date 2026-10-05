@@ -136,6 +136,18 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .mcard.on { border-color: var(--accent); }
 .mcard .t { display: flex; gap: 8px; align-items: center; font-weight: 600; }
 .mcard .d { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.ccard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; }
+.ccard:hover { border-color: var(--faint); }
+.ccard.on { border-color: var(--accent); }
+.ccard .t { font-weight: 600; overflow-wrap: anywhere; }
+.ccard .d { color: var(--muted); font-size: 12.5px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.convview { max-height: 60vh; overflow-y: auto; margin-top: 4px; }
+.msg { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.msg:last-child { border-bottom: 0; }
+.msg .who { font-size: 12px; font-weight: 600; color: var(--muted); }
+.msg .who time { font-weight: 400; margin-left: 6px; }
+.msg .txt { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; margin-top: 2px; }
+.msg.tool .txt { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 .editor { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
 .editor textarea { width: 100%; min-height: 340px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
 .editor .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
@@ -287,6 +299,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
   <nav class="tabs" id="tabs">
     <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
     <button data-tab="memories">Memories</button>
+    <button data-tab="conversations">Conversations</button>
     <button data-tab="profiles">Profiles</button>
     <button data-tab="skills">Skills</button>
     <button data-tab="mcp">MCP</button>
@@ -302,6 +315,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
+            conv: { profile: null, project: null, projects: [], list: null, session: null, view: null, q: "" },
             health: null, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
@@ -557,6 +571,80 @@ async function moveMemory(ctx) {
   if (!res) return;
   await run(() => api("/api/memory/move", { ...ctx, to_profile: $("#mvp", res.el).value, to_project: $("#mvj", res.el).value }));
   S.mem.file = null; await loadMemProjects(); await openMemProject(ctx.project); loadProfiles();
+}
+
+// ---------- conversations ----------
+async function loadConvProjects() {
+  S.conv.projects = await api("/api/conversations/projects?profile=" + S.conv.profile);
+}
+async function openConvProject(name) {
+  const c = S.conv;
+  Object.assign(c, { project: name, list: null, session: null, view: null }); renderConversations();
+  c.list = await api(`/api/conversations?profile=${c.profile}&project=${encodeURIComponent(name)}`);
+  renderConversations();
+}
+async function openConversation(session) {
+  const c = S.conv;
+  Object.assign(c, { session, view: null }); renderConversations();
+  c.view = await api(`/api/conversations/view?profile=${c.profile}&project=${encodeURIComponent(c.project)}&session=${encodeURIComponent(session)}`);
+  renderConversations();
+}
+const convDate = c => new Date(c.last || c.mtime * 1000).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const openWarning = ids => {
+  const open = S.profiles.filter(p => ids.includes(p.id) && p.active).map(p => esc(p.label));
+  return open.length ? `<div class="danger-box" style="margin-top:10px">A Claude Code session is open in ${open.join(" and ")}: if it is this conversation, it keeps writing to it. Close it first.</div>` : "";
+};
+function renderConversations() {
+  if (S.tab !== "conversations") return;
+  const c = S.conv, q = c.q.toLowerCase();
+  const plist = c.projects.filter(p => !q || p.pretty.toLowerCase().includes(q));
+  const cur = c.list?.conversations.find(x => x.session === c.session);
+  $("#main").innerHTML = `<div class="memgrid">
+    <aside class="side"><div class="head">
+      <div class="seg">${S.profiles.map(p => `<button data-cprof="${p.id}" class="${c.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>
+      <input class="search" style="min-width:0;margin:0" placeholder="Filter projects…" value="${esc(c.q)}" id="cq" aria-label="Filter projects"></div>
+      <div class="plist">${plist.map(p => `<button data-cproj="${esc(p.name)}" class="${p.name === c.project ? "on" : ""}">
+        <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No conversations in this profile.</div>`}</div>
+    </aside>
+    <section>${!c.project ? `<div class="empty">Pick a project on the left.</div>` : !c.list ? `<div class="empty"><span class="spinner"></span></div>` : `
+      <div class="hint" style="margin-bottom:8px"><code>${esc(c.list.path)}</code> · ${esc(label(c.profile))} · ${plural(c.list.conversations.length, "conversation", "conversations")}</div>
+      <div class="cards">${c.list.conversations.map(x => `<div class="ccard ${x.session === c.session ? "on" : ""}" data-conv="${esc(x.session)}" tabindex="0" role="button">
+        <div class="t">${esc(x.title) || `<span class="hint">No prompt</span>`}</div>
+        <div class="d">${esc(convDate(x))} · ${plural(x.prompts, "prompt", "prompts")} · ${plural(x.replies, "reply", "replies")} · ${size(x.size)}</div></div>`).join("")}</div>
+      ${cur ? `<div class="editor">
+        <div class="hint" style="margin-bottom:6px"><code>${esc(cur.session)}.jsonl</code>${cur.snapshots ? " · with file snapshots" : ""}</div>
+        ${!c.view ? `<div class="empty"><span class="spinner"></span></div>` : `
+          ${c.view.truncated ? `<div class="hint">Shortened: the last ${plural(c.view.messages.length, "message", "messages")} of ${c.view.total}, long texts cut.</div>` : ""}
+          <div class="convview">${c.view.messages.map(m => `<div class="msg ${m.role}"><div class="who">${{ user: "You", assistant: "Claude", tool: "Tool" }[m.role]}${m.time ? `<time>${esc(new Date(m.time).toLocaleString())}</time>` : ""}</div>
+            <div class="txt">${esc(m.text)}</div></div>`).join("") || `<div class="empty">No messages to show.</div>`}</div>`}
+        <div class="row"><span class="grow">Read-only. Moving takes the conversation and its file snapshots; the prompt history stays.</span>
+          <button class="btn danger" id="cdel">Delete</button><button class="btn" id="cmove">Move to…</button></div></div>` : ""}`}
+    </section></div>`;
+  $("#cq").oninput = e => { c.q = e.target.value; const pos = e.target.selectionStart; renderConversations(); const i = $("#cq"); i.focus(); i.setSelectionRange(pos, pos); };
+  document.querySelectorAll("[data-cprof]").forEach(b => b.onclick = async () => {
+    Object.assign(c, { profile: b.dataset.cprof, project: null, list: null, session: null, view: null });
+    await loadConvProjects(); renderConversations();
+  });
+  document.querySelectorAll("[data-cproj]").forEach(b => b.onclick = () => openConvProject(b.dataset.cproj));
+  document.querySelectorAll("[data-conv]").forEach(el => {
+    el.onclick = () => openConversation(el.dataset.conv);
+    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openConversation(el.dataset.conv); } };
+  });
+  if (!cur) return;
+  const ctx = { profile: c.profile, project: c.project, session: c.session };
+  const after = async () => { c.session = null; c.view = null; await loadConvProjects(); if (c.projects.some(p => p.name === c.project)) await openConvProject(c.project); else { c.project = null; renderConversations(); } refresh(); };
+  $("#cmove").onclick = async () => {
+    const to = await pickProfile("Move conversation", `<b>${esc(cur.title || cur.session)}</b> moves to the same project in the other profile, with its file snapshots. The prompt history stays where it is.${openWarning([c.profile])}`, c.profile, "Move");
+    if (!to) return;
+    if (S.profiles.find(p => p.id === to)?.active && !(await confirmBox("A session is open there", openWarning([to]) + "Move anyway?", "Move"))) return;
+    try { await run(() => api("/api/conversations/move", { ...ctx, to })); } catch { return; }
+    after();
+  };
+  $("#cdel").onclick = async () => {
+    if (!(await confirmBox("Delete this conversation?", `<b>${esc(cur.title || cur.session)}</b> and its file snapshots go to the backup, not erased.${openWarning([c.profile])}`, "Delete", "danger"))) return;
+    try { await run(() => api("/api/conversations/delete", ctx)); } catch { return; }
+    after();
+  };
 }
 
 // ---------- health ----------
@@ -1171,6 +1259,7 @@ document.addEventListener("click", async e => {
     S.tab = t.dataset.tab;
     document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b === t));
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
+    if (S.tab === "conversations" && !S.conv.profile) { S.conv.profile = S.profiles[0]?.id; await loadConvProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
     if (S.tab === "profiles") return loadSharing();
     if (EXT_TABS.includes(S.tab)) return loadExt();
@@ -1212,6 +1301,7 @@ document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard
 function render() {
   if (S.tab === "projects") renderProjects();
   else if (S.tab === "memories") renderMemories();
+  else if (S.tab === "conversations") renderConversations();
   else if (S.tab === "settings") renderSettings();
   else if (S.tab === "profiles") renderSharing();
   else if (EXT_TABS.includes(S.tab)) renderExt();

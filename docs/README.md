@@ -7,6 +7,7 @@
 3. Guides by tab:
    - [Projects](guides/projects.md): move, relink, assign
    - [Memories](guides/memories.md): browse, edit, move
+   - [Conversations](guides/conversations.md): read, move one to another profile, delete
    - [Profiles and sharing](guides/profiles.md): create, edit, delete, share
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
    - [Settings](guides/settings.md): general settings, `CLAUDE.md`, permissions, raw JSON
