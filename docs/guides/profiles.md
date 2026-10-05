@@ -16,7 +16,9 @@ What a new profile never gets:
 - **login credentials** (`.credentials.json`) and account data (`oauthAccount`, `userID`): run the new command and use `/login`. A copied token could be invalidated when the original profile refreshes it.
 - runtime state: caches, open sessions, telemetry.
 
-cc-profiles also creates the launcher `~/.local/bin/claude-<id>` (see [Getting started](../getting-started.md#starting-claude-code-in-a-profile)).
+cc-profiles also creates the launcher `~/.local/bin/claude-<id>` (see [Getting started](../getting-started.md#starting-claude-code-in-a-profile)) and adds the `/cc-profiles` command to the new profile, so you can open this app from it right away. If the profile shares `commands` with the source profile, the command goes into the source and reaches both through the link. A `cc-profiles.md` that cc-profiles did not write is left as it is.
+
+Items you choose to share that the source profile does not have yet are created there, empty, so the link always works.
 
 ## Edit a profile
 
