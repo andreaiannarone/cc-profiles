@@ -73,6 +73,10 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
+### Social preview image
+
+The image GitHub shows when the repository is shared, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`: the command is at the top of that file. Upload it again under *Settings → General → Social preview* after regenerating it.
+
 ## Pull requests
 
 1. Open an issue first for anything bigger than a small fix, so we can agree on the approach.
