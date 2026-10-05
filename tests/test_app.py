@@ -4,6 +4,7 @@ The key property of cc-profiles is that everything can be undone, so most tests
 end the same way: restore every backup, newest first, and check the fake home is
 byte-for-byte identical to how it started.
 """
+import io
 import json
 import os
 import re
@@ -12,7 +13,11 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
+import zipfile
+
+import pytest
 
 from conftest import SRC, free_port, san
 
@@ -599,6 +604,141 @@ def test_version_order():
     from cc_profiles.server import version_key
     assert version_key("0.10.1") > version_key("0.9") > version_key("0.2.1") > version_key("0.2.0")
     assert version_key("1.0.0rc1") == version_key("1.0.0")  # pre-releases are not offered as newer
+
+
+# --- export, import, plugins --------------------------------------------------
+def raw(app, path, data=None):
+    """A request whose answer (or body) is not JSON: (status, bytes)."""
+    headers = {"X-Token": app.token}
+    if data is not None:
+        headers["Content-Type"] = "application/zip"
+    req = urllib.request.Request(app.base + path, data=data, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
+def export_home(home):
+    """A default profile with everything an export has to handle."""
+    basic_home(home)
+    d = home.path(".claude")
+    home.write(".claude/.credentials.json", '{"secret": 1}')
+    home.json(".claude/settings.local.json", {"hooks": {"Stop": [{"command": f"{d}/hooks/stop.sh"}]}})
+    home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {"demo@market": [
+        {"scope": "user", "installPath": f"{d}/plugins/cache/market/demo/1.0.0", "version": "1.0.0",
+         "installedAt": "2026-10-01T10:00:00.000Z"}]}})
+    home.write(".claude/plugins/cache/market/demo/1.0.0/plugin.json", "{}")
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\n")
+    home.write("elsewhere/linked/SKILL.md", "---\nname: linked\n---\n")  # a skill linked from elsewhere in home
+    os.symlink(home.path("elsewhere/linked"), home.path(".claude/skills/linked"))
+    os.symlink("/etc", home.path(".claude/skills/outside"))  # a link out of home: never exported
+    home.write(".claude/shell-snapshots/snap.sh", "runtime data")
+    home.conversation("", "", "s-home", {"general.md": "always answer briefly"})  # the general memory
+
+
+def test_export_holds_the_profile_without_credentials(home, app_factory):
+    export_home(home)
+    app = app_factory()
+    status, data = raw(app, "/api/profiles/export?id=default&projects=0")
+    assert status == 200
+    z = zipfile.ZipFile(io.BytesIO(data))
+    names = set(z.namelist())
+    assert {"cc-profiles-export.json", "claude.json", "profile/settings.json", "profile/skills/review/SKILL.md",
+            "profile/plugins/cache/market/demo/1.0.0/plugin.json", "home-memory/general.md"} <= names
+    assert not any(".credentials.json" in n or "shell-snapshots" in n for n in names)
+    assert "profile/skills/linked/SKILL.md" in names  # links inside home: their real content
+    assert not any(n.startswith("profile/skills/outside") for n in names)
+    assert not any(n.startswith("profile/projects/") or n == "profile/history.jsonl" for n in names)
+    assert "__CC_PROFILES_PROFILE_DIR__/hooks/stop.sh" in z.read("profile/settings.local.json").decode()
+    assert str(home.path(".claude")) not in z.read("profile/plugins/installed_plugins.json").decode()
+    cfg = json.loads(z.read("claude.json"))
+    assert "oauthAccount" not in cfg and "projects" not in cfg
+    man = json.loads(z.read("cc-profiles-export.json"))
+    assert man["app"] == "cc-profiles" and man["id"] == "default" and man["projects"] is False
+
+    with_projects = zipfile.ZipFile(io.BytesIO(raw(app, "/api/profiles/export?id=default&projects=1")[1]))
+    assert any(n.startswith("profile/projects/") for n in with_projects.namelist())
+    assert "profile/history.jsonl" in with_projects.namelist()
+    assert "projects" in json.loads(with_projects.read("claude.json"))
+
+
+def test_import_recreates_the_profile_and_restores(home, app_factory):
+    export_home(home)
+    app = app_factory()
+    data = raw(app, "/api/profiles/export?id=default&projects=1")[1]
+    before = home.snapshot()
+    status, body = raw(app, "/api/profiles/import?label=Laptop&id=laptop", data)
+    r = json.loads(body)
+    assert status == 200 and "not logged in" in r["message"]
+    new = home.path(".claude-laptop")
+    assert (new / "skills/review/SKILL.md").exists()
+    assert f"{new}/hooks/stop.sh" in (new / "settings.local.json").read_text()
+    assert f"{new}/plugins/cache/market/demo/1.0.0" in (new / "plugins/installed_plugins.json").read_text()
+    assert not (new / ".credentials.json").exists()
+    assert "oauthAccount" not in json.loads((new / ".claude.json").read_text())
+    assert (new / "commands/cc-profiles.md").exists()
+    assert os.access(home.path(".local/bin/claude-laptop"), os.X_OK)
+    assert "laptop" in [p["id"] for p in app.get("/api/profiles")]
+    assert "already exists" in json.loads(raw(app, "/api/profiles/import?label=Laptop&id=laptop", data)[1])["error"]
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+@pytest.mark.parametrize("bad", ["../evil.txt", "/etc/evil", "profile/../../evil", "link"])
+def test_import_rejects_unsafe_archives(home, app_factory, bad):
+    basic_home(home)
+    app = app_factory()
+    before = home.snapshot()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("cc-profiles-export.json", json.dumps({"app": "cc-profiles", "format": 1, "label": "X", "id": "x"}))
+        z.writestr("profile/settings.json", "{}")
+        if bad == "link":  # a symbolic link entry
+            info = zipfile.ZipInfo("profile/skills")
+            info.external_attr = (0o120777 << 16)
+            z.writestr(info, "/etc")
+        else:
+            z.writestr(bad, "evil")
+    status, body = raw(app, "/api/profiles/import?label=X&id=x", buf.getvalue())
+    assert status == 400 and "Nothing was imported" in json.loads(body)["error"]
+    assert home.snapshot() == before and not home.path(".claude-x").exists()
+    assert "not a zip" in json.loads(raw(app, "/api/profiles/import?label=X&id=x", b"plain text")[1])["error"]
+
+
+def test_plugins_are_listed_and_switched(home, app_factory):
+    basic_home(home)
+    d = home.path(".claude")
+    home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {
+        "warp@claude-code-warp": [{"scope": "user", "installPath": f"{d}/plugins/cache/x", "version": "2.1.0",
+                                   "installedAt": "2026-06-28T20:57:07.083Z"}],
+        "lint@team": [{"scope": "project", "projectPath": str(home.path("code/work/api")), "version": "0.3.0"}]}})
+    home.json(".claude/plugins/known_marketplaces.json", {"claude-code-warp": {
+        "source": {"source": "github", "repo": "warpdotdev/claude-code-warp"}, "lastUpdated": "2026-08-26T13:20:55Z"}})
+    home.json(".claude/settings.json", {"enabledPlugins": {"warp@claude-code-warp": True}})
+    home.json(".claude/settings.local.json", {"enabledPlugins": {"lint@team": False}})
+    before = home.snapshot()
+    app = app_factory()
+    data = app.get("/api/plugins?profile=default")
+    by = {p["name"]: p for p in data["plugins"]}
+    assert by["warp@claude-code-warp"]["enabled"] is True and by["warp@claude-code-warp"]["source"] == "settings"
+    assert by["warp@claude-code-warp"]["version"] == "2.1.0" and by["warp@claude-code-warp"]["plugin"] == "warp"
+    assert by["lint@team"]["enabled"] is False and by["lint@team"]["source"] == "local"
+    assert by["lint@team"]["scopes"] == ["project"] and by["lint@team"]["projects"] == ["~/code/work/api"]
+    assert data["marketplaces"] == [{"name": "claude-code-warp", "source": "warpdotdev/claude-code-warp",
+                                     "updated": "2026-08-26"}]
+
+    app.post("/api/plugins/enable", {"profile": "default", "plugin": "warp@claude-code-warp", "enabled": False})
+    assert json.loads(home.path(".claude/settings.json").read_text())["enabledPlugins"]["warp@claude-code-warp"] is False
+    app.post("/api/plugins/enable", {"profile": "default", "plugin": "lint@team", "enabled": True})
+    assert json.loads(home.path(".claude/settings.local.json").read_text())["enabledPlugins"]["lint@team"] is True
+    assert "lint@team" not in home.path(".claude/settings.json").read_text()  # written where its value lives
+    assert app.request("/api/plugins/enable", {"profile": "default", "plugin": "nope@x", "enabled": True})[0] == 404
+    assert "true or false" in app.post_error("/api/plugins/enable", {"profile": "default", "plugin": "lint@team",
+                                                                     "enabled": "yes"})
+    app.restore_all()
+    assert home.snapshot() == before
 
 
 # --- command line ---------------------------------------------------------------

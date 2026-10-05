@@ -75,6 +75,8 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .ext-head h3 { margin: 0; font-size: 15px; }
 .ext-head .hint { flex: 1; min-width: 200px; }
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.plug-row .m code { font-size: 11.5px; }
+.mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .mcp-target { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .pcard .nums { display: flex; gap: 16px; margin-top: 10px; }
 .pcard .nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -315,6 +317,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
     <button data-tab="compare">Compare</button>
     <button data-tab="skills">Skills</button>
     <button data-tab="mcp">MCP</button>
+    <button data-tab="plugins">Plugins</button>
     <button data-tab="backups">Backups</button>
     <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
     <button data-tab="settings">Settings</button>
@@ -328,7 +331,7 @@ const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
             conv: { profile: null, project: null, projects: [], list: null, session: null, view: null, q: "" },
-            health: null, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
+            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 const $ = (s, el = document) => el.querySelector(s);
@@ -695,14 +698,15 @@ function renderSharing() {
   const src = S.profiles[0];
   $("#main").innerHTML = `
     <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
-      <button class="btn primary" data-newprofile style="margin-left:auto">+ New profile</button></div>
+      <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
+      <button class="btn primary" data-newprofile>+ New profile</button></div>
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
         <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
-      <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pedit="${p.id}">Edit</button>
+      <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
@@ -1155,6 +1159,93 @@ async function runUpdate(u) {
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
 }
 
+// ---------- export, import and plugins ----------
+async function exportProfile(id) {
+  const p = S.profiles.find(x => x.id === id);
+  const res = await modal({ title: `Export ${p.label}`,
+    sub: `Saves the profile as a .zip, to import it on another computer with <b>Import profile…</b>. Login credentials are never included: the imported profile logs in on its own.`,
+    body: `<div class="form"><label class="check"><input type="checkbox" id="ex-proj"> also include conversations, prompt history and file snapshots</label>
+      <div class="hint">Without them the export holds settings, <code>CLAUDE.md</code>, skills, agents, commands, plugins, MCP servers and the general memory.</div></div>`,
+    actions: [{ label: "Export", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  const projects = $("#ex-proj", res.el).checked ? 1 : 0;
+  try {
+    const r = await fetch(`/api/profiles/export?id=${encodeURIComponent(id)}&projects=${projects}`, { headers: { "X-Token": TOKEN } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || `cc-profiles-${id}.zip`;
+    const url = URL.createObjectURL(await r.blob());
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(`Exported ${p.label}`, name);
+  } catch (e) { toast(e.message, "", true); }
+}
+async function importProfile() {
+  const resP = modal({ title: "Import profile",
+    sub: "Creates a new profile from a .zip exported by cc-profiles. It is not logged in: run its command and log in with /login.",
+    body: `<div class="form"><label class="f">Exported file<input type="file" id="im-file" accept=".zip,application/zip"></label>
+      <label class="f">Name<input class="text" id="im-label" placeholder="e.g. Work"></label>
+      <label class="f">Id (folder and command)<input class="text" id="im-id" placeholder="e.g. work"></label>
+      <div class="hint" id="im-cmd"></div></div>`,
+    actions: [{ label: "Import profile", kind: "primary", value: "ok" }] });
+  const F = $("#im-file"), L = $("#im-label"), I = $("#im-id");
+  const upd = () => { $("#im-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
+  F.onchange = () => {  // cc-profiles-<id>-<date>.zip: suggest the id and a name
+    const m = (F.files[0]?.name || "").match(/^cc-profiles-(.+?)-\d{4}-\d{2}-\d{2}/);
+    if (m && !I.value) { I.value = m[1]; L.value = m[1].replace(/-/g, " ").replace(/^./, c => c.toUpperCase()); upd(); }
+  };
+  I.oninput = upd;
+  const res = await resP;
+  if (!res) return;
+  const file = $("#im-file", res.el).files[0];
+  if (!file) return toast("Pick the .zip of an exported profile", "", true);
+  const q = `label=${encodeURIComponent($("#im-label", res.el).value)}&id=${encodeURIComponent($("#im-id", res.el).value)}`;
+  try {
+    await run(async () => {
+      const r = await fetch("/api/profiles/import?" + q, { method: "POST", body: file, headers: { "X-Token": TOKEN, "Content-Type": "application/zip" } });
+      const j = await r.json().catch(() => ({ error: "Invalid response from the server" }));
+      if (!r.ok) throw new Error(j.error || r.statusText);
+      return j;
+    });
+  } catch { return; }
+  await refresh(); loadSharing();
+}
+
+async function loadPlugins(pid) {
+  const x = S.plug;
+  x.profile = pid || x.profile || S.profiles[0]?.id;
+  x.data = null; x.error = null; renderPlugins();
+  try { x.data = await api("/api/plugins?profile=" + x.profile); }
+  catch (e) { x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server. Stop it and start it again." : e.message; }
+  renderPlugins();
+}
+function renderPlugins() {
+  if (S.tab !== "plugins") return;
+  const x = S.plug, d = x.data;
+  const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-plugprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
+  const head = `<div class="toolbar">${seg}<span class="hint">Install and remove plugins with <code>/plugin</code> in Claude Code; here you see them and turn them on or off.</span></div>`;
+  if (x.error) $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`;
+  else if (!d) $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading plugins…</div>`;
+  else $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h3>Plugins</h3><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
+    <div class="table">${d.plugins.map((g, i) => `<div class="prow plug-row"><div class="txt">
+        <div class="t">${esc(g.plugin)} <span class="badge b-none">${esc(g.marketplace || "no marketplace")}</span>${g.version ? ` <span class="badge b-none">${esc(g.version)}</span>` : ""}${g.is_installed ? "" : ` <span class="badge b-warn">not installed</span>`}</div>
+        <div class="m">${g.installed ? `installed ${esc(g.installed)}` : ""}${g.scopes.length ? ` · ${esc(g.scopes.join(", "))}` : ""}${g.projects.length ? ` · ${g.projects.map(esc).join(", ")}` : ""}${g.path ? ` · <code>${esc(g.path)}</code>` : ""}</div>
+        <div class="m">${g.enabled == null ? "not set in the settings: Claude Code's default" : `${g.enabled ? "enabled" : "disabled"} in ${g.source === "local" ? "settings.local.json" : "settings.json"}`}</div></div>
+      <label class="switch" title="${g.enabled ? "Enabled" : "Disabled"}"><input type="checkbox" data-plugsw="${i}" ${g.enabled ? "checked" : ""} aria-label="Enable ${esc(g.name)}"><span></span></label></div>`).join("")
+      || `<div class="empty">No plugins in this profile. Install them with <code>/plugin</code> in Claude Code.</div>`}</div>
+    <div class="ext-head"><h3>Marketplaces</h3><span class="hint">where Claude Code finds plugins to install</span></div>
+    <div class="mlist">${d.marketplaces.map(m => `<div><b>${esc(m.name)}</b> · <code>${esc(m.source)}</code>${m.updated ? ` · updated ${esc(m.updated)}` : ""}</div>`).join("") || `<div>None.</div>`}</div>`;
+  document.querySelectorAll("[data-plugprof]").forEach(b => b.onclick = () => loadPlugins(b.dataset.plugprof));
+  document.querySelectorAll("[data-plugsw]").forEach(cb => cb.onchange = async () => {
+    const g = d.plugins[cb.dataset.plugsw], on = cb.checked;
+    if (!(await confirmBox(`${on ? "Enable" : "Disable"} ${g.plugin}?`,
+        `Saved in <code>${g.source === "local" ? "settings.local.json" : "settings.json"}</code> as <code>enabledPlugins</code>${d.shared ? `; plugins are ${esc(d.shared)}` : ""}. It applies from the next Claude Code session; the file goes to the backup first.`, on ? "Enable" : "Disable"))) { cb.checked = !on; return; }
+    try { await run(() => api("/api/plugins/enable", { profile: x.profile, plugin: g.name, enabled: on })); } catch {}
+    loadPlugins();
+  });
+}
+
 // ---------- installing Claude Code ----------
 async function loadClaudeStatus() {
   try { S.cc = await api("/api/claude/status"); } catch { return; }
@@ -1440,6 +1531,7 @@ document.addEventListener("click", async e => {
     if (S.tab === "profiles") return loadSharing();
     if (S.tab === "compare") return loadCompare();
     if (EXT_TABS.includes(S.tab)) return loadExt();
+    if (S.tab === "plugins") return loadPlugins();
     if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
     if (S.tab === "backups") return loadBackups();
     return render();
@@ -1448,6 +1540,8 @@ document.addEventListener("click", async e => {
   if (t.hasAttribute("data-install")) return installClaude();
   if (t.hasAttribute("data-install-log")) return showInstallLog();
   if (t.dataset.pedit) return editProfile(t.dataset.pedit);
+  if (t.dataset.pexport) return exportProfile(t.dataset.pexport);
+  if (t.hasAttribute("data-pimport")) return importProfile();
   if (t.dataset.pext) { S.tab = t.dataset.ext; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab)); return loadExt(t.dataset.pext); }
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
@@ -1484,6 +1578,7 @@ function render() {
   else if (S.tab === "compare") renderCompare();
   else if (S.tab === "search") renderSearch();
   else if (EXT_TABS.includes(S.tab)) renderExt();
+  else if (S.tab === "plugins") renderPlugins();
   else if (S.tab === "backups") renderBackups();
   else renderHealth();
 }
