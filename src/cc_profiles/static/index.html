@@ -1212,8 +1212,8 @@ function bindSettings() {
     const list = $("#pa-list", res.el).value, rule = $("#pa-rule", res.el).value.trim();
     if (!rule) { toast("Write a rule first, e.g. Bash(rm -rf:*)", "", true); return; }
     if (await applyAll(`Add the rule to every profile?`,
-        `/api/settings/permissions/all/preview?list=${list}&rule=${encodeURIComponent(rule)}`,
-        `<code>${esc(rule)}</code> is added to <code>${list}</code>.`,
+        `/api/settings/permissions/all/preview?list=${encodeURIComponent(list)}&rule=${encodeURIComponent(rule)}`,
+        `<code>${esc(rule)}</code> is added to <code>${esc(list)}</code>.`,
         "Add to all", () => api("/api/settings/permissions/all", { list, rule }))) loadSettings(pid);
   };
   document.querySelectorAll("[data-setprof]").forEach(b => b.onclick = () => loadSettings(b.dataset.setprof));
