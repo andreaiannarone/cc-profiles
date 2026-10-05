@@ -23,6 +23,10 @@ The journal lists every step in order:
 
 Only the first copy of a file is kept, because it is the state before the operation. Modified files are stored through symlinks, so restoring a shared file writes the real file and keeps the link.
 
+## Incomplete backups
+
+If an operation fails halfway (a disk error, a file Claude Code locked, a bug), the steps it had already done stay journaled: the backup is closed anyway and labelled **incomplete**, and the error message says so. **Restore** undoes those steps like any other backup. A failure before any change leaves no backup.
+
 ## Restore
 
 **Restore** walks the journal backwards. It is itself an operation with a backup (titled *Before restoring: …*), so you can undo a restore.

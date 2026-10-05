@@ -26,6 +26,18 @@ python3 -m venv .venv
 
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
 
+### The browser smoke test
+
+`tests/test_ui.py` opens every tab of the real page in Chromium and fails on JavaScript errors, Content-Security-Policy violations or a tab stuck loading. It is skipped unless Playwright is installed:
+
+```sh
+.venv/bin/pip install -e ".[ui]"
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m pytest tests/test_ui.py
+```
+
+CI always runs it (the *UI smoke test* job).
+
 ## Run the app on a sandbox
 
 ```sh

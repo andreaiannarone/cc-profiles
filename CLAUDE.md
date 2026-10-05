@@ -46,6 +46,8 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
   - `bk.mkdir(path)` to create folders (it journals every missing parent); `bk.created(path)` for new links, launchers and profiles.
   - `bk.close()` at the end; return its value in the `backup` field of the response.
 
+  Journal a new folder (`bk.created`) before filling it. If an operation raises, the POST handler closes its open backups as "failed" (`abort_open_backups`), so whatever was journaled can still be restored; `CC_PROFILES_FAULT=<name>` makes `fault_point(name)` raise in tests.
+
   A step that is not journaled makes the operation impossible to undo. The tests catch it: they restore everything and compare snapshots of the fake home.
 - **One write at a time**: POST handlers run under `_lock`.
 - **Never trust the client**: project, memory and backup names go through `project_dir()`, `memory_path()` and `backup_path()`, which reject `/`, `..` and empty names. The installer accepts only a method id from `INSTALL_METHODS`, never a command.
