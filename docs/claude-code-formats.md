@@ -37,6 +37,18 @@ The mapping is not reversible; see [Architecture](architecture.md#path-resolutio
 
 `projects/<name>/<sessionId>.jsonl`, one JSON object per line. cc-profiles only reads the `cwd` field of the first lines, to learn the project path. File snapshots of the session are in `file-history/<sessionId>/`, and they must move together with the conversation.
 
+Lines with `"type": "assistant"` carry the token usage of the reply, which the [Usage](guides/usage.md) tab adds up:
+
+```json
+{"type": "assistant", "timestamp": "2026-10-06T09:12:00.000Z", "requestId": "req_…",
+ "message": {"id": "msg_…", "model": "claude-opus-5-5",
+             "usage": {"input_tokens": 12, "output_tokens": 840, "cache_creation_input_tokens": 3100,
+                       "cache_read_input_tokens": 52000,
+                       "cache_creation": {"ephemeral_5m_input_tokens": 3100, "ephemeral_1h_input_tokens": 0}}}}
+```
+
+One reply can span several lines (one per content block, all with the same `message.id` and `requestId`), and a resumed conversation copies earlier replies into its new file: count each `message.id` + `requestId` once. Subagents write their own conversations in `projects/<name>/<sessionId>/subagents/*.jsonl`.
+
 ## Prompt history
 
 `history.jsonl`, one object per prompt:

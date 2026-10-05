@@ -1359,3 +1359,100 @@ def test_about_counts_each_profile(home, app_factory):
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0
     assert about["app"]["Backups"].startswith("0 ·")
+
+
+# --- usage ----------------------------------------------------------------------
+def reply_line(mid, days_ago, model="claude-sonnet-5-5", inp=0, out=0, cw=0, cr=0, req="req-1", **extra):
+    """An assistant line with the usage Claude Code records on every reply."""
+    t = time.time() - days_ago * 86400
+    usage = {"input_tokens": inp, "output_tokens": out, "cache_creation_input_tokens": cw,
+             "cache_read_input_tokens": cr, **extra}
+    return json.dumps({"type": "assistant", "requestId": req,
+                       "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.123Z", time.gmtime(t)),
+                       "message": {"id": mid, "model": model, "role": "assistant",
+                                   "content": [{"type": "text", "text": "ok"}], "usage": usage}},
+                      separators=(",", ":"))
+
+
+def add_lines(home, profile, project, session, lines):
+    d = home.conversation(profile, project, session) if not (home.profile(profile) / "projects" / san(home.path(project)) / f"{session}.jsonl").exists() \
+        else home.profile(profile) / "projects" / san(home.path(project))
+    with open(d / f"{session}.jsonl", "a") as f:
+        f.write("\n".join(lines) + "\n")
+    return d
+
+
+M = 1_000_000
+
+
+def test_usage_is_counted_once_per_reply_and_priced(home, app_factory):
+    basic_home(home)
+    big = reply_line("msg-a", 0.01, inp=M, out=M, cw=M, cr=M)  # sonnet 5.5: 2 + 10 + 2.50 + 0.20 = $14.70
+    add_lines(home, "", "code/work/api", "s-use", [
+        big, big,  # Claude Code writes one line per content block of the same reply
+        reply_line("msg-a", 0.01, inp=M, out=10, cw=M, cr=M),  # a mid-stream line: the one with more output wins
+        "{not json", '{"type":"assistant","message":"odd"}',  # broken lines are skipped
+        reply_line("msg-b", 0.01, model="<synthetic>", inp=100, out=50),  # no list price: tokens, no cost
+        reply_line("msg-c", 3, model="claude-haiku-4-5", out=M),  # $5
+        reply_line("msg-d", 40, model="claude-opus-5-5", out=M),  # $20, outside 30 days
+        reply_line("msg-e", 0.01, model="claude-sonnet-5-5", cw=M,  # written for 1 hour: 2 × input
+                   cache_creation={"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": M}),
+        reply_line("msg-f", 0.02, req="req-2", model="claude-opus-4-1", inp=M),  # $15; same id as below, other request
+    ])
+    add_lines(home, "", "code/personal/blog", "s-use2", [reply_line("msg-f", 0.02, req="req-3", model="claude-opus-4-1", inp=M)])
+    # a resumed conversation copies earlier replies into its own file; a moved one can sit in two profiles
+    add_lines(home, "work", "code/work/api", "s-use-work", [big, reply_line("msg-w", 1, model="claude-opus-4-8", out=M)])
+    app = app_factory()
+    before = home.snapshot()
+
+    r = app.get("/api/usage?profile=all&days=30")
+    t = r["totals"]
+    assert t["replies"] == 7  # a, b, c, e, f twice (two requests), w
+    assert (t["input"], t["output"], t["cache_write"], t["cache_read"]) == (3 * M + 100, 3 * M + 50, 2 * M, M)
+    assert t["cost"] == pytest.approx(14.70 + 5 + 4 + 15 + 15 + 25)
+    assert t["unpriced_tokens"] == 150 and t["cache_read_share"] == pytest.approx(M / (6 * M + 100), abs=1e-4)
+    assert len(r["daily"]) == 30 and r["daily"][-1]["date"] == time.strftime("%Y-%m-%d")
+    assert r["start"] == r["daily"][0]["date"] and r["end"] == r["daily"][-1]["date"]
+    assert sum(d["replies"] for d in r["daily"]) == 7 and sum(1 for d in r["daily"] if d["tokens"]) <= 4
+    assert all(d["tokens"] == 0 and d["cost"] == 0 for d in r["daily"][:-5])  # every day is there, zeros included
+    models = {m["model"]: m for m in r["models"]}
+    assert models["<synthetic>"]["family"] is None and models["<synthetic>"]["unpriced_tokens"] == 150
+    assert models["claude-haiku-4-5"]["cost"] == 5 and models["claude-opus-4-8"]["family"] == "Opus 4.5–5"
+    assert {p["id"]: p["replies"] for p in r["profiles"]} == {"default": 6, "work": 1}
+    projects = {(p["profile"], p["pretty"]): p["replies"] for p in r["projects"]}
+    assert projects == {("default", "~/code/work/api"): 5, ("default", "~/code/personal/blog"): 1, ("work", "~/code/work/api"): 1}
+    assert r["projects_count"] == 3 and r["prices_checked"] and r["currency"] == "USD"
+
+    work = app.get("/api/usage?profile=work&days=7")  # alone, work counts its copy of msg-a
+    assert work["totals"]["replies"] == 2 and "profiles" not in work and len(work["daily"]) == 7
+    assert work["totals"]["cost"] == pytest.approx(14.70 + 25)
+    assert app.get("/api/usage?profile=default&days=90")["totals"]["replies"] == 7  # msg-d is 40 days old
+    assert app.get("/api/usage")["days"] == 30  # all profiles, 30 days by default
+    assert home.snapshot() == before  # read-only
+    assert not home.path(".cc-profiles/backups").exists() or not any(home.path(".cc-profiles/backups").iterdir())
+
+    # a new reply is read on the next request: the cache follows the file
+    add_lines(home, "work", "code/work/api", "s-use-work", [reply_line("msg-new", 0, model="claude-haiku-4-5", inp=10)])
+    assert app.get("/api/usage?profile=work&days=7")["totals"]["replies"] == 3
+
+
+def test_usage_counts_subagent_conversations(home, app_factory):
+    basic_home(home)
+    d = add_lines(home, "", "code/work/api", "s-main", [reply_line("m-main", 0.01, out=10)])
+    sub = d / "s-main" / "subagents"
+    sub.mkdir(parents=True)
+    (sub / "agent-1.jsonl").write_text(reply_line("m-sub", 0.01, out=20) + "\n")
+    app = app_factory()
+    assert app.get("/api/usage?profile=default&days=7")["totals"]["output"] == 30
+
+
+def test_usage_rejects_bad_parameters(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    for q in ("days=10", "days=abc", "days=030", "days=-7", "days=7.0"):
+        status, data = app.request("/api/usage?profile=all&" + q)
+        assert status == 400 and "Pick 7, 30, 90 or 365 days" in data["error"], q
+    status, data = app.request("/api/usage?profile=nope&days=7")
+    assert status == 400 and "Unknown profile" in data["error"]
+    r = app.get("/api/usage?profile=default&days=365")
+    assert r["totals"]["replies"] == 0 and len(r["daily"]) == 365 and r["models"] == [] and r["projects"] == []

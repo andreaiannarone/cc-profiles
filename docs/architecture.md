@@ -27,6 +27,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |
+| `usage.py` | tokens and estimated cost per day, project, model and profile, from the usage of every reply (read-only); the list-price table |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |
@@ -84,6 +85,7 @@ A large home has tens of thousands of conversation files, so listings keep what 
 | `cached_read(kind, path, compute)`: the parsed content of a file or the listing of a folder | `core._file_cache` | the file's or folder's `(mtime_ns, size, inode)`, checked with a fresh `stat()` on every use |
 | `load_config()` | `core._file_cache` | `config.json`'s stat; callers get a deep copy |
 | Conversation and memory file names of each project folder (`project_folders()`, `memory_files()`) | `core._file_cache` | the folder's stat (adding, removing or renaming an entry changes its mtime) |
+| Token usage of a conversation file (one record per reply), for the Usage tab | `core._file_cache` | the file's stat |
 | `cwd`s of a conversation, projects of `.claude.json`, history summary (prompts, broken lines, projects), `MEMORY.md`, memory and skill text for search, backup manifests | `core._file_cache` | the file's stat |
 | Size of a closed backup | `core._file_cache` | the backup folder's stat (only its manifest is ever rewritten, by `os.replace`) |
 | Size of a profile folder (About) | `backups._size_cache` | time: 60 s |
@@ -94,7 +96,7 @@ Rules that keep this safe:
 
 - A cache keyed on a stat is as current as a new read: a changed file is read again in the same request. Time-keyed caches only serve numbers and suggestions on screen.
 - Before a write, code reads afresh: `history_lines()` (never cached) for history rewrites, `memory_files(d, fresh=True)` before deleting a folder, `read_json()` for manifests being restored.
-- At startup, `cli.warm_caches()` fills the caches in a background thread (projects, backups, profile sizes, search texts), so the first tabs open fast. It only reads.
+- At startup, `cli.warm_caches()` fills the caches in a background thread (projects, backups, profile sizes, search texts, token usage), so the first tabs open fast. It only reads.
 
 `tests/bench_home.py` times every tab on a large fake home (see CONTRIBUTING).
 

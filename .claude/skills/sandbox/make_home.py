@@ -99,21 +99,61 @@ TALKS = {
 }
 
 
+# Which model answered in each conversation, and how many days ago it started: the Usage
+# tab then shows a few weeks of replies. Timestamps are relative to now, so the sample
+# data always falls in the last 7 and 30 days.
+MODELS = {"s-api": "claude-opus-5-5", "s-api-work": "claude-sonnet-5-5", "s-billing": "claude-sonnet-5-5",
+          "s-blog": "claude-haiku-4-5", "s-site": "claude-opus-4-8", "s-old": "claude-sonnet-4-6"}
+AGO = {"s-api": 1, "s-api-work": 3, "s-billing": 9, "s-blog": 5, "s-site": 2, "s-old": 20}
+
+
 def write_talks(root):
-    """FakeHome writes one technical line per conversation: add real prompts and replies."""
+    """FakeHome writes one technical line per conversation: add real prompts and replies,
+    with the token usage Claude Code records on every reply, plus earlier replies that
+    only carry usage (tool calls), so the Usage tab has a few weeks to show."""
     import json
-    for f in root.glob(".claude*/projects/*/*.jsonl"):
+    import random
+    import time
+    rnd = random.Random(7)
+    now = time.time()
+    stamp = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(t))
+
+    def usage():
+        return {"input_tokens": rnd.randint(3, 60), "output_tokens": rnd.randint(150, 2400),
+                "cache_creation_input_tokens": rnd.randint(500, 9000),
+                "cache_read_input_tokens": rnd.randint(15000, 90000)}
+
+    for f in sorted(root.glob(".claude*/projects/*/*.jsonl")):
         lines = f.read_text().splitlines()
         cwd = json.loads(lines[0]).get("cwd") if lines else None
+        model, start = MODELS.get(f.stem, "claude-sonnet-5-5"), now - AGO.get(f.stem, 4) * 86400
+        n = 0
+
+        def reply(t, content, extra=None):
+            nonlocal n
+            n += 1
+            line = {"type": "assistant", "sessionId": f.stem, "cwd": cwd, "timestamp": stamp(t),
+                    "requestId": f"req_{f.stem}_{n}",
+                    "message": {"id": f"msg_{f.stem}_{n}", "role": "assistant", "model": model,
+                                "content": content, "usage": usage()}}
+            line.update(extra or {})
+            return json.dumps(line, separators=(",", ":"))  # compact, like Claude Code
+
+        # earlier work in the same project: replies with only a tool call and their usage
+        for day in range(AGO.get(f.stem, 4) + 6, AGO.get(f.stem, 4), -1):
+            for _ in range(rnd.randint(0, 6)):
+                lines.append(reply(now - day * 86400 + rnd.randint(0, 36000), [{"type": "thinking", "thinking": ""}]))
         for i, msg in enumerate(TALKS.get(f.stem, [])):
-            role, text = msg[0], msg[1]
-            content = text if role == "user" else [{"type": "text", "text": text}]
-            if len(msg) > 2:
-                content.append({"type": "tool_use", "name": msg[2], "input": {}})
-            lines.append(json.dumps({"type": role, "sessionId": f.stem, "cwd": cwd,
-                                     "timestamp": f"2026-10-0{1 + i % 4}T09:{10 + i:02d}:00Z",
-                                     "message": {"role": role, "content": content}},
-                                    separators=(",", ":")))  # compact, like Claude Code
+            role, text, t = msg[0], msg[1], start + i * 90
+            if role == "user":
+                lines.append(json.dumps({"type": "user", "sessionId": f.stem, "cwd": cwd, "timestamp": stamp(t),
+                                         "message": {"role": "user", "content": text}}, separators=(",", ":")))
+                continue
+            lines.append(reply(t, [{"type": "text", "text": text}]))
+            if len(msg) > 2:  # a second line for the same reply, as Claude Code writes while streaming
+                same = json.loads(lines[-1])
+                same["message"]["content"] = [{"type": "tool_use", "name": msg[2], "input": {}}]
+                lines.append(json.dumps(same, separators=(",", ":")))
         f.write_text("\n".join(lines) + "\n")
 
 

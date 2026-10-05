@@ -86,7 +86,7 @@ def test_tabs_that_do_not_fit_go_into_the_more_menu(page_on_sandbox):
     assert page.evaluate("document.documentElement.scrollWidth") <= 375  # nothing scrolls sideways
     page.set_viewport_size({"width": 1440, "height": 900})
     page.wait_for_selector("#tabs-more", state="hidden")
-    assert len(row()) == 11
+    assert len(row()) == 12
     assert errors == []
 
 
@@ -109,6 +109,29 @@ def test_keyboard_shortcuts(page_on_sandbox):
     assert page.evaluate("document.activeElement.id") == "gsearch"
     page.keyboard.type("gp")  # typing in a field is not a shortcut
     assert page.get_attribute('#tabs button[data-tab="mcp"]', "class") == "on"
+    assert errors == []
+
+
+def test_usage_tab(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.keyboard.press("g")
+    page.keyboard.press("u")
+    page.wait_for_selector('#tabs button[data-tab="usage"][aria-current="page"]')
+    page.wait_for_selector(".uchart svg g.day")
+    assert page.eval_on_selector_all(".uchart g.day", "gs => gs.length") == 30
+    assert "estimate" in page.inner_text("#main") and "not billed per token" in page.inner_text("#main")
+    assert page.query_selector("text=Profiles") is not None  # per-profile table with All profiles
+    page.click('[data-udays="7"]')
+    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 7")
+    assert page.get_attribute('[data-udays="7"]', "aria-pressed") == "true"
+    page.click('[data-uprof="work"]')
+    page.wait_for_selector('[data-uprof="work"].on')
+    page.wait_for_selector(".uchart svg")
+    assert "~/code/work/api" in page.inner_text("#main")  # work, last 7 days
+    assert "~/code/personal/blog" not in page.inner_text("#main")
+    page.click('[data-udays="365"]')
+    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 365")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 1440
     assert errors == []
 
 

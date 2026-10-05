@@ -19,6 +19,7 @@ from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import install_command
 from .projects import list_projects
 from .search import warm_search
+from .usage import warm_usage
 from .web import Handler, Server
 
 # ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ def warm_caches():
         for p in profiles():
             recent_dir_size(p["dir_abs"])
         warm_search()
+        warm_usage()
     except Exception:  # a cold cache is only slower, never wrong
         pass
 

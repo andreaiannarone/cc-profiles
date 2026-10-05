@@ -8,6 +8,7 @@
    - [Projects](guides/projects.md): move, relink, assign
    - [Memories](guides/memories.md): browse, edit, move
    - [Conversations](guides/conversations.md): read, move one to another profile, delete
+   - [Usage](guides/usage.md): tokens and estimated cost per day, project, model and profile
    - [Profiles and sharing](guides/profiles.md): create, edit, delete, share
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
    - [Search and compare](guides/search-and-compare.md): search every profile at once, compare two profiles side by side

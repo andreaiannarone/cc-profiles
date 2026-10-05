@@ -124,6 +124,7 @@ cc-profiles
 - 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
 - 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
+- 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile, or copy one to every profile at once.
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
@@ -302,6 +303,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 - **[Projects](docs/guides/projects.md)**: move, relink, assign
 - **[Memories](docs/guides/memories.md)**: browse, edit, move
+- **[Usage](docs/guides/usage.md)**: tokens and estimated cost per day, project, model and profile
 - **[Profiles and sharing](docs/guides/profiles.md)**: create, edit, delete, share
 - **[Skills and MCP servers](docs/guides/skills-and-mcp.md)**: create, edit, copy, delete
 - **[Settings](docs/guides/settings.md)**: general settings, `CLAUDE.md`, permissions, raw JSON

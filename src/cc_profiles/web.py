@@ -73,6 +73,7 @@ from .conversations import (
     op_conversation_delete,
     op_conversation_move,
 )
+from .usage import usage
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
@@ -251,6 +252,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
                 "/api/backups": lambda: list_backups(),
                 "/api/search": lambda: search(q.get("q", "")),
+                "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
