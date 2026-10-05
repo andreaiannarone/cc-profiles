@@ -11,7 +11,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/index.html`). R
 
 ## Color
 
-All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`. Do not hard-code colors outside these properties, except the white text of error toasts.
+All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme button next to (i) (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts.
 
 | Property | Light | Dark | Use |
 |---|---|---|---|

@@ -18,6 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Skills and MCP tabs: for each profile, browse, create, edit, copy and delete skills, and add, edit, copy and remove MCP servers (user or project scope). Values of environment variables and headers stay out of the list.
 - Profile cards and the Profiles tab show the account each profile is signed in with.
 
+- Theme button next to (i): System, Light or Dark, remembered per browser and applied before the page is drawn.
+
 ### Changed
 - License: GPL-3.0-or-later instead of MIT, from this release on. Version 0.1.0 stays available under MIT.
 - Settings: output styles use Claude Code's own descriptions, shown under the menu, are grouped into built-in and custom, and the duplicate "Default" entry is gone.

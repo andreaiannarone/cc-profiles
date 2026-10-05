@@ -33,9 +33,9 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/projects-dark.jpg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/projects-light.jpg">
-    <img src="docs/assets/screenshots/projects-light.jpg" alt="The Projects tab of cc-profiles: three profiles at the top, and a table that shows which profile each project belongs to and what needs attention" width="860">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.gif">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.gif">
+    <img src="docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, the skills, the MCP servers, the settings and the backup of the move are shown" width="860">
   </picture>
 </p>
 
@@ -131,6 +131,7 @@ cc-profiles
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
+- 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is ever sent anywhere.
 
 ---
