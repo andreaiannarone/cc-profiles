@@ -9,7 +9,7 @@ import time
 
 from .core import ApiError, cached_read, load_settings, parse_memory, pretty, profile, profiles, read_json
 from .paths import memory_files, path_index, project_folders
-from .settings import SETTING_FIELDS, effective, settings_files
+from .settings import effective, fields_for, settings_files
 from .info import names_in
 from .extensions import mcp_summary
 
@@ -169,7 +169,7 @@ def compare(a, b):
     if pa["id"] == pb["id"]:
         raise ApiError("Pick two different profiles")
     settings = []
-    for fd in SETTING_FIELDS:
+    for fd in fields_for([pa, pb]):
         va, sa = effective(pa, fd["key"])
         vb, sb = effective(pb, fd["key"])
         settings.append({"key": fd["key"], "label": fd["label"], "type": fd["type"],
