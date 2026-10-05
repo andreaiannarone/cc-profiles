@@ -22,6 +22,16 @@ SRC = ROOT / "src"
 OLD = time.time() - 3600  # files older than the "session open" window
 
 
+def child_env(env):
+    """Environment for a cc-profiles process started by a test. Under coverage
+    (COVERAGE_PROCESS_START is set) the process is measured too."""
+    env = dict(env)
+    if os.environ.get("COVERAGE_PROCESS_START"):
+        env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
+        env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "tests" / "coverage_startup"), env.get("PYTHONPATH", "")])
+    return env
+
+
 def san(path):
     return re.sub(r"[^A-Za-z0-9]", "-", str(path))
 
@@ -113,6 +123,7 @@ class App:
             "CC_PROFILES_INSTALL_DRYRUN": "1",
         }
         env.update(extra_env or {})
+        env = child_env(env)
         self.env = env
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(self.port)],

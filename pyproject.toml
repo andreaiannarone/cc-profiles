@@ -26,7 +26,7 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+test = ["pytest>=7", "coverage[toml]>=7.4"]
 # the browser smoke test (tests/test_ui.py), run in CI; locally also needs: python -m playwright install chromium
 ui = ["pytest>=7", "playwright>=1.40"]
 
@@ -49,3 +49,13 @@ cc_profiles = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# Coverage of the test suite, servers started by the tests included (see CONTRIBUTING.md)
+[tool.coverage.run]
+source_pkgs = ["cc_profiles"]
+parallel = true  # one data file per process, merged by coverage combine
+sigterm = true   # the tests stop each server with SIGTERM: save its data first
+
+[tool.coverage.report]
+show_missing = false
+skip_empty = true

@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Much faster on large homes. On a test home with 2,000 projects and 20,000 conversations, Projects opens in 0.4–0.6 s instead of 25–26 s, Memories and Conversations in 0.3 s instead of 20–22 s, Health in 0.8–2.2 s instead of 31–37 s, and Search in 0.4–1.9 s instead of 16–23 s. Files that did not change since the last read are not read again: each cached result is checked against the file's modification time and size first. The app also reads the first tabs' data in the background when it starts.
+- Health looks for moved project folders with a single walk of the search roots, instead of one walk per missing folder.
+
+### Fixed
+- A prompt-history line that is valid JSON but not an object (for example `3`) no longer breaks the project list. Health counts it as a broken line.
+
+### Added
+- Test coverage, servers started by the tests included, measured in CI and shown in the run summary (see CONTRIBUTING).
+- `tests/bench_home.py` times every tab on a large generated home.
+- A test that starts a real process named `claude` and checks that its profile is reported as in use.
+
 ## [0.3.0] - 2026-10-05
 
 ### Added
