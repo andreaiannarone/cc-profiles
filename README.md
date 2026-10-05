@@ -123,6 +123,7 @@ cc-profiles
 
 - 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
+- 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty or copied from another one; rename it, change its command, or delete it, optionally merging its content into another profile first.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile.
 - 🔌 **MCP servers**: add, edit, copy and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.

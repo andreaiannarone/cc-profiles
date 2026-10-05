@@ -6,13 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Conversations tab: read the conversations of each project (title, dates, prompt and reply counts, a read-only viewer), and move one to another profile with its file snapshots, or delete it.
 - A browser smoke test (`tests/test_ui.py`, run in CI) opens every tab in Chromium and fails on JavaScript errors or Content-Security-Policy violations.
 
 ### Changed
 - An operation that fails halfway keeps its backup: the steps done so far are journaled, the backup is labelled "incomplete" and Restore undoes them.
 - The page is served with a strict Content-Security-Policy and cannot be framed by other sites.
-
-### Changed
 - CI and release workflows use the current GitHub Actions (checkout and setup-python v7, upload-artifact v7, download-artifact v8), off the deprecated Node 20.
 - Dependabot opens one weekly pull request with GitHub Actions updates; CodeQL scans the Python server and the UI's JavaScript.
 - Security issues are reported privately through GitHub's *Report a vulnerability* (see SECURITY.md).
