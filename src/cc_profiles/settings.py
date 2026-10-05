@@ -329,7 +329,9 @@ def check_setting_value(fd, prof, value):
     """The value to write (None removes the setting), checked against the field's type."""
     if value is None:
         return None
-    if "off_value" in fd:
+    if "off_value" in fd:  # a switch: true is the default, false the "off" text; a custom text is kept
+        if isinstance(value, str):
+            return value.strip() or fd["off_value"]
         if not isinstance(value, bool):
             raise ApiError("Invalid value: expected true or false")
         return None if value else fd["off_value"]
@@ -364,6 +366,24 @@ def op_setting(pid, key, value):
         msg = f"Saved in {os.path.basename(path)}: {fd['label'].lower()} = {show_value(fd, prof, value)}{shared_note(path)}."
     bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(path)}")
     return {"message": msg, "backup": bk.close()}
+
+
+def op_settings_many(pid, values):
+    """Save several fields of one profile at once: all are checked first, then written
+    in one backup. Each goes where its value lives, as with a single save."""
+    prof = profile(pid)
+    if not isinstance(values, dict) or not values:
+        raise ApiError("Nothing to save")
+    checked = [(setting_field(k), check_setting_value(setting_field(k), prof, v)) for k, v in values.items()]
+    bk = Backup("settings", f"{len(checked)} setting{'s' if len(checked) != 1 else ''} of {prof['label']}")
+    shown = []
+    for fd, value in checked:
+        which = effective(prof, fd["key"])[1] or home_file(fd)
+        write_field(prof, which, fd["key"], value, bk)
+        bk.note(f"{fd['key']} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(field_path(prof, which))}")
+        shown.append(f"{fd['label'].lower()} = {show_value(fd, prof, value)}")
+    return {"message": f"Saved {len(checked)} setting{'s' if len(checked) != 1 else ''}: " + "; ".join(shown) + ".",
+            "backup": bk.close()}
 
 
 # Apply to all profiles: one operation, one backup for every profile it changes. The plan

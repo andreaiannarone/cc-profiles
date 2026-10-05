@@ -242,6 +242,10 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .sec > .b { padding: 12px 16px; }
 .srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
 .srow:last-child { border-bottom: 0; }
+.srow.changed { box-shadow: inset 3px 0 0 var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.savebar { position: sticky; bottom: 12px; z-index: 5; display: flex; gap: 8px; align-items: center; margin: 10px 12px 12px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+.savebar[hidden] { display: none; }
+.savebar .grow { flex: 1; }
 .sgroup { margin: 0; padding: 14px 16px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--panel-2); }
 .srow .l b { display: block; font-weight: 600; }
 .srow .l span { color: var(--muted); font-size: 12.5px; }
@@ -1101,13 +1105,40 @@ async function editMcp(m) {
 }
 
 // ---------- settings ----------
+// Reloading the same profile keeps the page where it is: no spinner, same scroll.
 async function loadSettings(pid) {
-  S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings" }; renderSettings();
+  const same = S.set?.profile === pid && S.set.data, y = window.scrollY;
+  if (!same) { S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings", draft: {} }; renderSettings(); }
   try {
-    [S.set.data, S.set.sl] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid)]);
+    const [data, sl] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid)]);
+    Object.assign(S.set, { data, sl, draft: same ? S.set.draft || {} : {} });
     slDraft();
   } catch (e) { toast(e.message, "", true); }
   renderSettings();
+  if (same) window.scrollTo(0, y);
+}
+window.addEventListener("beforeunload", e => { if (S.set?.data && genChanged().length) { e.preventDefault(); e.returnValue = ""; } });
+// General: changes wait in a draft (key → the value to send) until Save changes.
+// reqOf turns a stored value into that form, so an edit undone by hand is no change.
+function reqOf(f, v) {
+  if (f.off_value !== undefined) return v === f.off_value ? false : v == null ? true : v;
+  if (f.type === "bool" && v == null && f.default !== undefined) return f.default;
+  return v ?? null;
+}
+function storedOf(f, r) {  // the reverse, to draw a draft value
+  if (f.off_value !== undefined) return r === false ? f.off_value : r === true ? null : r;
+  return r;
+}
+const genChanged = () => Object.keys(S.set.draft).filter(k => { const f = S.set.data.fields.find(x => x.key === k); return f && JSON.stringify(S.set.draft[k]) !== JSON.stringify(reqOf(f, f.value)); });
+function genMark() {
+  const keys = genChanged();
+  document.querySelectorAll("[data-srow]").forEach(r => r.classList.toggle("changed", keys.includes(r.dataset.srow)));
+  const bar = $("#gen-bar"); if (!bar) return;
+  bar.hidden = !keys.length;
+  $("#gen-count").textContent = plural(keys.length, "unsaved change", "unsaved changes");
+}
+function genRedraw() {  // after a reset or a copy: redraw in place
+  const y = window.scrollY; renderSettings(); window.scrollTo(0, y);
 }
 
 // ---------- status line ----------
@@ -1288,7 +1319,7 @@ function fieldInput(f) {
   const list = f.suggest?.length ? `list="dl-${f.key}"` : "";
   return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="default" ${list} aria-label="${esc(f.label)}">
     ${f.suggest?.length ? `<datalist id="dl-${f.key}">${f.suggest.map(v => `<option value="${esc(v)}">`).join("")}</datalist>` : ""}
-    <button class="btn small" data-ssave="${f.key}" hidden>Save</button>`;
+`;
 }
 function renderSettings() {
   if (S.tab !== "settings") return;
@@ -1300,15 +1331,16 @@ function renderSettings() {
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
   <div class="setgrid">${errs}
     <section class="sec"><div class="h"><h3>General</h3><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
-      ${d.fields.map((f, i) => `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow">
+      ${d.fields.map((f, i) => { const shownF = f.key in st.draft ? { ...f, value: storedOf(f, st.draft[f.key]) } : f; return `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow" data-srow="${f.key}">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
-        <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
+        <div class="v">${fieldInput(shownF)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
-          ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, f.value))}</div>` : ""}</div>
+          ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, shownF.value))}</div>` : ""}</div>
         <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.off_value !== undefined ? (o.value === f.off_value ? "off" : o.value == null ? "on" : "custom") : f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
           ${f.deprecated ? "" : JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}
-          ${!f.deprecated && f.others.some(o => JSON.stringify(o.value) !== JSON.stringify(f.value)) ? `<div><button class="btn small" data-sall="${f.key}" title="Give every other profile the value of this one">Apply to all…</button></div>` : ""}</div>
-      </div>`).join("")}
+          ${!f.deprecated && f.others.some(o => JSON.stringify(o.value) !== JSON.stringify(f.value)) ? `<div><button class="btn small" data-sall="${f.key}" title="Give every other profile the value saved in this one">Apply to all…</button></div>` : ""}</div>
+      </div>`; }).join("")}
+      <div class="savebar" id="gen-bar" hidden><span id="gen-count"></span><span class="grow"></span><button class="btn" id="gen-cancel">Cancel</button><button class="btn primary" id="gen-save">Save changes</button></div>
     </section>
 
     ${statusLineSection()}
@@ -1342,34 +1374,44 @@ function renderSettings() {
 function bindSettings() {
   const st = S.set, d = st.data, pid = st.profile;
   bindStatusLine();
-  const save = async (key, value) => { try { await run(() => api("/api/settings/field", { profile: pid, key, value })); } catch {} loadSettings(pid); };
+  const set = (f, r) => { st.draft[f.key] = r; genMark(); };
   document.querySelectorAll("[data-sfield]").forEach(el => {
     const f = d.fields.find(x => x.key === el.dataset.sfield);
-    if (f.type === "bool") { el.onchange = () => save(f.key, el.checked); return; }
+    if (!f) return;
+    if (f.off_value !== undefined) {  // on keeps a custom text the profile already has
+      el.onchange = () => set(f, el.checked ? (typeof f.value === "string" && f.value !== f.off_value ? f.value : true) : false);
+      return;
+    }
+    if (f.type === "bool") { el.onchange = () => set(f, el.checked); return; }
     if (f.type === "select") {
       el.onchange = () => {
         const dsc = document.querySelector(`[data-sdesc="${f.key}"]`);
         if (dsc) dsc.textContent = optionDesc(f, el.value);
-        save(f.key, el.value === "" ? null : el.value);
+        set(f, el.value === "" ? null : el.value);
       };
       return;
     }
-    const btn = document.querySelector(`[data-ssave="${f.key}"]`);
-    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null);
-    el.oninput = () => { btn.hidden = JSON.stringify(val()) === JSON.stringify(f.value ?? null); };
-    el.onkeydown = e => { if (e.key === "Enter" && !btn.hidden) btn.click(); };
-    btn.onclick = () => save(f.key, val());
+    el.oninput = () => set(f, f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null));
+    el.onkeydown = e => { if (e.key === "Enter" && genChanged().length) $("#gen-save").click(); };
   });
-  document.querySelectorAll("[data-sreset]").forEach(b => b.onclick = async () => {
+  document.querySelectorAll("[data-sreset]").forEach(b => b.onclick = () => {
     const f = d.fields.find(x => x.key === b.dataset.sreset);
-    if (await confirmBox("Back to the default?", `<b>${esc(f.label)}</b> is removed from <code>${f.source === "local" ? "settings.local.json" : "settings.json"}</code>.${f.source === "local" ? " If settings.json also has it, that value applies." : ""}`, "Remove")) save(f.key, null);
+    st.draft[f.key] = null; genRedraw();
   });
   document.querySelectorAll("[data-scopy]").forEach(b => b.onclick = () => {
     const f = d.fields.find(x => x.key === b.dataset.scopy), o = f.others.find(x => x.id === b.dataset.from);
-    save(f.key, o.value);
+    st.draft[f.key] = reqOf(f, o.value); genRedraw();
   });
+  $("#gen-cancel").onclick = () => { st.draft = {}; genRedraw(); };
+  $("#gen-save").onclick = async () => {
+    const values = Object.fromEntries(genChanged().map(k => [k, st.draft[k]]));
+    try { await run(() => api("/api/settings/fields", { profile: pid, values })); } catch { return; }
+    st.draft = {}; loadSettings(pid);
+  };
+  genMark();
   document.querySelectorAll("[data-sall]").forEach(b => b.onclick = async () => {
     const f = d.fields.find(x => x.key === b.dataset.sall);
+    if (genChanged().includes(f.key) && !(await confirmBox("Unsaved change", `<b>Apply to all</b> uses the value of <b>${esc(f.label)}</b> saved in this profile, not the one you have not saved yet. Go on?`, "Go on"))) return;
     const shown = f.value === null || f.value === undefined ? "the default" : f.options?.find(o => o.value === f.value)?.label || fmt(f.value);
     if (await applyAll(`Apply ${f.label.toLowerCase()} to every profile?`,
         `/api/settings/field/all/preview?profile=${encodeURIComponent(pid)}&key=${encodeURIComponent(f.key)}`,
@@ -1389,7 +1431,11 @@ function bindSettings() {
         `<code>${esc(rule)}</code> is added to <code>${esc(list)}</code>.`,
         "Add to all", () => api("/api/settings/permissions/all", { list, rule }))) loadSettings(pid);
   };
-  document.querySelectorAll("[data-setprof]").forEach(b => b.onclick = () => loadSettings(b.dataset.setprof));
+  document.querySelectorAll("[data-setprof]").forEach(b => b.onclick = async () => {
+    if (b.dataset.setprof === pid) return;
+    if (genChanged().length && !(await confirmBox("Discard the changes?", `${plural(genChanged().length, "change", "changes")} to ${esc(label(pid))} ${genChanged().length === 1 ? "is" : "are"} not saved yet.`, "Discard"))) return;
+    loadSettings(b.dataset.setprof);
+  });
   document.querySelectorAll("[data-rawfile]").forEach(b => b.onclick = () => { st.rawFile = b.dataset.rawfile; renderSettings(); });
   $("#cmd-save").onclick = async () => { try { await run(() => api("/api/settings/claude-md", { profile: pid, content: $("#cmd-text").value })); } catch {} loadSettings(pid); };
   $("#perm-save").onclick = async () => {

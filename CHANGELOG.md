@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Settings → General: changes wait for **Save changes** (or **Cancel**) in a bar at the bottom, which counts them and marks the changed rows, and are saved together in one backup. The page no longer jumps to the top after a save, in General, CLAUDE.md, permissions and the advanced editor.
+
 ## [0.4.2] - 2026-10-06
 
 ### Added

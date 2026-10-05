@@ -296,6 +296,26 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_several_settings_saved_at_once_in_one_backup(home, app_factory):
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus"})
+    before = home.snapshot()
+    app = app_factory()
+    n = len(app.get("/api/backups"))
+    P = "/api/settings/fields"
+    # one bad value: nothing is written
+    assert "pick one of the options" in app.post_error(P, {"profile": "default", "values": {"model": "haiku", "timeFormat": "x"}})
+    assert home.snapshot() == before
+    r = app.post(P, {"profile": "default", "values": {"model": "haiku", "verbose": True, "attribution.commit": False}})
+    assert r["message"].startswith("Saved 3 settings")
+    assert len(app.get("/api/backups")) == n + 1
+    assert json.loads(home.path(".claude/settings.json").read_text()) == {"model": "haiku", "attribution": {"commit": ""}}
+    assert json.loads(home.path(".claude.json").read_text())["verbose"] is True
+    assert "Nothing to save" in app.post_error(P, {"profile": "default", "values": {}})
+    restore_newest(app)
+    assert home.snapshot() == before
+
+
 def test_attribution_keys_live_inside_their_object(home, app_factory):
     """attribution is an object: commit and pr are switches, off is an empty text (no
     attribution), on is the key's absence; a custom text counts as on and is kept. The
@@ -310,7 +330,7 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
     assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
 
-    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": "text"})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": 5})
     app.post(P, {"profile": "default", "key": "attribution.commit", "value": False})
     app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
     data = json.loads(home.path(".claude/settings.json").read_text())

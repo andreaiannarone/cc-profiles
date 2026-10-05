@@ -199,3 +199,27 @@ def test_status_line_section(page_on_sandbox):
     page.click('[data-slmode="off"]')
     assert page.query_selector("#sl-cmd") is None and page.query_selector("#sl-preview") is None
     assert errors == []
+
+
+def test_general_settings_wait_for_save(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    assert page.is_hidden("#gen-bar")
+    page.select_option('[data-sfield="timeFormat"]', "12-hour")
+    page.wait_for_selector("#gen-bar:not([hidden])")
+    assert page.inner_text("#gen-count") == "1 unsaved change"
+    assert page.get_attribute('[data-srow="timeFormat"]', "class") == "srow changed"
+    page.select_option('[data-sfield="timeFormat"]', "24-hour")  # back to the saved value: no change left
+    page.wait_for_selector("#gen-bar[hidden]", state="attached")
+    page.select_option('[data-sfield="editorMode"]', "vim")
+    page.click("#gen-cancel")
+    assert page.input_value('[data-sfield="editorMode"]') == ""
+    page.select_option('[data-sfield="editorMode"]', "vim")
+    y = page.evaluate("window.scrollY")
+    page.click("#gen-save")
+    page.wait_for_selector(".toast")
+    page.wait_for_selector("#gen-bar[hidden]", state="attached")
+    assert page.input_value('[data-sfield="editorMode"]') == "vim"
+    assert abs(page.evaluate("window.scrollY") - y) < 5  # the page stays where it was
+    assert errors == []
+

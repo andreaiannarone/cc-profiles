@@ -58,10 +58,12 @@ Settings that `/config` turns on by removing the key (Thinking mode, Prompt sugg
 
 Dropdowns list the values the Claude Code settings schema accepts. They were checked against the version shown in the tab. A value already in your file that is not in the list stays selectable as *(current value)*, so nothing is lost.
 
+Changes in **General** are not saved one by one: each changed row is marked, and a bar at the bottom counts them, with **Cancel** and **Save changes**. Saving writes them all in one backup and keeps the page where it is. Switching profile or closing the page with unsaved changes asks first.
+
 For each setting you see:
 
 - **where the value comes from**: `settings.local.json` (amber, because it wins over `settings.json`), `settings.json`, `.claude.json`, or *default*. Saving writes to the file the value comes from, so a change is never hidden by a local override.
-- **×** to remove the setting and go back to the default.
+- **×** to go back to the default (the setting is removed when you save).
 - **the other profiles' values**, with *copy* to take one.
 - **Apply to all…**, when another profile has a different value: gives every other profile the value saved in this one.
 
