@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Settings → **Status line**: build one from 17 pieces (path or folder, git branch with `*` for uncommitted changes, profile, account email, model, effort, output style, pull request, context used, session cost, lines changed, session time, 5-hour and weekly limits, terminal, time), in the order you drag them into, each with its own brackets (none, `( )`, `[ ]`, `{ }`, `⟨ ⟩`), with a separator and colors of your choice and a live preview in color; or set your own command. Padding, refresh interval and the vim indicator too. The built-in one is a small `sh` + `jq` script in the profile folder, shown before you save, that names the right profile even through a shared `settings.json` and keeps working in a shell with a broken locale. **Apply to all…** puts it in every profile in one backup.
+
+### Changed
+- Automatic backup cleanup: pick 15, 30, 60 or 90 days. A 180 or 365 already set keeps working until you change it.
+- Settings: the **General** section now has the same settings as Claude Code's `/config` panel, in groups (Model and replies, Interface, Editor and files, Notifications and updates, Commits and pull requests), plus the commit and pull request attribution as on/off switches. The keys `/config` keeps in `.claude.json` (Auto-compact, Verbose output, Diff tool, Editor mode and more) are written there, so Editor mode now goes where Claude Code reads it. Dropdowns name their default value. Effort level, Renderer, Days to keep conversations and Session link are no longer listed: they are not in `/config` (edit them in the advanced editor).
+
 ## [0.4.1] - 2026-10-05
 
 ### Added

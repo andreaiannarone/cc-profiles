@@ -45,7 +45,7 @@ A backup can be restored once; afterwards it shows *restored* with the time.
 
 ## Automatic cleanup
 
-**Delete backups older than … automatically**, in the toolbar of the Backups tab, is off by default (*never*). Pick 30, 90, 180 or 365 days to turn it on. From then on cc-profiles deletes the backups older than that when it starts and once a day while it runs. The confirmation shows what goes right away.
+**Delete backups older than … automatically**, in the toolbar of the Backups tab, is off by default (*never*). Pick 15, 30, 60 or 90 days to turn it on. From then on cc-profiles deletes the backups older than that when it starts and once a day while it runs. The confirmation shows what goes right away.
 
 The automatic cleanup never deletes:
 

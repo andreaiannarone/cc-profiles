@@ -255,6 +255,7 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     basic_home(home)
     home.json(".claude/settings.json", {"model": "opus", "permissions": {"defaultMode": "default"}})
     home.json(".claude/settings.local.json", {"outputStyle": "Explanatory"})
+    home.json(".claude-work/settings.local.json", {"theme": "light"})
     home.write(".claude/output-styles/terse.md", "---\nname: Terse\n---\nBe brief.\n")
     before = home.snapshot()
     app = app_factory()
@@ -263,10 +264,25 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     app.post(P, {"profile": "default", "key": "outputStyle", "value": "Terse"})
     assert json.loads(home.path(".claude/settings.local.json").read_text()) == {"outputStyle": "Terse"}
     assert "pick one of the options" in app.post_error(P, {"profile": "work", "key": "outputStyle", "value": "Terse"})
-    assert "pick one of the options" in app.post_error(P, {"profile": "default", "key": "effortLevel", "value": "max"})
-    assert "greater than zero" in app.post_error(P, {"profile": "default", "key": "cleanupPeriodDays", "value": 0})
+    assert "pick one of the options" in app.post_error(P, {"profile": "default", "key": "timeFormat", "value": "max"})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "verbose", "value": "yes"})
     assert "advanced editor" in app.post_error(P, {"profile": "default", "key": "hooks", "value": {}})
-    app.post(P, {"profile": "default", "key": "effortLevel", "value": "xhigh"})
+    app.post(P, {"profile": "default", "key": "timeFormat", "value": "24-hour"})
+    # the keys /config keeps in .claude.json are written there, and only those
+    app.post(P, {"profile": "default", "key": "autoCompactEnabled", "value": False})
+    app.post(P, {"profile": "work", "key": "permissions.defaultMode", "value": "plan"})
+    assert json.loads(home.path(".claude.json").read_text())["autoCompactEnabled"] is False
+    assert json.loads(home.path(".claude-work/settings.json").read_text()) == {"permissions": {"defaultMode": "plan"}}
+    # thinking on is the key's absence, as /config writes it
+    app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": False})
+    assert json.loads(home.path(".claude/settings.json").read_text())["alwaysThinkingEnabled"] is False
+    app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": True})
+    assert "alwaysThinkingEnabled" not in json.loads(home.path(".claude/settings.json").read_text())
+    # theme lives where a file has it: settings.local.json here, .claude.json otherwise
+    app.post(P, {"profile": "work", "key": "theme", "value": "dark"})
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text()) == {"theme": "dark"}
+    app.post(P, {"profile": "default", "key": "theme", "value": "light"})
+    assert json.loads(home.path(".claude.json").read_text())["theme"] == "light"
 
     app.post("/api/settings/permissions", {"profile": "default", "rules": {"deny": ["mcp__gmail", "  "]}})
     perms = json.loads(home.path(".claude/settings.json").read_text())["permissions"]
@@ -281,8 +297,9 @@ def test_settings_write_where_the_value_lives(home, app_factory):
 
 
 def test_attribution_keys_live_inside_their_object(home, app_factory):
-    """attribution is an object: each of its keys is a field, an empty text means none,
-    and the deprecated includeCoAuthoredBy shows only where a profile still has it."""
+    """attribution is an object: commit and pr are switches, off is an empty text (no
+    attribution), on is the key's absence; a custom text counts as on and is kept. The
+    deprecated includeCoAuthoredBy shows only where a profile still has it."""
     basic_home(home)
     home.json(".claude/settings.json", {"includeCoAuthoredBy": False, "attribution": {"pr": "via Claude"}})
     before = home.snapshot()
@@ -292,22 +309,93 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     assert "includeCoAuthoredBy" in keys("work")  # Default still has it
     fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
     assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
-    assert fields["attribution.sessionUrl"]["default"] is True
 
-    app.post(P, {"profile": "default", "key": "attribution.commit", "value": "  "})
-    app.post(P, {"profile": "default", "key": "attribution.sessionUrl", "value": False})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": "text"})
+    app.post(P, {"profile": "default", "key": "attribution.commit", "value": False})
     app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
     data = json.loads(home.path(".claude/settings.json").read_text())
-    assert data == {"attribution": {"pr": "via Claude", "commit": "", "sessionUrl": False}}
+    assert data == {"attribution": {"pr": "via Claude", "commit": ""}}
     assert "includeCoAuthoredBy" not in keys("work")
-    for k in ("attribution.pr", "attribution.commit", "attribution.sessionUrl"):
-        app.post(P, {"profile": "default", "key": k, "value": None})
+    plan = app.get("/api/settings/field/all/preview?profile=default&key=attribution.commit")
+    assert plan["shown"] == "off" and [a["id"] for a in plan["apply"]] == ["work"]
+    for k in ("attribution.pr", "attribution.commit"):
+        app.post(P, {"profile": "default", "key": k, "value": True})
     assert json.loads(home.path(".claude/settings.json").read_text()) == {}  # the empty object goes too
 
     home.json(".claude-work/settings.json", {"attribution": "text"})
-    assert "not an object" in app.post_error(P, {"profile": "work", "key": "attribution.pr", "value": "x"})
+    assert "not an object" in app.post_error(P, {"profile": "work", "key": "attribution.pr", "value": False})
     app.restore_all()
     home.json(".claude-work/settings.json", {})
+    assert home.snapshot() == before
+
+
+def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus"})
+    home.write(".claude-work/statusline.sh", "#!/bin/sh\necho mine\n")  # not ours: never overwritten
+    before = home.snapshot()
+    app = app_factory()
+    S = "/api/statusline"
+    assert app.get(S + "?profile=default")["mode"] == "off"
+
+    preview = app.get(S + "/preview?profile=default&parts=cost,profile,model&separator=dot&colors=0")["text"]
+    colored = app.get(S + "/preview?profile=default&parts=model:none,context:none&separator=bar")
+    square = app.get(S + "/preview?profile=default&parts=model:square,cost:square&colors=0")["text"]
+    assert "Unknown brackets" in app.request(S + "/preview?profile=default&parts=model:x")[1]["error"]
+    if shutil.which("jq"):
+        assert square == "[Opus] [$1.27]"
+        assert preview == "$1.27 · (Default) · [Opus]"  # in the order picked, each with its own brackets
+        assert colored["text"] == "\x1b[35mOpus\x1b[0m\x1b[2m | \x1b[0m\x1b[34mctx:42%\x1b[0m"
+    else:
+        assert "install jq" in preview
+    assert "# style: separator=bar colors=1" in colored["script"]
+    assert "Unknown separator" in app.request(S + "/preview?profile=default&parts=model&separator=x")[1]["error"]
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model:none", "profile", "nope"], "refreshInterval": 5,
+                 "separator": "bar", "colors": False})
+    script = home.path(".claude/statusline.sh").read_text()
+    assert "# managed by cc-profiles: status line" in script and "# parts: model:none profile:round" in script
+    line = json.loads(home.path(".claude/settings.json").read_text())["statusLine"]
+    assert line["type"] == "command" and line["command"].endswith("/.claude/statusline.sh") and line["refreshInterval"] == 5
+    got = app.get(S + "?profile=default")
+    assert got["mode"] == "builtin" and got["parts"] == ["model:none", "profile:round"]
+    assert got["separator"] == "bar" and not got["colors"]
+    if shutil.which("jq"):  # the real script, as Claude Code runs it
+        r = subprocess.run(["sh", "-c", line["command"]], input='{"model": {"display_name": "Opus"}}', capture_output=True,
+                           text=True, env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
+        assert r.stdout == "Opus | (Default)"
+
+    assert "not made by cc-profiles" in app.post_error(S, {"profile": "work", "mode": "builtin", "parts": ["model"]})
+    assert app.get(S + "/all/preview?profile=default")["skip"][0]["reason"].endswith("was not made by cc-profiles")
+    assert "Pick at least one" in app.post_error(S, {"profile": "default", "mode": "builtin", "parts": []})
+    assert "whole number" in app.post_error(S, {"profile": "default", "mode": "custom", "command": "x", "padding": -1})
+
+    app.post(S, {"profile": "default", "mode": "custom", "command": "echo hi"})
+    assert not home.path(".claude/statusline.sh").exists()  # the unused script goes to the backup
+    assert app.get(S + "?profile=default")["mode"] == "custom"
+    app.post(S, {"profile": "default", "mode": "off"})
+    assert "statusLine" not in json.loads(home.path(".claude/settings.json").read_text())
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):
+    basic_home(home)
+    home.profile("solo")
+    home.json(".claude-solo/settings.json", {"statusLine": {"type": "command", "command": "echo solo"}})
+    before = home.snapshot()
+    app = app_factory()
+    app.post("/api/statusline", {"profile": "default", "mode": "builtin", "parts": ["profile", "branch"], "padding": 1})
+    plan = app.get("/api/statusline/all/preview?profile=default")
+    assert sorted(a["id"] for a in plan["apply"]) == ["solo", "work"]
+    app.post("/api/statusline/all", {"profile": "default"})
+    for d in (".claude-work", ".claude-solo"):  # each profile gets its own script, same parts and options
+        line = json.loads(home.path(f"{d}/settings.json").read_text())["statusLine"]
+        assert line["command"].endswith(f"{d}/statusline.sh") and line["padding"] == 1
+        assert "# parts: profile:round branch:round" in home.path(f"{d}/statusline.sh").read_text()
+    assert app.get("/api/statusline/all/preview?profile=default")["apply"] == []
+    for b in app.get("/api/backups")[:2]:  # to every profile, then the one it copied
+        app.post("/api/backups/restore", {"name": b["name"]})
     assert home.snapshot() == before
 
 
@@ -994,7 +1082,7 @@ def test_share_preview_lists_what_the_link_replaces(home, app_factory):
 def all_home(home):
     """default; lab shares settings.json and skills with default; solo and work have their own."""
     basic_home(home)
-    home.json(".claude/settings.json", {"model": "opus", "effortLevel": "high"})
+    home.json(".claude/settings.json", {"model": "opus", "timeFormat": "24-hour"})
     home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\nReview it.\n")
     cfg = json.loads(home.path(".claude.json").read_text())
     cfg["mcpServers"] = {"files": {"type": "stdio", "command": "npx", "args": ["files"]}}
@@ -1034,10 +1122,19 @@ def test_apply_a_setting_to_all_profiles_is_undone_by_one_restore(home, app_fact
     restore_newest(app)
     assert home.snapshot() == before
 
-    # the default value (work has no effort level) removes it where it is set
-    app.post("/api/settings/field/all", {"profile": "work", "key": "effortLevel"})
-    assert "effortLevel" not in json.loads(home.path(".claude/settings.json").read_text())
+    # the default value (work has no time format) removes it where it is set
+    app.post("/api/settings/field/all", {"profile": "work", "key": "timeFormat"})
+    assert "timeFormat" not in json.loads(home.path(".claude/settings.json").read_text())
     restore_newest(app)
+    assert home.snapshot() == before
+
+    # a key of .claude.json goes to each profile's own .claude.json, in the same backup
+    app.post("/api/settings/field", {"profile": "work", "key": "verbose", "value": True})
+    r = app.post("/api/settings/field/all", {"profile": "work", "key": "verbose"})
+    assert json.loads(home.path(".claude.json").read_text())["verbose"] is True
+    assert json.loads(home.path(".claude-solo/.claude.json").read_text())["verbose"] is True
+    for b in app.get("/api/backups")[:2]:  # apply to all, then the single change before it
+        app.post("/api/backups/restore", {"name": b["name"]})
     assert home.snapshot() == before
 
 
@@ -1122,6 +1219,13 @@ def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory
     assert app.get("/api/backups/auto")["days"] == 30
     app.post("/api/backups/auto", {"days": None})
     assert "backup_keep_days" not in json.loads(home.path(".cc-profiles/config.json").read_text())
+
+    # a value only older versions offered keeps working, and stays selectable; it cannot be picked anew
+    assert app.request("/api/backups/auto", {"days": 365})[0] == 400
+    cfg = json.loads(home.path(".cc-profiles/config.json").read_text())
+    home.json(".cc-profiles/config.json", dict(cfg, backup_keep_days=365))
+    auto = app.get("/api/backups/auto")
+    assert auto["days"] == 365 and auto["choices"] == [15, 30, 60, 90, 365]
 
 
 # --- profile templates ------------------------------------------------------------

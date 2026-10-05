@@ -49,7 +49,7 @@ Claude Code filters it by `project` to offer arrow-up history in each folder. cc
 
 ## Per-project settings
 
-The `projects` key of `.claude.json`, keyed by absolute path: trust, allowed tools, project MCP servers and more. Most other keys of `.claude.json` are internal state: caches, counters, tips seen. cc-profiles edits only `projects` and `autoUpdates`.
+The `projects` key of `.claude.json`, keyed by absolute path: trust, allowed tools, project MCP servers and more. Most other keys of `.claude.json` are internal state: caches, counters, tips seen. cc-profiles edits only `projects`, `autoUpdates` and the keys the `/config` panel keeps there (see [Settings](guides/settings.md#general)).
 
 ## Memories
 

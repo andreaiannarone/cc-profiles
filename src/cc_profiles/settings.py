@@ -5,16 +5,21 @@
 import glob
 import json
 import os
+import shlex
+import subprocess
+import tempfile
 
 from .core import (
     ApiError,
     Backup,
+    find_tool,
     load_settings,
     parse_memory,
     pretty,
     profile,
     profiles,
     read_json,
+    tool_env,
     write_json,
     write_text,
 )
@@ -35,40 +40,102 @@ BUILTIN_STYLES = [
     ("Explanatory", "Explanatory", "Explains its implementation choices and codebase patterns"),
     ("Learning", "Learning", "Pauses and asks you to write small pieces of code for hands-on practice"),
 ]
+# The fields of Claude Code's /config panel, in groups, plus the attribution texts.
+# "file": "global" marks the keys /config keeps in .claude.json (the profile's global
+# config) instead of settings.json; "also_settings" ones are edited where a settings
+# file already has them. "default" is Claude Code's value when the key is missing;
+# "drop_default" fields are removed rather than set to it, as /config does.
+_ON = {"type": "bool", "default": True}
+_OFF = {"type": "bool", "default": False}
+_GLOBAL = {"file": "global"}
 SETTING_FIELDS = [
-    {"key": "model", "type": "text", "label": "Model",
+    # model and replies
+    {"group": "Model and replies", "key": "model", "type": "text", "label": "Model",
      "help": "An alias (opus, sonnet, haiku) or a full model name", "suggest": ["opus", "sonnet", "haiku"]},
-    {"key": "effortLevel", "type": "select", "label": "Effort level",
-     "help": "How much the model reasons before answering",
-     "options": [("low", "Low"), ("medium", "Medium"), ("high", "High"), ("xhigh", "Extra high")]},
-    {"key": "outputStyle", "type": "select", "label": "Output style",
+    dict(_ON, group="Model and replies", key="alwaysThinkingEnabled", label="Thinking mode", drop_default=True,
+         help="Claude reasons before answering"),
+    {"group": "Model and replies", "key": "outputStyle", "type": "select", "label": "Output style",
      "default_desc": "Claude Code's standard behavior",
      "help": "Built-in styles plus the profile's custom ones (output-styles/)", "options": "styles"},
-    {"key": "language", "type": "text", "label": "Response language", "help": "Free text, e.g. English, Italiano",
-     "suggest": []},
-    {"key": "theme", "type": "select", "label": "Theme", "help": "Colors of the terminal UI; custom themes (custom:…) are kept",
+    {"group": "Model and replies", "key": "language", "type": "text", "label": "Language",
+     "help": "Language of the replies, e.g. English, Italiano", "suggest": []},
+    dict(_ON, group="Model and replies", key="promptSuggestionEnabled", label="Prompt suggestions", drop_default=True,
+         help="Suggest what to ask next"),
+    dict(_ON, group="Model and replies", key="awaySummaryEnabled", label="Session recap", drop_default=True,
+         help="A summary of what happened while you were away"),
+    dict(_ON, **_GLOBAL, group="Model and replies", key="autoCompactEnabled", label="Auto-compact",
+         help="Compact the conversation when the context fills up"),
+    dict(_ON, group="Model and replies", key="precomputeCompactionEnabled", label="Precompute compaction",
+         help="Prepare the compaction in advance, so it takes less time"),
+    dict(_ON, **_GLOBAL, group="Model and replies", key="fileCheckpointingEnabled", label="Rewind code (checkpoints)",
+         help="Keep snapshots of the files Claude edits, to undo them with /rewind"),
+    {"group": "Model and replies", "key": "permissions.defaultMode", "type": "select", "default": "default", "label": "Default permission mode",
+     "help": "How a session starts: asking first, planning, or editing on its own",
+     "options": [("default", "Ask before acting"), ("plan", "Plan mode"), ("acceptEdits", "Accept edits"),
+                 ("auto", "Auto"), ("dontAsk", "Don't ask")]},
+    dict(_ON, group="Model and replies", key="useAutoModeDuringPlan", label="Use auto mode during plan",
+         help="Plan mode runs with auto mode's permissions"),
+    # interface
+    {"group": "Interface", "key": "theme", "type": "select", "default": "dark", "label": "Theme", "file": "global", "also_settings": True,
+     "help": "Colors of the terminal UI; custom themes (custom:…) are kept",
      "options": [("auto", "Auto"), ("dark", "Dark"), ("light", "Light"), ("dark-daltonized", "Dark, colorblind-friendly"),
                  ("light-daltonized", "Light, colorblind-friendly"), ("dark-ansi", "Dark, ANSI colors only"),
                  ("light-ansi", "Light, ANSI colors only")]},
-    {"key": "editorMode", "type": "select", "label": "Editor mode", "help": "Key bindings for the prompt input",
-     "options": [("normal", "Normal"), ("vim", "Vim")]},
-    {"key": "tui", "type": "select", "label": "Renderer", "help": "How the UI is drawn in the terminal",
-     "options": [("default", "Classic"), ("fullscreen", "Fullscreen, flicker-free")]},
-    # attribution is an object; its three keys are edited one by one. An empty text is a
-    # value of its own: Claude Code then adds no attribution at all.
-    {"key": "attribution.commit", "type": "text", "blank": True, "label": "Commit attribution",
-     "help": "Text Claude adds to its commits, trailers included (e.g. Co-Authored-By: …). Empty: none"},
-    {"key": "attribution.pr", "type": "text", "blank": True, "label": "Pull request attribution",
-     "help": "Text Claude adds to the pull requests it opens. Empty: none"},
-    {"key": "attribution.sessionUrl", "type": "bool", "default": True, "label": "Session link in commits",
-     "help": "From web and Remote Control sessions, link the claude.ai session in commits and pull requests"},
-    {"key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits", "deprecated": True,
-     "only_if_set": True,
+    dict(_ON, group="Interface", key="spinnerTipsEnabled", label="Show tips", help="Tips while Claude works"),
+    dict(_OFF, group="Interface", key="prefersReducedMotion", label="Reduce motion", help="Fewer animations"),
+    dict(_OFF, **_GLOBAL, group="Interface", key="verbose", label="Verbose output", help="Show tool calls and results in full"),
+    dict(_ON, **_GLOBAL, group="Interface", key="terminalProgressBarEnabled", label="Terminal progress bar",
+         help="Progress in the terminal's tab or title bar, where the terminal supports it"),
+    dict(_ON, **_GLOBAL, group="Interface", key="showTurnDuration", label="Show turn duration",
+         help="How long each reply took"),
+    {"group": "Interface", "key": "timeFormat", "type": "select", "default": "auto", "label": "Time format", "help": "How times are shown",
+     "options": [("auto", "Auto"), ("12-hour", "12-hour"), ("24-hour", "24-hour"), ("24-hour-utc", "24-hour, UTC")]},
+    {"group": "Interface", "key": "defaultView", "type": "select", "label": "Default view",
+     "help": "Show the whole transcript, or only the conversation",
+     "options": [("transcript", "Transcript"), ("chat", "Chat")]},
+    dict(_ON, **_GLOBAL, group="Interface", key="autoScrollEnabled", label="Auto-scroll", help="Follow the output as it arrives"),
+    dict(_ON, **_GLOBAL, group="Interface", key="prStatusFooterEnabled", label="Show PR status footer",
+         help="The status of the branch's pull request under the prompt"),
+    # editor and files
+    {"group": "Editor and files", "key": "editorMode", "type": "select", "default": "normal", "label": "Editor mode", "file": "global",
+     "also_settings": True, "help": "Key bindings for the prompt input", "options": [("normal", "Normal"), ("vim", "Vim")]},
+    dict(_ON, **_GLOBAL, group="Editor and files", key="respectGitignore", label="Respect .gitignore in file picker",
+         help="Files ignored by git are left out of @ mentions"),
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="copyFullResponse", label="Skip the /copy picker",
+         help="/copy copies the whole last reply at once"),
+    dict(_ON, **_GLOBAL, group="Editor and files", key="copyOnSelect", label="Copy on select",
+         help="Selecting text with the mouse copies it"),
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="externalEditorContext", label="Show last response in external editor",
+         help="Ctrl+G opens the prompt with Claude's last reply above it"),
+    {"group": "Editor and files", "key": "diffTool", "type": "select", "default": "auto", "label": "Diff tool", "file": "global",
+     "help": "Where proposed edits are shown", "options": [("auto", "Auto (the IDE when connected)"), ("terminal", "Terminal")]},
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="autoConnectIde", label="Auto-connect to IDE (external terminal)",
+         help="Connect to a running IDE when Claude Code starts in another terminal"),
+    dict(_ON, **_GLOBAL, group="Editor and files", key="autoInstallIdeExtension", label="Auto-install IDE extension",
+         help="Install the Claude Code extension in VS Code and JetBrains IDEs"),
+    {"group": "Editor and files", "key": "worktree.baseRef", "type": "select", "default": "fresh", "label": "Worktree base ref",
+     "help": "Where new worktrees start: the default branch fetched fresh, or the current commit",
+     "options": [("fresh", "Fresh default branch"), ("head", "Current commit (HEAD)")]},
+    # notifications and updates
+    {"group": "Notifications and updates", "key": "preferredNotifChannel", "type": "select", "default": "auto", "label": "Notifications",
+     "file": "global", "help": "How Claude Code tells you it needs you",
+     "options": [("auto", "Auto"), ("iterm2", "iTerm2"), ("terminal_bell", "Terminal bell"),
+                 ("iterm2_with_bell", "iTerm2 with bell"), ("kitty", "Kitty"), ("ghostty", "Ghostty"),
+                 ("notifications_disabled", "Off")]},
+    {"group": "Notifications and updates", "key": "autoUpdatesChannel", "type": "select", "default": "latest", "label": "Auto-update channel",
+     "help": "Latest releases, or the stable ones that have been out for a while",
+     "options": [("latest", "Latest"), ("stable", "Stable")]},
+    # commits and pull requests: a switch. Off is an empty text, which Claude Code reads as
+    # "no attribution"; on is the key's absence, its own attribution. A custom text counts as on and is kept.
+    {"group": "Commits and pull requests", "key": "attribution.commit", "type": "bool", "default": True, "off_value": "",
+     "label": "Commit attribution", "help": "Claude adds itself to its commits (Co-Authored-By)"},
+    {"group": "Commits and pull requests", "key": "attribution.pr", "type": "bool", "default": True, "off_value": "",
+     "label": "Pull request attribution", "help": "Claude mentions itself in the pull requests it opens"},
+    {"group": "Commits and pull requests", "key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits",
+     "deprecated": True, "only_if_set": True,
      "help": "Replaced by Commit attribution and Pull request attribution: remove it with ×"},
-    {"key": "cleanupPeriodDays", "type": "number", "label": "Days to keep conversations",
-     "help": "Older conversations are deleted (default 30, minimum 1)"},
-    {"key": "prefersReducedMotion", "type": "bool", "label": "Reduce motion", "help": "Fewer animations in the UI"},
 ]
+FIELD_BY_KEY = {fd["key"]: fd for fd in SETTING_FIELDS}
 GLOBAL_FIELDS = {"autoUpdates": "bool"}  # the only .claude.json keys the app edits
 
 
@@ -144,14 +211,59 @@ def settings_files(prof):
             "claude_md": os.path.join(d, "CLAUDE.md")}
 
 
+def global_config(prof):
+    """The profile's .claude.json, or {} when it is missing or unreadable."""
+    data = read_json(prof["config_abs"], {})
+    return data if isinstance(data, dict) else {}
+
+
+def home_file(fd):
+    """Where a field is written when no file has it yet."""
+    return "global" if fd and fd.get("file") == "global" else "settings"
+
+
 def effective(prof, key):
-    """Value in use and the file it comes from: settings.local.json wins over settings.json."""
-    f = settings_files(prof)
-    for which in ("local", "settings"):
-        found, value = get_key(load_settings(f[which])[0], key)
+    """Value in use and the file it comes from: settings.local.json wins over settings.json;
+    the keys /config keeps in .claude.json are read there ("global")."""
+    fd = FIELD_BY_KEY.get(key)
+    if home_file(fd) == "settings" or fd.get("also_settings"):
+        f = settings_files(prof)
+        for which in ("local", "settings"):
+            found, value = get_key(load_settings(f[which])[0], key)
+            if found:
+                return value, which
+    if home_file(fd) == "global":
+        found, value = get_key(global_config(prof), key)
         if found:
-            return value, which
+            return value, "global"
     return None, None
+
+
+def field_path(prof, which):
+    return prof["config_abs"] if which == "global" else settings_files(prof)[which]
+
+
+def file_error(prof, which):
+    """Why a file cannot be edited, or None."""
+    path = field_path(prof, which)
+    if which == "global":
+        return None if not os.path.exists(path) or isinstance(read_json(path), dict) else "invalid JSON"
+    return load_settings(path)[1]
+
+
+def write_field(prof, which, key, value, bk):
+    """Set (or, with None, remove) a key in one of the profile's files, inside an open backup."""
+    if which != "global":
+        data, _ = load_settings(settings_files(prof)[which])
+        pop_key(data, key) if value is None else set_key(data, key, value)
+        return save_settings_file(prof, which, data, bk)
+    path = prof["config_abs"]
+    if file_error(prof, "global"):
+        raise ApiError(f"{pretty(path)} cannot be read: it is not valid JSON")
+    data = read_json(path, {})
+    pop_key(data, key) if value is None else set_key(data, key, value)
+    bk.copy(path, "claude.json")
+    write_json(path, data)
 
 
 def get_settings(pid):
@@ -217,13 +329,19 @@ def check_setting_value(fd, prof, value):
     """The value to write (None removes the setting), checked against the field's type."""
     if value is None:
         return None
+    if "off_value" in fd:
+        if not isinstance(value, bool):
+            raise ApiError("Invalid value: expected true or false")
+        return None if value else fd["off_value"]
     if fd["type"] == "bool" and not isinstance(value, bool):
         raise ApiError("Invalid value: expected true or false")
     if fd["type"] == "number":
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ApiError("Invalid value: expected a whole number greater than zero")
     if fd["type"] == "text":
-        value = str(value).strip() or ("" if fd.get("blank") else None)
+        value = str(value).strip() or None
+    if fd.get("drop_default") and value == fd.get("default"):
+        return None  # as /config does: the default is the key's absence
     if fd["type"] == "select":
         allowed = [o["value"] for o in field_options(fd, prof, effective(prof, fd["key"])[0])]
         if value not in allowed:
@@ -236,18 +354,15 @@ def op_setting(pid, key, value):
     fd = setting_field(key)
     value = check_setting_value(fd, prof, value)
     _, src = effective(prof, key)
-    which = src or "settings"
-    f = settings_files(prof)
-    data, _ = load_settings(f[which])
+    which = src or home_file(fd)
+    path = field_path(prof, which)
     bk = Backup("setting", f"{fd['label']} of {prof['label']}")
+    write_field(prof, which, key, value, bk)
     if value is None:
-        pop_key(data, key)
         msg = f"{fd['label']}: back to the default."
     else:
-        set_key(data, key, value)
-        msg = f"Saved in {os.path.basename(f[which])}: {fd['label'].lower()} = {value}{shared_note(f[which])}."
-    save_settings_file(prof, which, data, bk)
-    bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(f[which])}")
+        msg = f"Saved in {os.path.basename(path)}: {fd['label'].lower()} = {show_value(fd, prof, value)}{shared_note(path)}."
+    bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(path)}")
     return {"message": msg, "backup": bk.close()}
 
 
@@ -256,8 +371,12 @@ def op_setting(pid, key, value):
 def show_value(fd, prof, value):
     if value is None:
         return "the default"
+    if "off_value" in fd:
+        return "off" if value == fd["off_value"] else "custom text"
     if value == "":
         return "none"
+    if isinstance(value, bool):
+        return "on" if value else "off"
     opt = next((o for o in field_options(fd, prof, value) or [] if o["value"] == value), None)
     return opt["label"] if opt else json.dumps(value, ensure_ascii=False)
 
@@ -265,10 +384,13 @@ def show_value(fd, prof, value):
 def setting_targets(prof, key, value):
     """The files of a profile to write so that its value of key becomes value: where the
     value lives, or every file that has it when the value goes back to the default."""
-    f = settings_files(prof)
+    f, fd = settings_files(prof), FIELD_BY_KEY.get(key)
     if value is None:
-        return [w for w in ("local", "settings") if get_key(load_settings(f[w])[0], key)[0]]
-    return [effective(prof, key)[1] or "settings"]
+        found = [w for w in ("local", "settings") if get_key(load_settings(f[w])[0], key)[0]]
+        if home_file(fd) == "global" and get_key(global_config(prof), key)[0]:
+            found.append("global")
+        return found
+    return [effective(prof, key)[1] or home_file(fd)]
 
 
 def no_targets(plan):
@@ -288,7 +410,8 @@ def setting_all_plan(pid, key):
     fd = setting_field(key)
     value, _ = effective(prof, key)
     try:  # the type only: whether an option exists is checked in each profile
-        value = check_setting_value(dict(fd, type="text" if fd["type"] == "select" else fd["type"]), prof, value)
+        if "off_value" not in fd:  # a switch stored as text: its stored value is copied as it is
+            value = check_setting_value(dict(fd, type="text" if fd["type"] == "select" else fd["type"]), prof, value)
     except ApiError:
         raise ApiError(f"The value in {prof['label']} is not valid: fix it there first")
     apply, skip = [], []
@@ -297,9 +420,9 @@ def setting_all_plan(pid, key):
         if o["id"] == pid:
             continue
         cur, _ = effective(o, key)
-        f = settings_files(o)
-        paths = [f[w] for w in setting_targets(o, key, value)]
-        errs = [os.path.basename(p) for p in paths if load_settings(p)[1]]
+        targets = setting_targets(o, key, value)
+        paths = [field_path(o, w) for w in targets]
+        errs = [os.path.basename(field_path(o, w)) for w in targets if file_error(o, w)]
         shared = next((written[os.path.realpath(p)] for p in paths if os.path.realpath(p) in written), None)
         if json.dumps(cur) == json.dumps(value):
             reason = f"already {show_value(fd, o, value)}"
@@ -330,14 +453,8 @@ def op_setting_all(pid, key):
     bk = Backup("setting-all", f"{plan['label']} = {plan['shown']} in every profile")
     for t in plan["apply"]:
         o = profile(t["id"])
-        f = settings_files(o)
         for which in setting_targets(o, key, value):
-            data, _ = load_settings(f[which])
-            if value is None:
-                pop_key(data, key)
-            else:
-                set_key(data, key, value)
-            save_settings_file(o, which, data, bk)
+            write_field(o, which, key, value, bk)
         bk.note(f"{o['label']}: {t['detail']}")
     for s in plan["skip"]:
         bk.note(f"skipped {s['label']}: {s['reason']}")
@@ -462,3 +579,310 @@ def op_global(pid, key, value):
     cfg[key] = value
     write_json(prof["config_abs"], cfg)
     return {"message": f"{key}: {'on' if value else 'off'}.", "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
+# Status line
+# ---------------------------------------------------------------------------
+# statusLine in settings.json runs a command that prints one line. cc-profiles can write
+# that command itself: a POSIX sh script in the profile folder that reads the JSON Claude
+# Code sends on stdin with jq. It finds the profile's label at run time (in
+# ~/.cc-profiles/config.json), so a script reached through a shared settings.json still
+# names the right profile. Only a script with STATUS_MARK on its first line is rewritten.
+STATUS_MARK = "# managed by cc-profiles: status line"
+# (id, label, sample, brackets by default, sh code). The code reads the JSON with j and
+# adds one piece with add TEXT [SGR color]; $cwd is the session's folder, $cfg the
+# profile's .claude.json. Colors are the terminal's own 16 (90 is its grey).
+STATUS_PARTS = [
+    ("path", "Path", "~/code/api", "none",
+     'if [ -n "$cwd" ]; then case $cwd in "$HOME") p="~" ;; "$HOME"/*) p="~${cwd#"$HOME"}" ;; *) p=$cwd ;; esac; add "$p" 36; fi'),
+    ("folder", "Folder", "api", "none", '[ -n "$cwd" ] && add "$(basename "$cwd")" 36'),
+    ("branch", "Git branch (* when changed)", "main*", "round",
+     'if [ -n "$cwd" ]; then b=$(git -C "$cwd" --no-optional-locks branch --show-current 2>/dev/null)\n'
+     '[ -z "$b" ] && b=$(git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null)\n'
+     'if [ -n "$b" ]; then git -C "$cwd" --no-optional-locks diff --quiet --ignore-submodules HEAD 2>/dev/null || b="$b*"; '
+     'add "$b" "2;36"; fi; fi'),
+    ("profile", "Profile", "Default", "round",
+     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
+     '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" 1'),
+    ("email", "Account email", "me@example.com", "none", 'add "$(jq -r \'.oauthAccount.emailAddress // empty\' "$cfg" 2>/dev/null)" 90'),
+    ("model", "Model", "Opus", "square", 'add "$(j .model.display_name)" 35'),
+    ("effort", "Effort", "high", "none", 'add "$(j .effort.level)" 35'),
+    ("style", "Output style", "Explanatory", "curly", 'add "$(j .output_style.name)" 33'),
+    ("pr", "Pull request", "PR #42", "none", 'v=$(j .pr.number); [ -n "$v" ] && add "PR #$v" 35'),
+    ("context", "Context used", "ctx:42%", "angle",
+     'v=$(j \'.context_window.used_percentage | floor\'); if [ -n "$v" ]; then c=34; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "ctx:$v%" $c; fi'),
+    ("cost", "Session cost", "$1.27", "none", 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")" 32'),
+    ("lines", "Lines changed", "+120 -34", "none",
+     'a=$(j .cost.total_lines_added); r=$(j .cost.total_lines_removed)\n'
+     'if [ -n "$a$r" ]; then if [ "$C" = 1 ]; then add "$(printf \'\\033[32m+%s\\033[0m \\033[31m-%s\\033[0m\' "${a:-0}" "${r:-0}")"; '
+     'else add "+${a:-0} -${r:-0}"; fi; fi'),
+    ("duration", "Session time", "12m", "none",
+     'v=$(j \'.cost.total_duration_ms | floor\'); if [ -n "$v" ]; then m=$((v / 60000)); '
+     'if [ "$m" -ge 60 ]; then add "$((m / 60))h $(printf %02d $((m % 60)))m" 2; else add "${m}m" 2; fi; fi'),
+    ("limit", "5-hour limit used", "5h:18%", "none",
+     'v=$(j \'.rate_limits.five_hour.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "5h:$v%" $c; fi'),
+    ("week", "Weekly limit used", "7d:41%", "none",
+     'v=$(j \'.rate_limits.seven_day.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "7d:$v%" $c; fi'),
+    ("terminal", "Terminal", "iTerm", "round",
+     'case $TERM_PROGRAM in Apple_Terminal) t=Terminal ;; iTerm.app) t=iTerm ;; WarpTerminal) t=Warp ;; vscode) t="VS Code" ;; '
+     'ghostty) t=Ghostty ;; "") t=$TERM ;; *) t=$TERM_PROGRAM ;; esac; add "$t" 32'),
+    ("time", "Time", "14:05", "none", 'add "$(date +%H:%M)" 2'),
+]
+STATUS_CODE = {x[0]: x[4] for x in STATUS_PARTS}
+STATUS_DEFAULT_BRACKETS = {x[0]: x[3] for x in STATUS_PARTS}
+STATUS_DEFAULT_PARTS = ["path", "branch", "profile", "model", "context"]
+STATUS_SEPARATORS = {"space": " ", "dot": " · ", "bar": " | ", "arrow": " › "}
+STATUS_BRACKETS = {"none": ("", ""), "round": ("(", ")"), "square": ("[", "]"), "curly": ("{", "}"), "angle": ("⟨", "⟩")}
+STATUS_SAMPLE = {
+    "model": {"id": "claude-opus-5-5", "display_name": "Opus"},
+    "effort": {"level": "high"},
+    "output_style": {"name": "Explanatory"},
+    "pr": {"number": 42},
+    "context_window": {"used_percentage": 42.4},
+    "cost": {"total_cost_usd": 1.27, "total_lines_added": 120, "total_lines_removed": 34, "total_duration_ms": 754000},
+    "rate_limits": {"five_hour": {"used_percentage": 18}, "seven_day": {"used_percentage": 41}},
+}
+
+
+def status_parts(items):
+    """[(id, brackets)] from "id" or "id:brackets" items: unknown ids and repeats dropped."""
+    out, seen = [], set()
+    for item in items:
+        pid, _, br = str(item).partition(":")
+        if pid not in STATUS_CODE or pid in seen:
+            continue
+        if br and br not in STATUS_BRACKETS:
+            raise ApiError("Unknown brackets")
+        seen.add(pid)
+        out.append((pid, br or STATUS_DEFAULT_BRACKETS[pid]))
+    return out
+
+
+def status_style(separator, colors):
+    if separator not in STATUS_SEPARATORS:
+        raise ApiError("Unknown separator")
+    return separator, bool(colors)
+
+
+def status_script(parts, separator="space", colors=True):
+    """The status line script: parts are (id, brackets) in the order to show them."""
+    body = "\n".join(f"L='{STATUS_BRACKETS[br][0]}' R='{STATUS_BRACKETS[br][1]}'\n{STATUS_CODE[pid]}" for pid, br in parts)
+    return f"""#!/bin/sh
+{STATUS_MARK}
+# parts: {" ".join(f"{pid}:{br}" for pid, br in parts)}
+# style: separator={separator} colors={1 if colors else 0}
+# Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the second line.
+# Bytes stay bytes (LC_ALL=C): the shell cannot mangle ⟨ ⟩ or · whatever the terminal's locale.
+export LC_ALL=C
+C={1 if colors else 0}
+SEP='{STATUS_SEPARATORS[separator]}'
+[ "$C" = 1 ] && SEP=$(printf '\\033[2m%s\\033[0m' "$SEP")
+input=$(cat)
+dir=$(cd "${{CLAUDE_CONFIG_DIR:-$HOME/.claude}}" 2>/dev/null && pwd -P)
+name=$(basename "$dir"); case $name in .claude-*) name=${{name#.claude-}} ;; *) name=default ;; esac
+cfg="$dir/.claude.json"; [ -f "$cfg" ] || cfg="$HOME/.claude.json"  # the default profile keeps it in the home
+if ! command -v jq >/dev/null 2>&1; then printf '%s (install jq for the rest)' "$name"; exit 0; fi
+j() {{ printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null; }}
+out=
+add() {{
+  [ -n "$1" ] || return 0
+  s="$L$1$R"
+  [ "$C" = 1 ] && [ -n "$2" ] && s=$(printf '\\033[%sm%s\\033[0m' "$2" "$s")
+  out="${{out:+$out$SEP}}$s"
+}}
+cwd=$(j .workspace.current_dir)
+{body}
+printf '%s' "$out"
+"""
+
+
+def status_script_path(prof):
+    return os.path.join(prof["dir_abs"], "statusline.sh")
+
+
+def status_script_info(path):
+    """{parts: [(id, brackets)], separator, colors} of a script cc-profiles wrote, or None
+    for any other file. Scripts from before per-piece brackets list bare ids."""
+    try:
+        with open(path) as f:
+            head = f.read(800).split("\n")
+    except OSError:
+        return None
+    if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
+        return None
+    old = ":" not in head[2]
+    try:
+        parts = status_parts(head[2][len("# parts:"):].split())
+    except ApiError:
+        return None
+    if old:
+        parts = [(pid, "none") for pid, _ in parts]
+    info = {"parts": parts, "separator": "dot", "colors": False}
+    if len(head) > 3 and head[3].startswith("# style:"):
+        style = dict(x.split("=", 1) for x in head[3][len("# style:"):].split() if "=" in x)
+        info["separator"] = style.get("separator") if style.get("separator") in STATUS_SEPARATORS else "dot"
+        info["colors"] = style.get("colors") == "1"
+    return info
+
+
+def status_command(prof):
+    return "sh " + shlex.quote(status_script_path(prof))
+
+
+def get_statusline(pid):
+    prof = profile(pid)
+    value, src = effective(prof, "statusLine")
+    value = value if isinstance(value, dict) else None
+    path = status_script_path(prof)
+    info = status_script_info(path)
+    mode = "off"
+    if value:
+        mode = "builtin" if value.get("command") == status_command(prof) and info is not None else "custom"
+    info = info or {"parts": status_parts(STATUS_DEFAULT_PARTS), "separator": "space", "colors": True}
+    return {"value": value, "source": src, "mode": mode, "parts": [f"{pid}:{br}" for pid, br in info["parts"]],
+            "separator": info["separator"], "colors": info["colors"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
+            "jq": bool(find_tool("jq")), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
+            "brackets": [{"id": k, "left": v[0], "right": v[1]} for k, v in STATUS_BRACKETS.items()],
+            "parts_available": [{"id": x[0], "label": x[1], "sample": x[2], "brackets": x[3]} for x in STATUS_PARTS]}
+
+
+def statusline_preview(pid, parts, separator="space", colors="1"):
+    """What the script prints on sample data, and the script itself. It runs from a
+    temporary file, never the profile's: read-only."""
+    prof = profile(pid)
+    parts = status_parts(x for x in parts.split(",") if x)
+    separator, colors = status_style(separator, colors == "1")
+    script = status_script(parts, separator, colors)
+    if not parts:
+        return {"text": "", "script": script}
+    sample = dict(STATUS_SAMPLE, workspace={"current_dir": os.getcwd()})
+    with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
+        f.write(script)
+    env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
+    try:
+        r = subprocess.run(["sh", f.name], input=json.dumps(sample), capture_output=True, text=True, timeout=5, env=env)
+        return {"text": r.stdout.strip("\n"), "script": script}
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"text": "", "script": script, "error": str(e)}
+    finally:
+        os.unlink(f.name)
+
+
+def statusline_value(prof, body):
+    """(statusLine object, script info) a request asks for, checked. (None, None) turns it off;
+    the info is None for a command of the user's own."""
+    mode = body.get("mode")
+    if mode == "off":
+        return None, None
+    if mode == "builtin":
+        parts = status_parts(body.get("parts") or [])
+        if not parts:
+            raise ApiError("Pick at least one thing to show")
+        separator, colors = status_style(body.get("separator") or "space", body.get("colors", True))
+        info = {"parts": parts, "separator": separator, "colors": colors}
+        command = status_command(prof)
+    elif mode == "custom":
+        command, info = str(body.get("command") or "").strip(), None
+        if not command:
+            raise ApiError("Write the command that prints the status line")
+    else:
+        raise ApiError("Unknown status line mode")
+    value = {"type": "command", "command": command}
+    for key, low in (("padding", 0), ("refreshInterval", 1)):
+        n = body.get(key)
+        if n in (None, ""):
+            continue
+        if not isinstance(n, int) or isinstance(n, bool) or n < low:
+            raise ApiError(f"Invalid {'padding' if key == 'padding' else 'refresh interval'}: expected a whole number from {low}")
+        value[key] = n
+    if body.get("hideVimModeIndicator") is True:
+        value["hideVimModeIndicator"] = True
+    return value, info
+
+
+def write_statusline(prof, value, info, bk):
+    """Write a profile's statusLine (and its script for the built-in one), inside a backup."""
+    path = status_script_path(prof)
+    if info is not None:
+        if os.path.exists(path) and status_script_info(path) is None:
+            raise ApiError(f"{pretty(path)} exists and was not made by cc-profiles: rename it, or use it as your own command")
+        bk.copy(path, "statusline.sh")
+        write_text(path, status_script(info["parts"], info["separator"], info["colors"]))
+    elif status_script_info(path) is not None:
+        bk.stash(path, "statusline.sh")  # the old built-in script is no longer used
+    targets = setting_targets(prof, "statusLine", value) if value is None else [effective(prof, "statusLine")[1] or "settings"]
+    for which in targets:
+        write_field(prof, which, "statusLine", value, bk)
+
+
+def op_statusline(pid, body):
+    prof = profile(pid)
+    value, info = statusline_value(prof, body)
+    bk = Backup("statusline", f"Status line of {prof['label']}")
+    write_statusline(prof, value, info, bk)
+    bk.note(f"statusLine = {json.dumps(value)}" + (f", script: {' '.join(p for p, _ in info['parts'])}" if info else ""))
+    msg = "Status line turned off." if value is None else "Status line saved: it shows from the next Claude Code session."
+    return {"message": msg, "backup": bk.close()}
+
+
+def status_signature(sl):
+    """What makes two profiles' status lines the same, the script's own path aside."""
+    if sl["mode"] == "off":
+        return ("off",)
+    rest = {k: v for k, v in sl["value"].items() if k != "command" or sl["mode"] == "custom"}
+    script = (sl["parts"], sl["separator"], sl["colors"]) if sl["mode"] == "builtin" else None
+    return (sl["mode"], json.dumps(rest, sort_keys=True), script)
+
+
+def statusline_all_plan(pid):
+    """Which profiles get this profile's status line, and which are skipped, with the reason."""
+    prof = profile(pid)
+    cur = get_statusline(pid)
+    apply, skip, written = [], [], {}
+    for o in profiles():
+        if o["id"] == pid:
+            continue
+        mine = get_statusline(o["id"])
+        where = effective(o, "statusLine")[1] or "settings"
+        target = field_path(o, where)
+        if status_signature(mine) == status_signature(cur):
+            reason = "already has it"
+        elif file_error(o, where):
+            reason = f"{os.path.basename(target)} has an error: fix it in the advanced editor"
+        elif cur["mode"] == "builtin" and mine["script_is_other"]:
+            reason = f"{mine['script']} was not made by cc-profiles"
+        elif os.path.realpath(target) in written:
+            reason = f"shares {os.path.basename(target)} with {written[os.path.realpath(target)]}"
+        else:
+            written[os.path.realpath(target)] = o["label"]
+            apply.append({"id": o["id"], "label": o["label"], "detail": f"{mine['mode']} → {cur['mode']}"})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"from": prof["label"], "mode": cur["mode"], "apply": apply, "skip": skip}
+
+
+def op_statusline_all(pid):
+    plan = statusline_all_plan(pid)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    cur = get_statusline(pid)
+    info = ({"parts": status_parts(cur["parts"]), "separator": cur["separator"], "colors": cur["colors"]}
+            if cur["mode"] == "builtin" else None)
+    bk = Backup("statusline-all", f"Status line of {plan['from']} in every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        if cur["mode"] == "off":
+            value = None
+        elif cur["mode"] == "builtin":
+            value = dict(cur["value"], command=status_command(o))
+        else:
+            value = dict(cur["value"])
+        write_statusline(o, value, info, bk)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for x in plan["skip"]:
+        bk.note(f"skipped {x['label']}: {x['reason']}")
+    return {"message": plan_message("Status line set", plan), "backup": bk.close()}

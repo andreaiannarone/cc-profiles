@@ -242,6 +242,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .sec > .b { padding: 12px 16px; }
 .srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
 .srow:last-child { border-bottom: 0; }
+.sgroup { margin: 0; padding: 14px 16px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--panel-2); }
 .srow .l b { display: block; font-weight: 600; }
 .srow .l span { color: var(--muted); font-size: 12.5px; }
 .srow .v { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -254,6 +255,35 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .srow .o code { color: var(--text); }
 textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
 .perm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.slgrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: 18px; margin: 14px 0 12px; align-items: start; }
+@media (max-width: 820px) { .slgrid { grid-template-columns: 1fr; } }
+.slparts { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.slparts li { display: grid; grid-template-columns: 18px 1fr auto 9em auto; gap: 8px; align-items: center; padding: 5px 8px 5px 6px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.slparts li:last-child { border-bottom: 0; }
+.slparts li.off { background: var(--panel-2); }
+.slparts li.off label { color: var(--muted); }
+.slparts li.drag { opacity: .4; }
+.slparts li.over { box-shadow: inset 0 2px 0 var(--accent); }
+.slparts .grip { cursor: grab; color: var(--muted); font-size: 13px; text-align: center; user-select: none; }
+.slparts label { display: flex; gap: 8px; align-items: center; }
+.slparts .smp { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slparts select.slbr { font-size: 12px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.slparts .mv { display: flex; gap: 2px; }
+.slparts .mv button { padding: 1px 6px; min-width: 0; }
+.slside { display: grid; gap: 14px; }
+.slside .f { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.slside label.c { display: flex; gap: 7px; align-items: center; color: var(--text); }
+.slpreview { font-family: var(--mono); font-size: 12.5px; background: #1d1c1a; color: #d6d4cd; border-radius: 8px; padding: 10px 12px; min-height: 18px; white-space: pre; overflow-x: auto; }
+.slpreview .b { font-weight: 700; } .slpreview .d { opacity: .55; }
+.slpreview .a31 { color: #f1736b; } .slpreview .a32 { color: #7fd17f; } .slpreview .a33 { color: #f0c65a; }
+.slpreview .a34 { color: #79a8f2; } .slpreview .a35 { color: #d08ae8; } .slpreview .a36 { color: #6fd0d8; } .slpreview .a90 { color: #8d8a83; }
+.slopts { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: end; margin-top: 14px; }
+.slopts label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.slopts label.c { display: flex; gap: 7px; align-items: center; }
+.slopts input.text { width: 110px; }
+details.slscript { margin-top: 10px; } details.slscript summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 12px; }
+.slsep { max-width: 240px; } .slsep button { font-family: var(--mono); font-size: 15px; font-weight: 700; padding: 3px 0; }
 .perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
 .row-end { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 10px; }
@@ -1073,12 +1103,173 @@ async function editMcp(m) {
 // ---------- settings ----------
 async function loadSettings(pid) {
   S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings" }; renderSettings();
-  try { S.set.data = await api("/api/settings?profile=" + pid); } catch (e) { toast(e.message, "", true); }
+  try {
+    [S.set.data, S.set.sl] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid)]);
+    slDraft();
+  } catch (e) { toast(e.message, "", true); }
   renderSettings();
+}
+
+// ---------- status line ----------
+// The draft holds what the form shows until it is saved; switching mode re-renders only this section.
+function slDraft() {
+  const sl = S.set.sl, v = sl.value || {};
+  const ids = sl.parts_available.map(p => p.id), saved = sl.parts.map(x => x.split(":"));
+  const parts = saved.map(([id]) => id).filter(id => ids.includes(id));
+  const brackets = Object.fromEntries(sl.parts_available.map(p => [p.id, p.brackets]));
+  saved.forEach(([id, br]) => { if (br) brackets[id] = br; });
+  S.set.slDraft = { mode: sl.mode, parts, order: [...parts, ...ids.filter(i => !parts.includes(i))], brackets,
+                    separator: sl.separator, colors: sl.colors, command: sl.mode === "custom" ? v.command || "" : "",
+                    padding: v.padding ?? "", refreshInterval: v.refreshInterval ?? "", hide: v.hideVimModeIndicator === true };
+  S.set.slSaved = slKey(S.set.slDraft);
+}
+// What decides whether there is something to save: the order of unticked parts does not count.
+const slKey = dr => JSON.stringify(dr.mode === "off" ? { mode: "off" } : {
+  mode: dr.mode, parts: dr.mode === "builtin" ? slParts(dr) : null,
+  separator: dr.mode === "builtin" ? dr.separator : null, colors: dr.mode === "builtin" ? dr.colors : null,
+  command: dr.mode === "custom" ? dr.command.trim() : null, padding: String(dr.padding ?? ""), refresh: String(dr.refreshInterval ?? ""), hide: dr.hide });
+// The ticked parts in line order, each with its brackets: "model:square".
+const slParts = dr => dr.order.filter(i => dr.parts.includes(i)).map(i => `${i}:${dr.brackets[i]}`);
+// SGR escapes (bold, dim, the 8 colors and grey) to spans; everything else is text.
+function ansiHtml(text) {
+  let out = "", open = 0;
+  for (const piece of text.split(/(\x1b\[[0-9;]*m)/)) {
+    const m = piece.match(/^\x1b\[([0-9;]*)m$/);
+    if (!m) { out += esc(piece); continue; }
+    const codes = m[1].split(";").filter(Boolean);
+    if (!codes.length || codes.includes("0")) { out += "</span>".repeat(open); open = 0; continue; }
+    const cls = codes.map(c => c === "1" ? "b" : c === "2" ? "d" : /^(3[1-7]|90)$/.test(c) ? "a" + c : "").filter(Boolean).join(" ");
+    out += `<span class="${cls}">`; open++;
+  }
+  return out + "</span>".repeat(open);
+}
+const slBr = (sl, br, text) => { const b = sl.brackets.find(x => x.id === br); return b ? b.left + text + b.right : text; };
+function statusLineSection() {
+  const st = S.set, sl = st.sl, dr = st.slDraft;
+  if (!sl) return "";
+  const where = sl.value ? `Now: ${sl.mode === "builtin" ? "made by cc-profiles" : "your command"}, in ${srcBadge(sl.source)}` : "Now: off";
+  const byId = Object.fromEntries(sl.parts_available.map(p => [p.id, p]));
+  const dirty = slKey(dr) !== st.slSaved;
+  return `<section class="sec" id="sl-sec"><div class="h"><h3>Status line</h3><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
+    <div class="b">
+      <div class="seg" style="max-width:460px" role="group" aria-label="Status line">${[["off", "Off"], ["builtin", "Made by cc-profiles"], ["custom", "Your command"]].map(([m, l]) =>
+        `<button data-slmode="${m}" class="${dr.mode === m ? "on" : ""}" aria-pressed="${dr.mode === m}">${l}</button>`).join("")}</div>
+      ${dr.mode === "builtin" ? `
+        <div class="slgrid">
+          <ul class="slparts" aria-label="What to show, in order: drag or use the arrows">${dr.order.map((id, i) => { const p = byId[id], on = dr.parts.includes(id); return `
+            <li class="${on ? "" : "off"}" draggable="true" data-slitem="${id}">
+              <span class="grip" aria-hidden="true">⋮⋮</span>
+              <label><input type="checkbox" data-slpart="${id}" ${on ? "checked" : ""}> ${esc(p.label)}</label>
+              <select class="slbr" data-slbr="${id}" aria-label="Brackets around ${esc(p.label)}">${sl.brackets.map(b => `<option value="${b.id}" ${dr.brackets[id] === b.id ? "selected" : ""}>${b.id === "none" ? "no brackets" : esc(b.left + "…" + b.right)}</option>`).join("")}</select>
+              <span class="smp">${esc(slBr(sl, dr.brackets[id], p.sample))}</span>
+              <span class="mv"><button class="btn small" data-slmove="${id}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move ${esc(p.label)} up">↑</button><button class="btn small" data-slmove="${id}" data-dir="1" ${i === dr.order.length - 1 ? "disabled" : ""} aria-label="Move ${esc(p.label)} down">↓</button></span>
+            </li>`; }).join("")}</ul>
+          <div class="slside">
+            <div class="f">Separator<div class="seg slsep" role="group" aria-label="Separator">${sl.separators.map(x => `<button data-slsep="${x.id}" class="${dr.separator === x.id ? "on" : ""}" aria-pressed="${dr.separator === x.id}" aria-label="${x.id === "space" ? "two spaces" : x.id}" title="${x.id === "space" ? "Two spaces" : esc(x.text.trim())}">${esc(x.text.trim() || "␣")}</button>`).join("")}</div></div>
+            <div class="f">Brackets: each piece has its own, in its row; or all the same<div class="seg slsep" role="group" aria-label="Brackets for every piece">${sl.brackets.map(b => `<button data-slbrall="${b.id}" aria-label="${b.id === "none" ? "no brackets anywhere" : b.id + " brackets everywhere"}" title="${b.id === "none" ? "No brackets anywhere" : "Use " + esc(b.left + " " + b.right) + " everywhere"}">${b.id === "none" ? "–" : esc(b.left + b.right)}</button>`).join("")}<button data-slbrall="default" title="Back to each piece's own brackets" aria-label="each piece's own brackets">mix</button></div></div>
+            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context turns yellow at 50%, red at 80%)</span></label>
+          </div>
+        </div>
+        <div class="slpreview" id="sl-preview" aria-live="polite" aria-label="Preview with sample data"></div>
+        <div class="hint" style="margin-top:6px">Preview with sample data; the branch shows inside a git repository. Saved as <code>${esc(sl.script)}</code>, a shell script that reads Claude Code's data with <code>jq</code>.
+          ${sl.jq ? "" : ` <b>jq is not installed</b>: until you install it (<code>brew install jq</code>), the line shows only the profile.`}</div>
+        <details class="slscript"><summary>Show the script</summary><pre class="code" id="sl-script"></pre></details>
+        ${sl.script_is_other ? `<div class="danger-box" style="margin-top:10px"><code>${esc(sl.script)}</code> was not made by cc-profiles and is never overwritten: rename it to use this, or pick <b>Your command</b> to run it.</div>` : ""}` : ""}
+      ${dr.mode === "custom" ? `<div class="slopts" style="margin-top:14px"><label class="f" style="flex:1;min-width:240px">Command<input class="text" style="width:100%" id="sl-cmd" value="${esc(dr.command)}" placeholder="e.g. sh ~/.claude/my-statusline.sh" autocomplete="off" spellcheck="false"></label></div>
+        <div class="hint" style="margin-top:6px">Claude Code runs it with the session's data as JSON on stdin and shows what it prints. cc-profiles never runs it.</div>` : ""}
+      ${dr.mode !== "off" ? `<div class="slopts">
+        <label class="f">Padding<input class="text" type="number" min="0" step="1" id="sl-pad" value="${esc(dr.padding)}" placeholder="0"></label>
+        <label class="f">Refresh every (s)<input class="text" type="number" min="1" step="1" id="sl-ref" value="${esc(dr.refreshInterval)}" placeholder="on events"></label>
+        <label class="c"><input type="checkbox" id="sl-hide" ${dr.hide ? "checked" : ""}> Hide the vim mode indicator</label></div>` : ""}
+      <div class="row-end"><span class="grow hint" id="sl-dirty">${dirty ? "Unsaved changes" : ""}</span><button class="btn" id="sl-all" title="Give every other profile the status line saved in this one">Apply to all…</button><button class="btn primary" id="sl-save" ${dirty ? "" : "disabled"}>Save status line</button></div>
+    </div></section>`;
+}
+function slRead() {
+  const dr = S.set.slDraft, num = id => { const v = $(id)?.value; return v === undefined ? undefined : v === "" ? "" : parseInt(v, 10); };
+  if (dr.mode === "builtin") { dr.parts = [...document.querySelectorAll("[data-slpart]")].filter(c => c.checked).map(c => c.dataset.slpart); dr.colors = $("#sl-colors").checked; }
+  if (dr.mode === "custom") dr.command = $("#sl-cmd").value;
+  if (dr.mode !== "off") { dr.padding = num("#sl-pad"); dr.refreshInterval = num("#sl-ref"); dr.hide = $("#sl-hide").checked; }
+}
+function slDirty() {
+  const dirty = slKey(S.set.slDraft) !== S.set.slSaved;
+  $("#sl-dirty").textContent = dirty ? "Unsaved changes" : "";
+  $("#sl-save").disabled = !dirty;
+}
+let slSeq = 0;
+async function slPreview() {
+  const box = $("#sl-preview"); if (!box) return;
+  const dr = S.set.slDraft, parts = slParts(dr), seq = ++slSeq;
+  try {
+    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}`);
+    if (seq !== slSeq || !$("#sl-preview")) return;  // a newer preview is on its way
+    $("#sl-preview").innerHTML = parts.length ? ansiHtml(r.text) : `<span class="d">Tick something to show</span>`;
+    $("#sl-script").textContent = r.script;
+  } catch {}
+}
+function renderStatusLine(focus) {
+  const sec = $("#sl-sec"); if (!sec) return;
+  sec.outerHTML = statusLineSection();
+  bindStatusLine();
+  if (focus) $(focus)?.focus();
+}
+function bindStatusLine() {
+  const st = S.set, pid = st.profile, dr = st.slDraft;
+  if (!$("#sl-sec")) return;
+  const changed = () => { slRead(); slDirty(); slPreview(); };
+  const move = (id, to) => { const o = dr.order.filter(x => x !== id); o.splice(Math.max(0, Math.min(to, o.length)), 0, id); dr.order = o; };
+  document.querySelectorAll("[data-slmode]").forEach(b => b.onclick = () => { slRead(); dr.mode = b.dataset.slmode; renderStatusLine(); });
+  // a ticked part joins the end of the line, an unticked one leaves it: the list reads in line order
+  document.querySelectorAll("[data-slpart]").forEach(c => c.onchange = () => {
+    slRead(); const id = c.dataset.slpart, shown = dr.order.filter(x => x !== id && dr.parts.includes(x));
+    move(id, shown.length); renderStatusLine(`[data-slpart="${id}"]`);
+  });
+  document.querySelectorAll("[data-slbr]").forEach(sel => sel.onchange = () => { slRead(); dr.brackets[sel.dataset.slbr] = sel.value; renderStatusLine(`[data-slbr="${sel.dataset.slbr}"]`); });
+  document.querySelectorAll("[data-slbrall]").forEach(b => b.onclick = () => {
+    slRead(); const v = b.dataset.slbrall;
+    st.sl.parts_available.forEach(p => { dr.brackets[p.id] = v === "default" ? p.brackets : v; });
+    renderStatusLine(`[data-slbrall="${v}"]`);
+  });
+  document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
+  document.querySelectorAll("[data-slmove]").forEach(b => b.onclick = () => {
+    slRead(); const id = b.dataset.slmove, d = +b.dataset.dir;
+    move(id, dr.order.indexOf(id) + d);
+    const next = `[data-slmove="${id}"][data-dir="${d}"]`;
+    renderStatusLine($(next) && !document.querySelector(next)?.disabled ? next : `[data-slpart="${id}"]`);
+  });
+  let dragged = null;
+  document.querySelectorAll("[data-slitem]").forEach(li => {
+    li.ondragstart = e => { dragged = li.dataset.slitem; li.classList.add("drag"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragged); };
+    li.ondragend = () => { li.classList.remove("drag"); document.querySelectorAll(".slparts li.over").forEach(x => x.classList.remove("over")); };
+    li.ondragover = e => { if (!dragged) return; e.preventDefault(); li.classList.add("over"); };
+    li.ondragleave = () => li.classList.remove("over");
+    li.ondrop = e => {
+      e.preventDefault(); if (!dragged || dragged === li.dataset.slitem) return;
+      slRead(); move(dragged, dr.order.filter(x => x !== dragged).indexOf(li.dataset.slitem)); dragged = null; renderStatusLine();
+    };
+  });
+  ["#sl-colors", "#sl-hide"].forEach(id => { if ($(id)) $(id).onchange = changed; });
+  ["#sl-cmd", "#sl-pad", "#sl-ref"].forEach(id => { if ($(id)) $(id).oninput = () => { slRead(); slDirty(); }; });
+  slDirty();
+  slPreview();
+  $("#sl-save").onclick = async () => {
+    slRead();
+    const opt = v => v === "" || Number.isNaN(v) ? null : v;
+    const body = { profile: pid, mode: dr.mode, parts: slParts(dr), separator: dr.separator, colors: dr.colors,
+                   command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
+    try { await run(() => api("/api/statusline", body)); } catch { return; }
+    st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine();
+  };
+  $("#sl-all").onclick = async () => {
+    if (slKey(dr) !== st.slSaved && !(await confirmBox("Unsaved changes", "<b>Apply to all</b> uses the status line saved in this profile, without the changes you have not saved yet. Go on?", "Go on"))) return;
+    if (await applyAll("Use this status line in every profile?", `/api/statusline/all/preview?profile=${pid}`,
+        `The status line saved in <b>${esc(label(pid))}</b> goes to every other profile. One made by cc-profiles gets its own script in each profile, and shows each profile's name.`,
+        "Apply to all", () => api("/api/statusline/all", { profile: pid }))) { st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine(); }
+  };
 }
 const fmt = v => v === null || v === undefined ? "default" : v === "" ? "none" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
 const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
-  : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-default src">default</span>`;
+  : src === "settings" ? `<span class="badge b-none src">settings.json</span>`
+  : src === "global" ? `<span class="badge b-none src" title="Where /config keeps this setting: the profile's global config">.claude.json</span>` : `<span class="badge b-default src">default</span>`;
 function selectOptions(f) {
   const opt = o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`;
   const groups = [...new Set(f.options.map(o => o.group))];
@@ -1089,12 +1280,13 @@ function selectOptions(f) {
 const optionDesc = (f, v) => v == null || v === "" ? f.default_desc || "" : f.options?.find(o => o.value === v)?.desc || "";
 function fieldInput(f) {
   if (f.type === "select") return `<select data-sfield="${f.key}" style="flex:1;min-width:0" aria-label="${esc(f.label)}">
-      <option value="" ${f.value == null ? "selected" : ""}>— default —</option>
+      <option value="" ${f.value == null ? "selected" : ""}>— default${f.default != null && f.options?.find(o => o.value === f.default) ? ": " + esc(f.options.find(o => o.value === f.default).label) : ""} —</option>
       ${selectOptions(f)}</select>`;
+  if (f.off_value !== undefined) return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value !== f.off_value ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>${typeof f.value === "string" && f.value !== f.off_value ? `<span class="hint" title="${esc(f.value)}">custom text, kept</span>` : ""}`;
   if (f.type === "bool" && f.value != null && typeof f.value !== "boolean") return `<span class="hint">custom value: edit it in the advanced editor</span>`;
   if (f.type === "bool") return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value === true || (f.value == null && f.default === true) ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>`;
   const list = f.suggest?.length ? `list="dl-${f.key}"` : "";
-  return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="${f.value === "" ? "none: no attribution" : "default"}" ${list} aria-label="${esc(f.label)}">
+  return `<input class="text" ${f.type === "number" ? 'type="number" min="1" step="1"' : ""} data-sfield="${f.key}" value="${esc(f.value ?? "")}" placeholder="default" ${list} aria-label="${esc(f.label)}">
     ${f.suggest?.length ? `<datalist id="dl-${f.key}">${f.suggest.map(v => `<option value="${esc(v)}">`).join("")}</datalist>` : ""}
     <button class="btn small" data-ssave="${f.key}" hidden>Save</button>`;
 }
@@ -1107,17 +1299,19 @@ function renderSettings() {
   const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
   <div class="setgrid">${errs}
-    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
-      ${d.fields.map(f => `<div class="srow">
+    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
+      ${d.fields.map((f, i) => `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
         <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
           ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, f.value))}</div>` : ""}</div>
-        <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
+        <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.off_value !== undefined ? (o.value === f.off_value ? "off" : o.value == null ? "on" : "custom") : f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
           ${f.deprecated ? "" : JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}
           ${!f.deprecated && f.others.some(o => JSON.stringify(o.value) !== JSON.stringify(f.value)) ? `<div><button class="btn small" data-sall="${f.key}" title="Give every other profile the value of this one">Apply to all…</button></div>` : ""}</div>
       </div>`).join("")}
     </section>
+
+    ${statusLineSection()}
 
     <section class="sec"><div class="h"><h3>Global instructions · CLAUDE.md</h3><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
       <div class="b"><textarea class="code" id="cmd-text" spellcheck="false" aria-label="CLAUDE.md" placeholder="# Context&#10;&#10;In this profile you work on …">${esc(d.claude_md.content)}</textarea>
@@ -1147,6 +1341,7 @@ function renderSettings() {
 }
 function bindSettings() {
   const st = S.set, d = st.data, pid = st.profile;
+  bindStatusLine();
   const save = async (key, value) => { try { await run(() => api("/api/settings/field", { profile: pid, key, value })); } catch {} loadSettings(pid); };
   document.querySelectorAll("[data-sfield]").forEach(el => {
     const f = d.fields.find(x => x.key === el.dataset.sfield);
@@ -1160,7 +1355,7 @@ function bindSettings() {
       return;
     }
     const btn = document.querySelector(`[data-ssave="${f.key}"]`);
-    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || (f.blank ? "" : null));
+    const val = () => f.type === "number" ? (el.value === "" ? null : parseInt(el.value, 10)) : (el.value.trim() || null);
     el.oninput = () => { btn.hidden = JSON.stringify(val()) === JSON.stringify(f.value ?? null); };
     el.onkeydown = e => { if (e.key === "Enter" && !btn.hidden) btn.click(); };
     btn.onclick = () => save(f.key, val());

@@ -177,3 +177,25 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     open_tab(page, "backups")
     assert page.query_selector("#bk-auto") is not None
     assert errors == []
+
+
+def test_status_line_section(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    assert page.is_disabled("#sl-save")  # nothing to save yet
+    page.click('[data-slmode="builtin"]')
+    page.wait_for_function("() => document.querySelector('#sl-preview')?.textContent.length > 3")
+    page.click('[data-slmove="profile"][data-dir="1"]')  # profile after model
+    page.click('[data-slsep="bar"]')
+    page.click('[data-slbrall="square"]')
+    page.select_option('[data-slbr="profile"]', "curly")
+    page.wait_for_function("() => /\\[Opus\\].*\\|.*\\{Default\\}/.test(document.querySelector('#sl-preview').textContent)")
+    assert page.is_enabled("#sl-save") and page.inner_text("#sl-dirty") == "Unsaved changes"
+    page.click('[data-slpart="time"]')  # ticked: it joins the end of the line
+    order = page.eval_on_selector_all("[data-slitem]", "ls => ls.map(l => l.dataset.slitem)")
+    assert order.index("time") == 5
+    page.click('[data-slmode="custom"]')
+    page.wait_for_selector("#sl-cmd")
+    page.click('[data-slmode="off"]')
+    assert page.query_selector("#sl-cmd") is None and page.query_selector("#sl-preview") is None
+    assert errors == []
