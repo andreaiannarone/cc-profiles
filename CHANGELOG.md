@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-05
+
 ### Added
 - Check for updates in the (i) panel: asks PyPI for the latest version only when you click, and updates a pipx or uv install with one click, then restarts the app.
 
@@ -63,7 +65,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/andreaiannarone/cc-profiles/releases/tag/v0.1.0
