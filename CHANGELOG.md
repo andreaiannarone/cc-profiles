@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Export a profile as a `.zip` (with or without conversations, never with login credentials) and import it on another computer, from the Profiles tab.
+- Plugins tab: the plugins installed in each profile, their version, marketplace and scope, with a switch to enable or disable each one.
+
 ## [0.2.2] - 2026-10-05
 
 ### Added

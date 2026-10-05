@@ -9,6 +9,8 @@
    - [Memories](guides/memories.md): browse, edit, move
    - [Profiles and sharing](guides/profiles.md): create, edit, delete, share
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
+   - [Plugins](guides/plugins.md): see the installed plugins and turn them on or off
+   - [Export and import](guides/export-import.md): move a profile to another computer
    - [Settings](guides/settings.md): general settings, `CLAUDE.md`, permissions, raw JSON
    - [Backups](guides/backups.md): what gets saved and how restoring works
    - [Health and About](guides/health.md): checks, orphan projects, installing Claude Code

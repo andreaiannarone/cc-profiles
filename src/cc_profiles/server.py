@@ -23,12 +23,15 @@ import re
 import secrets
 import shutil
 import socketserver
+import stat
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
 import webbrowser
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -1321,6 +1324,242 @@ def op_backup_prune(days):
 
 
 # ---------------------------------------------------------------------------
+# Export and import
+# ---------------------------------------------------------------------------
+# A profile travels as a .zip: profile/… (its folder), claude.json (its .claude.json),
+# home-memory/… (the general memory, which lives under the home folder's project)
+# and cc-profiles-export.json (the manifest). Login credentials never travel: a
+# copied token can be invalidated when the original refreshes it.
+EXPORT_FORMAT = 1
+EXPORT_MANIFEST = "cc-profiles-export.json"
+DIR_PLACEHOLDER = "__CC_PROFILES_PROFILE_DIR__"
+IMPORT_MAX = 500 * 1024 * 1024          # size of the uploaded zip
+IMPORT_MAX_UNPACKED = 5 * 1024 ** 3     # size once unpacked: refuse zip bombs
+NEVER_EXPORT = {".credentials.json"}    # at any depth
+
+
+def holds_profile_paths(rel):
+    """Files whose text holds absolute paths to the profile folder (see CLAUDE.md)."""
+    return rel == "settings.local.json" or (rel.startswith("plugins/") and rel.count("/") == 1
+                                            and rel.endswith(".json"))
+
+
+def share_note(prof, item):
+    """Who else uses this item of the profile through sharing."""
+    src = primary()
+    if prof["id"] != src["id"]:
+        return f"shared with {src['label']}" if share_state(prof, item, "dir")["shared"] else ""
+    users = [p["label"] for p in profiles()[1:] if share_state(p, item, "dir")["shared"]]
+    return f"shared with {', '.join(users)}" if users else ""
+
+
+def export_profile(pid, projects):
+    """Write the profile into a temporary zip. Returns (path, download name)."""
+    prof = profile(pid)
+    d = prof["dir_abs"]
+    if not os.path.isdir(d):
+        raise ApiError(f"{pretty(d)} does not exist")
+    skip = RUNTIME | NEVER_EXPORT | (set() if projects else PROJECT_DATA)
+    shared = [i for i, _, _ in SHARE_ITEMS if os.path.islink(os.path.join(d, i))]
+    dirs = sorted({d, os.path.realpath(d)}, key=len, reverse=True)
+    fd, tmp = tempfile.mkstemp(prefix="cc-profiles-export-", suffix=".zip")
+    os.close(fd)
+    seen, count = set(), [0]
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            def add(src, arc, rel=None):
+                if rel is not None and holds_profile_paths(rel):
+                    text = open(src, errors="replace").read()
+                    for x in dirs:
+                        text = text.replace(x, DIR_PLACEHOLDER)
+                    z.writestr(arc, text)
+                else:
+                    z.write(src, arc)
+                count[0] += 1
+
+            def walk(src, rel):
+                # Links are followed (shared items, skills linked from elsewhere): the
+                # export holds real files. Each real folder is written once, so a loop stops.
+                real = os.path.realpath(src)
+                if real in seen:
+                    return
+                seen.add(real)
+                for name in sorted(os.listdir(src)):
+                    if (rel == "" and name in skip) or name in NEVER_EXPORT or name == ".trash":
+                        continue
+                    p = os.path.join(src, name)
+                    if os.path.islink(p) and not os.path.realpath(p).startswith(os.path.realpath(HOME) + os.sep):
+                        continue  # a link out of the home folder: never pull system files into an export
+                    if os.path.isdir(p):
+                        walk(p, rel + name + "/")
+                    elif os.path.isfile(p):
+                        add(p, "profile/" + rel + name, rel + name)
+
+            walk(d, "")
+            cfg = read_json(prof["config_abs"], {}) or {}
+            for k in ("oauthAccount", "userID"):  # account data belongs to the login
+                cfg.pop(k, None)
+            if not projects:
+                cfg.pop("projects", None)  # per-project settings go with the projects
+            z.writestr("claude.json", json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
+            home_memory = os.path.join(d, "projects", san(HOME), "memory")
+            has_home_memory = not projects and os.path.isdir(home_memory)
+            if has_home_memory:
+                for f in sorted(os.listdir(home_memory)):
+                    if os.path.isfile(os.path.join(home_memory, f)):
+                        add(os.path.join(home_memory, f), "home-memory/" + f)
+            z.writestr(EXPORT_MANIFEST, json.dumps({
+                "app": "cc-profiles", "format": EXPORT_FORMAT, "version": __version__,
+                "label": prof["label"], "id": prof["id"], "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "projects": bool(projects), "home_memory": has_home_memory,
+                "shared": shared, "files": count[0]}, indent=2) + "\n")
+    except Exception:
+        os.unlink(tmp)
+        raise
+    return tmp, f"cc-profiles-{prof['id']}-{time.strftime('%Y-%m-%d')}.zip"
+
+
+def check_zip_entry(info):
+    name = info.filename
+    parts = name.split("/")
+    if not name or name.startswith("/") or "\\" in name or ".." in parts or ":" in parts[0]:
+        raise ApiError(f"Unsafe path in the archive: {name}. Nothing was imported.")
+    kind = (info.external_attr >> 16) & 0o170000
+    if kind and kind not in (stat.S_IFREG, stat.S_IFDIR):
+        raise ApiError(f"Not a plain file in the archive (a link or a device): {name}. Nothing was imported.")
+    if name not in (EXPORT_MANIFEST, "claude.json") and parts[0] not in ("profile", "home-memory"):
+        raise ApiError(f"Unexpected entry in the archive: {name}. Nothing was imported.")
+
+
+def op_import_profile(zip_path, label, pid):
+    try:
+        z = zipfile.ZipFile(zip_path)
+    except (zipfile.BadZipFile, OSError):
+        raise ApiError("This is not a zip file. Export the profile from cc-profiles and try again.")
+    with z:
+        infos = z.infolist()
+        for info in infos:  # check everything before writing anything
+            check_zip_entry(info)
+        try:
+            man = json.loads(z.read(EXPORT_MANIFEST))
+        except (KeyError, ValueError):
+            raise ApiError("This zip was not exported by cc-profiles: it has no cc-profiles-export.json.")
+        if man.get("app") != "cc-profiles" or man.get("format") != EXPORT_FORMAT:
+            raise ApiError("This export was made by a newer cc-profiles: update cc-profiles and try again.")
+        if sum(i.file_size for i in infos) > IMPORT_MAX_UNPACKED:
+            raise ApiError("The archive is too big once unpacked (over 5 GB).")
+        label, pid, new, command = check_new_profile(label or man.get("label"), pid or man.get("id"))
+        bk = Backup("import-profile", f"Import profile {label} ({pretty(new)})")
+        bk.copy(CONFIG_FILE, "config.json")
+        os.makedirs(new)
+        bk.created(new)
+        try:
+            for info in infos:
+                if info.is_dir():
+                    continue
+                top, _, rest = info.filename.partition("/")
+                if top == "profile":
+                    dst = os.path.join(new, rest)
+                elif top == "home-memory":
+                    dst = os.path.join(new, "projects", san(HOME), "memory", rest)
+                else:
+                    continue
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                data = z.read(info)
+                if top == "profile" and holds_profile_paths(rest):
+                    data = data.decode(errors="replace").replace(DIR_PLACEHOLDER, new).encode()
+                with open(dst, "wb") as f:
+                    f.write(data)
+            cfg = json.loads(z.read("claude.json")) if "claude.json" in z.namelist() else {}
+            for k in ("oauthAccount", "userID"):
+                cfg.pop(k, None)
+            write_json(os.path.join(new, ".claude.json"), cfg)
+            if command_state(new) in ("missing", "outdated"):
+                write_command(new, bk, pid)
+            write_launcher(command, f"~/.claude-{pid}", label, bk)
+        except Exception:
+            shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
+            raise
+    add_profile_to_config(label, pid, command)
+    bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
+            f"conversations: {'yes' if man.get('projects') else 'no'}")
+    msg = f"Profile {label} imported. It is not logged in: run {command} and log in with /login."
+    if not launcher_dir_in_path():
+        msg += f" Note: {pretty(LAUNCHER_DIR)} is not in your PATH yet."
+    return {"message": msg, "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
+# Plugins
+# ---------------------------------------------------------------------------
+# Installing and removing plugins is Claude Code's job (/plugin): here they are
+# listed, and enabled or disabled through enabledPlugins in the settings files.
+def plugin_switch(prof, name):
+    """(value, file) of one plugin in enabledPlugins: settings.local.json wins."""
+    f = settings_files(prof)
+    for which in ("local", "settings"):
+        data, _ = load_settings(f[which])
+        ep = data.get("enabledPlugins")
+        if isinstance(ep, dict) and name in ep:
+            return ep[name], which
+    return None, None
+
+
+def list_plugins(pid):
+    prof = profile(pid)
+    pdir = os.path.join(prof["dir_abs"], "plugins")
+    installed = (read_json(os.path.join(pdir, "installed_plugins.json"), {}) or {}).get("plugins") or {}
+    names = set(installed)
+    for path in settings_files(prof).values():
+        if path.endswith(".json"):
+            ep = load_settings(path)[0].get("enabledPlugins")
+            if isinstance(ep, dict):
+                names |= set(ep)
+    items = []
+    for name in sorted(names):
+        installs = installed.get(name) or []
+        if isinstance(installs, dict):  # an older format: one install per plugin
+            installs = [installs]
+        first = installs[0] if installs else {}
+        plugin, _, market = name.partition("@")
+        value, source = plugin_switch(prof, name)
+        items.append({"name": name, "plugin": plugin, "marketplace": market,
+                      "version": first.get("version", ""), "installed": (first.get("installedAt") or "")[:10],
+                      "path": pretty(first.get("installPath", "")), "is_installed": bool(installs),
+                      "scopes": sorted({i.get("scope", "user") for i in installs}),
+                      "projects": [pretty(i["projectPath"]) for i in installs if i.get("projectPath")],
+                      "enabled": value, "source": source})
+    markets = read_json(os.path.join(pdir, "known_marketplaces.json"), {}) or {}
+    marketplaces = []
+    for name, m in sorted(markets.items()):
+        src = (m or {}).get("source") or {}
+        marketplaces.append({"name": name, "source": src.get("repo") or src.get("url") or src.get("path") or "",
+                             "updated": ((m or {}).get("lastUpdated") or "")[:10]})
+    return {"plugins": items, "marketplaces": marketplaces, "dir": pretty(pdir),
+            "shared": share_note(prof, "plugins")}
+
+
+def op_plugin_enable(pid, name, enabled):
+    if not isinstance(enabled, bool):
+        raise ApiError("Invalid value: expected true or false")
+    prof = profile(pid)
+    if name not in {p["name"] for p in list_plugins(pid)["plugins"]}:
+        raise ApiError(f"Plugin not found in {prof['label']}: {name}", 404)
+    _, source = plugin_switch(prof, name)
+    which = source or "settings"
+    path = settings_files(prof)[which]
+    data, _ = load_settings(path)
+    bk = Backup("plugin", f"{'Enable' if enabled else 'Disable'} plugin {name} ({prof['label']})")
+    ep = data.get("enabledPlugins") if isinstance(data.get("enabledPlugins"), dict) else {}
+    ep[name] = enabled
+    data["enabledPlugins"] = ep
+    save_settings_file(prof, which, data, bk)
+    bk.note(f"enabledPlugins.{name} = {json.dumps(enabled)} in {os.path.basename(path)}")
+    msg = f"{name} {'enabled' if enabled else 'disabled'} in {os.path.basename(path)}{shared_note(path)}."
+    return {"message": msg + session_hint(prof), "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
 # Sharing between profiles
 # ---------------------------------------------------------------------------
 SHARE_ITEMS = [
@@ -1572,8 +1811,10 @@ PROJECT_DATA = {"projects", "history.jsonl", "file-history", "paste-cache", "bac
                 "jobs", "downloads", "todos"}
 
 
-def op_create_profile(label, pid, base, include_projects, share):
-    label, pid = label.strip(), pid.strip().lower()
+def check_new_profile(label, pid):
+    """Validate the name and id of a profile about to be created (or imported).
+    Returns (label, id, folder, command)."""
+    label, pid = (label or "").strip(), (pid or "").strip().lower()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,30}", pid):
         raise ApiError("Invalid id: lowercase letters, digits and dashes only")
     profs = profiles()
@@ -1586,6 +1827,18 @@ def op_create_profile(label, pid, base, include_projects, share):
     err = command_conflict(command, profs)
     if err:
         raise ApiError(err)
+    return label, pid, new, command
+
+
+def add_profile_to_config(label, pid, command):
+    cfg = load_config()
+    cfg["profiles"].append({"id": pid, "label": label, "dir": f"~/.claude-{pid}",
+                            "config": f"~/.claude-{pid}/.claude.json", "command": command})
+    write_json(CONFIG_FILE, cfg)
+
+
+def op_create_profile(label, pid, base, include_projects, share):
+    label, pid, new, command = check_new_profile(label, pid)
     share = [i for i in share if i in {x for x, _, _ in SHARE_ITEMS}]
     bk = Backup("new-profile", f"New profile {label} ({pretty(new)})")
     bk.copy(CONFIG_FILE, "config.json")
@@ -1632,10 +1885,7 @@ def op_create_profile(label, pid, base, include_projects, share):
     if command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
-    cfg = load_config()
-    cfg["profiles"].append({"id": pid, "label": label, "dir": f"~/.claude-{pid}",
-                            "config": f"~/.claude-{pid}/.claude.json", "command": command})
-    write_json(CONFIG_FILE, cfg)
+    add_profile_to_config(label, pid, command)
     bk.note(f"base: {src['label'] if src else 'empty'}, projects: {'yes' if include_projects else 'no'}, "
             f"shared: {', '.join(share) or 'nothing'}")
     msg = f"Profile {label} created. Run {command} and log in with /login."
@@ -2319,6 +2569,43 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, status, obj):
         self._send(status, json.dumps(obj, ensure_ascii=False))
 
+    def _send_file(self, path, name, ctype):
+        """Stream a file as a download, then delete it (a temporary export)."""
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(os.path.getsize(path)))
+            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            with open(path, "rb") as f:
+                shutil.copyfileobj(f, self.wfile, 1024 * 1024)
+        finally:
+            os.unlink(path)
+
+    def _import(self, q):
+        """POST /api/profiles/import: the request body is the zip itself, not JSON."""
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0:
+            raise ApiError("Pick the .zip of an exported profile")
+        if n > IMPORT_MAX:
+            raise ApiError("The file is too big (over 500 MB)")
+        fd, tmp = tempfile.mkstemp(prefix="cc-profiles-import-", suffix=".zip")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                left = n
+                while left:
+                    chunk = self.rfile.read(min(left, 1024 * 1024))
+                    if not chunk:
+                        raise ApiError("The upload was interrupted")
+                    f.write(chunk)
+                    left -= len(chunk)
+            with _lock:
+                return op_import_profile(tmp, q.get("label", ""), q.get("id", ""))
+        finally:
+            os.unlink(tmp)
+
     def _guard(self):
         # A fixed Host blocks DNS rebinding; the token blocks requests from other sites.
         if self.headers.get("Host") not in ALLOWED_HOSTS:
@@ -2338,6 +2625,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/", "/index.html"):
                 html = open(os.path.join(STATIC_DIR, "index.html")).read().replace("__TOKEN__", TOKEN)
                 return self._send(200, html, "text/html; charset=utf-8")
+            if u.path == "/api/profiles/export":
+                path, name = export_profile(q["id"], q.get("projects") == "1")
+                return self._send_file(path, name, "application/zip")
             routes = {
                 "/api/profiles": lambda: list_profiles(),
                 "/api/projects": lambda: list_projects(),
@@ -2349,6 +2639,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/backups": lambda: list_backups(),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
+                "/api/plugins": lambda: list_plugins(q["profile"]),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
                 "/api/claude/status": lambda: claude_status(),
@@ -2372,6 +2663,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self._guard():
             return
         try:
+            u = urlparse(self.path)
+            if u.path == "/api/profiles/import":
+                return self._json(200, self._import({k: v[0] for k, v in parse_qs(u.query).items()}))
             n = int(self.headers.get("Content-Length") or 0)
             b = json.loads(self.rfile.read(n) or b"{}")
             routes = {
@@ -2387,6 +2681,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),
                 "/api/backups/prune": lambda: op_backup_prune(b.get("days")),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
+                "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),
                 "/api/settings/raw": lambda: op_settings_raw(b["profile"], b["file"], b["content"]),
