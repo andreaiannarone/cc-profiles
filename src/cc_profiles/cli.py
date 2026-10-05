@@ -5,6 +5,7 @@
 import argparse
 import http.client
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -13,7 +14,7 @@ import webbrowser
 
 from . import __version__
 from . import core
-from .core import CONFIG_FILE, DATA_DIR, expand, load_config, pretty, profiles, read_json
+from .core import CONFIG_FILE, DATA_DIR, expand, find_tool, load_config, pretty, profiles, read_json
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import install_command
 from .projects import list_projects
@@ -63,12 +64,19 @@ def warm_caches():
         pass
 
 
+def stop_gracefully(signum, frame):
+    """SIGTERM (cc-profiles stop, restart, kill): let a write in progress finish, then exit."""
+    core._lock.acquire(timeout=60)
+    os._exit(0)
+
+
 def serve(port, open_browser):
     core.PORT = port
     core.ALLOWED_HOSTS = {f"127.0.0.1:{port}", f"localhost:{port}"}
     load_config()
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
+    signal.signal(signal.SIGTERM, stop_gracefully)
     try:
         srv = Server(("127.0.0.1", port), Handler)
     except OSError:
@@ -86,17 +94,58 @@ def serve(port, open_browser):
         print("\nStopped.")
 
 
-def is_running(port):
-    """True if cc-profiles answers on the port (another program there does not count).
+def probe(port):
+    """(running, pid): whether cc-profiles answers on the port (another program there
+    does not count) and the pid it reports (None before 0.4.1).
     http.client talks to 127.0.0.1 directly, without urllib's proxy handling."""
     conn = http.client.HTTPConnection("127.0.0.1", port, timeout=1)
     try:
         conn.request("GET", "/")
-        return (conn.getresponse().getheader("Server") or "").startswith("cc-profiles/")
+        res = conn.getresponse()
+        if not (res.getheader("Server") or "").startswith("cc-profiles/"):
+            return False, None
+        pid = res.getheader("X-CC-Profiles-Pid") or ""
+        return True, int(pid) if pid.isdigit() else None
     except (OSError, http.client.HTTPException):
-        return False
+        return False, None
     finally:
         conn.close()
+
+
+def is_running(port):
+    return probe(port)[0]
+
+
+def listening_pid(port):
+    """The pid listening on the port, from lsof: for servers too old to report it."""
+    lsof = find_tool("lsof")
+    if not lsof:
+        return None
+    r = subprocess.run([lsof, "-nP", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"], capture_output=True, text=True)
+    pids = [int(x) for x in r.stdout.split() if x.isdigit()]
+    return pids[0] if len(pids) == 1 else None
+
+
+def stop_app(port):
+    """Stop the cc-profiles server on the port, if one is running. A write in progress
+    finishes first. Exits with status 1 when it cannot be stopped."""
+    url = f"http://127.0.0.1:{port}"
+    running, pid = probe(port)
+    if not running:
+        print(f"cc-profiles is not running on {url}")
+        return
+    pid = pid or listening_pid(port)
+    if not pid:
+        print(f"cc-profiles is running on {url}, but its pid is unknown: stop it with kill and the pid it printed when it started.")
+        sys.exit(1)
+    os.kill(pid, signal.SIGTERM)
+    deadline = time.time() + 70  # stop_gracefully waits up to 60 s for a write to finish
+    while time.time() < deadline and is_running(port):
+        time.sleep(0.1)
+    if is_running(port):
+        print(f"cc-profiles on {url} (pid {pid}) did not stop. Try again, or kill {pid}.")
+        sys.exit(1)
+    print(f"Stopped cc-profiles on {url} (pid {pid}).")
 
 
 def open_app(port, open_browser):
@@ -104,6 +153,7 @@ def open_app(port, open_browser):
 
     Returns at once, so it can run from a Claude Code slash command."""
     url = f"http://127.0.0.1:{port}"
+    port_arg = "" if port == core.PORT else f" --port {port}"
     if is_running(port):
         print(f"cc-profiles is already running on {url}")
     else:
@@ -120,7 +170,7 @@ def open_app(port, open_browser):
             print(f"cc-profiles did not start. See {pretty(log)}:")
             print(open(log, errors="replace").read().strip())
             sys.exit(1)
-        print(f"cc-profiles started in the background on {url} (pid {proc.pid}). Stop it with: kill {proc.pid}")
+        print(f"cc-profiles started in the background on {url} (pid {proc.pid}). Stop it with: cc-profiles stop{port_arg}")
     if open_browser:
         webbrowser.open(url)
 
@@ -136,6 +186,10 @@ def main(argv=None):
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     op.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port to listen on")
     op.add_argument("--no-browser", action="store_true", default=argparse.SUPPRESS, help="do not open the browser")
+    for name, text in (("stop", "stop the server running in the background"),
+                       ("restart", "stop the server and start it again in the background, e.g. after an update")):
+        sp = sub.add_parser(name, help=text)
+        sp.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port it listens on")
     args = ap.parse_args(argv)
     if args.cmd == "label":
         print(current_label())
@@ -152,6 +206,14 @@ def main(argv=None):
         return
     if args.cmd == "open":
         open_app(args.port, not args.no_browser)
+        return
+    if args.cmd == "stop":
+        stop_app(args.port)
+        return
+    if args.cmd == "restart":
+        stop_app(args.port)
+        open_app(args.port, False)
+        print("Reload the page in your browser.")
         return
     serve(args.port, not args.no_browser)
 

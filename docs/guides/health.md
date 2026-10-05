@@ -33,7 +33,7 @@ The ⓘ button at the top right opens a panel with:
 
 At the bottom of the About panel, **Check for updates** asks PyPI for the latest version of cc-profiles. It runs only when you click: this and the Claude Code installer are the only times cc-profiles reaches the internet, and PyPI sees your IP address.
 
-When a newer version exists, **Update to …** runs the update for the way you installed cc-profiles, `pipx upgrade cc-profiles` or `uv tool upgrade cc-profiles`, then restarts the app on the same port; the page reloads by itself. Your profiles, backups and settings are not touched. A copy run from the source folder, or installed with plain pip, shows the command to run by hand instead.
+When a newer version exists, **Update to …** runs the update for the way you installed cc-profiles, `pipx upgrade cc-profiles` or `uv tool upgrade cc-profiles`, then restarts the app on the same port; the page reloads by itself. Your profiles, backups and settings are not touched. A copy run from the source folder, or installed with plain pip, shows the command to run by hand instead. After updating from a terminal, run `cc-profiles restart` so the running app picks up the new version.
 
 ## Installing Claude Code
 

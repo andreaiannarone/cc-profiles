@@ -248,6 +248,7 @@ cc-profiles                   # starts on http://127.0.0.1:4777 and opens the br
 cc-profiles --port 4800       # another port
 cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
+cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
 cc-profiles install-command   # adds the /cc-profiles command to Claude Code in every profile
 cc-profiles label             # prints the name of the active profile, for status lines
 ```

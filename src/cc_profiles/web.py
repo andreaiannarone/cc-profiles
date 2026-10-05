@@ -88,6 +88,11 @@ class Server(ThreadingHTTPServer):
 class Handler(BaseHTTPRequestHandler):
     server_version = f"cc-profiles/{__version__}"
 
+    def end_headers(self):
+        # which process answers: `cc-profiles stop` and `restart` stop exactly this one
+        self.send_header("X-CC-Profiles-Pid", str(os.getpid()))
+        super().end_headers()
+
     def log_message(self, fmt, *args):
         if os.environ.get("CC_PROFILES_QUIET"):
             return

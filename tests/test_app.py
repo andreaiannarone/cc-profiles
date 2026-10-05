@@ -806,6 +806,41 @@ def test_open_command(home):
         os.kill(pid, signal.SIGTERM)
 
 
+def test_stop_and_restart_commands(home):
+    port = free_port()
+    first = run_cli(home, "open", "--no-browser", "--port", str(port))
+    pid = int(re.search(r"pid (\d+)", first.stdout).group(1))
+    assert f"Stop it with: cc-profiles stop --port {port}" in first.stdout
+    pids = [pid]
+    try:
+        r = run_cli(home, "restart", "--port", str(port))
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"Stopped cc-profiles on http://127.0.0.1:{port} (pid {pid})" in r.stdout
+        new = int(re.search(r"started in the background .* \(pid (\d+)\)", r.stdout).group(1))
+        pids.append(new)
+        assert new != pid and "Reload the page" in r.stdout
+        assert urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5).headers["X-CC-Profiles-Pid"] == str(new)
+        r = run_cli(home, "stop", "--port", str(port))
+        assert r.returncode == 0 and f"(pid {new})" in r.stdout
+        with pytest.raises(OSError):
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2)
+        assert "is not running" in run_cli(home, "stop", "--port", str(port)).stdout
+    finally:
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+
+def test_stop_leaves_other_programs_alone(home):
+    with socket.socket() as other:  # not cc-profiles: nothing to stop
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        r = run_cli(home, "stop", "--port", str(other.getsockname()[1]))
+    assert r.returncode == 0 and "is not running" in r.stdout
+
+
 def test_open_command_port_taken(home):
     with socket.socket() as other:  # another program on the port
         other.bind(("127.0.0.1", 0))
