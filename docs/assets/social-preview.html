@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Source of social-preview.png, the image GitHub shows when the repository is shared.
+     Regenerate it from the repository root with:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars \
+       --force-device-scale-factor=1 --window-size=1280,640 \
+       --screenshot=docs/assets/social-preview.png "file://$PWD/docs/assets/social-preview.html" -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cc-profiles social preview</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    background: #161513;
+    color: #ecebe7;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    position: relative;
+  }
+  /* a warm glow behind the screenshot, so the card does not feel flat */
+  body::before {
+    content: ""; position: absolute; right: -160px; top: -120px; width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(217, 119, 87, .22), rgba(217, 119, 87, 0) 62%);
+  }
+  .text { position: absolute; left: 72px; top: 0; bottom: 0; width: 500px; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+  .logo { width: 440px; display: block; }
+  h1 { margin: 0; font-size: 38px; line-height: 1.22; font-weight: 650; letter-spacing: -0.01em; }
+  h1 em { font-style: normal; color: #fb8a4c; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .facts span { font-size: 17px; color: #a29e95; border: 1px solid #353330; border-radius: 99px; padding: 5px 12px; }
+  .install { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 21px; color: #ecebe7; background: #1f1e1b; border: 1px solid #353330; border-radius: 10px; padding: 12px 16px; align-self: flex-start; }
+  .install b { color: #fb8a4c; font-weight: 400; }
+  .shot {
+    position: absolute; left: 616px; top: 110px; width: 780px;
+    border-radius: 14px; border: 1px solid #353330; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+  }
+  .shot .bar { height: 30px; background: #1f1e1b; border-bottom: 1px solid #353330; display: flex; align-items: center; gap: 7px; padding-left: 14px; }
+  .shot .bar i { width: 11px; height: 11px; border-radius: 50%; background: #353330; display: block; }
+  .shot img { display: block; width: 100%; }
+</style>
+</head>
+<body>
+  <div class="text">
+    <img class="logo" src="logo-dark.svg" alt="cc-profiles">
+    <h1>A local web UI to manage multiple <em>Claude Code</em> profiles</h1>
+    <div class="facts"><span>Projects</span><span>Memories</span><span>Skills</span><span>MCP</span><span>Undo anything</span></div>
+    <div class="install"><b>$</b> pipx install cc-profiles</div>
+  </div>
+  <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="screenshots/skills-dark.jpg" alt=""></div>
+</body>
+</html>

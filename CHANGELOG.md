@@ -5,6 +5,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-05
+
+### Added
+- Conversations tab: read the conversations of each project (title, dates, prompt and reply counts, a read-only viewer), and move one to another profile with its file snapshots, or delete it.
+- A browser smoke test (`tests/test_ui.py`, run in CI) opens every tab in Chromium and fails on JavaScript errors or Content-Security-Policy violations.
+- Search everything: a field in the header searches projects, memories, skills, MCP servers and CLAUDE.md in every profile, with highlighted excerpts; clicking a result opens it.
+- Compare tab: two profiles side by side (settings, permissions, skills, MCP servers, CLAUDE.md, plugins), with copies of what differs through the usual operations.
+- Export a profile as a `.zip` (with or without conversations, never with login credentials) and import it on another computer, from the Profiles tab.
+- Plugins tab: the plugins installed in each profile, their version, marketplace and scope, with a switch to enable or disable each one.
+
+### Fixed
+- Conversations are read whatever the spacing of their JSON lines.
+
+### Changed
+- An operation that fails halfway keeps its backup: the steps done so far are journaled, the backup is labelled "incomplete" and Restore undoes them.
+- The page is served with a strict Content-Security-Policy and cannot be framed by other sites.
+- CI and release workflows use the current GitHub Actions (checkout and setup-python v7, upload-artifact v7, download-artifact v8), off the deprecated Node 20.
+- Dependabot opens one weekly pull request with GitHub Actions updates; CodeQL scans the Python server and the UI's JavaScript.
+- Security issues are reported privately through GitHub's *Report a vulnerability* (see SECURITY.md).
+- A social preview image for the repository (`docs/assets/social-preview.png`).
+
 ## [0.2.2] - 2026-10-05
 
 ### Added
@@ -65,7 +86,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.1.0...v0.2.0

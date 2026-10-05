@@ -4,6 +4,7 @@ The key property of cc-profiles is that everything can be undone, so most tests
 end the same way: restore every backup, newest first, and check the fake home is
 byte-for-byte identical to how it started.
 """
+import io
 import json
 import os
 import re
@@ -12,7 +13,11 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
+import zipfile
+
+import pytest
 
 from conftest import SRC, free_port, san
 
@@ -41,6 +46,15 @@ def test_api_requires_token_and_local_host(home, app_factory):
     assert app.request("/api/projects", token=False)[0] == 403
     assert app.request("/api/projects", host=f"evil.example:{app.port}")[0] == 403
     assert app.request("/api/projects")[0] == 200
+
+
+def test_page_sends_a_strict_content_security_policy(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    with urllib.request.urlopen(app.base + "/", timeout=5) as r:
+        csp = r.headers["Content-Security-Policy"]
+        assert r.headers["X-Frame-Options"] == "DENY"
+    assert "default-src 'none'" in csp and "connect-src 'self'" in csp and "frame-ancestors 'none'" in csp
 
 
 def test_path_traversal_is_rejected(home, app_factory):
@@ -112,6 +126,104 @@ def test_restore_twice_is_refused(home, app_factory):
     name = app.get("/api/backups")[0]["name"]
     app.post("/api/backups/restore", {"name": name})
     assert "already restored" in app.post_error("/api/backups/restore", {"name": name})
+
+
+# --- conversations ------------------------------------------------------------
+def write_session(home, profile, project, session, n_prompts=2):
+    """A conversation shaped like Claude Code's: prompts, replies, a tool call and its result,
+    a slash command, a meta line, the AI title and a file snapshot folder."""
+    proj = home.conversation(profile, project, session)  # creates the folder and file-history/<session>
+    lines = [
+        {"type": "user", "isMeta": True, "message": {"role": "user", "content": "<local-command-caveat>x</local-command-caveat>"}},
+        {"type": "user", "message": {"role": "user", "content": "<command-name>/clear</command-name>"},
+         "timestamp": "2026-10-01T09:00:00Z"},
+    ]
+    for i in range(n_prompts):
+        lines += [
+            {"type": "user", "message": {"role": "user", "content": f"Fix the login bug number {i}"},
+             "timestamp": f"2026-10-01T10:0{i}:00Z"},
+            {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "hm"}]}},
+            {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Bash", "input": {}}]}},
+            {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "x" * 5000}]}},
+            {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": f"Fixed bug {i}."}]},
+             "timestamp": f"2026-10-01T10:0{i}:30Z"},
+        ]
+    lines.append({"type": "ai-title", "aiTitle": "Login bug fixes", "sessionId": session})
+    (proj / f"{session}.jsonl").write_text("\n".join(json.dumps(l, separators=(",", ":")) for l in lines) + "\n")
+    return proj
+
+
+def test_conversations_are_listed_and_viewed(home, app_factory):
+    basic_home(home)
+    write_session(home, "", "code/work/api", "s-api", n_prompts=2)
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    projects = {p["name"]: p["count"] for p in app.get("/api/conversations/projects?profile=default")}
+    assert projects[api] == 1
+    (c,) = app.get(f"/api/conversations?profile=default&project={api}")["conversations"]
+    assert c["session"] == "s-api" and c["title"] == "Login bug fixes"  # the AI title wins
+    assert (c["prompts"], c["replies"]) == (2, 2) and c["snapshots"] is True
+    assert c["first"] == "2026-10-01T09:00:00Z" and c["last"] == "2026-10-01T10:01:30Z"
+    view = app.get(f"/api/conversations/view?profile=default&project={api}&session=s-api")
+    assert [m["role"] for m in view["messages"]] == ["user", "tool", "assistant", "user", "tool", "assistant"]
+    assert view["truncated"] is False and view["messages"][1]["text"] == "Tool: Bash"
+    assert "x" * 100 not in json.dumps(view)  # tool results are left out
+
+    blog = san(home.path("code/personal/blog"))
+    write_session(home, "", "code/personal/blog", "s-long", n_prompts=0)
+    with open(home.path(f".claude/projects/{blog}/s-long.jsonl"), "a") as f:
+        for i in range(320):
+            f.write(json.dumps({"type": "user", "message": {"content": f"prompt {i} " + "y" * 5000}},
+                               separators=(",", ":")) + "\n")
+    view = app.get(f"/api/conversations/view?profile=default&project={blog}&session=s-long")
+    assert view["truncated"] is True and view["total"] == 320 and len(view["messages"]) == 300
+    assert view["messages"][-1]["text"].startswith("prompt 319") and view["messages"][-1]["text"].endswith("…")
+
+    # JSON with spaces (not how Claude Code writes it today) is read just the same
+    with open(home.path(f".claude/projects/{blog}/s-spaced.jsonl"), "w") as f:
+        f.write(json.dumps({"type": "user", "message": {"role": "user", "content": "spaced prompt"}}) + "\n")
+        f.write(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "ok"}]}}) + "\n")
+    spaced = next(c for c in app.get(f"/api/conversations?profile=default&project={blog}")["conversations"]
+                  if c["session"] == "s-spaced")
+    assert (spaced["title"], spaced["prompts"], spaced["replies"]) == ("spaced prompt", 1, 1)
+
+    for bad in ("../x", "", "a/b", ".."):
+        assert app.request(f"/api/conversations/view?profile=default&project={api}&session={bad}")[0] in (400, 404)
+    assert app.request("/api/conversations?profile=default&project=..")[0] == 400
+
+
+def test_one_conversation_moves_and_everything_is_undoable(home, app_factory):
+    basic_home(home)
+    write_session(home, "", "code/work/api", "s-two")  # a second conversation in the same project
+    before = home.snapshot()
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    hist = home.path(".claude/history.jsonl").read_text()
+
+    r = app.post("/api/conversations/move", {"profile": "default", "project": api, "session": "s-two", "to": "work"})
+    assert "with its file snapshots" in r["message"]
+    assert home.path(f".claude-work/projects/{api}/s-two.jsonl").exists()
+    assert home.path(".claude-work/file-history/s-two").is_dir() and not home.path(".claude/file-history/s-two").exists()
+    assert home.path(f".claude/projects/{api}/s-api.jsonl").exists()  # the other conversation stays
+    assert home.path(".claude/history.jsonl").read_text() == hist  # prompt history is not touched
+    assert "Pick another" in app.post_error("/api/conversations/move",
+                                            {"profile": "work", "project": api, "session": "s-two", "to": "work"})
+
+    app.post("/api/conversations/delete", {"profile": "default", "project": api, "session": "s-api"})
+    assert not home.path(f".claude/projects/{api}/s-api.jsonl").exists()
+    assert not home.path(".claude/file-history/s-api").exists()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_moving_a_conversation_the_target_has_is_refused(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    write_session(home, "work", "code/work/api", "s-api")  # Work already has a conversation with this id
+    assert "already has" in app.post_error("/api/conversations/move",
+                                           {"profile": "default", "project": api, "session": "s-api", "to": "work"})
 
 
 # --- sharing and settings -----------------------------------------------------
@@ -210,6 +322,66 @@ def test_old_backups_are_pruned(home, app_factory):
     assert [b["name"] for b in app.get("/api/backups")] == names[:-1]
     assert "No backups older" in app.post("/api/backups/prune", {"days": 30})["message"]
     assert app.request("/api/backups/prune", {"days": 0})[0] == 400
+
+
+# --- search and compare (read-only) --------------------------------------------
+def search_home(home):
+    basic_home(home)
+    home.write(".claude/skills/release-notes/SKILL.md",
+               "---\nname: release-notes\ndescription: Write the changelog from merged pull requests\n---\nBody.\n")
+    home.write(".claude/CLAUDE.md", "# Rules\n\nAlways answer in English.\nPrefer postgres for databases.\n")
+    cfg = json.loads(home.path(".claude.json").read_text())
+    cfg["mcpServers"] = {"files": {"type": "stdio", "command": "npx", "args": ["-y", "server-filesystem"],
+                                   "env": {"API_KEY": "secret-zebra-123"}}}
+    home.json(".claude.json", cfg)
+
+
+def test_search_finds_everything_and_changes_nothing(home, app_factory):
+    search_home(home)
+    before = home.snapshot()
+    app = app_factory()
+    r = app.get("/api/search?q=POSTGRES")  # case-insensitive
+    assert {m["open"]["file"] for m in r["results"]["memories"]} == {"api-notes.md"}  # a memory body
+    hit = r["results"]["claude_md"][0]
+    assert hit["profile"] == "default" and hit["open"]["line"] == 4
+    assert hit["snippet"]["text"][hit["snippet"]["at"]:][:8].lower() == "postgres"
+    assert [s["title"] for s in app.get("/api/search?q=changelog")["results"]["skills"]] == ["release-notes"]
+    mcp = app.get("/api/search?q=filesystem")["results"]["mcp"]
+    assert [(m["title"], m["open"]["scope"]) for m in mcp] == [("files", "user")]
+    proj = app.get("/api/search?q=work/api")["results"]["projects"]
+    assert len(proj) == 1 and sorted(proj[0]["profiles"]) == ["default", "work"]
+    assert "secret-zebra" not in json.dumps(app.get("/api/search?q=files"))
+    assert app.get("/api/search?q=secret-zebra")["counts"]["mcp"] == 0  # env values are not searched
+    assert app.request("/api/search?q=a")[0] == 400
+    assert home.snapshot() == before
+
+
+def test_compare_two_profiles(home, app_factory):
+    search_home(home)
+    home.json(".claude/settings.json", {"model": "opus", "permissions": {"allow": ["Bash(ls)", "Read"]}})
+    home.json(".claude-work/settings.local.json", {"model": "sonnet"})
+    home.json(".claude-work/settings.json", {"permissions": {"allow": ["Read"], "deny": ["Bash(rm:*)"]}})
+    home.write(".claude-work/skills/release-notes/SKILL.md", "---\nname: release-notes\n---\nOther.\n")
+    home.write(".claude-work/skills/oncall/SKILL.md", "---\nname: oncall\n---\n")
+    cfg = json.loads(home.path(".claude-work/.claude.json").read_text())
+    cfg["mcpServers"] = {"sentry": {"type": "http", "url": "https://mcp.sentry.dev/mcp",
+                                    "headers": {"Authorization": "Bearer secret-zebra-456"}}}
+    home.json(".claude-work/.claude.json", cfg)
+    before = home.snapshot()
+    app = app_factory()
+    c = app.get("/api/compare?a=default&b=work")
+    model = next(s for s in c["settings"] if s["key"] == "model")
+    assert (model["a"], model["a_source"], model["b"], model["b_source"], model["same"]) == \
+        ("opus", "settings", "sonnet", "local", False)
+    assert c["permissions"]["diff"]["allow"] == {"only_a": ["Bash(ls)"], "only_b": [], "both": ["Read"]}
+    assert c["permissions"]["diff"]["deny"]["only_b"] == ["Bash(rm:*)"]
+    assert c["permissions"]["b"]["deny"] == ["Bash(rm:*)"]  # full lists, to post a merged one back
+    assert c["skills"]["only_b"] == ["oncall"] and c["skills"]["both"] == [{"name": "release-notes", "same": False}]
+    assert [m["name"] for m in c["mcp"]["only_a"]] == ["files"] and c["mcp"]["only_b"][0]["type"] == "http"
+    assert c["claude_md"]["a"]["exists"] and not c["claude_md"]["b"]["exists"] and not c["claude_md"]["same"]
+    assert "secret-zebra" not in json.dumps(c)
+    assert "two different profiles" in app.request("/api/compare?a=work&b=work")[1]["error"]
+    assert home.snapshot() == before
 
 
 # --- skills and MCP servers --------------------------------------------------
@@ -321,6 +493,27 @@ def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_a_failed_operation_can_still_be_undone(home, app_factory):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_FAULT="create-profile-after-copy")
+    status, body = app.request("/api/profiles/create", {"label": "Half", "id": "half", "base": "default",
+                                                        "include_projects": True, "share": []})
+    assert status == 500 and "fault injected" in body["error"] and "restore the incomplete backup" in body["error"]
+    assert home.path(".claude-half/projects").is_dir()  # the copy happened before the failure
+    newest = app.get("/api/backups")[0]
+    assert newest["failed"] and newest["restorable"]
+    app.post("/api/backups/restore", {"name": newest["name"]})
+    assert home.snapshot() == before
+
+
+def test_a_failure_before_any_change_leaves_no_backup(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    assert app.request("/api/projects/move", {"project": "nope", "from": "default", "to": "work"})[0] == 404
+    assert app.get("/api/backups") == []
+
+
 def test_create_edit_delete_profile(home, app_factory):
     basic_home(home)
     home.write(".claude/.credentials.json", "{\"secret\": 1}")
@@ -419,6 +612,141 @@ def test_version_order():
     from cc_profiles.server import version_key
     assert version_key("0.10.1") > version_key("0.9") > version_key("0.2.1") > version_key("0.2.0")
     assert version_key("1.0.0rc1") == version_key("1.0.0")  # pre-releases are not offered as newer
+
+
+# --- export, import, plugins --------------------------------------------------
+def raw(app, path, data=None):
+    """A request whose answer (or body) is not JSON: (status, bytes)."""
+    headers = {"X-Token": app.token}
+    if data is not None:
+        headers["Content-Type"] = "application/zip"
+    req = urllib.request.Request(app.base + path, data=data, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
+def export_home(home):
+    """A default profile with everything an export has to handle."""
+    basic_home(home)
+    d = home.path(".claude")
+    home.write(".claude/.credentials.json", '{"secret": 1}')
+    home.json(".claude/settings.local.json", {"hooks": {"Stop": [{"command": f"{d}/hooks/stop.sh"}]}})
+    home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {"demo@market": [
+        {"scope": "user", "installPath": f"{d}/plugins/cache/market/demo/1.0.0", "version": "1.0.0",
+         "installedAt": "2026-10-01T10:00:00.000Z"}]}})
+    home.write(".claude/plugins/cache/market/demo/1.0.0/plugin.json", "{}")
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\n")
+    home.write("elsewhere/linked/SKILL.md", "---\nname: linked\n---\n")  # a skill linked from elsewhere in home
+    os.symlink(home.path("elsewhere/linked"), home.path(".claude/skills/linked"))
+    os.symlink("/etc", home.path(".claude/skills/outside"))  # a link out of home: never exported
+    home.write(".claude/shell-snapshots/snap.sh", "runtime data")
+    home.conversation("", "", "s-home", {"general.md": "always answer briefly"})  # the general memory
+
+
+def test_export_holds_the_profile_without_credentials(home, app_factory):
+    export_home(home)
+    app = app_factory()
+    status, data = raw(app, "/api/profiles/export?id=default&projects=0")
+    assert status == 200
+    z = zipfile.ZipFile(io.BytesIO(data))
+    names = set(z.namelist())
+    assert {"cc-profiles-export.json", "claude.json", "profile/settings.json", "profile/skills/review/SKILL.md",
+            "profile/plugins/cache/market/demo/1.0.0/plugin.json", "home-memory/general.md"} <= names
+    assert not any(".credentials.json" in n or "shell-snapshots" in n for n in names)
+    assert "profile/skills/linked/SKILL.md" in names  # links inside home: their real content
+    assert not any(n.startswith("profile/skills/outside") for n in names)
+    assert not any(n.startswith("profile/projects/") or n == "profile/history.jsonl" for n in names)
+    assert "__CC_PROFILES_PROFILE_DIR__/hooks/stop.sh" in z.read("profile/settings.local.json").decode()
+    assert str(home.path(".claude")) not in z.read("profile/plugins/installed_plugins.json").decode()
+    cfg = json.loads(z.read("claude.json"))
+    assert "oauthAccount" not in cfg and "projects" not in cfg
+    man = json.loads(z.read("cc-profiles-export.json"))
+    assert man["app"] == "cc-profiles" and man["id"] == "default" and man["projects"] is False
+
+    with_projects = zipfile.ZipFile(io.BytesIO(raw(app, "/api/profiles/export?id=default&projects=1")[1]))
+    assert any(n.startswith("profile/projects/") for n in with_projects.namelist())
+    assert "profile/history.jsonl" in with_projects.namelist()
+    assert "projects" in json.loads(with_projects.read("claude.json"))
+
+
+def test_import_recreates_the_profile_and_restores(home, app_factory):
+    export_home(home)
+    app = app_factory()
+    data = raw(app, "/api/profiles/export?id=default&projects=1")[1]
+    before = home.snapshot()
+    status, body = raw(app, "/api/profiles/import?label=Laptop&id=laptop", data)
+    r = json.loads(body)
+    assert status == 200 and "not logged in" in r["message"]
+    new = home.path(".claude-laptop")
+    assert (new / "skills/review/SKILL.md").exists()
+    assert f"{new}/hooks/stop.sh" in (new / "settings.local.json").read_text()
+    assert f"{new}/plugins/cache/market/demo/1.0.0" in (new / "plugins/installed_plugins.json").read_text()
+    assert not (new / ".credentials.json").exists()
+    assert "oauthAccount" not in json.loads((new / ".claude.json").read_text())
+    assert (new / "commands/cc-profiles.md").exists()
+    assert os.access(home.path(".local/bin/claude-laptop"), os.X_OK)
+    assert "laptop" in [p["id"] for p in app.get("/api/profiles")]
+    assert "already exists" in json.loads(raw(app, "/api/profiles/import?label=Laptop&id=laptop", data)[1])["error"]
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+@pytest.mark.parametrize("bad", ["../evil.txt", "/etc/evil", "profile/../../evil", "link"])
+def test_import_rejects_unsafe_archives(home, app_factory, bad):
+    basic_home(home)
+    app = app_factory()
+    before = home.snapshot()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("cc-profiles-export.json", json.dumps({"app": "cc-profiles", "format": 1, "label": "X", "id": "x"}))
+        z.writestr("profile/settings.json", "{}")
+        if bad == "link":  # a symbolic link entry
+            info = zipfile.ZipInfo("profile/skills")
+            info.external_attr = (0o120777 << 16)
+            z.writestr(info, "/etc")
+        else:
+            z.writestr(bad, "evil")
+    status, body = raw(app, "/api/profiles/import?label=X&id=x", buf.getvalue())
+    assert status == 400 and "Nothing was imported" in json.loads(body)["error"]
+    assert home.snapshot() == before and not home.path(".claude-x").exists()
+    assert "not a zip" in json.loads(raw(app, "/api/profiles/import?label=X&id=x", b"plain text")[1])["error"]
+
+
+def test_plugins_are_listed_and_switched(home, app_factory):
+    basic_home(home)
+    d = home.path(".claude")
+    home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {
+        "warp@claude-code-warp": [{"scope": "user", "installPath": f"{d}/plugins/cache/x", "version": "2.1.0",
+                                   "installedAt": "2026-06-28T20:57:07.083Z"}],
+        "lint@team": [{"scope": "project", "projectPath": str(home.path("code/work/api")), "version": "0.3.0"}]}})
+    home.json(".claude/plugins/known_marketplaces.json", {"claude-code-warp": {
+        "source": {"source": "github", "repo": "warpdotdev/claude-code-warp"}, "lastUpdated": "2026-08-26T13:20:55Z"}})
+    home.json(".claude/settings.json", {"enabledPlugins": {"warp@claude-code-warp": True}})
+    home.json(".claude/settings.local.json", {"enabledPlugins": {"lint@team": False}})
+    before = home.snapshot()
+    app = app_factory()
+    data = app.get("/api/plugins?profile=default")
+    by = {p["name"]: p for p in data["plugins"]}
+    assert by["warp@claude-code-warp"]["enabled"] is True and by["warp@claude-code-warp"]["source"] == "settings"
+    assert by["warp@claude-code-warp"]["version"] == "2.1.0" and by["warp@claude-code-warp"]["plugin"] == "warp"
+    assert by["lint@team"]["enabled"] is False and by["lint@team"]["source"] == "local"
+    assert by["lint@team"]["scopes"] == ["project"] and by["lint@team"]["projects"] == ["~/code/work/api"]
+    assert data["marketplaces"] == [{"name": "claude-code-warp", "source": "warpdotdev/claude-code-warp",
+                                     "updated": "2026-08-26"}]
+
+    app.post("/api/plugins/enable", {"profile": "default", "plugin": "warp@claude-code-warp", "enabled": False})
+    assert json.loads(home.path(".claude/settings.json").read_text())["enabledPlugins"]["warp@claude-code-warp"] is False
+    app.post("/api/plugins/enable", {"profile": "default", "plugin": "lint@team", "enabled": True})
+    assert json.loads(home.path(".claude/settings.local.json").read_text())["enabledPlugins"]["lint@team"] is True
+    assert "lint@team" not in home.path(".claude/settings.json").read_text()  # written where its value lives
+    assert app.request("/api/plugins/enable", {"profile": "default", "plugin": "nope@x", "enabled": True})[0] == 404
+    assert "true or false" in app.post_error("/api/plugins/enable", {"profile": "default", "plugin": "lint@team",
+                                                                     "enabled": "yes"})
+    app.restore_all()
+    assert home.snapshot() == before
 
 
 # --- command line ---------------------------------------------------------------

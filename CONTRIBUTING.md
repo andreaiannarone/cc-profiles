@@ -26,6 +26,18 @@ python3 -m venv .venv
 
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
 
+### The browser smoke test
+
+`tests/test_ui.py` opens every tab of the real page in Chromium and fails on JavaScript errors, Content-Security-Policy violations or a tab stuck loading. It is skipped unless Playwright is installed:
+
+```sh
+.venv/bin/pip install -e ".[ui]"
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m pytest tests/test_ui.py
+```
+
+CI always runs it (the *UI smoke test* job).
+
 ## Run the app on a sandbox
 
 ```sh
@@ -72,6 +84,10 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 - `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release.
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
+
+### Social preview image
+
+The image GitHub shows when the repository is shared, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`: the command is at the top of that file. Upload it again under *Settings → General → Social preview* after regenerating it.
 
 ## Pull requests
 

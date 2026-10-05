@@ -83,4 +83,40 @@ def describe_memories(root):
 
 describe_memories(root)
 
+TALKS = {
+    "s-api": [("user", "The /orders endpoint is slow, can you find out why?"),
+              ("assistant", "I'll look at the query first.", "Bash"),
+              ("assistant", "The orders query has no index on customer_id: it scans 2 million rows. Adding the index brings it from 1.8 s to 12 ms."),
+              ("user", "Great, add a migration for it.")],
+    "s-api-work": [("user", "Write tests for the invoice totals."),
+                   ("assistant", "Added 6 tests covering discounts, VAT and rounding.", "Edit")],
+    "s-billing": [("user", "Why do monthly invoices start on the 2nd?"),
+                  ("assistant", "The cron job runs at midnight UTC, which is still the 1st in your time zone only after 1 am.")],
+    "s-blog": [("user", "Draft a short post about our new release."),
+               ("assistant", "Here is a 300-word draft with a title and three sections.")],
+    "s-site": [("user", "Fix the broken link in the footer."), ("assistant", "Fixed: it pointed to /about-us instead of /about.", "Edit")],
+    "s-old": [("user", "Rename the project folder to new-name."), ("assistant", "Done. Remember to relink it in cc-profiles.")],
+}
+
+
+def write_talks(root):
+    """FakeHome writes one technical line per conversation: add real prompts and replies."""
+    import json
+    for f in root.glob(".claude*/projects/*/*.jsonl"):
+        lines = f.read_text().splitlines()
+        cwd = json.loads(lines[0]).get("cwd") if lines else None
+        for i, msg in enumerate(TALKS.get(f.stem, [])):
+            role, text = msg[0], msg[1]
+            content = text if role == "user" else [{"type": "text", "text": text}]
+            if len(msg) > 2:
+                content.append({"type": "tool_use", "name": msg[2], "input": {}})
+            lines.append(json.dumps({"type": role, "sessionId": f.stem, "cwd": cwd,
+                                     "timestamp": f"2026-10-0{1 + i % 4}T09:{10 + i:02d}:00Z",
+                                     "message": {"role": role, "content": content}},
+                                    separators=(",", ":")))  # compact, like Claude Code
+        f.write_text("\n".join(lines) + "\n")
+
+
+write_talks(root)
+
 print(root)

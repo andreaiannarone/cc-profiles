@@ -123,13 +123,18 @@ cc-profiles
 
 - 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
+- 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty or copied from another one; rename it, change its command, or delete it, optionally merging its content into another profile first.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile.
 - 🔌 **MCP servers**: add, edit, copy and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
+- 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
+- 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere.
 - ⚙️ **Settings**: model, effort, output style, theme and more, with dropdowns that offer only the values Claude Code accepts and show which file each value comes from. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go when they take too much space.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
+- 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
+- ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.

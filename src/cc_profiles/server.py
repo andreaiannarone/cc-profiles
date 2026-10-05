@@ -23,16 +23,19 @@ import re
 import secrets
 import shutil
 import socketserver
+import stat
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.request
 import webbrowser
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 HOME = os.path.expanduser("~")
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -166,6 +169,37 @@ def project_dir(prof, name, must_exist=True):
     return d
 
 
+_tls = threading.local()
+
+
+def _open_backups():
+    """Backups opened by the operation running in this thread and not closed yet."""
+    if not hasattr(_tls, "backups"):
+        _tls.backups = []
+    return _tls.backups
+
+
+def abort_open_backups(error):
+    """An operation failed: close its open backups with what was journaled so far.
+    A backup with no steps has nothing to undo and is removed. Returns whether any
+    step was kept (so the error can say that Restore undoes it)."""
+    kept = False
+    for bk in list(_open_backups()):
+        if bk.journal:
+            bk.close(failed=error)
+            kept = True
+        else:
+            _open_backups().remove(bk)
+            shutil.rmtree(bk.dir, ignore_errors=True)
+    return kept
+
+
+def fault_point(name):
+    """Tests only: fail on purpose at a named point, to check what a failure leaves behind."""
+    if os.environ.get("CC_PROFILES_FAULT") == name:
+        raise RuntimeError(f"fault injected at {name}")
+
+
 class Backup:
     """Backup of a single operation, with a journal so it can be undone.
 
@@ -179,6 +213,7 @@ class Backup:
     """
 
     def __init__(self, op, title=""):
+        _open_backups().append(self)
         stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         base = os.path.join(BACKUP_DIR, f"{stamp}_{op}")
         d, i = base, 2
@@ -236,10 +271,16 @@ class Backup:
     def note(self, msg):
         self.log.append(msg)
 
-    def close(self):
-        write_json(os.path.join(self.dir, "manifest.json"),
-                   {"title": self.title, "created": time.time(), "log": self.log,
-                    "journal": self.journal, "version": __version__})
+    def close(self, failed=None):
+        """Write the journal. failed: the error that stopped the operation halfway; the
+        steps done until then are journaled anyway, so Restore can undo them."""
+        if self in _open_backups():
+            _open_backups().remove(self)
+        man = {"title": self.title, "created": time.time(), "log": self.log,
+               "journal": self.journal, "version": __version__}
+        if failed:
+            man["failed"] = failed
+        write_json(os.path.join(self.dir, "manifest.json"), man)
         write_text(os.path.join(self.dir, "operation.txt"), "\n".join([self.title] + self.log) + "\n")
         return pretty(self.dir)
 
@@ -1013,6 +1054,185 @@ def op_mcp_copy(pid, scope, name, to_pid):
 
 
 # ---------------------------------------------------------------------------
+# Conversations
+# ---------------------------------------------------------------------------
+# projects/<name>/<session>.jsonl, one JSON object per line. Lines of type "user"
+# and "assistant" carry message.content: a string, or a list of blocks (text,
+# tool_use, tool_result, thinking, image). "ai-title" lines hold the title Claude
+# Code generated. The file snapshots of a session live in file-history/<session>.
+SESSION_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+VIEW_LIMIT = 300      # messages shown by the viewer, the most recent ones
+TEXT_LIMIT = 4000     # characters per message in the viewer
+
+
+def conversation_path(prof, name, session, must_exist=True):
+    if not session or not SESSION_ID.fullmatch(session) or ".." in session:
+        raise ApiError("Invalid conversation id")
+    f = os.path.join(project_dir(prof, name), session + ".jsonl")
+    if must_exist and not os.path.isfile(f):
+        raise ApiError(f"Conversation not found in {prof['label']}: {session}", 404)
+    return f
+
+
+def prompt_text(j):
+    """The text a person typed, or None for tool results, meta lines and commands."""
+    if j.get("type") != "user" or j.get("isMeta"):
+        return None
+    c = (j.get("message") or {}).get("content")
+    if isinstance(c, list):
+        c = "\n".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
+    if not isinstance(c, str) or not c.strip():
+        return None
+    t = c.strip()
+    if t.startswith("<") and not t.startswith("<pasted"):  # <command-name>, <local-command-…>, <task-notification>…
+        return None
+    return t
+
+
+def assistant_text(j):
+    c = (j.get("message") or {}).get("content")
+    if isinstance(c, str):
+        return c.strip() or None
+    if isinstance(c, list):
+        return "\n".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text").strip() or None
+    return None
+
+
+def conversation_summary(f):
+    """Title, counts and dates of one conversation, reading the file line by line."""
+    title = ai_title = None
+    users = replies = 0
+    first = last = None
+    with open(f, errors="replace") as fh:
+        for line in fh:
+            # cheap filter: most lines are tool output, snapshots and bookkeeping. It looks for the
+            # values only, not '"type":"user"', so spacing in the JSON does not matter; json decides.
+            if '"user"' not in line and '"assistant"' not in line and '"ai-title"' not in line:
+                continue
+            try:
+                j = json.loads(line)
+            except ValueError:
+                continue
+            t = j.get("type")
+            if t == "ai-title" and j.get("aiTitle"):
+                ai_title = j["aiTitle"]
+                continue
+            ts = j.get("timestamp")
+            if ts:
+                first = first or ts
+                last = ts
+            if t == "user":
+                p = prompt_text(j)
+                if p:
+                    users += 1
+                    title = title or p
+            elif t == "assistant" and assistant_text(j):
+                replies += 1
+    st = os.stat(f)
+    t = " ".join((ai_title or title or "").split())
+    return {"title": t[:120] + ("…" if len(t) > 120 else ""), "prompts": users, "replies": replies,
+            "first": first, "last": last, "mtime": st.st_mtime, "size": st.st_size}
+
+
+def list_conversations(pid, name):
+    prof = profile(pid)
+    d = project_dir(prof, name)
+    out = []
+    for sid in sessions_of(d):
+        item = conversation_summary(os.path.join(d, sid + ".jsonl"))
+        item.update(session=sid, snapshots=os.path.isdir(os.path.join(prof["dir_abs"], "file-history", sid)))
+        out.append(item)
+    out.sort(key=lambda c: c["mtime"], reverse=True)
+    return {"conversations": out, "path": pretty(path_index().get(name) or name)}
+
+
+def conversation_projects(pid):
+    """Projects of a profile that have conversations, with how many."""
+    prof = profile(pid)
+    idx = path_index()
+    out = []
+    for d in glob.glob(os.path.join(prof["dir_abs"], "projects", "*", "")):
+        name = os.path.basename(os.path.dirname(d))
+        n = len(sessions_of(d))
+        if n:
+            out.append({"name": name, "pretty": pretty(idx.get(name)) or name, "count": n})
+    out.sort(key=lambda p: p["pretty"].lower())
+    return out
+
+
+def conversation_view(pid, name, session):
+    f = conversation_path(profile(pid), name, session)
+    msgs = []
+    with open(f, errors="replace") as fh:
+        for line in fh:
+            if '"user"' not in line and '"assistant"' not in line:
+                continue
+            try:
+                j = json.loads(line)
+            except ValueError:
+                continue
+            ts = j.get("timestamp")
+            if j.get("type") == "user":
+                text = prompt_text(j)
+                if text:
+                    msgs.append({"role": "user", "time": ts, "text": text})
+                continue
+            c = (j.get("message") or {}).get("content")
+            text = assistant_text(j)
+            if text:
+                msgs.append({"role": "assistant", "time": ts, "text": text})
+            if isinstance(c, list):
+                for b in c:
+                    if isinstance(b, dict) and b.get("type") == "tool_use":
+                        msgs.append({"role": "tool", "time": ts, "text": f"Tool: {b.get('name', '?')}"})
+    total = len(msgs)
+    truncated = total > VIEW_LIMIT
+    msgs = msgs[-VIEW_LIMIT:]
+    for m in msgs:
+        if len(m["text"]) > TEXT_LIMIT:
+            m["text"] = m["text"][:TEXT_LIMIT] + "…"
+            truncated = True
+    return {"messages": msgs, "truncated": truncated, "total": total}
+
+
+def op_conversation_move(pid, name, session, to_pid):
+    src, dst = profile(pid), profile(to_pid)
+    if src["id"] == dst["id"]:
+        raise ApiError("Pick another profile")
+    f = conversation_path(src, name, session)
+    tdir = project_dir(dst, name, must_exist=False)
+    t = os.path.join(tdir, session + ".jsonl")
+    if os.path.lexists(t):
+        raise ApiError(f"{dst['label']} already has this conversation")
+    bk = Backup(f"move-conversation-{src['id']}-{dst['id']}",
+                f"Move conversation {session[:8]}: {src['label']} → {dst['label']}")
+    bk.mkdir(tdir)
+    shutil.move(f, t)
+    bk.moved(f, t)
+    fh, moved_fh = os.path.join(src["dir_abs"], "file-history", session), False
+    tfh = os.path.join(dst["dir_abs"], "file-history", session)
+    if os.path.isdir(fh) and not os.path.lexists(tfh):
+        bk.mkdir(os.path.dirname(tfh))
+        shutil.move(fh, tfh)
+        bk.moved(fh, tfh)
+        moved_fh = True
+    bk.note(f"in {pretty(path_index().get(name)) or name}; file snapshots {'moved' if moved_fh else 'none'}")
+    msg = f"Conversation moved to {dst['label']}" + (", with its file snapshots." if moved_fh else ".")
+    return {"message": msg, "backup": bk.close()}
+
+
+def op_conversation_delete(pid, name, session):
+    prof = profile(pid)
+    f = conversation_path(prof, name, session)
+    bk = Backup(f"delete-conversation-{prof['id']}", f"Delete conversation {session[:8]} ({prof['label']})")
+    bk.stash(f, f"{session}.jsonl")
+    fh = os.path.join(prof["dir_abs"], "file-history", session)
+    if os.path.isdir(fh):
+        bk.stash(fh, f"file-history-{session}")
+    return {"message": "Conversation moved to the backup.", "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
 # Profiles and health
 # ---------------------------------------------------------------------------
 def parse_claude_processes(entries):
@@ -1204,6 +1424,200 @@ def health():
 
 
 # ---------------------------------------------------------------------------
+# Search and compare (read-only)
+# ---------------------------------------------------------------------------
+SEARCH_KINDS = ("projects", "memories", "skills", "mcp", "claude_md")
+SEARCH_LIMIT = 30      # results per kind
+SEARCH_SECONDS = 5     # stop looking after this, and say the results are partial
+SEARCH_BYTES = 200_000  # read at most this much of one file
+
+
+def read_head(path):
+    try:
+        with open(path, errors="replace") as f:
+            return f.read(SEARCH_BYTES)
+    except OSError:
+        return ""
+
+
+def snippet(text, q, width=60):
+    """One-line excerpt around the first match of q (lowercase) in text, with the match
+    position inside the excerpt so the UI can highlight it; None without a match."""
+    i = text.lower().find(q)
+    if i < 0:
+        return None
+    a, b = max(0, i - width), min(len(text), i + len(q) + width)
+    pre, post = ("…" if a else ""), ("…" if b < len(text) else "")
+    flat = re.sub(r"\s", " ", text[a:b])  # same length, so the offsets stay right
+    return {"text": pre + flat + post, "at": len(pre) + i - a, "len": len(q)}
+
+
+def search(q):
+    q = (q or "").strip()
+    if len(q) < 2:
+        raise ApiError("Type at least 2 characters to search")
+    ql = q.lower()
+    deadline = time.time() + SEARCH_SECONDS
+    res = {k: [] for k in SEARCH_KINDS}
+    truncated = False
+
+    def add(kind, item):
+        nonlocal truncated
+        if len(res[kind]) < SEARCH_LIMIT:
+            res[kind].append(item)
+        else:
+            truncated = True
+
+    def late():
+        nonlocal truncated
+        if time.time() > deadline:
+            truncated = True
+            return True
+        return False
+
+    idx = path_index()
+    profs = profiles()
+    projects, seen_skills, seen_md = {}, {}, set()
+    for p in profs:
+        if late():
+            break
+        root = p["dir_abs"]
+        for d in sorted(glob.glob(os.path.join(root, "projects", "*", ""))):
+            name = os.path.basename(d.rstrip("/"))
+            path = pretty(idx.get(name) or name)
+            m = snippet(path, ql)
+            if m:
+                if name in projects:
+                    projects[name]["profiles"].append(p["id"])
+                else:
+                    projects[name] = {"kind": "project", "profile": p["id"], "profiles": [p["id"]], "title": path,
+                                      "snippet": m, "open": {"project": name, "path": path}}
+            for f in memory_files(d):
+                text = read_head(os.path.join(d, "memory", f))
+                meta = parse_memory(text)
+                title = meta.get("name") or f[:-3]
+                m = snippet(title, ql) or snippet(meta.get("description", ""), ql) or snippet(text, ql)
+                if m:
+                    add("memories", {"kind": "memory", "profile": p["id"], "title": title, "where": path,
+                                     "snippet": m, "open": {"project": name, "file": f}})
+            if late():
+                break
+        sk = os.path.join(root, "skills")
+        for n in names_in(sk, dirs=True):
+            md = os.path.join(sk, n, "SKILL.md")
+            if not os.path.isfile(md):
+                continue
+            real = os.path.realpath(os.path.join(sk, n))
+            if real in seen_skills:  # a shared skills folder: one result, every profile that sees it
+                seen_skills[real]["profiles"].append(p["id"])
+                continue
+            text = read_head(md)
+            m = snippet(n, ql) or snippet(text, ql)
+            if m:
+                item = {"kind": "skill", "profile": p["id"], "profiles": [p["id"]], "title": n,
+                        "snippet": m, "open": {"skill": n}}
+                seen_skills[real] = item
+                add("skills", item)
+            else:
+                seen_skills[real] = {"profiles": []}
+        cfg = read_json(p["config_abs"], {}) or {}
+        tables = [("user", cfg.get("mcpServers") or {})] + [
+            (path_, (pr or {}).get("mcpServers") or {}) for path_, pr in sorted((cfg.get("projects") or {}).items())]
+        for scope, servers in tables:
+            for n, conf in sorted(servers.items()):
+                s = mcp_summary(n, conf, scope)  # names and targets only: env and header values never leave
+                m = snippet(n, ql) or snippet(s["target"], ql)
+                if m:
+                    add("mcp", {"kind": "mcp", "profile": p["id"], "title": n, "where": scope if scope == "user"
+                                else pretty(scope), "snippet": m, "open": {"scope": scope, "name": n}})
+        cm = os.path.join(root, "CLAUDE.md")
+        if os.path.isfile(cm) and os.path.realpath(cm) not in seen_md:
+            seen_md.add(os.path.realpath(cm))
+            hits = 0
+            for i, line in enumerate(read_head(cm).splitlines(), 1):
+                m = snippet(line, ql)
+                if m:
+                    add("claude_md", {"kind": "claude_md", "profile": p["id"], "title": f"CLAUDE.md, line {i}",
+                                      "snippet": m, "open": {"line": i}})
+                    hits += 1
+                    if hits == 5:
+                        break
+    for item in projects.values():
+        add("projects", item)
+    return {"q": q, "results": res, "counts": {k: len(v) for k, v in res.items()}, "truncated": truncated}
+
+
+def split3(a, b):
+    """(only in a, only in b, in both), each sorted."""
+    a, b = set(a), set(b)
+    return sorted(a - b), sorted(b - a), sorted(a & b)
+
+
+def skill_texts(prof):
+    root = os.path.join(prof["dir_abs"], "skills")
+    return {n: read_head(os.path.join(root, n, "SKILL.md")) for n in names_in(root, dirs=True)
+            if os.path.isfile(os.path.join(root, n, "SKILL.md"))}
+
+
+def plugin_lists(prof):
+    inst = read_json(os.path.join(prof["dir_abs"], "plugins", "installed_plugins.json"), {}) or {}
+    enabled, _ = effective(prof, "enabledPlugins")
+    return (sorted((inst.get("plugins") or {}).keys()),
+            sorted(k for k, v in (enabled or {}).items() if v) if isinstance(enabled, dict) else [])
+
+
+def compare(a, b):
+    pa, pb = profile(a), profile(b)
+    if pa["id"] == pb["id"]:
+        raise ApiError("Pick two different profiles")
+    settings = []
+    for fd in SETTING_FIELDS:
+        va, sa = effective(pa, fd["key"])
+        vb, sb = effective(pb, fd["key"])
+        settings.append({"key": fd["key"], "label": fd["label"], "type": fd["type"],
+                         "a": va, "a_source": sa, "b": vb, "b_source": sb, "same": va == vb})
+    perms = {}
+    for side, p in (("a", pa), ("b", pb)):
+        data, _ = load_settings(settings_files(p)["settings"])
+        pr = data.get("permissions") or {}
+        perms[side] = {k: [x for x in pr.get(k, []) if isinstance(x, str)] for k in ("allow", "ask", "deny")}
+    perm_diff = {}
+    for k in ("allow", "ask", "deny"):
+        oa, ob, both = split3(perms["a"][k], perms["b"][k])
+        perm_diff[k] = {"only_a": oa, "only_b": ob, "both": both}
+    ska, skb = skill_texts(pa), skill_texts(pb)
+    oa, ob, both = split3(ska, skb)
+    skills = {"only_a": oa, "only_b": ob, "both": [{"name": n, "same": ska[n] == skb[n]} for n in both],
+              "shared": os.path.realpath(os.path.join(pa["dir_abs"], "skills"))
+              == os.path.realpath(os.path.join(pb["dir_abs"], "skills"))}
+    ma = (read_json(pa["config_abs"], {}) or {}).get("mcpServers") or {}
+    mb = (read_json(pb["config_abs"], {}) or {}).get("mcpServers") or {}
+    oa, ob, both = split3(ma, mb)
+    row = lambda n, c: {k: v for k, v in mcp_summary(n, c, "user").items() if k in ("name", "type", "target")}
+    mcp = {"only_a": [row(n, ma[n]) for n in oa], "only_b": [row(n, mb[n]) for n in ob],
+           "both": [dict(row(n, ma[n]), same=ma[n] == mb[n]) for n in both]}
+    mds = {}
+    for side, p in (("a", pa), ("b", pb)):
+        path = settings_files(p)["claude_md"]
+        text = read_head(path) if os.path.isfile(path) else None
+        mds[side] = {"exists": text is not None, "lines": len(text.splitlines()) if text else 0, "text": text}
+    claude_md = {"a": {k: v for k, v in mds["a"].items() if k != "text"},
+                 "b": {k: v for k, v in mds["b"].items() if k != "text"},
+                 "same": mds["a"]["text"] == mds["b"]["text"],
+                 "shared": os.path.realpath(settings_files(pa)["claude_md"])
+                 == os.path.realpath(settings_files(pb)["claude_md"])}
+    ia, ea = plugin_lists(pa)
+    ib, eb = plugin_lists(pb)
+    plugins = {}
+    for k, (x, y) in (("installed", (ia, ib)), ("enabled", (ea, eb))):
+        oa, ob, both = split3(x, y)
+        plugins[k] = {"only_a": oa, "only_b": ob, "both": both}
+    return {"a": {"id": pa["id"], "label": pa["label"]}, "b": {"id": pb["id"], "label": pb["label"]},
+            "settings": settings, "permissions": {"a": perms["a"], "b": perms["b"], "diff": perm_diff},
+            "skills": skills, "mcp": mcp, "claude_md": claude_md, "plugins": plugins}
+
+
+# ---------------------------------------------------------------------------
 # Backups and restore
 # ---------------------------------------------------------------------------
 def backup_path(name):
@@ -1241,6 +1655,7 @@ def list_backups():
                     "log": man.get("log", []),
                     "steps": len(man.get("journal", [])),
                     "restorable": bool(man.get("journal")) and not man.get("restored"),
+                    "failed": man.get("failed"),
                     "restored": man.get("restored")})
     out.sort(key=lambda b: b["created"], reverse=True)  # chronological: names only have seconds
     return out
@@ -1318,6 +1733,242 @@ def op_backup_prune(days):
         return {"message": f"No backups older than {days} days."}
     n = len(old)
     return {"message": f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."}
+
+
+# ---------------------------------------------------------------------------
+# Export and import
+# ---------------------------------------------------------------------------
+# A profile travels as a .zip: profile/… (its folder), claude.json (its .claude.json),
+# home-memory/… (the general memory, which lives under the home folder's project)
+# and cc-profiles-export.json (the manifest). Login credentials never travel: a
+# copied token can be invalidated when the original refreshes it.
+EXPORT_FORMAT = 1
+EXPORT_MANIFEST = "cc-profiles-export.json"
+DIR_PLACEHOLDER = "__CC_PROFILES_PROFILE_DIR__"
+IMPORT_MAX = 500 * 1024 * 1024          # size of the uploaded zip
+IMPORT_MAX_UNPACKED = 5 * 1024 ** 3     # size once unpacked: refuse zip bombs
+NEVER_EXPORT = {".credentials.json"}    # at any depth
+
+
+def holds_profile_paths(rel):
+    """Files whose text holds absolute paths to the profile folder (see CLAUDE.md)."""
+    return rel == "settings.local.json" or (rel.startswith("plugins/") and rel.count("/") == 1
+                                            and rel.endswith(".json"))
+
+
+def share_note(prof, item):
+    """Who else uses this item of the profile through sharing."""
+    src = primary()
+    if prof["id"] != src["id"]:
+        return f"shared with {src['label']}" if share_state(prof, item, "dir")["shared"] else ""
+    users = [p["label"] for p in profiles()[1:] if share_state(p, item, "dir")["shared"]]
+    return f"shared with {', '.join(users)}" if users else ""
+
+
+def export_profile(pid, projects):
+    """Write the profile into a temporary zip. Returns (path, download name)."""
+    prof = profile(pid)
+    d = prof["dir_abs"]
+    if not os.path.isdir(d):
+        raise ApiError(f"{pretty(d)} does not exist")
+    skip = RUNTIME | NEVER_EXPORT | (set() if projects else PROJECT_DATA)
+    shared = [i for i, _, _ in SHARE_ITEMS if os.path.islink(os.path.join(d, i))]
+    dirs = sorted({d, os.path.realpath(d)}, key=len, reverse=True)
+    fd, tmp = tempfile.mkstemp(prefix="cc-profiles-export-", suffix=".zip")
+    os.close(fd)
+    seen, count = set(), [0]
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            def add(src, arc, rel=None):
+                if rel is not None and holds_profile_paths(rel):
+                    text = open(src, errors="replace").read()
+                    for x in dirs:
+                        text = text.replace(x, DIR_PLACEHOLDER)
+                    z.writestr(arc, text)
+                else:
+                    z.write(src, arc)
+                count[0] += 1
+
+            def walk(src, rel):
+                # Links are followed (shared items, skills linked from elsewhere): the
+                # export holds real files. Each real folder is written once, so a loop stops.
+                real = os.path.realpath(src)
+                if real in seen:
+                    return
+                seen.add(real)
+                for name in sorted(os.listdir(src)):
+                    if (rel == "" and name in skip) or name in NEVER_EXPORT or name == ".trash":
+                        continue
+                    p = os.path.join(src, name)
+                    if os.path.islink(p) and not os.path.realpath(p).startswith(os.path.realpath(HOME) + os.sep):
+                        continue  # a link out of the home folder: never pull system files into an export
+                    if os.path.isdir(p):
+                        walk(p, rel + name + "/")
+                    elif os.path.isfile(p):
+                        add(p, "profile/" + rel + name, rel + name)
+
+            walk(d, "")
+            cfg = read_json(prof["config_abs"], {}) or {}
+            for k in ("oauthAccount", "userID"):  # account data belongs to the login
+                cfg.pop(k, None)
+            if not projects:
+                cfg.pop("projects", None)  # per-project settings go with the projects
+            z.writestr("claude.json", json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
+            home_memory = os.path.join(d, "projects", san(HOME), "memory")
+            has_home_memory = not projects and os.path.isdir(home_memory)
+            if has_home_memory:
+                for f in sorted(os.listdir(home_memory)):
+                    if os.path.isfile(os.path.join(home_memory, f)):
+                        add(os.path.join(home_memory, f), "home-memory/" + f)
+            z.writestr(EXPORT_MANIFEST, json.dumps({
+                "app": "cc-profiles", "format": EXPORT_FORMAT, "version": __version__,
+                "label": prof["label"], "id": prof["id"], "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "projects": bool(projects), "home_memory": has_home_memory,
+                "shared": shared, "files": count[0]}, indent=2) + "\n")
+    except Exception:
+        os.unlink(tmp)
+        raise
+    return tmp, f"cc-profiles-{prof['id']}-{time.strftime('%Y-%m-%d')}.zip"
+
+
+def check_zip_entry(info):
+    name = info.filename
+    parts = name.split("/")
+    if not name or name.startswith("/") or "\\" in name or ".." in parts or ":" in parts[0]:
+        raise ApiError(f"Unsafe path in the archive: {name}. Nothing was imported.")
+    kind = (info.external_attr >> 16) & 0o170000
+    if kind and kind not in (stat.S_IFREG, stat.S_IFDIR):
+        raise ApiError(f"Not a plain file in the archive (a link or a device): {name}. Nothing was imported.")
+    if name not in (EXPORT_MANIFEST, "claude.json") and parts[0] not in ("profile", "home-memory"):
+        raise ApiError(f"Unexpected entry in the archive: {name}. Nothing was imported.")
+
+
+def op_import_profile(zip_path, label, pid):
+    try:
+        z = zipfile.ZipFile(zip_path)
+    except (zipfile.BadZipFile, OSError):
+        raise ApiError("This is not a zip file. Export the profile from cc-profiles and try again.")
+    with z:
+        infos = z.infolist()
+        for info in infos:  # check everything before writing anything
+            check_zip_entry(info)
+        try:
+            man = json.loads(z.read(EXPORT_MANIFEST))
+        except (KeyError, ValueError):
+            raise ApiError("This zip was not exported by cc-profiles: it has no cc-profiles-export.json.")
+        if man.get("app") != "cc-profiles" or man.get("format") != EXPORT_FORMAT:
+            raise ApiError("This export was made by a newer cc-profiles: update cc-profiles and try again.")
+        if sum(i.file_size for i in infos) > IMPORT_MAX_UNPACKED:
+            raise ApiError("The archive is too big once unpacked (over 5 GB).")
+        label, pid, new, command = check_new_profile(label or man.get("label"), pid or man.get("id"))
+        bk = Backup("import-profile", f"Import profile {label} ({pretty(new)})")
+        bk.copy(CONFIG_FILE, "config.json")
+        bk.created(new)  # journaled first: a failure while unpacking leaves a folder that Restore removes
+        os.makedirs(new)
+        try:
+            for info in infos:
+                if info.is_dir():
+                    continue
+                top, _, rest = info.filename.partition("/")
+                if top == "profile":
+                    dst = os.path.join(new, rest)
+                elif top == "home-memory":
+                    dst = os.path.join(new, "projects", san(HOME), "memory", rest)
+                else:
+                    continue
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                data = z.read(info)
+                if top == "profile" and holds_profile_paths(rest):
+                    data = data.decode(errors="replace").replace(DIR_PLACEHOLDER, new).encode()
+                with open(dst, "wb") as f:
+                    f.write(data)
+            cfg = json.loads(z.read("claude.json")) if "claude.json" in z.namelist() else {}
+            for k in ("oauthAccount", "userID"):
+                cfg.pop(k, None)
+            write_json(os.path.join(new, ".claude.json"), cfg)
+            if command_state(new) in ("missing", "outdated"):
+                write_command(new, bk, pid)
+            write_launcher(command, f"~/.claude-{pid}", label, bk)
+        except Exception:
+            shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
+            raise
+    add_profile_to_config(label, pid, command)
+    bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
+            f"conversations: {'yes' if man.get('projects') else 'no'}")
+    msg = f"Profile {label} imported. It is not logged in: run {command} and log in with /login."
+    if not launcher_dir_in_path():
+        msg += f" Note: {pretty(LAUNCHER_DIR)} is not in your PATH yet."
+    return {"message": msg, "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
+# Plugins
+# ---------------------------------------------------------------------------
+# Installing and removing plugins is Claude Code's job (/plugin): here they are
+# listed, and enabled or disabled through enabledPlugins in the settings files.
+def plugin_switch(prof, name):
+    """(value, file) of one plugin in enabledPlugins: settings.local.json wins."""
+    f = settings_files(prof)
+    for which in ("local", "settings"):
+        data, _ = load_settings(f[which])
+        ep = data.get("enabledPlugins")
+        if isinstance(ep, dict) and name in ep:
+            return ep[name], which
+    return None, None
+
+
+def list_plugins(pid):
+    prof = profile(pid)
+    pdir = os.path.join(prof["dir_abs"], "plugins")
+    installed = (read_json(os.path.join(pdir, "installed_plugins.json"), {}) or {}).get("plugins") or {}
+    names = set(installed)
+    for path in settings_files(prof).values():
+        if path.endswith(".json"):
+            ep = load_settings(path)[0].get("enabledPlugins")
+            if isinstance(ep, dict):
+                names |= set(ep)
+    items = []
+    for name in sorted(names):
+        installs = installed.get(name) or []
+        if isinstance(installs, dict):  # an older format: one install per plugin
+            installs = [installs]
+        first = installs[0] if installs else {}
+        plugin, _, market = name.partition("@")
+        value, source = plugin_switch(prof, name)
+        items.append({"name": name, "plugin": plugin, "marketplace": market,
+                      "version": first.get("version", ""), "installed": (first.get("installedAt") or "")[:10],
+                      "path": pretty(first.get("installPath", "")), "is_installed": bool(installs),
+                      "scopes": sorted({i.get("scope", "user") for i in installs}),
+                      "projects": [pretty(i["projectPath"]) for i in installs if i.get("projectPath")],
+                      "enabled": value, "source": source})
+    markets = read_json(os.path.join(pdir, "known_marketplaces.json"), {}) or {}
+    marketplaces = []
+    for name, m in sorted(markets.items()):
+        src = (m or {}).get("source") or {}
+        marketplaces.append({"name": name, "source": src.get("repo") or src.get("url") or src.get("path") or "",
+                             "updated": ((m or {}).get("lastUpdated") or "")[:10]})
+    return {"plugins": items, "marketplaces": marketplaces, "dir": pretty(pdir),
+            "shared": share_note(prof, "plugins")}
+
+
+def op_plugin_enable(pid, name, enabled):
+    if not isinstance(enabled, bool):
+        raise ApiError("Invalid value: expected true or false")
+    prof = profile(pid)
+    if name not in {p["name"] for p in list_plugins(pid)["plugins"]}:
+        raise ApiError(f"Plugin not found in {prof['label']}: {name}", 404)
+    _, source = plugin_switch(prof, name)
+    which = source or "settings"
+    path = settings_files(prof)[which]
+    data, _ = load_settings(path)
+    bk = Backup("plugin", f"{'Enable' if enabled else 'Disable'} plugin {name} ({prof['label']})")
+    ep = data.get("enabledPlugins") if isinstance(data.get("enabledPlugins"), dict) else {}
+    ep[name] = enabled
+    data["enabledPlugins"] = ep
+    save_settings_file(prof, which, data, bk)
+    bk.note(f"enabledPlugins.{name} = {json.dumps(enabled)} in {os.path.basename(path)}")
+    msg = f"{name} {'enabled' if enabled else 'disabled'} in {os.path.basename(path)}{shared_note(path)}."
+    return {"message": msg + session_hint(prof), "backup": bk.close()}
 
 
 # ---------------------------------------------------------------------------
@@ -1572,8 +2223,10 @@ PROJECT_DATA = {"projects", "history.jsonl", "file-history", "paste-cache", "bac
                 "jobs", "downloads", "todos"}
 
 
-def op_create_profile(label, pid, base, include_projects, share):
-    label, pid = label.strip(), pid.strip().lower()
+def check_new_profile(label, pid):
+    """Validate the name and id of a profile about to be created (or imported).
+    Returns (label, id, folder, command)."""
+    label, pid = (label or "").strip(), (pid or "").strip().lower()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,30}", pid):
         raise ApiError("Invalid id: lowercase letters, digits and dashes only")
     profs = profiles()
@@ -1586,6 +2239,18 @@ def op_create_profile(label, pid, base, include_projects, share):
     err = command_conflict(command, profs)
     if err:
         raise ApiError(err)
+    return label, pid, new, command
+
+
+def add_profile_to_config(label, pid, command):
+    cfg = load_config()
+    cfg["profiles"].append({"id": pid, "label": label, "dir": f"~/.claude-{pid}",
+                            "config": f"~/.claude-{pid}/.claude.json", "command": command})
+    write_json(CONFIG_FILE, cfg)
+
+
+def op_create_profile(label, pid, base, include_projects, share):
+    label, pid, new, command = check_new_profile(label, pid)
     share = [i for i in share if i in {x for x, _, _ in SHARE_ITEMS}]
     bk = Backup("new-profile", f"New profile {label} ({pretty(new)})")
     bk.copy(CONFIG_FILE, "config.json")
@@ -1594,9 +2259,10 @@ def op_create_profile(label, pid, base, include_projects, share):
         # Login credentials are never copied: each profile logs in on its own,
         # a copied token can be invalidated when the original refreshes it.
         skip = RUNTIME | set(share) | (set() if include_projects else PROJECT_DATA)
+        bk.created(new)  # journaled first: a failure while copying leaves a folder that Restore removes
         shutil.copytree(src["dir_abs"], new, symlinks=True,
                         ignore=lambda d, names: [n for n in names if n in skip] if d == src["dir_abs"] else [])
-        bk.created(new)
+        fault_point("create-profile-after-copy")
         if not include_projects:  # the general (home) memory comes along anyway
             hm = os.path.join(src["dir_abs"], "projects", san(HOME), "memory")
             if os.path.isdir(hm):
@@ -1610,8 +2276,8 @@ def op_create_profile(label, pid, base, include_projects, share):
             for f in glob.glob(os.path.join(new, "plugins", "*.json")):  # absolute paths point to the copy
                 write_text(f, open(f).read().replace(src["dir_abs"] + "/plugins/", new + "/plugins/"))
     else:
-        os.makedirs(new)
         bk.created(new)
+        os.makedirs(new)
         if "settings.json" not in share:  # a shared settings.json is linked below instead
             settings = {}
             sl = (read_json(os.path.join(primary()["dir_abs"], "settings.json"), {}) or {}).get("statusLine")
@@ -1632,10 +2298,7 @@ def op_create_profile(label, pid, base, include_projects, share):
     if command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
-    cfg = load_config()
-    cfg["profiles"].append({"id": pid, "label": label, "dir": f"~/.claude-{pid}",
-                            "config": f"~/.claude-{pid}/.claude.json", "command": command})
-    write_json(CONFIG_FILE, cfg)
+    add_profile_to_config(label, pid, command)
     bk.note(f"base: {src['label'] if src else 'empty'}, projects: {'yes' if include_projects else 'no'}, "
             f"shared: {', '.join(share) or 'nothing'}")
     msg = f"Profile {label} created. Run {command} and log in with /login."
@@ -2305,10 +2968,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         sys.stderr.write("  " + (fmt % args) + "\n")
 
+    # The page may run only its own inline code and talk only to this server: an escaping
+    # mistake cannot load code from elsewhere or send data out. Inline <script>/<style>
+    # are allowed because the whole UI is one file.
+    CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
+           "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+
     def _send(self, status, body, ctype="application/json; charset=utf-8"):
         data = body if isinstance(body, bytes) else body.encode()
         self.send_response(status)
         self.send_header("Content-Type", ctype)
+        if ctype.startswith("text/html"):
+            self.send_header("Content-Security-Policy", self.CSP)
+            self.send_header("X-Frame-Options", "DENY")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -2318,6 +2990,43 @@ class Handler(BaseHTTPRequestHandler):
 
     def _json(self, status, obj):
         self._send(status, json.dumps(obj, ensure_ascii=False))
+
+    def _send_file(self, path, name, ctype):
+        """Stream a file as a download, then delete it (a temporary export)."""
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(os.path.getsize(path)))
+            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            with open(path, "rb") as f:
+                shutil.copyfileobj(f, self.wfile, 1024 * 1024)
+        finally:
+            os.unlink(path)
+
+    def _import(self, q):
+        """POST /api/profiles/import: the request body is the zip itself, not JSON."""
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0:
+            raise ApiError("Pick the .zip of an exported profile")
+        if n > IMPORT_MAX:
+            raise ApiError("The file is too big (over 500 MB)")
+        fd, tmp = tempfile.mkstemp(prefix="cc-profiles-import-", suffix=".zip")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                left = n
+                while left:
+                    chunk = self.rfile.read(min(left, 1024 * 1024))
+                    if not chunk:
+                        raise ApiError("The upload was interrupted")
+                    f.write(chunk)
+                    left -= len(chunk)
+            with _lock:
+                return op_import_profile(tmp, q.get("label", ""), q.get("id", ""))
+        finally:
+            os.unlink(tmp)
 
     def _guard(self):
         # A fixed Host blocks DNS rebinding; the token blocks requests from other sites.
@@ -2338,6 +3047,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/", "/index.html"):
                 html = open(os.path.join(STATIC_DIR, "index.html")).read().replace("__TOKEN__", TOKEN)
                 return self._send(200, html, "text/html; charset=utf-8")
+            if u.path == "/api/profiles/export":
+                path, name = export_profile(q["id"], q.get("projects") == "1")
+                return self._send_file(path, name, "application/zip")
             routes = {
                 "/api/profiles": lambda: list_profiles(),
                 "/api/projects": lambda: list_projects(),
@@ -2346,9 +3058,15 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/projects": lambda: memory_projects(q["profile"]),
                 "/api/memory/list": lambda: memory_list(q["profile"], q["project"]),
                 "/api/memory/file": lambda: memory_read(q["profile"], q["project"], q["file"]),
+                "/api/conversations/projects": lambda: conversation_projects(q["profile"]),
+                "/api/conversations": lambda: list_conversations(q["profile"], q["project"]),
+                "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
                 "/api/backups": lambda: list_backups(),
+                "/api/search": lambda: search(q.get("q", "")),
+                "/api/compare": lambda: compare(q["a"], q["b"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
+                "/api/plugins": lambda: list_plugins(q["profile"]),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
                 "/api/claude/status": lambda: claude_status(),
@@ -2372,6 +3090,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self._guard():
             return
         try:
+            u = urlparse(self.path)
+            if u.path == "/api/profiles/import":
+                return self._json(200, self._import({k: v[0] for k, v in parse_qs(u.query).items()}))
             n = int(self.headers.get("Content-Length") or 0)
             b = json.loads(self.rfile.read(n) or b"{}")
             routes = {
@@ -2383,10 +3104,13 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
                                                            b["to_profile"], b["to_project"]),
                 "/api/memory/delete": lambda: op_memory_delete(b["profile"], b["project"], b["file"]),
+                "/api/conversations/move": lambda: op_conversation_move(b["profile"], b["project"], b["session"], b["to"]),
+                "/api/conversations/delete": lambda: op_conversation_delete(b["profile"], b["project"], b["session"]),
                 "/api/backups/restore": lambda: op_restore(b["name"]),
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),
                 "/api/backups/prune": lambda: op_backup_prune(b.get("days")),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
+                "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),
                 "/api/settings/raw": lambda: op_settings_raw(b["profile"], b["file"], b["content"]),
@@ -2414,11 +3138,16 @@ class Handler(BaseHTTPRequestHandler):
             with _lock:
                 self._json(200, routes[self.path]())
         except ApiError as e:
-            self._json(e.status, {"error": str(e)})
+            self._json(e.status, {"error": self._failed(str(e))})
         except KeyError as e:
-            self._json(400, {"error": f"Missing parameter: {e}"})
+            self._json(400, {"error": self._failed(f"Missing parameter: {e}")})
         except Exception as e:  # noqa: BLE001
-            self._json(500, {"error": f"{type(e).__name__}: {e}"})
+            self._json(500, {"error": self._failed(f"{type(e).__name__}: {e}")})
+
+    def _failed(self, error):
+        if abort_open_backups(error):
+            error += " Some changes were made before the error: restore the incomplete backup to undo them."
+        return error
 
 
 # ---------------------------------------------------------------------------

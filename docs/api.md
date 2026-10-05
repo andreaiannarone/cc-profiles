@@ -22,14 +22,21 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
 | `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries |
 | `GET /api/memory/file` | `profile`, `project`, `file` | `{content}` |
+| `GET /api/conversations/projects` | `profile` | the profile's projects that have conversations, with `count` |
+| `GET /api/conversations` | `profile`, `project` | `{conversations: [{session, title, prompts, replies, first, last, mtime, size, snapshots}], path}`, newest first |
+| `GET /api/conversations/view` | `profile`, `project`, `session` | `{messages: [{role, time, text}], truncated, total}`: prompts, replies and one line per tool call; the last 300 |
 | `GET /api/skills` | `profile` | `{skills: [{name, title, description, files, linked}], dir, shared}` |
 | `GET /api/skills/file` | `profile`, `name` | `{content}` of `SKILL.md` and the other `files` in the folder |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
+| `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source}], marketplaces, dir, shared}` |
+| `GET /api/profiles/export` | `id`, `projects` (`1` to include conversations) | a `.zip` download (not JSON): `profile/…`, `claude.json`, `home-memory/…`, `cc-profiles-export.json`; never login credentials |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
+| `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
+| `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called |
@@ -48,6 +55,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |
 | `POST /api/memory/move` | `profile`, `project`, `file`, `to_profile`, `to_project` |
 | `POST /api/memory/delete` | `profile`, `project`, `file` |
+| `POST /api/conversations/move` | `profile`, `project`, `session`, `to`: one conversation and its file snapshots |
+| `POST /api/conversations/delete` | `profile`, `project`, `session` |
 | `POST /api/skills/create` | `profile`, `name`, `description` |
 | `POST /api/skills/save` | `profile`, `name`, `content` (the whole `SKILL.md`) |
 | `POST /api/skills/copy` | `profile`, `name`, `to` |
@@ -56,6 +65,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
 | `POST /api/mcp/delete` | `profile`, `scope`, `name` |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
+| `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
+| `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 500 MB), not JSON |
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |
 | `POST /api/settings/raw` | `profile`, `file` (`settings` or `local`), `content` (JSON text) |
