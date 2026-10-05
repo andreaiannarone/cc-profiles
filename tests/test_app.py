@@ -334,22 +334,27 @@ def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
     S = "/api/statusline"
     assert app.get(S + "?profile=default")["mode"] == "off"
 
-    preview = app.get(S + "/preview?profile=default&parts=profile,model,cost")["text"]
+    preview = app.get(S + "/preview?profile=default&parts=cost,profile,model&colors=0")["text"]
+    colored = app.get(S + "/preview?profile=default&parts=model,context&separator=bar")
     if shutil.which("jq"):
-        assert preview == "Default · Opus · $1.27"
+        assert preview == "$1.27 · Default · Opus"  # in the order picked
+        assert colored["text"] == "\x1b[36mOpus\x1b[0m\x1b[2m | \x1b[0m\x1b[32mctx 42%\x1b[0m"
     else:
         assert "install jq" in preview
-    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model", "profile"], "refreshInterval": 5})
+    assert "# style: separator=bar colors=1" in colored["script"]
+    assert "Unknown separator" in app.request(S + "/preview?profile=default&parts=model&separator=x")[1]["error"]
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model", "profile", "nope"], "refreshInterval": 5,
+                 "separator": "bar", "colors": False})
     script = home.path(".claude/statusline.sh").read_text()
-    assert "# managed by cc-profiles: status line" in script and "# parts: profile model" in script
+    assert "# managed by cc-profiles: status line" in script and "# parts: model profile" in script
     line = json.loads(home.path(".claude/settings.json").read_text())["statusLine"]
     assert line["type"] == "command" and line["command"].endswith("/.claude/statusline.sh") and line["refreshInterval"] == 5
     got = app.get(S + "?profile=default")
-    assert got["mode"] == "builtin" and got["parts"] == ["profile", "model"]
+    assert got["mode"] == "builtin" and got["parts"] == ["model", "profile"] and got["separator"] == "bar" and not got["colors"]
     if shutil.which("jq"):  # the real script, as Claude Code runs it
         r = subprocess.run(["sh", "-c", line["command"]], input='{"model": {"display_name": "Opus"}}', capture_output=True,
                            text=True, env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
-        assert r.stdout == "Default · Opus"
+        assert r.stdout == "Opus | Default"
 
     assert "not made by cc-profiles" in app.post_error(S, {"profile": "work", "mode": "builtin", "parts": ["model"]})
     assert app.get(S + "/all/preview?profile=default")["skip"][0]["reason"].endswith("was not made by cc-profiles")

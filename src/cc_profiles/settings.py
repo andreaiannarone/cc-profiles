@@ -583,49 +583,79 @@ def op_global(pid, key, value):
 # ~/.cc-profiles/config.json), so a script reached through a shared settings.json still
 # names the right profile. Only a script with STATUS_MARK on its first line is rewritten.
 STATUS_MARK = "# managed by cc-profiles: status line"
+# (id, label, sample, sh code). The code reads the JSON with j and adds one piece with
+# add TEXT [SGR color]; $cwd is the session's folder. Colors are the terminal's own 16.
 STATUS_PARTS = [
-    ("profile", "Profile", "Default"),
-    ("model", "Model", "Opus"),
-    ("folder", "Folder", "api"),
-    ("branch", "Git branch", "main"),
-    ("context", "Context used", "ctx 42%"),
-    ("cost", "Session cost", "$1.27"),
-    ("limit", "5-hour limit used", "5h 18%"),
+    ("profile", "Profile", "Default",
+     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h)) == $d) | .label\' '
+     '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" "1;33"'),
+    ("model", "Model", "Opus", 'add "$(j .model.display_name)" 36'),
+    ("effort", "Effort", "high", 'add "$(j .effort.level)" 36'),
+    ("style", "Output style", "Explanatory", 'add "$(j .output_style.name)" 35'),
+    ("folder", "Folder", "api", '[ -n "$cwd" ] && add "$(basename "$cwd")" 34'),
+    ("branch", "Git branch", "main", '[ -n "$cwd" ] && add "$(git -C "$cwd" branch --show-current 2>/dev/null)" 35'),
+    ("pr", "Pull request", "PR #42", 'v=$(j .pr.number); [ -n "$v" ] && add "PR #$v" 35'),
+    ("context", "Context used", "ctx 42%",
+     'v=$(j \'.context_window.used_percentage | floor\'); if [ -n "$v" ]; then c=32; [ "$v" -ge 50 ] && c=33; '
+     '[ "$v" -ge 80 ] && c=31; add "ctx $v%" $c; fi'),
+    ("cost", "Session cost", "$1.27", 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")" 32'),
+    ("lines", "Lines changed", "+120 -34",
+     'a=$(j .cost.total_lines_added); r=$(j .cost.total_lines_removed)\n'
+     'if [ -n "$a$r" ]; then if [ "$C" = 1 ]; then add "$(printf \'\\033[32m+%s\\033[0m \\033[31m-%s\\033[0m\' "${a:-0}" "${r:-0}")"; '
+     'else add "+${a:-0} -${r:-0}"; fi; fi'),
+    ("duration", "Session time", "12m",
+     'v=$(j \'.cost.total_duration_ms | floor\'); if [ -n "$v" ]; then m=$((v / 60000)); '
+     'if [ "$m" -ge 60 ]; then add "$((m / 60))h $(printf %02d $((m % 60)))m" 2; else add "${m}m" 2; fi; fi'),
+    ("limit", "5-hour limit used", "5h 18%", 'v=$(j \'.rate_limits.five_hour.used_percentage | floor\'); [ -n "$v" ] && add "5h $v%" 33'),
+    ("week", "Weekly limit used", "7d 41%", 'v=$(j \'.rate_limits.seven_day.used_percentage | floor\'); [ -n "$v" ] && add "7d $v%" 33'),
+    ("time", "Time", "14:05", 'add "$(date +%H:%M)" 2'),
 ]
-STATUS_SNIPPETS = {
-    "profile": 'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h)) == $d) | .label\' '
-               '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}"',
-    "model": 'add "$(j .model.display_name)"',
-    "folder": '[ -n "$cwd" ] && add "$(basename "$cwd")"',
-    "branch": '[ -n "$cwd" ] && add "$(git -C "$cwd" branch --show-current 2>/dev/null)"',
-    "context": 'v=$(j .context_window.used_percentage); [ -n "$v" ] && add "ctx $(printf \'%.0f\' "$v")%"',
-    "cost": 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")"',
-    "limit": 'v=$(j .rate_limits.five_hour.used_percentage); [ -n "$v" ] && add "5h $(printf \'%.0f\' "$v")%"',
-}
+STATUS_CODE = {i: code for i, _, _, code in STATUS_PARTS}
+STATUS_DEFAULT_PARTS = ["profile", "model", "folder", "branch", "context"]
+STATUS_SEPARATORS = {"dot": " · ", "bar": " | ", "arrow": " › ", "space": "  "}
 STATUS_SAMPLE = {
     "model": {"id": "claude-opus-5-5", "display_name": "Opus"},
-    "context_window": {"used_percentage": 42},
-    "cost": {"total_cost_usd": 1.27},
-    "rate_limits": {"five_hour": {"used_percentage": 18}},
+    "effort": {"level": "high"},
+    "output_style": {"name": "Explanatory"},
+    "pr": {"number": 42},
+    "context_window": {"used_percentage": 42.4},
+    "cost": {"total_cost_usd": 1.27, "total_lines_added": 120, "total_lines_removed": 34, "total_duration_ms": 754000},
+    "rate_limits": {"five_hour": {"used_percentage": 18}, "seven_day": {"used_percentage": 41}},
 }
 
 
-def status_script(parts):
-    """The status line script for these parts, in STATUS_PARTS order."""
-    parts = [p for p, _, _ in STATUS_PARTS if p in parts]
-    body = "\n".join(STATUS_SNIPPETS[p] for p in parts)
+def status_style(separator, colors):
+    if separator not in STATUS_SEPARATORS:
+        raise ApiError("Unknown separator")
+    return separator, bool(colors)
+
+
+def status_script(parts, separator="dot", colors=True):
+    """The status line script: the parts in the given order."""
+    parts = [p for p in parts if p in STATUS_CODE]
+    body = "\n".join(STATUS_CODE[p] for p in parts)
+    sep = STATUS_SEPARATORS[separator]
     return f"""#!/bin/sh
 {STATUS_MARK}
 # parts: {" ".join(parts)}
-# Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the first two lines.
+# style: separator={separator} colors={1 if colors else 0}
+# Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the second line.
 export LC_NUMERIC=C
+C={1 if colors else 0}
+SEP='{sep}'
+[ "$C" = 1 ] && SEP=$(printf '\\033[2m%s\\033[0m' "$SEP")
 input=$(cat)
 dir=$(cd "${{CLAUDE_CONFIG_DIR:-$HOME/.claude}}" 2>/dev/null && pwd -P)
 name=$(basename "$dir"); case $name in .claude-*) name=${{name#.claude-}} ;; *) name=default ;; esac
 if ! command -v jq >/dev/null 2>&1; then printf '%s (install jq for the rest)' "$name"; exit 0; fi
 j() {{ printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null; }}
 out=
-add() {{ [ -n "$1" ] && out="${{out:+$out · }}$1"; return 0; }}
+add() {{
+  [ -n "$1" ] || return 0
+  s=$1
+  [ "$C" = 1 ] && [ -n "$2" ] && s=$(printf '\\033[%sm%s\\033[0m' "$2" "$1")
+  out="${{out:+$out$SEP}}$s"
+}}
 cwd=$(j .workspace.current_dir)
 {body}
 printf '%s' "$out"
@@ -636,16 +666,21 @@ def status_script_path(prof):
     return os.path.join(prof["dir_abs"], "statusline.sh")
 
 
-def status_script_parts(path):
-    """The parts of a script cc-profiles wrote, or None for any other file."""
+def status_script_info(path):
+    """{parts, separator, colors} of a script cc-profiles wrote, or None for any other file."""
     try:
         with open(path) as f:
-            head = f.read(400).split("\n")
+            head = f.read(600).split("\n")
     except OSError:
         return None
     if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
         return None
-    return head[2][len("# parts:"):].split()
+    info = {"parts": head[2][len("# parts:"):].split(), "separator": "dot", "colors": False}
+    if len(head) > 3 and head[3].startswith("# style:"):  # scripts from 0.4.2 on
+        style = dict(x.split("=", 1) for x in head[3][len("# style:"):].split() if "=" in x)
+        info["separator"] = style.get("separator") if style.get("separator") in STATUS_SEPARATORS else "dot"
+        info["colors"] = style.get("colors") == "1"
+    return info
 
 
 def status_command(prof):
@@ -657,46 +692,56 @@ def get_statusline(pid):
     value, src = effective(prof, "statusLine")
     value = value if isinstance(value, dict) else None
     path = status_script_path(prof)
-    parts = status_script_parts(path)
+    info = status_script_info(path)
     mode = "off"
     if value:
-        mode = "builtin" if value.get("command") == status_command(prof) and parts is not None else "custom"
-    return {"value": value, "source": src, "mode": mode, "parts": parts or ["profile", "model", "folder", "branch", "context"],
-            "script": pretty(path), "script_is_other": os.path.exists(path) and parts is None,
-            "jq": bool(find_tool("jq")), "parts_available": [{"id": i, "label": l, "sample": s} for i, l, s in STATUS_PARTS]}
+        mode = "builtin" if value.get("command") == status_command(prof) and info is not None else "custom"
+    info = info or {"parts": STATUS_DEFAULT_PARTS, "separator": "dot", "colors": True}
+    return {"value": value, "source": src, "mode": mode, "parts": info["parts"], "separator": info["separator"],
+            "colors": info["colors"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
+            "jq": bool(find_tool("jq")), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
+            "parts_available": [{"id": i, "label": l, "sample": x} for i, l, x, _ in STATUS_PARTS]}
 
 
-def statusline_preview(pid, parts):
-    """What the script prints on sample data, run in a temporary file: read-only."""
+def statusline_preview(pid, parts, separator="dot", colors="1"):
+    """What the script prints on sample data, and the script itself. It runs from a
+    temporary file, never the profile's: read-only."""
     prof = profile(pid)
-    parts = [p for p in parts.split(",") if p in STATUS_SNIPPETS]
+    parts = [p for p in parts.split(",") if p in STATUS_CODE]
+    separator, colors = status_style(separator, colors == "1")
+    script = status_script(parts, separator, colors)
     if not parts:
-        return {"text": ""}
+        return {"text": "", "script": script}
     sample = dict(STATUS_SAMPLE, workspace={"current_dir": os.getcwd()})
     with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
-        f.write(status_script(parts))
+        f.write(script)
     env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
     try:
         r = subprocess.run(["sh", f.name], input=json.dumps(sample), capture_output=True, text=True, timeout=5, env=env)
-        return {"text": r.stdout.strip()}
+        return {"text": r.stdout.strip("\n"), "script": script}
     except (OSError, subprocess.SubprocessError) as e:
-        return {"text": "", "error": str(e)}
+        return {"text": "", "script": script, "error": str(e)}
     finally:
         os.unlink(f.name)
 
 
 def statusline_value(prof, body):
-    """The statusLine object a request asks for, checked; None turns it off."""
+    """(statusLine object, script info) a request asks for, checked. (None, None) turns it off;
+    the info is None for a command of the user's own."""
     mode = body.get("mode")
     if mode == "off":
         return None, None
     if mode == "builtin":
-        parts = [p for p in body.get("parts") or [] if p in STATUS_SNIPPETS]
+        parts = []
+        for x in body.get("parts") or []:
+            if x in STATUS_CODE and x not in parts:
+                parts.append(x)
         if not parts:
             raise ApiError("Pick at least one thing to show")
-        command = status_command(prof)
+        separator, colors = status_style(body.get("separator") or "dot", body.get("colors", True))
+        info, command = {"parts": parts, "separator": separator, "colors": colors}, status_command(prof)
     elif mode == "custom":
-        command, parts = str(body.get("command") or "").strip(), None
+        command, info = str(body.get("command") or "").strip(), None
         if not command:
             raise ApiError("Write the command that prints the status line")
     else:
@@ -711,18 +756,18 @@ def statusline_value(prof, body):
         value[key] = n
     if body.get("hideVimModeIndicator") is True:
         value["hideVimModeIndicator"] = True
-    return value, parts
+    return value, info
 
 
-def write_statusline(prof, value, parts, bk):
+def write_statusline(prof, value, info, bk):
     """Write a profile's statusLine (and its script for the built-in one), inside a backup."""
     path = status_script_path(prof)
-    if parts is not None:
-        if os.path.exists(path) and status_script_parts(path) is None:
+    if info is not None:
+        if os.path.exists(path) and status_script_info(path) is None:
             raise ApiError(f"{pretty(path)} exists and was not made by cc-profiles: rename it, or use it as your own command")
         bk.copy(path, "statusline.sh")
-        write_text(path, status_script(parts))
-    elif status_script_parts(path) is not None:
+        write_text(path, status_script(info["parts"], info["separator"], info["colors"]))
+    elif status_script_info(path) is not None:
         bk.stash(path, "statusline.sh")  # the old built-in script is no longer used
     targets = setting_targets(prof, "statusLine", value) if value is None else [effective(prof, "statusLine")[1] or "settings"]
     for which in targets:
@@ -731,12 +776,21 @@ def write_statusline(prof, value, parts, bk):
 
 def op_statusline(pid, body):
     prof = profile(pid)
-    value, parts = statusline_value(prof, body)
+    value, info = statusline_value(prof, body)
     bk = Backup("statusline", f"Status line of {prof['label']}")
-    write_statusline(prof, value, parts, bk)
-    bk.note(f"statusLine = {json.dumps(value)}")
+    write_statusline(prof, value, info, bk)
+    bk.note(f"statusLine = {json.dumps(value)}" + (f", script: {' '.join(info['parts'])}" if info else ""))
     msg = "Status line turned off." if value is None else "Status line saved: it shows from the next Claude Code session."
     return {"message": msg, "backup": bk.close()}
+
+
+def status_signature(sl):
+    """What makes two profiles' status lines the same, the script's own path aside."""
+    if sl["mode"] == "off":
+        return ("off",)
+    rest = {k: v for k, v in sl["value"].items() if k != "command" or sl["mode"] == "custom"}
+    script = (sl["parts"], sl["separator"], sl["colors"]) if sl["mode"] == "builtin" else None
+    return (sl["mode"], json.dumps(rest, sort_keys=True), script)
 
 
 def statusline_all_plan(pid):
@@ -748,15 +802,11 @@ def statusline_all_plan(pid):
         if o["id"] == pid:
             continue
         mine = get_statusline(o["id"])
-        target = field_path(o, effective(o, "statusLine")[1] or "settings")
-        same = mine["mode"] == cur["mode"] and (
-            mine["mode"] == "off" or (cur["mode"] == "builtin" and mine["parts"] == cur["parts"]
-                                      and {k: v for k, v in mine["value"].items() if k != "command"}
-                                      == {k: v for k, v in cur["value"].items() if k != "command"})
-            or mine["value"] == cur["value"])
-        if same:
+        where = effective(o, "statusLine")[1] or "settings"
+        target = field_path(o, where)
+        if status_signature(mine) == status_signature(cur):
             reason = "already has it"
-        elif file_error(o, effective(o, "statusLine")[1] or "settings"):
+        elif file_error(o, where):
             reason = f"{os.path.basename(target)} has an error: fix it in the advanced editor"
         elif cur["mode"] == "builtin" and mine["script_is_other"]:
             reason = f"{mine['script']} was not made by cc-profiles"
@@ -775,17 +825,18 @@ def op_statusline_all(pid):
     if not plan["apply"]:
         raise no_targets(plan)
     cur = get_statusline(pid)
+    info = {k: cur[k] for k in ("parts", "separator", "colors")} if cur["mode"] == "builtin" else None
     bk = Backup("statusline-all", f"Status line of {plan['from']} in every profile")
     for t in plan["apply"]:
         o = profile(t["id"])
         if cur["mode"] == "off":
-            value, parts = None, None
+            value = None
         elif cur["mode"] == "builtin":
-            value, parts = dict(cur["value"], command=status_command(o)), cur["parts"]
+            value = dict(cur["value"], command=status_command(o))
         else:
-            value, parts = dict(cur["value"]), None
-        write_statusline(o, value, parts, bk)
+            value = dict(cur["value"])
+        write_statusline(o, value, info, bk)
         bk.note(f"{o['label']}: {t['detail']}")
-    for s in plan["skip"]:
-        bk.note(f"skipped {s['label']}: {s['reason']}")
+    for x in plan["skip"]:
+        bk.note(f"skipped {x['label']}: {x['reason']}")
     return {"message": plan_message("Status line set", plan), "backup": bk.close()}

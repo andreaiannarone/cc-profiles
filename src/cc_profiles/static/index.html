@@ -255,12 +255,34 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .srow .o code { color: var(--text); }
 textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
 .perm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.slparts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 12px; }
-.slparts label, .slopts label.c { display: flex; gap: 7px; align-items: center; }
-.slpreview { font-family: var(--mono); font-size: 12.5px; background: #1d1c1a; color: #ecebe7; border-radius: 8px; padding: 10px 12px; min-height: 18px; white-space: pre; overflow-x: auto; }
+.slgrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: 18px; margin: 14px 0 12px; align-items: start; }
+@media (max-width: 820px) { .slgrid { grid-template-columns: 1fr; } }
+.slparts { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.slparts li { display: grid; grid-template-columns: 18px 1fr auto auto; gap: 8px; align-items: center; padding: 5px 8px 5px 6px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.slparts li:last-child { border-bottom: 0; }
+.slparts li.off { background: var(--panel-2); }
+.slparts li.off label { color: var(--muted); }
+.slparts li.drag { opacity: .4; }
+.slparts li.over { box-shadow: inset 0 2px 0 var(--accent); }
+.slparts .grip { cursor: grab; color: var(--muted); font-size: 13px; text-align: center; user-select: none; }
+.slparts label { display: flex; gap: 8px; align-items: center; }
+.slparts .smp { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.slparts .mv { display: flex; gap: 2px; }
+.slparts .mv button { padding: 1px 6px; min-width: 0; }
+.slside { display: grid; gap: 14px; }
+.slside .f { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.slside label.c { display: flex; gap: 7px; align-items: center; color: var(--text); }
+.slpreview { font-family: var(--mono); font-size: 12.5px; background: #1d1c1a; color: #d6d4cd; border-radius: 8px; padding: 10px 12px; min-height: 18px; white-space: pre; overflow-x: auto; }
+.slpreview .b { font-weight: 700; } .slpreview .d { opacity: .55; }
+.slpreview .a31 { color: #f1736b; } .slpreview .a32 { color: #7fd17f; } .slpreview .a33 { color: #f0c65a; }
+.slpreview .a34 { color: #79a8f2; } .slpreview .a35 { color: #d08ae8; } .slpreview .a36 { color: #6fd0d8; }
 .slopts { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: end; margin-top: 14px; }
 .slopts label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.slopts label.c { display: flex; gap: 7px; align-items: center; }
 .slopts input.text { width: 110px; }
+details.slscript { margin-top: 10px; } details.slscript summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 12px; }
+.slsep { max-width: 240px; } .slsep button { font-family: var(--mono); font-size: 15px; font-weight: 700; padding: 3px 0; }
 .perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
 .row-end { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 10px; }
@@ -1091,22 +1113,58 @@ async function loadSettings(pid) {
 // The draft holds what the form shows until it is saved; switching mode re-renders only this section.
 function slDraft() {
   const sl = S.set.sl, v = sl.value || {};
-  S.set.slDraft = { mode: sl.mode, parts: [...sl.parts], command: sl.mode === "custom" ? v.command || "" : "",
+  const ids = sl.parts_available.map(p => p.id), parts = sl.parts.filter(p => ids.includes(p));
+  S.set.slDraft = { mode: sl.mode, parts, order: [...parts, ...ids.filter(i => !parts.includes(i))],
+                    separator: sl.separator, colors: sl.colors, command: sl.mode === "custom" ? v.command || "" : "",
                     padding: v.padding ?? "", refreshInterval: v.refreshInterval ?? "", hide: v.hideVimModeIndicator === true };
+  S.set.slSaved = slKey(S.set.slDraft);
+}
+// What decides whether there is something to save: the order of unticked parts does not count.
+const slKey = dr => JSON.stringify(dr.mode === "off" ? { mode: "off" } : {
+  mode: dr.mode, parts: dr.mode === "builtin" ? dr.order.filter(i => dr.parts.includes(i)) : null,
+  separator: dr.mode === "builtin" ? dr.separator : null, colors: dr.mode === "builtin" ? dr.colors : null,
+  command: dr.mode === "custom" ? dr.command.trim() : null, padding: String(dr.padding ?? ""), refresh: String(dr.refreshInterval ?? ""), hide: dr.hide });
+// SGR escapes (bold, dim, the 8 colors) to spans; everything else is text.
+function ansiHtml(text) {
+  let out = "", open = 0;
+  for (const piece of text.split(/(\x1b\[[0-9;]*m)/)) {
+    const m = piece.match(/^\x1b\[([0-9;]*)m$/);
+    if (!m) { out += esc(piece); continue; }
+    const codes = m[1].split(";").filter(Boolean);
+    if (!codes.length || codes.includes("0")) { out += "</span>".repeat(open); open = 0; continue; }
+    const cls = codes.map(c => c === "1" ? "b" : c === "2" ? "d" : /^3[1-7]$/.test(c) ? "a" + c : "").filter(Boolean).join(" ");
+    out += `<span class="${cls}">`; open++;
+  }
+  return out + "</span>".repeat(open);
 }
 function statusLineSection() {
   const st = S.set, sl = st.sl, dr = st.slDraft;
   if (!sl) return "";
   const where = sl.value ? `Now: ${sl.mode === "builtin" ? "made by cc-profiles" : "your command"}, in ${srcBadge(sl.source)}` : "Now: off";
+  const byId = Object.fromEntries(sl.parts_available.map(p => [p.id, p]));
+  const dirty = slKey(dr) !== st.slSaved;
   return `<section class="sec" id="sl-sec"><div class="h"><h3>Status line</h3><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
     <div class="b">
       <div class="seg" style="max-width:460px" role="group" aria-label="Status line">${[["off", "Off"], ["builtin", "Made by cc-profiles"], ["custom", "Your command"]].map(([m, l]) =>
         `<button data-slmode="${m}" class="${dr.mode === m ? "on" : ""}" aria-pressed="${dr.mode === m}">${l}</button>`).join("")}</div>
       ${dr.mode === "builtin" ? `
-        <div class="slparts" role="group" aria-label="What to show">${sl.parts_available.map(p => `<label><input type="checkbox" data-slpart="${p.id}" ${dr.parts.includes(p.id) ? "checked" : ""}> ${esc(p.label)}</label>`).join("")}</div>
+        <div class="slgrid">
+          <ul class="slparts" aria-label="What to show, in order: drag or use the arrows">${dr.order.map((id, i) => { const p = byId[id], on = dr.parts.includes(id); return `
+            <li class="${on ? "" : "off"}" draggable="true" data-slitem="${id}">
+              <span class="grip" aria-hidden="true">⋮⋮</span>
+              <label><input type="checkbox" data-slpart="${id}" ${on ? "checked" : ""}> ${esc(p.label)}</label>
+              <span class="smp">${esc(p.sample)}</span>
+              <span class="mv"><button class="btn small" data-slmove="${id}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move ${esc(p.label)} up">↑</button><button class="btn small" data-slmove="${id}" data-dir="1" ${i === dr.order.length - 1 ? "disabled" : ""} aria-label="Move ${esc(p.label)} down">↓</button></span>
+            </li>`; }).join("")}</ul>
+          <div class="slside">
+            <div class="f">Separator<div class="seg slsep" role="group" aria-label="Separator">${sl.separators.map(x => `<button data-slsep="${x.id}" class="${dr.separator === x.id ? "on" : ""}" aria-pressed="${dr.separator === x.id}" aria-label="${x.id === "space" ? "two spaces" : x.id}" title="${x.id === "space" ? "Two spaces" : esc(x.text.trim())}">${esc(x.text.trim() || "␣")}</button>`).join("")}</div></div>
+            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context turns yellow at 50%, red at 80%)</span></label>
+          </div>
+        </div>
         <div class="slpreview" id="sl-preview" aria-live="polite" aria-label="Preview with sample data"></div>
         <div class="hint" style="margin-top:6px">Preview with sample data; the branch shows inside a git repository. Saved as <code>${esc(sl.script)}</code>, a shell script that reads Claude Code's data with <code>jq</code>.
           ${sl.jq ? "" : ` <b>jq is not installed</b>: until you install it (<code>brew install jq</code>), the line shows only the profile.`}</div>
+        <details class="slscript"><summary>Show the script</summary><pre class="code" id="sl-script"></pre></details>
         ${sl.script_is_other ? `<div class="danger-box" style="margin-top:10px"><code>${esc(sl.script)}</code> was not made by cc-profiles and is never overwritten: rename it to use this, or pick <b>Your command</b> to run it.</div>` : ""}` : ""}
       ${dr.mode === "custom" ? `<div class="slopts" style="margin-top:14px"><label class="f" style="flex:1;min-width:240px">Command<input class="text" style="width:100%" id="sl-cmd" value="${esc(dr.command)}" placeholder="e.g. sh ~/.claude/my-statusline.sh" autocomplete="off" spellcheck="false"></label></div>
         <div class="hint" style="margin-top:6px">Claude Code runs it with the session's data as JSON on stdin and shows what it prints. cc-profiles never runs it.</div>` : ""}
@@ -1114,38 +1172,80 @@ function statusLineSection() {
         <label class="f">Padding<input class="text" type="number" min="0" step="1" id="sl-pad" value="${esc(dr.padding)}" placeholder="0"></label>
         <label class="f">Refresh every (s)<input class="text" type="number" min="1" step="1" id="sl-ref" value="${esc(dr.refreshInterval)}" placeholder="on events"></label>
         <label class="c"><input type="checkbox" id="sl-hide" ${dr.hide ? "checked" : ""}> Hide the vim mode indicator</label></div>` : ""}
-      <div class="row-end"><span class="grow"></span><button class="btn" id="sl-all" title="Give every other profile the status line saved in this one">Apply to all…</button><button class="btn primary" id="sl-save">Save status line</button></div>
+      <div class="row-end"><span class="grow hint" id="sl-dirty">${dirty ? "Unsaved changes" : ""}</span><button class="btn" id="sl-all" title="Give every other profile the status line saved in this one">Apply to all…</button><button class="btn primary" id="sl-save" ${dirty ? "" : "disabled"}>Save status line</button></div>
     </div></section>`;
 }
 function slRead() {
   const dr = S.set.slDraft, num = id => { const v = $(id)?.value; return v === undefined ? undefined : v === "" ? "" : parseInt(v, 10); };
-  if (dr.mode === "builtin") dr.parts = [...document.querySelectorAll("[data-slpart]")].filter(c => c.checked).map(c => c.dataset.slpart);
+  if (dr.mode === "builtin") { dr.parts = [...document.querySelectorAll("[data-slpart]")].filter(c => c.checked).map(c => c.dataset.slpart); dr.colors = $("#sl-colors").checked; }
   if (dr.mode === "custom") dr.command = $("#sl-cmd").value;
   if (dr.mode !== "off") { dr.padding = num("#sl-pad"); dr.refreshInterval = num("#sl-ref"); dr.hide = $("#sl-hide").checked; }
 }
+function slDirty() {
+  const dirty = slKey(S.set.slDraft) !== S.set.slSaved;
+  $("#sl-dirty").textContent = dirty ? "Unsaved changes" : "";
+  $("#sl-save").disabled = !dirty;
+}
+let slSeq = 0;
 async function slPreview() {
   const box = $("#sl-preview"); if (!box) return;
-  const parts = S.set.slDraft.parts.join(",");
-  try { const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts)}`); if ($("#sl-preview") === box) box.textContent = r.text || (parts ? "" : "Pick something to show"); } catch {}
+  const dr = S.set.slDraft, parts = dr.order.filter(i => dr.parts.includes(i)), seq = ++slSeq;
+  try {
+    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}`);
+    if (seq !== slSeq || !$("#sl-preview")) return;  // a newer preview is on its way
+    $("#sl-preview").innerHTML = parts.length ? ansiHtml(r.text) : `<span class="d">Tick something to show</span>`;
+    $("#sl-script").textContent = r.script;
+  } catch {}
 }
-function renderStatusLine() {
+function renderStatusLine(focus) {
   const sec = $("#sl-sec"); if (!sec) return;
   sec.outerHTML = statusLineSection();
   bindStatusLine();
+  if (focus) $(focus)?.focus();
 }
 function bindStatusLine() {
-  const st = S.set, pid = st.profile;
-  document.querySelectorAll("[data-slmode]").forEach(b => b.onclick = () => { slRead(); st.slDraft.mode = b.dataset.slmode; renderStatusLine(); });
-  document.querySelectorAll("[data-slpart]").forEach(c => c.onchange = () => { slRead(); slPreview(); });
+  const st = S.set, pid = st.profile, dr = st.slDraft;
+  if (!$("#sl-sec")) return;
+  const changed = () => { slRead(); slDirty(); slPreview(); };
+  const move = (id, to) => { const o = dr.order.filter(x => x !== id); o.splice(Math.max(0, Math.min(to, o.length)), 0, id); dr.order = o; };
+  document.querySelectorAll("[data-slmode]").forEach(b => b.onclick = () => { slRead(); dr.mode = b.dataset.slmode; renderStatusLine(); });
+  // a ticked part joins the end of the line, an unticked one leaves it: the list reads in line order
+  document.querySelectorAll("[data-slpart]").forEach(c => c.onchange = () => {
+    slRead(); const id = c.dataset.slpart, shown = dr.order.filter(x => x !== id && dr.parts.includes(x));
+    move(id, shown.length); renderStatusLine(`[data-slpart="${id}"]`);
+  });
+  document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
+  document.querySelectorAll("[data-slmove]").forEach(b => b.onclick = () => {
+    slRead(); const id = b.dataset.slmove, d = +b.dataset.dir;
+    move(id, dr.order.indexOf(id) + d);
+    const next = `[data-slmove="${id}"][data-dir="${d}"]`;
+    renderStatusLine($(next) && !document.querySelector(next)?.disabled ? next : `[data-slpart="${id}"]`);
+  });
+  let dragged = null;
+  document.querySelectorAll("[data-slitem]").forEach(li => {
+    li.ondragstart = e => { dragged = li.dataset.slitem; li.classList.add("drag"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragged); };
+    li.ondragend = () => { li.classList.remove("drag"); document.querySelectorAll(".slparts li.over").forEach(x => x.classList.remove("over")); };
+    li.ondragover = e => { if (!dragged) return; e.preventDefault(); li.classList.add("over"); };
+    li.ondragleave = () => li.classList.remove("over");
+    li.ondrop = e => {
+      e.preventDefault(); if (!dragged || dragged === li.dataset.slitem) return;
+      slRead(); move(dragged, dr.order.filter(x => x !== dragged).indexOf(li.dataset.slitem)); dragged = null; renderStatusLine();
+    };
+  });
+  ["#sl-colors", "#sl-hide"].forEach(id => { if ($(id)) $(id).onchange = changed; });
+  ["#sl-cmd", "#sl-pad", "#sl-ref"].forEach(id => { if ($(id)) $(id).oninput = () => { slRead(); slDirty(); }; });
+  slDirty();
   slPreview();
   $("#sl-save").onclick = async () => {
     slRead();
-    const dr = st.slDraft, opt = v => v === "" || Number.isNaN(v) ? null : v;
-    const body = { profile: pid, mode: dr.mode, parts: dr.parts, command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
+    const opt = v => v === "" || Number.isNaN(v) ? null : v;
+    const body = { profile: pid, mode: dr.mode, parts: dr.order.filter(i => dr.parts.includes(i)), separator: dr.separator, colors: dr.colors,
+                   command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
     try { await run(() => api("/api/statusline", body)); } catch { return; }
     st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine();
   };
   $("#sl-all").onclick = async () => {
+    if (slKey(dr) !== st.slSaved && !(await confirmBox("Unsaved changes", "<b>Apply to all</b> uses the status line saved in this profile, without the changes you have not saved yet. Go on?", "Go on"))) return;
     if (await applyAll("Use this status line in every profile?", `/api/statusline/all/preview?profile=${pid}`,
         `The status line saved in <b>${esc(label(pid))}</b> goes to every other profile. One made by cc-profiles gets its own script in each profile, and shows each profile's name.`,
         "Apply to all", () => api("/api/statusline/all", { profile: pid }))) { st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine(); }
