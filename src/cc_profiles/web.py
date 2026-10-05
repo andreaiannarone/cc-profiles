@@ -25,29 +25,37 @@ from .memories import (
     op_memory_move,
     op_memory_save,
 )
-from .sharing import list_sharing, op_share
+from .sharing import list_sharing, op_share, share_plan
 from .settings import (
     get_settings,
     op_claude_md,
     op_global,
+    op_permission_all,
     op_permissions,
     op_setting,
+    op_setting_all,
     op_settings_raw,
+    permission_all_plan,
+    setting_all_plan,
 )
 from .health import candidates, health, list_profiles
-from .backups import list_backups, op_backup_delete, op_backup_prune, op_restore
+from .backups import backup_auto, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
 from .info import about
 from .extensions import (
     list_mcp,
     list_skills,
+    mcp_all_plan,
     mcp_server,
     op_mcp_copy,
+    op_mcp_copy_all,
     op_mcp_delete,
     op_mcp_save,
     op_skill_copy,
+    op_skill_copy_all,
     op_skill_create,
     op_skill_delete,
     op_skill_save,
+    skill_all_plan,
     skill_read,
 )
 from .conversations import (
@@ -60,8 +68,9 @@ from .conversations import (
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
+from .templates import list_templates, op_create_from_template, op_template_delete, op_template_save
 from .plugins import list_plugins, op_plugin_enable
-from .editprofile import op_delete_profile, op_update_profile
+from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
 from .updater import check_update, op_update
 
@@ -182,6 +191,14 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/compare": lambda: compare(q["a"], q["b"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
+                "/api/sharing/preview": lambda: share_plan(q["profile"], q["item"], q["shared"] == "1"),
+                "/api/profiles/delete/preview": lambda: delete_plan(q["id"], q.get("merge_into") or None),
+                "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
+                "/api/settings/permissions/all/preview": lambda: permission_all_plan(q["list"], q["rule"]),
+                "/api/skills/copy-all/preview": lambda: skill_all_plan(q["profile"], q["name"]),
+                "/api/mcp/copy-all/preview": lambda: mcp_all_plan(q["profile"], q["scope"], q["name"]),
+                "/api/backups/auto": lambda: backup_auto(),
+                "/api/templates": lambda: list_templates(),
                 "/api/plugins": lambda: list_plugins(q["profile"]),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
@@ -225,10 +242,16 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/backups/restore": lambda: op_restore(b["name"]),
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),
                 "/api/backups/prune": lambda: op_backup_prune(b.get("days")),
+                "/api/backups/auto": lambda: op_backup_auto(b.get("days")),
+                "/api/templates/save": lambda: op_template_save(b["profile"], b["name"]),
+                "/api/templates/delete": lambda: op_template_delete(b["name"]),
+                "/api/templates/create": lambda: op_create_from_template(b["name"], b["label"], b["id"]),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),
+                "/api/settings/field/all": lambda: op_setting_all(b["profile"], b["key"]),
+                "/api/settings/permissions/all": lambda: op_permission_all(b["list"], b["rule"]),
                 "/api/settings/raw": lambda: op_settings_raw(b["profile"], b["file"], b["content"]),
                 "/api/settings/claude-md": lambda: op_claude_md(b["profile"], b.get("content", "")),
                 "/api/settings/global": lambda: op_global(b["profile"], b["key"], b.get("value")),
@@ -238,10 +261,12 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),
                 "/api/skills/delete": lambda: op_skill_delete(b["profile"], b["name"]),
                 "/api/skills/copy": lambda: op_skill_copy(b["profile"], b["name"], b["to"]),
+                "/api/skills/copy-all": lambda: op_skill_copy_all(b["profile"], b["name"]),
                 "/api/mcp/save": lambda: op_mcp_save(b["profile"], b["scope"], b["name"], b["config"],
                                                      b.get("old_name") or None),
                 "/api/mcp/delete": lambda: op_mcp_delete(b["profile"], b["scope"], b["name"]),
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),
+                "/api/mcp/copy-all": lambda: op_mcp_copy_all(b["profile"], b["scope"], b["name"]),
                 "/api/profiles/update": lambda: op_update_profile(b["id"], b.get("label"), b.get("command")),
                 "/api/profiles/delete": lambda: op_delete_profile(b["id"], b.get("merge_into") or None,
                                                                   bool(b.get("force"))),

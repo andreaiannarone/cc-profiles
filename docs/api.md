@@ -34,7 +34,15 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/profiles/export` | `id`, `projects` (`1` to include conversations) | a `.zip` download (not JSON): `profile/…`, `claude.json`, `home-memory/…`, `cc-profiles-export.json`; never login credentials |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
+| `GET /api/profiles/delete/preview` | `id`, `merge_into` (optional) | `{items: [{action, item, from, to}], projects, conversations, memories, prompts, settings, active, folder, config, into}`: what deleting would do; `action` is `move`, `merge`, `conflict`, `stash` (goes to the backup) or `edit` (a line or entry removed from a file). Changes nothing |
+| `GET /api/sharing/preview` | `profile`, `item`, `shared` (`1` to share, `0` to separate) | `{items: [{action, item, from, to}], source, profile, only_own}`; `action` is `create` (made empty in the source), `stash`, `only-here` (only the own copy has it), `link` or `copy`. Changes nothing |
+| `GET /api/settings/field/all/preview` | `profile`, `key` | `{key, label, value, shown, from, apply: [{id, label, detail}], skip: [{id, label, reason}]}`: which profiles applying the value would change |
+| `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
+| `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
+| `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
+| `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, size}], dir}` |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
+| `GET /api/backups/auto` | | `{days, choices, last, message, config}`: the automatic cleanup setting (`days` is `null` when off) and its last run |
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
@@ -60,24 +68,32 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/skills/create` | `profile`, `name`, `description` |
 | `POST /api/skills/save` | `profile`, `name`, `content` (the whole `SKILL.md`) |
 | `POST /api/skills/copy` | `profile`, `name`, `to` |
+| `POST /api/skills/copy-all` | `profile`, `name`: to every profile that lacks it, one backup |
 | `POST /api/skills/delete` | `profile`, `name` |
 | `POST /api/mcp/save` | `profile`, `scope`, `name`, `config` (object), `old_name` (to rename or edit) |
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
+| `POST /api/mcp/copy-all` | `profile`, `scope`, `name`: to every profile that lacks it, one backup |
 | `POST /api/mcp/delete` | `profile`, `scope`, `name` |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
 | `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 500 MB), not JSON |
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |
+| `POST /api/settings/field/all` | `profile`, `key`: the profile's value goes to every other profile, one backup |
+| `POST /api/settings/permissions/all` | `list`, `rule`: added to `settings.json` of every profile, one backup |
 | `POST /api/settings/raw` | `profile`, `file` (`settings` or `local`), `content` (JSON text) |
 | `POST /api/settings/claude-md` | `profile`, `content` |
 | `POST /api/settings/global` | `profile`, `key` (`autoUpdates`), `value` (bool) |
 | `POST /api/profiles/create` | `label`, `id`, `base` (profile id or empty), `include_projects`, `share` (list) |
+| `POST /api/templates/save` | `profile`, `name` (letters, digits, spaces, `.`, `-`, `_`, up to 48) |
+| `POST /api/templates/delete` | `name`: the file goes to the backup |
+| `POST /api/templates/create` | `name`, `label`, `id`: a new profile from the template, through the import code |
 | `POST /api/profiles/update` | `id`, `label`, `command` |
 | `POST /api/profiles/delete` | `id`, `merge_into` (optional), `force` (skip the open-session check) |
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |
 | `POST /api/backups/prune` | `days` (integer, 1 or more): permanently deletes the backups older than that |
+| `POST /api/backups/auto` | `days` (`30`, `90`, `180`, `365`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 

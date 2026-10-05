@@ -456,6 +456,34 @@ function renderProjects() {
 const byName = n => S.projects.find(r => r.name === n);
 
 const PLAN = { move: to => `moves to ${to}`, merge: to => `is merged into the index of ${to}`, conflict: to => `${to} already has it: the original goes to the backup` };
+// The other previews (delete a profile, share, separate) use the same items plus a few actions of their own.
+const PLAN_MORE = {
+  merge: (i, to) => i.item === "history.jsonl" ? `is merged into the prompt history of ${to}` : PLAN.merge(to),
+  stash: () => "goes to the backup",
+  edit: i => `in <code>${esc(i.from)}</code>: ${esc(i.to)}`,
+  "only-here": () => "exists only here: it goes to the backup and is no longer used",
+  link: i => `becomes a link to <code>${esc(i.to)}</code>`,
+  create: i => `is created, empty, at <code>${esc(i.to)}</code>`,
+  copy: i => `is copied from <code>${esc(i.from)}</code>${i.files > 1 ? ` (${plural(i.files, "file", "files")})` : ""}`,
+};
+function planDetails(items, to) {
+  if (!items.length) return "";
+  const text = i => PLAN_MORE[i.action] ? PLAN_MORE[i.action](i, to) : PLAN[i.action] ? PLAN[i.action](to) : esc(i.action);
+  return `<details style="margin-top:10px"><summary>Show the ${plural(items.length, "file or folder", "files and folders")} it touches</summary>
+    <ul class="plan">${items.map(i => `<li class="${esc(i.action)}" title="${esc(i.from)}${i.to ? " → " + esc(i.to) : ""}"><code>${esc(i.item)}</code> ${text(i)}</li>`).join("")}</ul></details>`;
+}
+// Apply to all profiles: show which profiles change and which are skipped (with the reason), then run it.
+// One backup covers every profile, so one Restore undoes it. Returns true when it ran.
+async function applyAll(title, preview, intro, okLabel, post) {
+  let plan;
+  try { plan = await api(preview); } catch (e) { toast(e.message, "", true); return false; }
+  const skip = plan.skip.length ? `<div style="margin-top:10px">Skipped:</div><ul class="plan">${plan.skip.map(s => `<li><b>${esc(s.label)}</b>: ${esc(s.reason)}</li>`).join("")}</ul>` : "";
+  if (!plan.apply.length) { await modal({ title, sub: `${intro} No profile to change.${skip}` }); return false; }
+  const list = `<ul class="plan">${plan.apply.map(a => `<li><b>${esc(a.label)}</b>: ${esc(a.detail)}</li>`).join("")}</ul>`;
+  if (!(await confirmBox(title, `${intro}<div style="margin-top:10px">Changes ${plural(plan.apply.length, "profile", "profiles")}:</div>${list}${skip}<div style="margin-top:10px">One backup covers every profile: one Restore undoes it all.</div>`, okLabel))) return false;
+  try { await run(post); } catch { return false; }
+  return true;
+}
 async function doMove(r, from, to) {
   const s = r.in[from];
   let plan = null;
@@ -699,6 +727,7 @@ function renderSharing() {
   $("#main").innerHTML = `
     <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
+      <button class="btn" id="ptemplates">Templates…</button>
       <button class="btn primary" data-newprofile>+ New profile</button></div>
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
@@ -715,19 +744,25 @@ function renderSharing() {
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
         <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
       </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>`;
+  $("#ptemplates").onclick = manageTemplates;
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
     const sub = on
       ? `${esc(p.label)} will use <code>${esc(it.item)}</code> from ${esc(p.source)}.` + (it.own ? ` Its current copy goes to the backup${it.only_own.length ? `, including <b>${plural(it.only_own.length, "item", "items")} ${esc(p.source)} does not have</b>: ${it.only_own.slice(0, 8).map(esc).join(", ")}` : ""}.` : "")
       : `${esc(p.label)} gets its own copy of <code>${esc(it.item)}</code>: from then on, changes no longer flow between profiles.`;
-    if (!(await confirmBox(on ? "Share?" : "Separate?", sub, on ? "Share" : "Separate"))) { cb.checked = !on; return; }
+    let plan = null;
+    try { plan = await api(`/api/sharing/preview?profile=${encodeURIComponent(p.id)}&item=${encodeURIComponent(it.item)}&shared=${on ? 1 : 0}`); } catch {}
+    if (!(await confirmBox(on ? "Share?" : "Separate?", sub + (plan ? planDetails(plan.items, esc(p.source)) : ""), on ? "Share" : "Separate"))) { cb.checked = !on; return; }
     try { await run(() => api("/api/sharing", { profile: p.id, item: it.item, shared: on })); } catch {}
     loadSharing();
   });
 }
 async function newProfile() {
-  const opts = S.profiles.map(p => `<label><input type="radio" name="base" value="${p.id}" ${p.id === S.profiles[0].id ? "checked" : ""}> Copy of ${esc(p.label)} <span class="hint">(settings, MCP servers; you log in again)</span></label>`).join("");
+  let tpl = [];
+  try { tpl = (await api("/api/templates")).templates; } catch {}
+  const opts = S.profiles.map(p => `<label><input type="radio" name="base" value="${p.id}" ${p.id === S.profiles[0].id ? "checked" : ""}> Copy of ${esc(p.label)} <span class="hint">(settings, MCP servers; you log in again)</span></label>`).join("")
+    + tpl.map(t => `<label><input type="radio" name="base" value="template:${esc(t.name)}"> From template: ${esc(t.name)} <span class="hint">(${esc(t.items.join(", ") || "empty")})</span></label>`).join("");
   const resP = modal({ title: "New profile", sub: "Creates the folder <code>~/.claude-&lt;id&gt;</code> and a <code>claude-&lt;id&gt;</code> command in <code>~/.local/bin</code> that starts Claude Code in it.",
     body: `<div class="form">
       <label class="f">Name<input class="text" id="np-label" placeholder="e.g. Work"></label>
@@ -735,23 +770,58 @@ async function newProfile() {
       <div class="hint" id="np-cmd"></div>
       <div class="radio">${opts}<label><input type="radio" name="base" value=""> Empty</label></div>
       <label class="check" id="np-projwrap"><input type="checkbox" id="np-proj"> also copy project conversations, history and memories</label>
-      <div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
-      <div class="checks">${["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"].map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div>
+      <div id="np-share"><div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
+      <div class="checks">${["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"].map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
+      <div class="hint" id="np-tpl" hidden>The profile gets the template's own copies: settings, CLAUDE.md, permissions, skills, agents, commands, output styles and MCP servers. Nothing is shared; you can share items later.</div>
     </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
   const L = $("#np-label"), I = $("#np-id"); let touched = false;
   const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
   const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
   L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
   I.oninput = () => { touched = true; upd(); };
-  document.querySelectorAll('input[name="base"]').forEach(r => r.onchange = () => { $("#np-projwrap").style.display = r.value ? "" : "none"; });
+  document.querySelectorAll('input[name="base"]').forEach(r => r.onchange = () => {
+    const isTpl = r.value.startsWith("template:");
+    $("#np-projwrap").style.display = r.value && !isTpl ? "" : "none";
+    $("#np-share").hidden = isTpl; $("#np-tpl").hidden = !isTpl;
+  });
   const res = await resP;
   if (!res) return;
   const v = sel => $(sel, res.el);
+  const base = v('input[name="base"]:checked').value;
   const body = { label: v("#np-label").value, id: v("#np-id").value,
-    base: v('input[name="base"]:checked').value, include_projects: v("#np-proj").checked,
+    base, include_projects: v("#np-proj").checked,
     share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value) };
-  try { await run(() => api("/api/profiles/create", body)); } catch { return; }
+  const req = base.startsWith("template:")
+    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id })
+    : () => api("/api/profiles/create", body);
+  try { await run(req); } catch { return; }
   await refresh(); if (S.tab === "profiles") loadSharing();
+}
+async function manageTemplates() {
+  let data;
+  try { data = await api("/api/templates"); } catch (e) { toast(e.message, "", true); return; }
+  const list = () => data.templates.length ? `<div class="table">${data.templates.map(t => `<div class="prow"><div class="txt">
+      <div class="t">${esc(t.name)}</div>
+      <div class="m">from ${esc(t.from)} · ${esc(t.created.replace("T", " ").slice(0, 16))} · ${esc(t.items.join(", ") || "empty")} · ${plural(t.skills, "skill", "skills")} · ${plural(t.mcp, "MCP server", "MCP servers")} · ${size(t.size)}</div></div>
+      <div class="acts"><button class="btn small danger" data-tdel="${esc(t.name)}">Delete</button></div></div>`).join("")}</div>`
+    : `<div class="hint">No templates yet.</div>`;
+  const resP = modal({ title: "Profile templates",
+    sub: `A template holds settings, <code>CLAUDE.md</code>, permissions, skills, agents, commands, output styles and MCP servers: never conversations, memories or login credentials. Templates live in <code>${esc(data.dir)}</code>; pick one in New profile.`,
+    body: `<div id="tp-list">${list()}</div>
+      <div class="form" style="margin-top:12px">
+        <label class="f">Profile to save as a template<select id="tp-prof">${S.profiles.map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join("")}</select></label>
+        <label class="f">Template name<input class="text" id="tp-name" placeholder="e.g. Client base" autocomplete="off"></label></div>`,
+    actions: [{ label: "Save template", kind: "primary", value: "save" }] });
+  const box = $("#tp-list");
+  box.onclick = async e => {
+    const name = e.target.closest("[data-tdel]")?.dataset.tdel;
+    if (!name || !(await confirmBox(`Delete the template ${name}?`, "The file goes to the backup: Restore brings it back.", "Delete", "danger"))) return;
+    try { await run(() => api("/api/templates/delete", { name })); data = await api("/api/templates"); } catch { return; }
+    box.innerHTML = list();
+  };
+  const res = await resP;
+  if (!res) return;
+  try { await run(() => api("/api/templates/save", { profile: $("#tp-prof", res.el).value, name: $("#tp-name", res.el).value.trim() })); } catch {}
 }
 async function editProfile(id) {
   const p = S.profiles.find(x => x.id === id);
@@ -778,12 +848,28 @@ async function deleteProfile(id) {
         ${others.map(o => `<label><input type="radio" name="pd" value="${o.id}"> First move conversations, memories and history to ${esc(o.label)}</label>`).join("")}
       </div>
       <div class="hint">The profile is also removed from the configuration, together with its <code>${esc(p.command)}</code> command. Everything can be undone from the Backups tab.</div>
+      <div class="hint" id="pd-plan" aria-live="polite"></div>
       <label class="f">Type <b>${esc(p.label)}</b> to confirm<input class="text" id="pd-confirm" autocomplete="off"></label>
     </div>`,
     actions: [{ label: "Delete profile", kind: "primary", value: "ok" }] });
-  const btn = document.querySelector('.modal [data-i="0"]'), inp = $("#pd-confirm");
+  const btn = document.querySelector('.modal [data-i="0"]'), inp = $("#pd-confirm"), box = $("#pd-plan");
   btn.disabled = true;
   inp.oninput = () => { btn.disabled = inp.value.trim() !== p.label; };
+  let asked = 0;
+  const showPlan = async () => {
+    const into = document.querySelector('input[name="pd"]:checked')?.value || "", n = ++asked;
+    box.innerHTML = `<span class="spinner"></span>`;
+    let plan;
+    try { plan = await api(`/api/profiles/delete/preview?id=${encodeURIComponent(id)}${into ? "&merge_into=" + encodeURIComponent(into) : ""}`); }
+    catch (e) { if (n === asked) box.textContent = e.message; return; }
+    if (n !== asked) return;
+    const to = esc(plan.into || "");
+    box.innerHTML = (plan.into
+      ? `Moves to ${to}: ${plural(plan.projects, "project", "projects")}, ${plural(plan.conversations, "conversation", "conversations")}, ${plural(plan.memories, "memory", "memories")}, ${plural(plan.prompts, "prompt", "prompts")}${plan.settings ? `, the settings of ${plural(plan.settings, "project", "projects")}` : ""}. Then the folder goes to the backup.`
+      : `Nothing is moved: the whole folder <code>${esc(plan.folder)}</code> goes to the backup.`) + planDetails(plan.items, to);
+  };
+  document.querySelectorAll('input[name="pd"]').forEach(r => r.onchange = showPlan);
+  showPlan();
   const res = await resP;
   if (!res) return;
   const merge_into = res.el.querySelector('input[name="pd"]:checked').value;
@@ -848,7 +934,7 @@ function renderSkills(head) {
     ${cur ? `<div class="editor"><div class="hint" style="margin-bottom:6px"><code>${esc(x.skill)}/SKILL.md</code>${x.files.length ? ` · also in the folder: ${x.files.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(", ")}${x.files.length > 8 ? "…" : ""}` : ""}</div>
       <textarea id="sktext" spellcheck="false" aria-label="SKILL.md">${esc(x.content)}</textarea>
       <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
-        <button class="btn danger" id="skdel">Delete</button><button class="btn" id="skcopy">Copy to…</button>
+        <button class="btn danger" id="skdel">Delete</button><button class="btn" id="skcopy">Copy to…</button><button class="btn" id="skall">Copy to all…</button>
         <button class="btn primary" id="sksave">Save</button></div></div>` : ""}`;
 
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
@@ -865,6 +951,10 @@ function renderSkills(head) {
       const to = await pickProfile("Copy skill", `The folder <code>${esc(x.skill)}</code> is copied with all its files.`, x.profile, "Copy");
       if (to) { try { await run(() => api("/api/skills/copy", { profile: x.profile, name: x.skill, to })); } catch {} }
     };
+    $("#skall").onclick = () => applyAll(`Copy ${x.skill} to every profile?`,
+      `/api/skills/copy-all/preview?profile=${encodeURIComponent(x.profile)}&name=${encodeURIComponent(x.skill)}`,
+      `The folder <code>${esc(x.skill)}</code> is copied with all its files to every profile that does not have it. Profiles that share their skills with ${esc(label(x.profile))} already see it.`,
+      "Copy to all", () => api("/api/skills/copy-all", { profile: x.profile, name: x.skill }));
   }
 }
 function renderMcp(head) {
@@ -876,7 +966,7 @@ function renderMcp(head) {
         <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
         <div class="mcp-target">${esc(m.target)}</div>
         ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
-      <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button>
+      <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button><button class="btn small" data-mcpall="${i}">Copy to all…</button>
         <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>`;
 
   $("#mcpnew").onclick = () => editMcp(null);
@@ -885,6 +975,13 @@ function renderMcp(head) {
     const m = x.mcp.servers[b.dataset.mcpcopy];
     const to = await pickProfile("Copy MCP server", `<code>${esc(m.name)}</code> is added to the other profile for every project. Its sign-in, if any, is not copied.`, x.profile, "Copy");
     if (to) { try { await run(() => api("/api/mcp/copy", { profile: x.profile, scope: m.scope, name: m.name, to })); } catch {} }
+  });
+  document.querySelectorAll("[data-mcpall]").forEach(b => b.onclick = () => {
+    const m = x.mcp.servers[b.dataset.mcpall];
+    applyAll(`Copy ${m.name} to every profile?`,
+      `/api/mcp/copy-all/preview?profile=${encodeURIComponent(x.profile)}&scope=${encodeURIComponent(m.scope)}&name=${encodeURIComponent(m.name)}`,
+      `<code>${esc(m.name)}</code> is added for every project to each profile that does not have a server with this name. Its sign-in, if any, is not copied.`,
+      "Copy to all", () => api("/api/mcp/copy-all", { profile: x.profile, scope: m.scope, name: m.name }));
   });
   document.querySelectorAll("[data-mcpdel]").forEach(b => b.onclick = async () => {
     const m = x.mcp.servers[b.dataset.mcpdel];
@@ -987,7 +1084,8 @@ function renderSettings() {
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
           ${f.default_desc || f.options?.some(o => o.desc) ? `<div class="sdesc" data-sdesc="${f.key}">${esc(optionDesc(f, f.value))}</div>` : ""}</div>
         <div class="o">${f.others.map(o => `<div>${esc(o.label)}: <code>${esc(f.options?.find(x => x.value === o.value)?.label || fmt(o.value))}</code>
-          ${JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}</div>
+          ${JSON.stringify(o.value) !== JSON.stringify(f.value) ? `<button class="btn small" data-scopy="${f.key}" data-from="${o.id}">copy</button>` : `<span class="okmark">same</span>`}</div>`).join("") || "—"}
+          ${f.others.some(o => JSON.stringify(o.value) !== JSON.stringify(f.value)) ? `<div><button class="btn small" data-sall="${f.key}" title="Give every other profile the value of this one">Apply to all…</button></div>` : ""}</div>
       </div>`).join("")}
     </section>
 
@@ -1000,7 +1098,7 @@ function renderSettings() {
       <div class="b"><div class="perm">${[["allow", "Allow without asking"], ["ask", "Always ask"], ["deny", "Block"]].map(([k, l]) => `<label class="f">${l} <code>${k}</code>
           <textarea class="text" id="perm-${k}" spellcheck="false">${esc((d.permissions[k] || []).join("\n"))}</textarea>
           ${(d.permissions_local[k] || []).length ? `<span class="hint">+ ${d.permissions_local[k].length} in settings.local.json (edit them in the advanced editor)</span>` : ""}</label>`).join("")}</div>
-        <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn primary" id="perm-save">Save permissions</button></div></div>
+        <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn" id="perm-all">Add a rule to every profile…</button><button class="btn primary" id="perm-save">Save permissions</button></div></div>
     </section>
 
     <section class="sec"><div class="h"><h3>Advanced editor</h3><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
@@ -1045,6 +1143,27 @@ function bindSettings() {
     const f = d.fields.find(x => x.key === b.dataset.scopy), o = f.others.find(x => x.id === b.dataset.from);
     save(f.key, o.value);
   });
+  document.querySelectorAll("[data-sall]").forEach(b => b.onclick = async () => {
+    const f = d.fields.find(x => x.key === b.dataset.sall);
+    const shown = f.value === null || f.value === undefined ? "the default" : f.options?.find(o => o.value === f.value)?.label || fmt(f.value);
+    if (await applyAll(`Apply ${f.label.toLowerCase()} to every profile?`,
+        `/api/settings/field/all/preview?profile=${encodeURIComponent(pid)}&key=${encodeURIComponent(f.key)}`,
+        `<b>${esc(f.label)}</b>: <code>${esc(shown)}</code>, the value saved in ${esc(label(pid))}, goes to every other profile.`,
+        "Apply to all", () => api("/api/settings/field/all", { profile: pid, key: f.key }))) loadSettings(pid);
+  });
+  $("#perm-all").onclick = async () => {
+    const res = await modal({ title: "Add a rule to every profile", sub: "The rule is added to <code>settings.json</code> of each profile that does not have it yet. The next step shows which profiles change.",
+      body: `<div class="form"><label class="f">List<select id="pa-list">${[["allow", "Allow without asking"], ["ask", "Always ask"], ["deny", "Block"]].map(([k, l]) => `<option value="${k}" ${k === "deny" ? "selected" : ""}>${l} (${k})</option>`).join("")}</select></label>
+        <label class="f">Rule<input class="text" id="pa-rule" placeholder="e.g. Bash(rm -rf:*)" autocomplete="off"></label></div>`,
+      actions: [{ label: "Preview", kind: "primary", value: "ok" }] });
+    if (!res) return;
+    const list = $("#pa-list", res.el).value, rule = $("#pa-rule", res.el).value.trim();
+    if (!rule) { toast("Write a rule first, e.g. Bash(rm -rf:*)", "", true); return; }
+    if (await applyAll(`Add the rule to every profile?`,
+        `/api/settings/permissions/all/preview?list=${list}&rule=${encodeURIComponent(rule)}`,
+        `<code>${esc(rule)}</code> is added to <code>${list}</code>.`,
+        "Add to all", () => api("/api/settings/permissions/all", { list, rule }))) loadSettings(pid);
+  };
   document.querySelectorAll("[data-setprof]").forEach(b => b.onclick = () => loadSettings(b.dataset.setprof));
   document.querySelectorAll("[data-rawfile]").forEach(b => b.onclick = () => { st.rawFile = b.dataset.rawfile; renderSettings(); });
   $("#cmd-save").onclick = async () => { try { await run(() => api("/api/settings/claude-md", { profile: pid, content: $("#cmd-text").value })); } catch {} loadSettings(pid); };
@@ -1469,7 +1588,8 @@ function bindCompare() {
 // ---------- backups ----------
 async function loadBackups() {
   S.backups = null; renderBackups();
-  S.backups = await api("/api/backups"); renderBackups();
+  [S.backups, S.bkAuto] = await Promise.all([api("/api/backups"), api("/api/backups/auto").catch(() => null)]);
+  renderBackups();
 }
 const size = n => n > 1e9 ? (n / 1e9).toFixed(1) + " GB" : n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : n > 1e3 ? Math.round(n / 1e3) + " KB" : n + " B";
 const when = t => new Date(t * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -1479,13 +1599,29 @@ function renderBackups() {
   const tot = S.backups.reduce((a, b) => a + b.size, 0);
   const where = S.backups[0]?.path.replace(/\/[^/]+$/, "") || "~/.cc-profiles/backups";
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span>
-      ${S.backups.length ? `<button class="btn" id="bk-prune" style="margin-left:auto">Delete old backups…</button>` : ""}</div>
+      ${S.bkAuto ? `<label class="hint" style="margin-left:auto;display:flex;gap:6px;align-items:center">Delete backups older than
+        <select id="bk-auto" aria-label="Automatic cleanup">${[["", "never (off)"], ...S.bkAuto.choices.map(d => [d, d + " days"])].map(([v, l]) => `<option value="${v}" ${String(S.bkAuto.days ?? "") === String(v) ? "selected" : ""}>${l}</option>`).join("")}</select> automatically</label>` : ""}
+      ${S.backups.length ? `<button class="btn" id="bk-prune" ${S.bkAuto ? "" : `style="margin-left:auto"`}>Delete old backups…</button>` : ""}</div>
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
         <div class="t">${esc(b.title)} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
+  $("#bk-auto")?.addEventListener("change", autoCleanup);
+}
+async function autoCleanup(e) {
+  const days = e.target.value ? +e.target.value : null;
+  // what goes at once: the same rules as the server (never incomplete backups not restored yet)
+  const now = days ? S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400 && !(b.failed && !b.restored)) : [];
+  const sub = days
+    ? `When cc-profiles starts and once a day while it runs, the backups older than ${days} days are deleted permanently. Backups of the last 24 hours and incomplete ones not restored yet are always kept. `
+      + (now.length ? `<b>Deleted now: ${plural(now.length, "backup", "backups")}, ${size(now.reduce((a, b) => a + b.size, 0))}.</b>` : "Nothing to delete now.")
+    : "Backups are kept until you delete them.";
+  if (!(await confirmBox(days ? `Delete backups older than ${days} days automatically?` : "Turn off the automatic cleanup?", sub,
+      days ? (S.bkAuto.days ? "Save" : "Turn on") : "Turn off", days && now.length ? "danger" : "primary"))) { e.target.value = S.bkAuto.days ?? ""; return; }
+  await run(() => api("/api/backups/auto", { days })).catch(() => {});
+  loadBackups();
 }
 async function pruneBackups() {
   const old = days => S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400);

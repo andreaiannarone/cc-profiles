@@ -162,23 +162,35 @@ def shared_note(path):
     return " (shared file: applies to the other profiles too)" if os.path.islink(path) else ""
 
 
-def op_setting(pid, key, value):
-    prof = profile(pid)
+def setting_field(key):
     fd = next((x for x in SETTING_FIELDS if x["key"] == key), None)
     if not fd:
         raise ApiError("This setting is not managed here: use the advanced editor")
-    if value is not None:
-        if fd["type"] == "bool" and not isinstance(value, bool):
-            raise ApiError("Invalid value: expected true or false")
-        if fd["type"] == "number":
-            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-                raise ApiError("Invalid value: expected a whole number greater than zero")
-        if fd["type"] == "text":
-            value = str(value).strip() or None
-        if fd["type"] == "select":
-            allowed = [o["value"] for o in field_options(fd, prof, effective(prof, key)[0])]
-            if value not in allowed:
-                raise ApiError(f"Invalid value for {fd['label'].lower()}: pick one of the options")
+    return fd
+
+
+def check_setting_value(fd, prof, value):
+    """The value to write (None removes the setting), checked against the field's type."""
+    if value is None:
+        return None
+    if fd["type"] == "bool" and not isinstance(value, bool):
+        raise ApiError("Invalid value: expected true or false")
+    if fd["type"] == "number":
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ApiError("Invalid value: expected a whole number greater than zero")
+    if fd["type"] == "text":
+        value = str(value).strip() or None
+    if fd["type"] == "select":
+        allowed = [o["value"] for o in field_options(fd, prof, effective(prof, fd["key"])[0])]
+        if value not in allowed:
+            raise ApiError(f"Invalid value for {fd['label'].lower()}: pick one of the options")
+    return value
+
+
+def op_setting(pid, key, value):
+    prof = profile(pid)
+    fd = setting_field(key)
+    value = check_setting_value(fd, prof, value)
     _, src = effective(prof, key)
     which = src or "settings"
     f = settings_files(prof)
@@ -193,6 +205,149 @@ def op_setting(pid, key, value):
     save_settings_file(prof, which, data, bk)
     bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(f[which])}")
     return {"message": msg, "backup": bk.close()}
+
+
+# Apply to all profiles: one operation, one backup for every profile it changes. The plan
+# says which profiles change and which are skipped, with the reason; the UI shows it first.
+def show_value(fd, prof, value):
+    if value is None:
+        return "the default"
+    opt = next((o for o in field_options(fd, prof, value) or [] if o["value"] == value), None)
+    return opt["label"] if opt else json.dumps(value, ensure_ascii=False)
+
+
+def setting_targets(prof, key, value):
+    """The files of a profile to write so that its value of key becomes value: where the
+    value lives, or every file that has it when the value goes back to the default."""
+    f = settings_files(prof)
+    if value is None:
+        return [w for w in ("local", "settings") if key in load_settings(f[w])[0]]
+    return [effective(prof, key)[1] or "settings"]
+
+
+def no_targets(plan):
+    return ApiError("No profile to change: " + "; ".join(f"{s['label']}: {s['reason']}" for s in plan["skip"]))
+
+
+def plan_message(what, plan):
+    n = len(plan["apply"])
+    msg = f"{what} in {n} profile{'s' if n != 1 else ''}"
+    return msg + (f", {len(plan['skip'])} skipped." if plan["skip"] else ".")
+
+
+def setting_all_plan(pid, key):
+    """Which profiles applying a profile's value of a setting to every other profile
+    changes, and which it skips, with the reason. Changes nothing."""
+    prof = profile(pid)
+    fd = setting_field(key)
+    value, _ = effective(prof, key)
+    try:  # the type only: whether an option exists is checked in each profile
+        value = check_setting_value(dict(fd, type="text" if fd["type"] == "select" else fd["type"]), prof, value)
+    except ApiError:
+        raise ApiError(f"The value in {prof['label']} is not valid: fix it there first")
+    apply, skip = [], []
+    written = {}  # real file → the profile it is written for: a shared file is written once
+    for o in profiles():
+        if o["id"] == pid:
+            continue
+        cur, _ = effective(o, key)
+        f = settings_files(o)
+        paths = [f[w] for w in setting_targets(o, key, value)]
+        errs = [os.path.basename(p) for p in paths if load_settings(p)[1]]
+        shared = next((written[os.path.realpath(p)] for p in paths if os.path.realpath(p) in written), None)
+        if json.dumps(cur) == json.dumps(value):
+            reason = f"already {show_value(fd, o, value)}"
+        elif errs:
+            reason = f"{errs[0]} has an error: fix it in the advanced editor"
+        elif fd["type"] == "select" and value is not None and \
+                value not in [x["value"] for x in field_options(fd, o, cur)]:
+            reason = f"{value} is not available in this profile"
+        elif shared:
+            reason = f"shares {os.path.basename(paths[0])} with {shared}"
+        else:
+            for p in paths:
+                written[os.path.realpath(p)] = o["label"]
+            apply.append({"id": o["id"], "label": o["label"],
+                          "detail": f"{show_value(fd, o, cur)} → {show_value(fd, o, value)} in "
+                                    + ", ".join(os.path.basename(p) for p in paths)})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"key": key, "label": fd["label"], "value": value, "shown": show_value(fd, prof, value),
+            "from": prof["label"], "apply": apply, "skip": skip}
+
+
+def op_setting_all(pid, key):
+    plan = setting_all_plan(pid, key)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    value = plan["value"]
+    bk = Backup("setting-all", f"{plan['label']} = {plan['shown']} in every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        f = settings_files(o)
+        for which in setting_targets(o, key, value):
+            data, _ = load_settings(f[which])
+            if value is None:
+                data.pop(key, None)
+            else:
+                data[key] = value
+            save_settings_file(o, which, data, bk)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for s in plan["skip"]:
+        bk.note(f"skipped {s['label']}: {s['reason']}")
+    return {"message": plan_message(f"{plan['label']} set to {plan['shown']}", plan), "backup": bk.close()}
+
+
+PERMISSION_LISTS = ("allow", "ask", "deny")
+
+
+def permission_all_plan(kind, rule):
+    """Which profiles adding a permission rule to every profile changes, and which it skips."""
+    if kind not in PERMISSION_LISTS:
+        raise ApiError("Pick allow, ask or deny")
+    rule = rule.strip() if isinstance(rule, str) else ""
+    if not rule or "\n" in rule:
+        raise ApiError("Write one rule, e.g. Bash(npm run test:*)")
+    apply, skip = [], []
+    written = {}
+    for o in profiles():
+        path = settings_files(o)["settings"]
+        data, err = load_settings(path)
+        perms = data.get("permissions") if isinstance(data.get("permissions"), dict) else {}
+        real = os.path.realpath(path)
+        if rule in (perms.get(kind) or []):
+            reason = f"already in {kind}"
+        elif err:
+            reason = "settings.json has an error: fix it in the advanced editor"
+        elif real in written:
+            reason = f"shares settings.json with {written[real]}"
+        else:
+            written[real] = o["label"]
+            also = [k for k in PERMISSION_LISTS if k != kind and rule in (perms.get(k) or [])]
+            apply.append({"id": o["id"], "label": o["label"],
+                          "detail": f"added to {kind} in settings.json"
+                                    + (f" (also in {', '.join(also)}: deny wins over ask, ask over allow)" if also else "")})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"list": kind, "rule": rule, "apply": apply, "skip": skip}
+
+
+def op_permission_all(kind, rule):
+    plan = permission_all_plan(kind, rule)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    bk = Backup("permission-all", f"Permission {kind} {plan['rule']} in every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        data, _ = load_settings(settings_files(o)["settings"])
+        perms = dict(data.get("permissions") if isinstance(data.get("permissions"), dict) else {})
+        perms[kind] = list(perms.get(kind) or []) + [plan["rule"]]
+        data["permissions"] = perms
+        save_settings_file(o, "settings", data, bk)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for s in plan["skip"]:
+        bk.note(f"skipped {s['label']}: {s['reason']}")
+    return {"message": plan_message(f"{plan['rule']} added to {kind}", plan), "backup": bk.close()}
 
 
 def op_permissions(pid, rules):

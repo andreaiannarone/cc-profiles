@@ -218,14 +218,15 @@ def op_move(name, src_id, dst_id):
     return {"message": msg, "backup": bk.close()}
 
 
-def move_plan(name, src_id, dst_id):
-    """What moving a project would do, without doing it: the same rules as move_project_into."""
+def move_plan(name, src_id, dst_id, idx=None):
+    """What moving a project would do, without doing it: the same rules as move_project_into.
+    idx: a path_index() already computed (planning many projects at once)."""
     src, dst = profile(src_id), profile(dst_id)
     if src_id == dst_id:
         raise ApiError("Source and target are the same profile")
     S = project_dir(src, name)
     D = project_dir(dst, name, must_exist=False)
-    path = path_index().get(name)
+    path = (path_index() if idx is None else idx).get(name)
     items = []
 
     def add(action, a, b):

@@ -20,6 +20,7 @@ from .core import (
     write_text,
 )
 from .sharing import primary, share_state
+from .settings import no_targets, plan_message
 from .info import names_in
 
 # ---------------------------------------------------------------------------
@@ -129,6 +130,49 @@ def op_skill_copy(pid, name, to_pid):
     shutil.copytree(os.path.realpath(d), t, symlinks=True)
     bk.created(t)
     return {"message": f"Skill {name} copied to {dst['label']}.", "backup": bk.close()}
+
+
+def skill_all_plan(pid, name):
+    """Which profiles copying a skill to every profile that lacks it changes, and which it
+    skips: those sharing their skills folder with the source (or with a profile that gets it)."""
+    src = profile(pid)
+    d = skill_dir(src, name)
+    written = {os.path.realpath(os.path.dirname(d)): src["label"]}
+    apply, skip = [], []
+    for o in profiles():
+        if o["id"] == pid:
+            continue
+        t = skill_dir(o, name, must_exist=False)
+        root = os.path.realpath(os.path.dirname(t))
+        if root in written:
+            reason = f"shares its skills with {written[root]}"
+        elif os.path.lexists(t):
+            reason = f"already has a skill called {name}"
+        else:
+            written[root] = o["label"]
+            apply.append({"id": o["id"], "label": o["label"], "detail": f"copied to {pretty(t)}"})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"name": name, "from": src["label"], "apply": apply, "skip": skip}
+
+
+def op_skill_copy_all(pid, name):
+    plan = skill_all_plan(pid, name)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    src = profile(pid)
+    d = os.path.realpath(skill_dir(src, name))
+    bk = Backup("skill-copy-all", f"Copy skill {name} from {src['label']} to every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        dst = skill_dir(o, name, must_exist=False)
+        bk.mkdir(os.path.dirname(dst))
+        shutil.copytree(d, dst, symlinks=True)
+        bk.created(dst)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for s in plan["skip"]:
+        bk.note(f"skipped {s['label']}: {s['reason']}")
+    return {"message": plan_message(f"Skill {name} copied", plan), "backup": bk.close()}
 
 
 def mcp_summary(name, conf, scope):
@@ -255,4 +299,51 @@ def op_mcp_copy(pid, scope, name, to_pid):
     msg = f"MCP server {name} copied to {dst['label']} for every project."
     if conf.get("type") in ("http", "sse"):
         msg += f" If it needs a sign-in, run /mcp in {dst['label']} to authenticate."
+    return {"message": msg, "backup": bk.close()}
+
+
+def mcp_all_plan(pid, scope, name):
+    """Which profiles copying an MCP server to every profile that lacks it changes, and which it skips."""
+    src = profile(pid)
+    mcp_server(pid, scope, name)  # it exists
+    written = {os.path.realpath(src["config_abs"]): src["label"]}
+    apply, skip = [], []
+    for o in profiles():
+        if o["id"] == pid:
+            continue
+        real = os.path.realpath(o["config_abs"])
+        cfg = read_json(o["config_abs"])
+        if real in written:
+            reason = f"uses the same .claude.json as {written[real]}"
+        elif not isinstance(cfg, dict):
+            reason = f"{pretty(o['config_abs'])} cannot be read: start Claude Code in it once"
+        elif name in (cfg.get("mcpServers") or {}):
+            reason = f"already has a server called {name}"
+        else:
+            written[real] = o["label"]
+            apply.append({"id": o["id"], "label": o["label"], "detail": f"added to {pretty(o['config_abs'])} for every project"})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"name": name, "from": src["label"], "apply": apply, "skip": skip}
+
+
+def op_mcp_copy_all(pid, scope, name):
+    plan = mcp_all_plan(pid, scope, name)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    src = profile(pid)
+    conf = mcp_server(pid, scope, name)["config"]
+    bk = Backup("mcp-copy-all", f"Copy MCP server {name} from {src['label']} to every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        cfg = load_claude_json(o)
+        bk.copy(o["config_abs"], f"claude-{o['id']}.json")
+        mcp_table(cfg, "user", create=True)[name] = json.loads(json.dumps(conf))
+        write_json(o["config_abs"], cfg)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for s in plan["skip"]:
+        bk.note(f"skipped {s['label']}: {s['reason']}")
+    msg = plan_message(f"MCP server {name} copied", plan)
+    if conf.get("type") in ("http", "sse"):
+        msg += " If it needs a sign-in, run /mcp in each profile to authenticate."
     return {"message": msg, "backup": bk.close()}
