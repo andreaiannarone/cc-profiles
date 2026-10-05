@@ -35,40 +35,102 @@ BUILTIN_STYLES = [
     ("Explanatory", "Explanatory", "Explains its implementation choices and codebase patterns"),
     ("Learning", "Learning", "Pauses and asks you to write small pieces of code for hands-on practice"),
 ]
+# The fields of Claude Code's /config panel, in groups, plus the attribution texts.
+# "file": "global" marks the keys /config keeps in .claude.json (the profile's global
+# config) instead of settings.json; "also_settings" ones are edited where a settings
+# file already has them. "default" is Claude Code's value when the key is missing;
+# "drop_default" fields are removed rather than set to it, as /config does.
+_ON = {"type": "bool", "default": True}
+_OFF = {"type": "bool", "default": False}
+_GLOBAL = {"file": "global"}
 SETTING_FIELDS = [
-    {"key": "model", "type": "text", "label": "Model",
+    # model and replies
+    {"group": "Model and replies", "key": "model", "type": "text", "label": "Model",
      "help": "An alias (opus, sonnet, haiku) or a full model name", "suggest": ["opus", "sonnet", "haiku"]},
-    {"key": "effortLevel", "type": "select", "label": "Effort level",
-     "help": "How much the model reasons before answering",
-     "options": [("low", "Low"), ("medium", "Medium"), ("high", "High"), ("xhigh", "Extra high")]},
-    {"key": "outputStyle", "type": "select", "label": "Output style",
+    dict(_ON, group="Model and replies", key="alwaysThinkingEnabled", label="Thinking mode", drop_default=True,
+         help="Claude reasons before answering"),
+    {"group": "Model and replies", "key": "outputStyle", "type": "select", "label": "Output style",
      "default_desc": "Claude Code's standard behavior",
      "help": "Built-in styles plus the profile's custom ones (output-styles/)", "options": "styles"},
-    {"key": "language", "type": "text", "label": "Response language", "help": "Free text, e.g. English, Italiano",
-     "suggest": []},
-    {"key": "theme", "type": "select", "label": "Theme", "help": "Colors of the terminal UI; custom themes (custom:…) are kept",
+    {"group": "Model and replies", "key": "language", "type": "text", "label": "Language",
+     "help": "Language of the replies, e.g. English, Italiano", "suggest": []},
+    dict(_ON, group="Model and replies", key="promptSuggestionEnabled", label="Prompt suggestions", drop_default=True,
+         help="Suggest what to ask next"),
+    dict(_ON, group="Model and replies", key="awaySummaryEnabled", label="Session recap", drop_default=True,
+         help="A summary of what happened while you were away"),
+    dict(_ON, **_GLOBAL, group="Model and replies", key="autoCompactEnabled", label="Auto-compact",
+         help="Compact the conversation when the context fills up"),
+    dict(_ON, group="Model and replies", key="precomputeCompactionEnabled", label="Precompute compaction",
+         help="Prepare the compaction in advance, so it takes less time"),
+    dict(_ON, **_GLOBAL, group="Model and replies", key="fileCheckpointingEnabled", label="Rewind code (checkpoints)",
+         help="Keep snapshots of the files Claude edits, to undo them with /rewind"),
+    {"group": "Model and replies", "key": "permissions.defaultMode", "type": "select", "default": "default", "label": "Default permission mode",
+     "help": "How a session starts: asking first, planning, or editing on its own",
+     "options": [("default", "Ask before acting"), ("plan", "Plan mode"), ("acceptEdits", "Accept edits"),
+                 ("auto", "Auto"), ("dontAsk", "Don't ask")]},
+    dict(_ON, group="Model and replies", key="useAutoModeDuringPlan", label="Use auto mode during plan",
+         help="Plan mode runs with auto mode's permissions"),
+    # interface
+    {"group": "Interface", "key": "theme", "type": "select", "default": "dark", "label": "Theme", "file": "global", "also_settings": True,
+     "help": "Colors of the terminal UI; custom themes (custom:…) are kept",
      "options": [("auto", "Auto"), ("dark", "Dark"), ("light", "Light"), ("dark-daltonized", "Dark, colorblind-friendly"),
                  ("light-daltonized", "Light, colorblind-friendly"), ("dark-ansi", "Dark, ANSI colors only"),
                  ("light-ansi", "Light, ANSI colors only")]},
-    {"key": "editorMode", "type": "select", "label": "Editor mode", "help": "Key bindings for the prompt input",
-     "options": [("normal", "Normal"), ("vim", "Vim")]},
-    {"key": "tui", "type": "select", "label": "Renderer", "help": "How the UI is drawn in the terminal",
-     "options": [("default", "Classic"), ("fullscreen", "Fullscreen, flicker-free")]},
-    # attribution is an object; its three keys are edited one by one. An empty text is a
-    # value of its own: Claude Code then adds no attribution at all.
-    {"key": "attribution.commit", "type": "text", "blank": True, "label": "Commit attribution",
+    dict(_ON, group="Interface", key="spinnerTipsEnabled", label="Show tips", help="Tips while Claude works"),
+    dict(_OFF, group="Interface", key="prefersReducedMotion", label="Reduce motion", help="Fewer animations"),
+    dict(_OFF, **_GLOBAL, group="Interface", key="verbose", label="Verbose output", help="Show tool calls and results in full"),
+    dict(_ON, **_GLOBAL, group="Interface", key="terminalProgressBarEnabled", label="Terminal progress bar",
+         help="Progress in the terminal's tab or title bar, where the terminal supports it"),
+    dict(_ON, **_GLOBAL, group="Interface", key="showTurnDuration", label="Show turn duration",
+         help="How long each reply took"),
+    {"group": "Interface", "key": "timeFormat", "type": "select", "default": "auto", "label": "Time format", "help": "How times are shown",
+     "options": [("auto", "Auto"), ("12-hour", "12-hour"), ("24-hour", "24-hour"), ("24-hour-utc", "24-hour, UTC")]},
+    {"group": "Interface", "key": "defaultView", "type": "select", "label": "Default view",
+     "help": "Show the whole transcript, or only the conversation",
+     "options": [("transcript", "Transcript"), ("chat", "Chat")]},
+    dict(_ON, **_GLOBAL, group="Interface", key="autoScrollEnabled", label="Auto-scroll", help="Follow the output as it arrives"),
+    dict(_ON, **_GLOBAL, group="Interface", key="prStatusFooterEnabled", label="Show PR status footer",
+         help="The status of the branch's pull request under the prompt"),
+    # editor and files
+    {"group": "Editor and files", "key": "editorMode", "type": "select", "default": "normal", "label": "Editor mode", "file": "global",
+     "also_settings": True, "help": "Key bindings for the prompt input", "options": [("normal", "Normal"), ("vim", "Vim")]},
+    dict(_ON, **_GLOBAL, group="Editor and files", key="respectGitignore", label="Respect .gitignore in file picker",
+         help="Files ignored by git are left out of @ mentions"),
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="copyFullResponse", label="Skip the /copy picker",
+         help="/copy copies the whole last reply at once"),
+    dict(_ON, **_GLOBAL, group="Editor and files", key="copyOnSelect", label="Copy on select",
+         help="Selecting text with the mouse copies it"),
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="externalEditorContext", label="Show last response in external editor",
+         help="Ctrl+G opens the prompt with Claude's last reply above it"),
+    {"group": "Editor and files", "key": "diffTool", "type": "select", "default": "auto", "label": "Diff tool", "file": "global",
+     "help": "Where proposed edits are shown", "options": [("auto", "Auto (the IDE when connected)"), ("terminal", "Terminal")]},
+    dict(_OFF, **_GLOBAL, group="Editor and files", key="autoConnectIde", label="Auto-connect to IDE (external terminal)",
+         help="Connect to a running IDE when Claude Code starts in another terminal"),
+    dict(_ON, **_GLOBAL, group="Editor and files", key="autoInstallIdeExtension", label="Auto-install IDE extension",
+         help="Install the Claude Code extension in VS Code and JetBrains IDEs"),
+    {"group": "Editor and files", "key": "worktree.baseRef", "type": "select", "default": "fresh", "label": "Worktree base ref",
+     "help": "Where new worktrees start: the default branch fetched fresh, or the current commit",
+     "options": [("fresh", "Fresh default branch"), ("head", "Current commit (HEAD)")]},
+    # notifications and updates
+    {"group": "Notifications and updates", "key": "preferredNotifChannel", "type": "select", "default": "auto", "label": "Notifications",
+     "file": "global", "help": "How Claude Code tells you it needs you",
+     "options": [("auto", "Auto"), ("iterm2", "iTerm2"), ("terminal_bell", "Terminal bell"),
+                 ("iterm2_with_bell", "iTerm2 with bell"), ("kitty", "Kitty"), ("ghostty", "Ghostty"),
+                 ("notifications_disabled", "Off")]},
+    {"group": "Notifications and updates", "key": "autoUpdatesChannel", "type": "select", "default": "latest", "label": "Auto-update channel",
+     "help": "Latest releases, or the stable ones that have been out for a while",
+     "options": [("latest", "Latest"), ("stable", "Stable")]},
+    # commits and pull requests: an empty text is a value of its own, Claude Code then adds nothing
+    {"group": "Commits and pull requests", "key": "attribution.commit", "type": "text", "blank": True,
+     "label": "Commit attribution",
      "help": "Text Claude adds to its commits, trailers included (e.g. Co-Authored-By: …). Empty: none"},
-    {"key": "attribution.pr", "type": "text", "blank": True, "label": "Pull request attribution",
-     "help": "Text Claude adds to the pull requests it opens. Empty: none"},
-    {"key": "attribution.sessionUrl", "type": "bool", "default": True, "label": "Session link in commits",
-     "help": "From web and Remote Control sessions, link the claude.ai session in commits and pull requests"},
-    {"key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits", "deprecated": True,
-     "only_if_set": True,
+    {"group": "Commits and pull requests", "key": "attribution.pr", "type": "text", "blank": True,
+     "label": "Pull request attribution", "help": "Text Claude adds to the pull requests it opens. Empty: none"},
+    {"group": "Commits and pull requests", "key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits",
+     "deprecated": True, "only_if_set": True,
      "help": "Replaced by Commit attribution and Pull request attribution: remove it with ×"},
-    {"key": "cleanupPeriodDays", "type": "number", "label": "Days to keep conversations",
-     "help": "Older conversations are deleted (default 30, minimum 1)"},
-    {"key": "prefersReducedMotion", "type": "bool", "label": "Reduce motion", "help": "Fewer animations in the UI"},
 ]
+FIELD_BY_KEY = {fd["key"]: fd for fd in SETTING_FIELDS}
 GLOBAL_FIELDS = {"autoUpdates": "bool"}  # the only .claude.json keys the app edits
 
 
@@ -144,14 +206,59 @@ def settings_files(prof):
             "claude_md": os.path.join(d, "CLAUDE.md")}
 
 
+def global_config(prof):
+    """The profile's .claude.json, or {} when it is missing or unreadable."""
+    data = read_json(prof["config_abs"], {})
+    return data if isinstance(data, dict) else {}
+
+
+def home_file(fd):
+    """Where a field is written when no file has it yet."""
+    return "global" if fd and fd.get("file") == "global" else "settings"
+
+
 def effective(prof, key):
-    """Value in use and the file it comes from: settings.local.json wins over settings.json."""
-    f = settings_files(prof)
-    for which in ("local", "settings"):
-        found, value = get_key(load_settings(f[which])[0], key)
+    """Value in use and the file it comes from: settings.local.json wins over settings.json;
+    the keys /config keeps in .claude.json are read there ("global")."""
+    fd = FIELD_BY_KEY.get(key)
+    if home_file(fd) == "settings" or fd.get("also_settings"):
+        f = settings_files(prof)
+        for which in ("local", "settings"):
+            found, value = get_key(load_settings(f[which])[0], key)
+            if found:
+                return value, which
+    if home_file(fd) == "global":
+        found, value = get_key(global_config(prof), key)
         if found:
-            return value, which
+            return value, "global"
     return None, None
+
+
+def field_path(prof, which):
+    return prof["config_abs"] if which == "global" else settings_files(prof)[which]
+
+
+def file_error(prof, which):
+    """Why a file cannot be edited, or None."""
+    path = field_path(prof, which)
+    if which == "global":
+        return None if not os.path.exists(path) or isinstance(read_json(path), dict) else "invalid JSON"
+    return load_settings(path)[1]
+
+
+def write_field(prof, which, key, value, bk):
+    """Set (or, with None, remove) a key in one of the profile's files, inside an open backup."""
+    if which != "global":
+        data, _ = load_settings(settings_files(prof)[which])
+        pop_key(data, key) if value is None else set_key(data, key, value)
+        return save_settings_file(prof, which, data, bk)
+    path = prof["config_abs"]
+    if file_error(prof, "global"):
+        raise ApiError(f"{pretty(path)} cannot be read: it is not valid JSON")
+    data = read_json(path, {})
+    pop_key(data, key) if value is None else set_key(data, key, value)
+    bk.copy(path, "claude.json")
+    write_json(path, data)
 
 
 def get_settings(pid):
@@ -224,6 +331,8 @@ def check_setting_value(fd, prof, value):
             raise ApiError("Invalid value: expected a whole number greater than zero")
     if fd["type"] == "text":
         value = str(value).strip() or ("" if fd.get("blank") else None)
+    if fd.get("drop_default") and value == fd.get("default"):
+        return None  # as /config does: the default is the key's absence
     if fd["type"] == "select":
         allowed = [o["value"] for o in field_options(fd, prof, effective(prof, fd["key"])[0])]
         if value not in allowed:
@@ -236,18 +345,15 @@ def op_setting(pid, key, value):
     fd = setting_field(key)
     value = check_setting_value(fd, prof, value)
     _, src = effective(prof, key)
-    which = src or "settings"
-    f = settings_files(prof)
-    data, _ = load_settings(f[which])
+    which = src or home_file(fd)
+    path = field_path(prof, which)
     bk = Backup("setting", f"{fd['label']} of {prof['label']}")
+    write_field(prof, which, key, value, bk)
     if value is None:
-        pop_key(data, key)
         msg = f"{fd['label']}: back to the default."
     else:
-        set_key(data, key, value)
-        msg = f"Saved in {os.path.basename(f[which])}: {fd['label'].lower()} = {value}{shared_note(f[which])}."
-    save_settings_file(prof, which, data, bk)
-    bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(f[which])}")
+        msg = f"Saved in {os.path.basename(path)}: {fd['label'].lower()} = {show_value(fd, prof, value)}{shared_note(path)}."
+    bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(path)}")
     return {"message": msg, "backup": bk.close()}
 
 
@@ -258,6 +364,8 @@ def show_value(fd, prof, value):
         return "the default"
     if value == "":
         return "none"
+    if isinstance(value, bool):
+        return "on" if value else "off"
     opt = next((o for o in field_options(fd, prof, value) or [] if o["value"] == value), None)
     return opt["label"] if opt else json.dumps(value, ensure_ascii=False)
 
@@ -265,10 +373,13 @@ def show_value(fd, prof, value):
 def setting_targets(prof, key, value):
     """The files of a profile to write so that its value of key becomes value: where the
     value lives, or every file that has it when the value goes back to the default."""
-    f = settings_files(prof)
+    f, fd = settings_files(prof), FIELD_BY_KEY.get(key)
     if value is None:
-        return [w for w in ("local", "settings") if get_key(load_settings(f[w])[0], key)[0]]
-    return [effective(prof, key)[1] or "settings"]
+        found = [w for w in ("local", "settings") if get_key(load_settings(f[w])[0], key)[0]]
+        if home_file(fd) == "global" and get_key(global_config(prof), key)[0]:
+            found.append("global")
+        return found
+    return [effective(prof, key)[1] or home_file(fd)]
 
 
 def no_targets(plan):
@@ -297,9 +408,9 @@ def setting_all_plan(pid, key):
         if o["id"] == pid:
             continue
         cur, _ = effective(o, key)
-        f = settings_files(o)
-        paths = [f[w] for w in setting_targets(o, key, value)]
-        errs = [os.path.basename(p) for p in paths if load_settings(p)[1]]
+        targets = setting_targets(o, key, value)
+        paths = [field_path(o, w) for w in targets]
+        errs = [os.path.basename(field_path(o, w)) for w in targets if file_error(o, w)]
         shared = next((written[os.path.realpath(p)] for p in paths if os.path.realpath(p) in written), None)
         if json.dumps(cur) == json.dumps(value):
             reason = f"already {show_value(fd, o, value)}"
@@ -330,14 +441,8 @@ def op_setting_all(pid, key):
     bk = Backup("setting-all", f"{plan['label']} = {plan['shown']} in every profile")
     for t in plan["apply"]:
         o = profile(t["id"])
-        f = settings_files(o)
         for which in setting_targets(o, key, value):
-            data, _ = load_settings(f[which])
-            if value is None:
-                pop_key(data, key)
-            else:
-                set_key(data, key, value)
-            save_settings_file(o, which, data, bk)
+            write_field(o, which, key, value, bk)
         bk.note(f"{o['label']}: {t['detail']}")
     for s in plan["skip"]:
         bk.note(f"skipped {s['label']}: {s['reason']}")

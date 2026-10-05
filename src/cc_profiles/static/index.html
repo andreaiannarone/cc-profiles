@@ -242,6 +242,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .sec > .b { padding: 12px 16px; }
 .srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
 .srow:last-child { border-bottom: 0; }
+.sgroup { margin: 0; padding: 14px 16px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--panel-2); }
 .srow .l b { display: block; font-weight: 600; }
 .srow .l span { color: var(--muted); font-size: 12.5px; }
 .srow .v { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -1078,7 +1079,8 @@ async function loadSettings(pid) {
 }
 const fmt = v => v === null || v === undefined ? "default" : v === "" ? "none" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
 const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
-  : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-default src">default</span>`;
+  : src === "settings" ? `<span class="badge b-none src">settings.json</span>`
+  : src === "global" ? `<span class="badge b-none src" title="Where /config keeps this setting: the profile's global config">.claude.json</span>` : `<span class="badge b-default src">default</span>`;
 function selectOptions(f) {
   const opt = o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`;
   const groups = [...new Set(f.options.map(o => o.group))];
@@ -1089,7 +1091,7 @@ function selectOptions(f) {
 const optionDesc = (f, v) => v == null || v === "" ? f.default_desc || "" : f.options?.find(o => o.value === v)?.desc || "";
 function fieldInput(f) {
   if (f.type === "select") return `<select data-sfield="${f.key}" style="flex:1;min-width:0" aria-label="${esc(f.label)}">
-      <option value="" ${f.value == null ? "selected" : ""}>— default —</option>
+      <option value="" ${f.value == null ? "selected" : ""}>— default${f.default != null && f.options?.find(o => o.value === f.default) ? ": " + esc(f.options.find(o => o.value === f.default).label) : ""} —</option>
       ${selectOptions(f)}</select>`;
   if (f.type === "bool" && f.value != null && typeof f.value !== "boolean") return `<span class="hint">custom value: edit it in the advanced editor</span>`;
   if (f.type === "bool") return `<label class="switch"><input type="checkbox" data-sfield="${f.key}" ${f.value === true || (f.value == null && f.default === true) ? "checked" : ""} aria-label="${esc(f.label)}"><span></span></label>`;
@@ -1107,8 +1109,8 @@ function renderSettings() {
   const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
   <div class="setgrid">${errs}
-    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
-      ${d.fields.map(f => `<div class="srow">
+    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
+      ${d.fields.map((f, i) => `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
         <div class="v">${fieldInput(f)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}

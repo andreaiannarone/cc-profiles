@@ -18,6 +18,8 @@ If the version equals `SCHEMA_VERSION`, say so and stop, unless the user asked f
 
 ## 2. Look up every field
 
+Fields with `"file": "global"` live in `.claude.json`, not in the settings schema: check them against the `/config` panel instead (search the binary for `{id:"<id>",label:` and read its `options` and the `W(`/`B(` call that writes it). To see whether `/config` gained or lost items, list every `{id:"…",label:` after `Pe=[{id:"autoCompact"`.
+
 For each entry in `SETTING_FIELDS`, find its schema with:
 
 ```sh

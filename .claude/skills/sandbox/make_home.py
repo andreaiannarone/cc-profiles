@@ -33,7 +33,7 @@ home.json(".claude.json", {
                                     "headers": {"Authorization": "Bearer not-a-real-token"}}}}}})
 home.json(".claude-work/.claude.json", {"projects": {}})
 home.json(".claude-client/.claude.json", {"projects": {}})
-home.json(".claude/settings.json", {"model": "sonnet", "effortLevel": "high", "theme": "dark",
+home.json(".claude/settings.json", {"model": "sonnet", "timeFormat": "24-hour", "theme": "dark",
                                     "outputStyle": "Explanatory"})
 home.write(".claude/CLAUDE.md", "# Global instructions\n\nAnswer briefly.\n")
 SKILLS = {

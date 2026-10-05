@@ -255,6 +255,7 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     basic_home(home)
     home.json(".claude/settings.json", {"model": "opus", "permissions": {"defaultMode": "default"}})
     home.json(".claude/settings.local.json", {"outputStyle": "Explanatory"})
+    home.json(".claude-work/settings.local.json", {"theme": "light"})
     home.write(".claude/output-styles/terse.md", "---\nname: Terse\n---\nBe brief.\n")
     before = home.snapshot()
     app = app_factory()
@@ -263,10 +264,25 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     app.post(P, {"profile": "default", "key": "outputStyle", "value": "Terse"})
     assert json.loads(home.path(".claude/settings.local.json").read_text()) == {"outputStyle": "Terse"}
     assert "pick one of the options" in app.post_error(P, {"profile": "work", "key": "outputStyle", "value": "Terse"})
-    assert "pick one of the options" in app.post_error(P, {"profile": "default", "key": "effortLevel", "value": "max"})
-    assert "greater than zero" in app.post_error(P, {"profile": "default", "key": "cleanupPeriodDays", "value": 0})
+    assert "pick one of the options" in app.post_error(P, {"profile": "default", "key": "timeFormat", "value": "max"})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "verbose", "value": "yes"})
     assert "advanced editor" in app.post_error(P, {"profile": "default", "key": "hooks", "value": {}})
-    app.post(P, {"profile": "default", "key": "effortLevel", "value": "xhigh"})
+    app.post(P, {"profile": "default", "key": "timeFormat", "value": "24-hour"})
+    # the keys /config keeps in .claude.json are written there, and only those
+    app.post(P, {"profile": "default", "key": "autoCompactEnabled", "value": False})
+    app.post(P, {"profile": "work", "key": "permissions.defaultMode", "value": "plan"})
+    assert json.loads(home.path(".claude.json").read_text())["autoCompactEnabled"] is False
+    assert json.loads(home.path(".claude-work/settings.json").read_text()) == {"permissions": {"defaultMode": "plan"}}
+    # thinking on is the key's absence, as /config writes it
+    app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": False})
+    assert json.loads(home.path(".claude/settings.json").read_text())["alwaysThinkingEnabled"] is False
+    app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": True})
+    assert "alwaysThinkingEnabled" not in json.loads(home.path(".claude/settings.json").read_text())
+    # theme lives where a file has it: settings.local.json here, .claude.json otherwise
+    app.post(P, {"profile": "work", "key": "theme", "value": "dark"})
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text()) == {"theme": "dark"}
+    app.post(P, {"profile": "default", "key": "theme", "value": "light"})
+    assert json.loads(home.path(".claude.json").read_text())["theme"] == "light"
 
     app.post("/api/settings/permissions", {"profile": "default", "rules": {"deny": ["mcp__gmail", "  "]}})
     perms = json.loads(home.path(".claude/settings.json").read_text())["permissions"]
@@ -292,15 +308,13 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     assert "includeCoAuthoredBy" in keys("work")  # Default still has it
     fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
     assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
-    assert fields["attribution.sessionUrl"]["default"] is True
 
     app.post(P, {"profile": "default", "key": "attribution.commit", "value": "  "})
-    app.post(P, {"profile": "default", "key": "attribution.sessionUrl", "value": False})
     app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
     data = json.loads(home.path(".claude/settings.json").read_text())
-    assert data == {"attribution": {"pr": "via Claude", "commit": "", "sessionUrl": False}}
+    assert data == {"attribution": {"pr": "via Claude", "commit": ""}}
     assert "includeCoAuthoredBy" not in keys("work")
-    for k in ("attribution.pr", "attribution.commit", "attribution.sessionUrl"):
+    for k in ("attribution.pr", "attribution.commit"):
         app.post(P, {"profile": "default", "key": k, "value": None})
     assert json.loads(home.path(".claude/settings.json").read_text()) == {}  # the empty object goes too
 
@@ -994,7 +1008,7 @@ def test_share_preview_lists_what_the_link_replaces(home, app_factory):
 def all_home(home):
     """default; lab shares settings.json and skills with default; solo and work have their own."""
     basic_home(home)
-    home.json(".claude/settings.json", {"model": "opus", "effortLevel": "high"})
+    home.json(".claude/settings.json", {"model": "opus", "timeFormat": "24-hour"})
     home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\nReview it.\n")
     cfg = json.loads(home.path(".claude.json").read_text())
     cfg["mcpServers"] = {"files": {"type": "stdio", "command": "npx", "args": ["files"]}}
@@ -1034,10 +1048,19 @@ def test_apply_a_setting_to_all_profiles_is_undone_by_one_restore(home, app_fact
     restore_newest(app)
     assert home.snapshot() == before
 
-    # the default value (work has no effort level) removes it where it is set
-    app.post("/api/settings/field/all", {"profile": "work", "key": "effortLevel"})
-    assert "effortLevel" not in json.loads(home.path(".claude/settings.json").read_text())
+    # the default value (work has no time format) removes it where it is set
+    app.post("/api/settings/field/all", {"profile": "work", "key": "timeFormat"})
+    assert "timeFormat" not in json.loads(home.path(".claude/settings.json").read_text())
     restore_newest(app)
+    assert home.snapshot() == before
+
+    # a key of .claude.json goes to each profile's own .claude.json, in the same backup
+    app.post("/api/settings/field", {"profile": "work", "key": "verbose", "value": True})
+    r = app.post("/api/settings/field/all", {"profile": "work", "key": "verbose"})
+    assert json.loads(home.path(".claude.json").read_text())["verbose"] is True
+    assert json.loads(home.path(".claude-solo/.claude.json").read_text())["verbose"] is True
+    for b in app.get("/api/backups")[:2]:  # apply to all, then the single change before it
+        app.post("/api/backups/restore", {"name": b["name"]})
     assert home.snapshot() == before
 
 
