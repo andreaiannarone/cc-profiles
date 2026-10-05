@@ -109,7 +109,7 @@ One file: CSS custom properties for both themes, semantic HTML, and vanilla Java
 - `modal()` returns a promise with the chosen action, which keeps confirmation flows linear with `await`.
 - `api()` adds the token and turns errors into exceptions; `run()` shows the resulting toast.
 
-The visual rules are in [DESIGN.md](../DESIGN.md).
+The visual rules are in [DESIGN.md](https://github.com/andreaiannarone/cc-profiles/blob/main/DESIGN.md).
 
 ## Security model
 

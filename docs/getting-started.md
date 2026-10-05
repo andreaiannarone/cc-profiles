@@ -48,7 +48,7 @@ Rename profiles from the **Profiles** tab. The first profile in the list is the 
 
 Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on. Stop the server with `cc-profiles stop`, or restart it after an update with `cc-profiles restart`.
 
-The [install script](../install.sh) adds the command for you. Otherwise run:
+The [install script](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) adds the command for you. Otherwise run:
 
 ```sh
 cc-profiles install-command

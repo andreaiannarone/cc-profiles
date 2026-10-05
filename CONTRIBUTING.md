@@ -139,3 +139,8 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 3. The **Release** workflow (`.github/workflows/release.yml`) does the rest: it checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes.
 
 PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.
+
+### Homebrew and the documentation site
+
+- **Homebrew**: after a release is on PyPI, `python3 scripts/homebrew_formula.py <version> > Formula/cc-profiles.rb` in the tap repository `andreaiannarone/homebrew-tap`, then commit and push there. Users install with `brew install andreaiannarone/tap/cc-profiles`.
+- **Documentation site**: GitHub Pages publishes `docs/` from `main` with Jekyll (`docs/_config.yml`): `README.md` is the home page and links between `.md` files become pages. Link files outside `docs/` with their full GitHub URL, or they break on the site.
