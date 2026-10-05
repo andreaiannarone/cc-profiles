@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: Conversations."""
 
-import glob
 import json
 import os
 import re
 import shutil
 
 from .core import ApiError, Backup, pretty, profile, project_dir
-from .paths import path_index
+from .paths import path_index, project_folders
 from .projects import sessions_of
 
 # ---------------------------------------------------------------------------
@@ -110,9 +109,8 @@ def conversation_projects(pid):
     prof = profile(pid)
     idx = path_index()
     out = []
-    for d in glob.glob(os.path.join(prof["dir_abs"], "projects", "*", "")):
-        name = os.path.basename(os.path.dirname(d))
-        n = len(sessions_of(d))
+    for name, _, convs in project_folders(prof):
+        n = len(convs)
         if n:
             out.append({"name": name, "pretty": pretty(idx.get(name)) or name, "count": n})
     out.sort(key=lambda p: p["pretty"].lower())

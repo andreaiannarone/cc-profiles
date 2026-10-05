@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 
-from .core import ApiError, BACKUP_DIR, Backup, pretty, read_json, write_json
+from .core import ApiError, BACKUP_DIR, Backup, cached_read, pretty, read_json, write_json
 
 # ---------------------------------------------------------------------------
 # Backups and restore
@@ -31,6 +31,19 @@ def dir_size(d):
     return total
 
 
+_size_cache = {}
+
+
+def recent_dir_size(d, max_age=60):
+    """dir_size for display, reused for up to max_age seconds."""
+    hit = _size_cache.get(d)
+    if hit and time.time() - hit[0] < max_age:
+        return hit[1]
+    size = dir_size(d)
+    _size_cache[d] = (time.time(), size)
+    return size
+
+
 def list_backups():
     out = []
     if not os.path.isdir(BACKUP_DIR):
@@ -39,8 +52,12 @@ def list_backups():
         d = os.path.join(BACKUP_DIR, name)
         if not os.path.isdir(d):
             continue
-        man = read_json(os.path.join(d, "manifest.json")) or {}
-        out.append({"name": name, "path": pretty(d), "size": dir_size(d),
+        mf = os.path.join(d, "manifest.json")
+        man = cached_read("manifest", mf, read_json) or {}
+        # A closed backup (it has a manifest) changes only by replacing files at its top
+        # level, which changes the folder's own mtime: its size is reused until then.
+        size = cached_read("backup-size", d, dir_size) if man else dir_size(d)
+        out.append({"name": name, "path": pretty(d), "size": size,
                     "title": man.get("title", name),
                     "created": man.get("created", os.path.getmtime(d)),
                     "log": man.get("log", []),

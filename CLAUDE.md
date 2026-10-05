@@ -75,6 +75,8 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 - External programs (`claude`, `brew`, `npm`, `node`) are looked up with `find_tool()`, which adds `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` to `PATH`. The app may have been started from a terminal that does not have them yet.
 - New profiles get a launcher in `~/.local/bin` marked with `LAUNCHER_MARK`. Only files with that mark may be rewritten or removed. The same goes for `commands/cc-profiles.md` and `COMMAND_MARK`. Aliases from older setups in `~/.zshrc`, `~/.bashrc` and `~/.bash_profile` are handled by `rewrite_alias()`, which touches only the alias line and the `# Claude Code:` comment above it.
 
+- Listings reuse file contents through `cached_read()`, keyed on each file's stat (see `docs/architecture.md`, Caches). Before a write, read afresh (`history_lines()`, `memory_files(d, fresh=True)`, `read_json()`): never decide a write on a time-keyed cache.
+
 ## Style
 
 - UI text, messages and comments in English. Sentence case, buttons named after their action, concrete numbers. See `DESIGN.md`.

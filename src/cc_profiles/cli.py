@@ -13,8 +13,11 @@ import webbrowser
 
 from . import __version__
 from . import core
-from .core import CONFIG_FILE, DATA_DIR, expand, load_config, pretty, read_json
+from .core import CONFIG_FILE, DATA_DIR, expand, load_config, pretty, profiles, read_json
+from .backups import list_backups, recent_dir_size
 from .command import install_command
+from .projects import list_projects
+from .search import warm_search
 from .web import Handler, Server
 
 # ---------------------------------------------------------------------------
@@ -31,6 +34,19 @@ def current_label():
     return base[len(".claude-"):] if base.startswith(".claude-") else "default"
 
 
+def warm_caches():
+    """Read in the background what the first tabs need, so that they open fast on a
+    large home. Read-only: it only fills the caches described in docs/architecture.md."""
+    try:
+        list_projects()
+        list_backups()
+        for p in profiles():
+            recent_dir_size(p["dir_abs"])
+        warm_search()
+    except Exception:  # a cold cache is only slower, never wrong
+        pass
+
+
 def serve(port, open_browser):
     core.PORT = port
     core.ALLOWED_HOSTS = {f"127.0.0.1:{port}", f"localhost:{port}"}
@@ -45,6 +61,7 @@ def serve(port, open_browser):
     print(f"cc-profiles {__version__} on {url}  (ctrl+C to stop)")
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    threading.Thread(target=warm_caches, daemon=True).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

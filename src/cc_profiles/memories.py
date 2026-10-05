@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: Memories."""
 
-import glob
 import os
 import re
 import shutil
@@ -10,6 +9,7 @@ import shutil
 from .core import (
     ApiError,
     Backup,
+    cached_read,
     parse_memory,
     pid_label,
     pretty,
@@ -17,7 +17,7 @@ from .core import (
     project_dir,
     write_text,
 )
-from .paths import memory_files, path_index
+from .paths import memory_files, path_index, project_folders
 
 def index_lines(md):
     p = os.path.join(md, "MEMORY.md")
@@ -28,28 +28,41 @@ def memory_projects(pid):
     prof = profile(pid)
     idx = path_index()
     out = []
-    for d in glob.glob(os.path.join(prof["dir_abs"], "projects", "*", "")):
-        name = os.path.basename(d.rstrip("/"))
+    for name, d, convs in project_folders(prof):
         path = idx.get(name)
         out.append({"name": name, "pretty": pretty(path) if path else name,
-                    "count": len(memory_files(d)),
-                    "conv": len(glob.glob(os.path.join(d, "*.jsonl")))})
+                    "count": len(memory_files(d)), "conv": len(convs)})
     out.sort(key=lambda r: (r["pretty"] != "~", r["pretty"].lower()))
     return out
+
+
+def index_check(d):
+    """Memory files of a project folder that MEMORY.md does not list, and files it
+    lists that do not exist. Reads only the index, not the memories."""
+    def read(path):
+        try:
+            with open(path) as f:
+                return f.read()
+        except OSError:
+            return ""
+    index = cached_read("index", os.path.join(d, "memory", "MEMORY.md"), read)
+    files = memory_files(d)
+    unindexed = [f for f in files if f"({f})" not in index]
+    missing = sorted(set(re.findall(r"\]\(([^)]+\.md)\)", index)) - set(files))
+    return unindexed, missing
 
 
 def memory_list(pid, name):
     d = project_dir(profile(pid), name)
     md = os.path.join(d, "memory")
-    index = "\n".join(index_lines(md))
+    unindexed, missing = index_check(d)
     items = []
     for f in memory_files(d):
         text = open(os.path.join(md, f)).read()
         meta = parse_memory(text)
         items.append({"file": f, "name": meta.get("name") or f[:-3],
                       "description": meta.get("description", ""),
-                      "type": meta.get("type", ""), "indexed": f"({f})" in index})
-    missing = sorted(set(re.findall(r"\]\(([^)]+\.md)\)", index)) - set(memory_files(d)))
+                      "type": meta.get("type", ""), "indexed": f not in unindexed})
     return {"items": items, "missing": missing}
 
 

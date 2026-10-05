@@ -88,7 +88,7 @@ def op_delete_profile(pid, merge_into=None, force=False):
         idx = path_index()
         for d in sorted(glob.glob(os.path.join(prof["dir_abs"], "projects", "*", ""))):
             name = os.path.basename(d.rstrip("/"))
-            if not glob.glob(os.path.join(d, "*.jsonl")) and not memory_files(d):
+            if not glob.glob(os.path.join(d, "*.jsonl")) and not memory_files(d, fresh=True):
                 continue
             c, _, h, _ = move_project_into(name, prof, dst, bk, idx.get(name))
             moved, conv, hist = moved + 1, conv + c, hist + h

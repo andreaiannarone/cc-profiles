@@ -14,6 +14,7 @@ steps, so any operation can be undone.
 Standard library only, Python >= 3.9.
 """
 
+import copy
 import glob
 import json
 import os
@@ -85,6 +86,35 @@ def read_json(path, default=None):
         return default
 
 
+# Read-only caches. Every entry is keyed on a file's (mtime, size, inode) and checked
+# against a fresh stat() on every use, so a changed file is always read again: the
+# caches only save re-reading and re-parsing files that did not change.
+_file_cache = {}
+
+
+def file_sig(path):
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    return (st.st_mtime_ns, st.st_size, st.st_ino)
+
+
+def cached_read(kind, path, compute):
+    """compute(path), reused while the file's stat() is unchanged."""
+    sig = file_sig(path)  # before reading: a write during the read changes it again
+    if sig is None:
+        return compute(path)
+    hit = _file_cache.get((kind, path))
+    if hit is not None and hit[0] == sig:
+        return hit[1]
+    value = compute(path)
+    if len(_file_cache) > 200000:  # files come and go: start over rather than grow forever
+        _file_cache.clear()
+    _file_cache[(kind, path)] = (sig, value)
+    return value
+
+
 def write_text(path, text):
     """Atomic write: temp file in the same directory + os.replace.
     A concurrent reader (Claude Code) sees either the old file or the new one.
@@ -124,12 +154,12 @@ def detect_profiles():
 
 def load_config():
     os.makedirs(DATA_DIR, exist_ok=True)
-    cfg = read_json(CONFIG_FILE)
+    cfg = cached_read("config", CONFIG_FILE, read_json)
     if cfg is None:
         cfg = {"profiles": detect_profiles(), "rules": json.loads(json.dumps(DEFAULT_RULES)),
                "search_roots": list(DEFAULT_SEARCH_ROOTS)}
         write_json(CONFIG_FILE, cfg)
-    return cfg
+    return copy.deepcopy(cfg)  # callers change it before writing it back
 
 
 def profiles():
