@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-06
+
 ### Added
 - Settings → **Status line**: build one from 17 pieces (path or folder, git branch with `*` for uncommitted changes, profile, account email, model, effort, output style, pull request, context used, session cost, lines changed, session time, 5-hour and weekly limits, terminal, time), in the order you drag them into, each with its own brackets (none, `( )`, `[ ]`, `{ }`, `⟨ ⟩`), with a separator and colors of your choice and a live preview in color; or set your own command. Padding, refresh interval and the vim indicator too. The built-in one is a small `sh` + `jq` script in the profile folder, shown before you save, that names the right profile even through a shared `settings.json` and keeps working in a shell with a broken locale. **Apply to all…** puts it in every profile in one backup.
 
@@ -129,7 +131,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...v0.3.0
