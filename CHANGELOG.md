@@ -5,12 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-05
+
 ### Added
 - New profiles get the `/cc-profiles` command automatically.
 
 ### Fixed
 - Creating an empty profile that shares `settings.json` failed with "File exists".
 - Items chosen for sharing when creating a profile are created in the source profile if missing, instead of being silently left out.
+- For contributors: the sandbox hook no longer reads the body of a here-document (a commit message, say) as commands.
 
 ### Changed
 - cc-profiles is on PyPI: the install script and the docs install it from there (`pipx install cc-profiles`).
@@ -57,6 +60,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/andreaiannarone/cc-profiles/releases/tag/v0.1.0
