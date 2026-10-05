@@ -179,6 +179,14 @@ def test_conversations_are_listed_and_viewed(home, app_factory):
     assert view["truncated"] is True and view["total"] == 320 and len(view["messages"]) == 300
     assert view["messages"][-1]["text"].startswith("prompt 319") and view["messages"][-1]["text"].endswith("…")
 
+    # JSON with spaces (not how Claude Code writes it today) is read just the same
+    with open(home.path(f".claude/projects/{blog}/s-spaced.jsonl"), "w") as f:
+        f.write(json.dumps({"type": "user", "message": {"role": "user", "content": "spaced prompt"}}) + "\n")
+        f.write(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "ok"}]}}) + "\n")
+    spaced = next(c for c in app.get(f"/api/conversations?profile=default&project={blog}")["conversations"]
+                  if c["session"] == "s-spaced")
+    assert (spaced["title"], spaced["prompts"], spaced["replies"]) == ("spaced prompt", 1, 1)
+
     for bad in ("../x", "", "a/b", ".."):
         assert app.request(f"/api/conversations/view?profile=default&project={api}&session={bad}")[0] in (400, 404)
     assert app.request("/api/conversations?profile=default&project=..")[0] == 400

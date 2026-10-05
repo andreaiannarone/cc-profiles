@@ -1105,8 +1105,9 @@ def conversation_summary(f):
     first = last = None
     with open(f, errors="replace") as fh:
         for line in fh:
-            # cheap filter: most lines are tool output, snapshots and bookkeeping
-            if '"type":"user"' not in line and '"type":"assistant"' not in line and '"ai-title"' not in line:
+            # cheap filter: most lines are tool output, snapshots and bookkeeping. It looks for the
+            # values only, not '"type":"user"', so spacing in the JSON does not matter; json decides.
+            if '"user"' not in line and '"assistant"' not in line and '"ai-title"' not in line:
                 continue
             try:
                 j = json.loads(line)
@@ -1164,7 +1165,7 @@ def conversation_view(pid, name, session):
     msgs = []
     with open(f, errors="replace") as fh:
         for line in fh:
-            if '"type":"user"' not in line and '"type":"assistant"' not in line:
+            if '"user"' not in line and '"assistant"' not in line:
                 continue
             try:
                 j = json.loads(line)
