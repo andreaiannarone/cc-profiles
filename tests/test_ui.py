@@ -40,7 +40,7 @@ def page_on_sandbox(tmp_path):
 
 def test_every_tab_renders_without_errors(page_on_sandbox):
     page, errors = page_on_sandbox
-    tabs = page.eval_on_selector_all("#tabs button", "bs => bs.map(b => b.dataset.tab)")
+    tabs = page.eval_on_selector_all("#tabs button[data-tab]", "bs => bs.map(b => b.dataset.tab)")
     assert len(tabs) >= 8
     for tab in tabs:
         page.click(f'#tabs button[data-tab="{tab}"]')
@@ -65,24 +65,28 @@ def test_theme_and_about_panels_open(page_on_sandbox):
 
 
 def open_tab(page, tab):
+    if not page.is_visible(f'#tabs button[data-tab="{tab}"]'):  # in the More menu on narrow screens
+        page.click("#tabs-more")
     page.click(f'#tabs button[data-tab="{tab}"]')
     page.wait_for_function("() => { const m = document.querySelector('#main');"
                            " return m.children.length && !m.querySelector('.spinner'); }", timeout=10000)
 
 
-def test_narrow_screens_show_one_group_at_a_time(page_on_sandbox):
+def test_tabs_that_do_not_fit_go_into_the_more_menu(page_on_sandbox):
     page, errors = page_on_sandbox
+    assert not page.is_visible("#tabs-more")  # 1440px: every tab fits
     page.set_viewport_size({"width": 375, "height": 800})
-    assert page.is_visible("#ngroups")
-    visible = page.eval_on_selector_all("#tabs button", "bs => bs.filter(b => b.offsetParent).map(b => b.dataset.tab)")
-    assert visible == ["projects", "memories", "conversations"]
-    page.click('#ngroups [data-group="system"]')
-    page.wait_for_selector('#tabs button[data-tab="backups"].on')
-    assert page.get_attribute('#ngroups [data-group="system"]', "aria-pressed") == "true"
-    assert not page.is_visible('#tabs button[data-tab="projects"]')
+    page.wait_for_selector("#tabs-more")
+    row = lambda: page.eval_on_selector_all(".tabrow button", "bs => bs.map(b => b.dataset.tab)")
+    assert row()[0] == "projects" and "settings" not in row()
+    page.click("#tabs-more")
+    page.click('#moremenu button[data-tab="health"]')
+    page.wait_for_selector('.tabrow button[data-tab="health"].on')  # the active tab moves into the row
+    assert page.is_hidden("#moremenu") and page.get_attribute("#tabs-more", "aria-expanded") == "false"
     assert page.evaluate("document.documentElement.scrollWidth") <= 375  # nothing scrolls sideways
     page.set_viewport_size({"width": 1440, "height": 900})
-    assert not page.is_visible("#ngroups") and page.is_visible('#tabs button[data-tab="projects"]')
+    page.wait_for_selector("#tabs-more", state="hidden")
+    assert len(row()) == 11
     assert errors == []
 
 
@@ -122,7 +126,7 @@ def test_no_serious_accessibility_violations(page_on_sandbox, theme):
     page, errors = page_on_sandbox
     page.evaluate(f"setTheme('{theme}')")
     found = {}
-    for tab in page.eval_on_selector_all("#tabs button", "bs => bs.map(b => b.dataset.tab)"):
+    for tab in page.eval_on_selector_all("#tabs button[data-tab]", "bs => bs.map(b => b.dataset.tab)"):
         open_tab(page, tab)
         found[tab] = axe_violations(page)
     page.keyboard.press("?")
@@ -136,6 +140,7 @@ def test_no_serious_accessibility_violations(page_on_sandbox, theme):
     found["about panel"] = axe_violations(page)
     page.keyboard.press("Escape")
     page.set_viewport_size({"width": 375, "height": 800})
+    page.wait_for_selector("#tabs-more")  # the row has made room for the More menu
     open_tab(page, "health")
     found["phone width"] = axe_violations(page)
     found = {t: v for t, v in found.items() if v}

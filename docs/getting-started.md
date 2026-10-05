@@ -92,7 +92,7 @@ Each new profile must log in once: run its command and use `/login`. Credentials
 
 ## Finding your way
 
-The tabs are in four groups: **Content** (Projects, Memories, Conversations), **Extensions** (Skills, MCP, Plugins), **Profiles** (Profiles, Compare) and **System** (Backups, Health, Settings). On a wide window they form a sidebar; on a narrow one, pick the group first and then the tab.
+The tabs sit in one row under the header. On a narrow window the ones that do not fit are in the **More** menu at the end of the row.
 
 ### Keyboard shortcuts
 

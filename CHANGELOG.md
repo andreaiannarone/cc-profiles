@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The tabs are a single row under the header again, styled like GitHub's: an icon before each name, an orange underline on the active one. The sidebar and the group switcher of 0.4.0 are gone: on a narrow window the tabs that do not fit go into a **More** menu, and the active tab always stays in view.
+
+### Fixed
+- The *cc-profiles* title no longer wraps at its hyphen on medium-width windows.
+
 ## [0.4.0] - 2026-10-05
 
 ### Added
