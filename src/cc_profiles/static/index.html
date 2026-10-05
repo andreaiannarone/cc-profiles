@@ -63,6 +63,14 @@ header .sub { color: var(--muted); }
 .pcard .meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
 .pcard .acct, .prow .acct { font-size: 13px; margin-top: 4px; overflow-wrap: anywhere; }
 .pcard .acct.none, .prow .acct.none { color: var(--muted); }
+mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
+.sres { display: grid; gap: 8px; }
+.sres .prow { cursor: pointer; }
+.sres .prow:hover { background: var(--panel-2); }
+.sres .snip { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+.cmp td.v { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.cmp tr.diff td { background: var(--warn-soft); }
+.cmp .src { font-family: inherit; font-size: 11px; color: var(--muted); margin-left: 6px; }
 .ext-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 8px; }
 .ext-head h3 { margin: 0; font-size: 15px; }
 .ext-head .hint { flex: 1; min-width: 200px; }
@@ -221,7 +229,7 @@ textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-s
 .shared-note { font-size: 12px; color: var(--shared); background: var(--shared-soft); border-radius: 99px; padding: 1px 8px; }
 @media (max-width: 820px) { .srow { grid-template-columns: 1fr; } .perm { grid-template-columns: 1fr; } }
 .iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); align-self: center; }
-#theme-btn { margin-left: auto; }
+#gsearch { margin-left: auto; min-width: 220px; }
 .iconbtn:hover { color: var(--text); border-color: var(--faint); }
 .popover { position: fixed; z-index: 15; width: 260px; display: grid; gap: 8px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .popover h2 { margin: 0 0 2px; font-size: 15px; }
@@ -269,6 +277,8 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
   .wrap { padding: 20px 16px 60px; }
   .memgrid { grid-template-columns: 1fr; }
   input.search { margin-left: 0; min-width: 0; width: 100%; }
+  header { flex-wrap: wrap; }
+  #gsearch { order: 3; flex-basis: 100%; }
   .table { overflow-x: auto; }
 }
 </style>
@@ -276,6 +286,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 <body>
 <div class="wrap">
   <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><rect class="lg-back" x="84" y="0" width="7" height="7"/><rect class="lg-back" x="77" y="7" width="7" height="7"/><rect class="lg-back" x="56" y="14" width="56" height="7"/><rect class="lg-back" x="77" y="21" width="42" height="7"/><rect class="lg-back" x="84" y="28" width="14" height="7"/><rect class="lg-back" x="105" y="28" width="14" height="7"/><rect class="lg-back" x="84" y="35" width="14" height="7"/><rect class="lg-back" x="105" y="35" width="14" height="7"/><rect class="lg-back" x="84" y="42" width="35" height="7"/><rect class="lg-back" x="84" y="49" width="35" height="7"/><rect class="lg-back" x="84" y="56" width="35" height="7"/><rect class="lg-back" x="98" y="63" width="14" height="7"/><rect class="lg-front" x="42" y="14" width="7" height="7"/><rect class="lg-front" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-eye" x="98" y="28" width="7" height="7"/><rect class="lg-eye" x="98" y="35" width="7" height="7"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+    <input class="search" id="gsearch" type="search" placeholder="Search everything…" aria-label="Search everything: projects, memories, skills, MCP servers, CLAUDE.md" autocomplete="off">
     <button class="iconbtn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
     </button>
@@ -288,6 +299,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
     <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
     <button data-tab="memories">Memories</button>
     <button data-tab="profiles">Profiles</button>
+    <button data-tab="compare">Compare</button>
     <button data-tab="skills">Skills</button>
     <button data-tab="mcp">MCP</button>
     <button data-tab="backups">Backups</button>
@@ -1111,6 +1123,170 @@ async function showInstallLog() {
   refresh();
 }
 
+// ---------- search everything ----------
+// A pseudo-tab: S.tab is "search" while results show; Esc or an empty field goes back.
+const SKINDS = [["projects", "Projects"], ["memories", "Memories"], ["skills", "Skills"], ["mcp", "MCP servers"], ["claude_md", "CLAUDE.md"]];
+S.search = { q: "", data: null, error: null, prev: "projects", timer: null };
+function goTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+}
+function highlight(sn) {
+  const t = sn.text;
+  return esc(t.slice(0, sn.at)) + "<mark>" + esc(t.slice(sn.at, sn.at + sn.len)) + "</mark>" + esc(t.slice(sn.at + sn.len));
+}
+async function runSearch(q) {
+  const x = S.search;
+  if (S.tab !== "search") x.prev = S.tab;
+  x.q = q; x.data = null; x.error = null;
+  goTab("search"); renderSearch();
+  try { const r = await api("/api/search?q=" + encodeURIComponent(q)); if (x.q === q) x.data = r; }
+  catch (e) { x.error = e.message; }
+  if (x.q === q) renderSearch();
+}
+function closeSearch() {
+  const x = S.search;
+  clearTimeout(x.timer);
+  $("#gsearch").value = ""; x.q = ""; x.data = null;
+  if (S.tab !== "search") return;
+  const prev = x.prev || "projects";
+  $(`#tabs button[data-tab="${prev}"]`)?.click();
+}
+function renderSearch() {
+  if (S.tab !== "search") return;
+  const x = S.search, d = x.data;
+  if (x.error) { $("#main").innerHTML = `<div class="empty">${esc(x.error)}</div>`; return; }
+  if (!d) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Searching every profile for “${esc(x.q)}”…</div>`; return; }
+  const total = Object.values(d.counts).reduce((a, b) => a + b, 0);
+  const others = r => (r.profiles || [r.profile]).map(badge).join(" ");
+  $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(total, "result", "results")} for “${esc(d.q)}” in every profile${d.truncated ? " · only the first ones: refine the search to see more" : ""}. Values of MCP environment variables and headers are not searched.</span>
+      <button class="btn small" id="s-close" style="margin-left:auto">Close search</button></div>
+    ${total ? SKINDS.filter(([k]) => d.results[k].length).map(([k, l]) => `<div class="ext-head"><h3>${l}</h3><span class="hint">${d.counts[k]}</span></div>
+      <div class="table sres">${d.results[k].map((r, i) => `<div class="prow" data-sres="${k}:${i}" tabindex="0" role="button"><div class="txt">
+          <div class="t">${esc(r.title)} ${others(r)}${r.where ? ` <span class="hint" style="font-weight:400">${esc(r.where)}</span>` : ""}</div>
+          <div class="snip">${highlight(r.snippet)}</div></div></div>`).join("")}</div>`).join("")
+      : `<div class="empty">Nothing matches “${esc(d.q)}” in any profile.</div>`}`;
+  $("#s-close").onclick = closeSearch;
+  document.querySelectorAll("[data-sres]").forEach(el => {
+    const [k, i] = el.dataset.sres.split(":"), r = d.results[k][+i];
+    el.onclick = () => openResult(r);
+    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openResult(r); } };
+  });
+}
+async function openResult(r) {
+  const o = r.open;
+  $("#gsearch").value = ""; S.search.q = "";
+  if (r.kind === "memory") {
+    goTab("memories"); S.mem.profile = r.profile; S.mem.q = ""; await loadMemProjects();
+    await openMemProject(o.project); return openMemFile(o.file);
+  }
+  if (r.kind === "skill") { goTab("skills"); await loadExt(r.profile); return openSkill(o.skill); }
+  if (r.kind === "mcp") { goTab("mcp"); return loadExt(r.profile); }
+  if (r.kind === "project") { goTab("projects"); S.filter = "all"; S.q = o.path; return renderProjects(); }
+  if (r.kind === "claude_md") { goTab("settings"); return loadSettings(r.profile); }
+}
+$("#gsearch").addEventListener("input", e => {
+  const x = S.search, q = e.target.value.trim();
+  clearTimeout(x.timer);
+  if (!q) return closeSearch();
+  if (q.length >= 2) x.timer = setTimeout(() => runSearch(q), 300);
+});
+$("#gsearch").addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); closeSearch(); }
+  if (e.key === "Enter") { const q = e.target.value.trim(); clearTimeout(S.search.timer); if (q.length >= 2) runSearch(q); }
+});
+document.addEventListener("click", e => { if (e.target.closest("#tabs button") && S.search.q) { $("#gsearch").value = ""; S.search.q = ""; } }, true);
+
+// ---------- compare two profiles ----------
+S.cmp = { a: null, b: null, data: null, error: null };
+async function loadCompare() {
+  const c = S.cmp;
+  if (S.profiles.length < 2) { c.data = null; c.error = "There is only one profile: create a second one to compare."; return renderCompare(); }
+  if (!S.profiles.some(p => p.id === c.a)) c.a = S.profiles[0].id;
+  if (!S.profiles.some(p => p.id === c.b) || c.b === c.a) c.b = S.profiles.find(p => p.id !== c.a).id;
+  c.data = null; c.error = null; renderCompare();
+  try { c.data = await api(`/api/compare?a=${c.a}&b=${c.b}`); } catch (e) { c.error = e.message; }
+  renderCompare();
+}
+function renderCompare() {
+  if (S.tab !== "compare") return;
+  const c = S.cmp, d = c.data;
+  const sel = (id, v, other) => `<select id="${id}" aria-label="${id === "cmp-a" ? "Profile A" : "Profile B"}">${S.profiles.map(p => `<option value="${p.id}" ${p.id === v ? "selected" : ""} ${p.id === other ? "disabled" : ""}>${esc(p.label)}</option>`).join("")}</select>`;
+  const head = S.profiles.length < 2 ? "" : `<div class="toolbar"><span class="hint">Compare</span> ${sel("cmp-a", c.a, c.b)} <span class="hint">with</span> ${sel("cmp-b", c.b, c.a)}
+      <span class="hint">Rows that differ are marked; copies go through the usual operations and their backups.</span></div>`;
+  if (c.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(c.error)}</div>`; return bindCompare(); }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Comparing…</div>`; return bindCompare(); }
+  const A = esc(d.a.label), B = esc(d.b.label);
+  const SRC = { local: "settings.local.json", settings: "settings.json" };
+  const val = (v, src) => `${esc(fmt(v))}${src ? `<span class="src">${SRC[src]}</span>` : ""}`;
+  const mark = same => same ? `<span class="okmark">same</span>` : `<span class="badge b-warn">differs</span>`;
+  const only = side => `<span class="badge b-warn">only in ${side === "a" ? A : B}</span>`;
+  const btn = (attrs, label) => `<button class="btn small" ${attrs}>${label}</button>`;
+  const table = (cols, rows, empty) => rows.length ? `<div class="table cmp"><table><thead><tr>${cols.map(x => `<th>${x}</th>`).join("")}<th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+    : `<div class="hint">${empty}</div>`;
+  const listRows = (sec, kind, side, name, extra = "", label = "Copy") => `<tr class="diff"><td class="v">${esc(name)}</td><td>${only(side)}${extra}</td>
+      <td class="acts">${btn(`data-cmp="${sec}" data-kind="${kind}" data-side="${side}" data-name="${esc(name)}"`, `${label} to ${side === "a" ? B : A}`)}</td></tr>`;
+  const P = d.permissions.diff, perms = [];
+  for (const k of ["allow", "ask", "deny"]) {
+    for (const r of P[k].only_a) perms.push(listRows("perm", k, "a", r, ` <code>${k}</code>`, "Add"));
+    for (const r of P[k].only_b) perms.push(listRows("perm", k, "b", r, ` <code>${k}</code>`, "Add"));
+  }
+  const nBoth = ["allow", "ask", "deny"].reduce((n, k) => n + P[k].both.length, 0);
+  const sk = d.skills, mc = d.mcp, md = d.claude_md, pl = d.plugins;
+  const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
+  $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h3>Settings</h3><span class="hint">the value in use and the file it comes from</span></div>
+    ${table(["Setting", A, B], d.settings.map((s, i) => `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
+        <td class="v">${val(s.a, s.a_source)}</td><td class="v">${val(s.b, s.b_source)}</td>
+        <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`), "")}
+    <div class="ext-head"><h3>Permissions</h3><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
+    ${table(["Rule", "Where"], perms, "Both profiles have the same rules. ✓")}
+    <div class="ext-head"><h3>Skills</h3><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
+    ${table(["Skill", "Where"], [...sk.only_a.map(n => listRows("skill", "", "a", n)), ...sk.only_b.map(n => listRows("skill", "", "b", n)),
+        ...sk.both.filter(x => !x.same).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${mark(false)} <span class="hint">the SKILL.md files are different: edit them in the Skills tab</span></td><td></td></tr>`)],
+      "The same skills, with the same SKILL.md. ✓")}
+    <div class="ext-head"><h3>MCP servers</h3><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
+    ${table(["Server", "Where"], [...mc.only_a.map(m => listRows("mcp", "", "a", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
+        ...mc.only_b.map(m => listRows("mcp", "", "b", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
+        ...mc.both.filter(m => !m.same).map(m => `<tr class="diff"><td class="v">${esc(m.name)}</td><td>${mark(false)} <span class="hint">different configuration: edit it in the MCP tab</span></td><td></td></tr>`)],
+      "The same servers, with the same configuration. ✓")}
+    <div class="ext-head"><h3>CLAUDE.md</h3><span class="hint">${md.shared ? "shared: the two profiles use the same file" : ""}</span></div>
+    ${table(["", A, B], [`<tr class="${md.same ? "" : "diff"}"><td>${mark(md.same)}</td>
+        <td>${md.a.exists ? plural(md.a.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
+        <td>${md.b.exists ? plural(md.b.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
+        <td class="acts">${md.same || md.shared ? "" : (md.a.exists ? btn(`data-cmp="md" data-side="a"`, `Replace ${B}'s with ${A}'s`) : "") + (md.b.exists ? btn(`data-cmp="md" data-side="b"`, `Replace ${A}'s with ${B}'s`) : "")}</td></tr>`], "")}
+    <div class="ext-head"><h3>Plugins</h3><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
+    ${table(["", ""], [`<tr><td>Installed</td><td>${plug("installed")}</td><td></td></tr>`, `<tr><td>Enabled</td><td>${plug("enabled")}</td><td></td></tr>`], "")}`;
+  bindCompare();
+}
+function bindCompare() {
+  const c = S.cmp, d = c.data;
+  const pick = (id, k) => { const el = $(id); if (el) el.onchange = () => { c[k] = el.value; loadCompare(); }; };
+  pick("#cmp-a", "a"); pick("#cmp-b", "b");
+  if (!d) return;
+  const ids = { a: d.a.id, b: d.b.id }, other = s => (s === "a" ? "b" : "a"), name = s => (s === "a" ? d.a.label : d.b.label);
+  const done = async fn => { try { await run(fn); } catch {} loadCompare(); };
+  document.querySelectorAll("[data-cmp]").forEach(b => b.onclick = async () => {
+    const side = b.dataset.side, from = ids[side], to = ids[other(side)];
+    if (b.dataset.cmp === "set") {
+      const s = d.settings[+b.dataset.i];
+      return done(() => api("/api/settings/field", { profile: to, key: s.key, value: s[side] }));
+    }
+    if (b.dataset.cmp === "perm") {
+      const lists = d.permissions[other(side)], k = b.dataset.kind;
+      const rules = { ...lists, [k]: [...lists[k], b.dataset.name] };  // the target's own rules stay
+      return done(() => api("/api/settings/permissions", { profile: to, rules }));
+    }
+    if (b.dataset.cmp === "skill") return done(() => api("/api/skills/copy", { profile: from, name: b.dataset.name, to }));
+    if (b.dataset.cmp === "mcp") return done(() => api("/api/mcp/copy", { profile: from, scope: "user", name: b.dataset.name, to }));
+    if (b.dataset.cmp === "md") {
+      if (!(await confirmBox(`Replace ${name(other(side))}'s CLAUDE.md?`, `It gets the content of ${esc(name(side))}'s CLAUDE.md. The current file goes to the backup.`, "Replace"))) return;
+      const src = await api("/api/settings?profile=" + from);
+      return done(() => api("/api/settings/claude-md", { profile: to, content: src.claude_md.content }));
+    }
+  });
+}
+
 // ---------- backups ----------
 async function loadBackups() {
   S.backups = null; renderBackups();
@@ -1173,6 +1349,7 @@ document.addEventListener("click", async e => {
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
     if (S.tab === "profiles") return loadSharing();
+    if (S.tab === "compare") return loadCompare();
     if (EXT_TABS.includes(S.tab)) return loadExt();
     if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
     if (S.tab === "backups") return loadBackups();
@@ -1214,6 +1391,8 @@ function render() {
   else if (S.tab === "memories") renderMemories();
   else if (S.tab === "settings") renderSettings();
   else if (S.tab === "profiles") renderSharing();
+  else if (S.tab === "compare") renderCompare();
+  else if (S.tab === "search") renderSearch();
   else if (EXT_TABS.includes(S.tab)) renderExt();
   else if (S.tab === "backups") renderBackups();
   else renderHealth();
