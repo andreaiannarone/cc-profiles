@@ -1862,8 +1862,8 @@ def op_import_profile(zip_path, label, pid):
         label, pid, new, command = check_new_profile(label or man.get("label"), pid or man.get("id"))
         bk = Backup("import-profile", f"Import profile {label} ({pretty(new)})")
         bk.copy(CONFIG_FILE, "config.json")
+        bk.created(new)  # journaled first: a failure while unpacking leaves a folder that Restore removes
         os.makedirs(new)
-        bk.created(new)
         try:
             for info in infos:
                 if info.is_dir():
