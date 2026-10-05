@@ -131,6 +131,8 @@ cc-profiles
 - ⚙️ **Settings**: model, effort, output style, theme and more, with dropdowns that offer only the values Claude Code accepts and show which file each value comes from. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go when they take too much space.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
+- 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
+- ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.

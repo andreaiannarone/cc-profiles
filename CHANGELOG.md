@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - Conversations tab: read the conversations of each project (title, dates, prompt and reply counts, a read-only viewer), and move one to another profile with its file snapshots, or delete it.
 - A browser smoke test (`tests/test_ui.py`, run in CI) opens every tab in Chromium and fails on JavaScript errors or Content-Security-Policy violations.
+- Search everything: a field in the header searches projects, memories, skills, MCP servers and CLAUDE.md in every profile, with highlighted excerpts; clicking a result opens it.
+- Compare tab: two profiles side by side (settings, permissions, skills, MCP servers, CLAUDE.md, plugins), with copies of what differs through the usual operations.
 
 ### Changed
 - An operation that fails halfway keeps its backup: the steps done so far are journaled, the backup is labelled "incomplete" and Restore undoes them.
