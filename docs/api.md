@@ -83,6 +83,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |
 | `POST /api/settings/field/all` | `profile`, `key`: the profile's value goes to every other profile, one backup |
+| `POST /api/settings/fields` | `profile`, `values` (`{key: value}`): several fields at once, all checked first, one backup |
 | `POST /api/statusline` | `profile`, `mode` (`off`, `builtin`, `custom`), `parts`, `command`, `padding`, `refreshInterval`, `hideVimModeIndicator` |
 | `POST /api/statusline/all` | `profile`: its status line goes to every other profile, one backup |
 | `POST /api/settings/permissions/all` | `list`, `rule`: added to `settings.json` of every profile, one backup |
