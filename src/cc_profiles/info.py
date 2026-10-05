@@ -6,6 +6,7 @@ import glob
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from . import __version__
 from . import core
@@ -20,11 +21,11 @@ from .core import (
     read_json,
     tool_env,
 )
-from .paths import history_lines, memory_files
+from .paths import history_stats, memory_files
 from .sharing import SHARE_ITEMS
 from .settings import SCHEMA_VERSION
 from .health import auth_status
-from .backups import dir_size, list_backups
+from .backups import list_backups, recent_dir_size
 
 # ---------------------------------------------------------------------------
 # Claude Code information
@@ -67,8 +68,10 @@ def about():
     binary = claude_binary()
     primary_cfg = read_json(profiles()[0]["config_abs"], {}) or {}
     profs = []
-    for p in profiles():
-        a = auth_status(p) or {}
+    with ThreadPoolExecutor(max_workers=8) as pool:  # `claude auth status` takes ~0.5 s each
+        auths = list(pool.map(auth_status, profiles()))
+    for p, a in zip(profiles(), auths):
+        a = a or {}
         cfg = read_json(p["config_abs"], {}) or {}
         sett, _ = load_settings(os.path.join(p["dir_abs"], "settings.json"))
         local, _ = load_settings(os.path.join(p["dir_abs"], "settings.local.json"))
@@ -98,8 +101,8 @@ def about():
                 "Saved conversations": len(convs),
                 "Projects": len(projs),
                 "Memories": sum(len(memory_files(d)) for d in projs),
-                "Prompts in history": len(history_lines(p)),
-                "Disk usage": dir_size(p["dir_abs"]),
+                "Prompts in history": history_stats(p)[0],
+                "Disk usage": recent_dir_size(p["dir_abs"]),
             },
             "contents": {
                 "Skills": names_in(os.path.join(p["dir_abs"], "skills"), dirs=True),
@@ -128,7 +131,7 @@ def about():
             "Code": pretty(APP_DIR),
             "Config and rules": pretty(CONFIG_FILE),
             "Backups": f"{len(list_backups())} · {pretty(BACKUP_DIR)}",
-            "Backup disk usage": dir_size(BACKUP_DIR) if os.path.isdir(BACKUP_DIR) else 0,
+            "Backup disk usage": recent_dir_size(BACKUP_DIR) if os.path.isdir(BACKUP_DIR) else 0,
             "Address": f"http://127.0.0.1:{core.PORT}",
             "Python": sys.version.split(" ")[0],
         },

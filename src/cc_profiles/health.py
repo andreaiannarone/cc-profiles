@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from .core import (
     DEFAULT_SEARCH_ROOTS,
@@ -21,24 +22,24 @@ from .core import (
     read_json,
     tool_env,
 )
-from .paths import history_lines, memory_files
+from .paths import history_stats, memory_files, project_folders
 from .projects import list_projects
-from .memories import memory_list
+from .memories import index_check
 
 def list_profiles():
     out = []
     profs = profiles()
     for p in profs:
         cfg = read_json(p["config_abs"], {}) or {}
-        projs = glob.glob(os.path.join(p["dir_abs"], "projects", "*", ""))
+        projs = project_folders(p)
         out.append({
             "id": p["id"], "label": p["label"], "dir": pretty(p["dir_abs"]),
             "primary": p["id"] == profs[0]["id"],
             "command": p.get("command", ""),
             "email": (cfg.get("oauthAccount") or {}).get("emailAddress", ""),
             "projects": len(projs),
-            "conv": len(glob.glob(os.path.join(p["dir_abs"], "projects", "*", "*.jsonl"))),
-            "memories": sum(len(memory_files(d)) for d in projs),
+            "conv": sum(len(convs) for _, _, convs in projs),
+            "memories": sum(len(memory_files(d)) for _, d, _ in projs),
             "active": active_session(p),
         })
     return out
@@ -47,28 +48,35 @@ def list_profiles():
 _cand_cache = {}
 
 
-def candidates(basename):
-    """Folders with the same name under the search roots (depth 5)."""
-    if not basename:
-        return []
-    hit = _cand_cache.get(basename)
-    if hit and time.time() - hit[0] < 60:
-        return hit[1]
-    found = []
-    for root in load_config().get("search_roots", DEFAULT_SEARCH_ROOTS):
-        root = expand(root)
+def candidate_index():
+    """Folder name -> up to 10 folders with that name under the search roots (depth 5).
+    One walk serves every orphan; reused for 60 s (suggestions only: relinking
+    checks the chosen folder again)."""
+    roots = [expand(r) for r in load_config().get("search_roots", DEFAULT_SEARCH_ROOTS)]
+    hit = _cand_cache.get("index")
+    if hit and hit[1] == roots and time.time() - hit[0] < 60:
+        return hit[2]
+    found = {}
+    for root in roots:
         base = root.rstrip("/").count("/")
         for cur, dirs, _ in os.walk(root):
             depth = cur.count("/") - base
             dirs[:] = [d for d in dirs if not d.startswith(".") and d not in SEARCH_SKIP]
             if depth >= 5:
                 dirs[:] = []
-            if os.path.basename(cur) == basename and cur != root:
-                found.append(pretty(cur))
-            if len(found) >= 10:
-                break
-    _cand_cache[basename] = (time.time(), found)
+            if cur != root:
+                same = found.setdefault(os.path.basename(cur), [])
+                if len(same) < 10:
+                    same.append(pretty(cur))
+    _cand_cache["index"] = (time.time(), roots, found)
     return found
+
+
+def candidates(basename):
+    """Folders with the same name under the search roots (depth 5)."""
+    if not basename:
+        return []
+    return list(candidate_index().get(basename, []))
 
 
 def auth_status(p):
@@ -90,13 +98,15 @@ def auth_status(p):
 def health():
     report = []
     projects = list_projects()
-    for p in profiles():
+    profs = profiles()
+    with ThreadPoolExecutor(max_workers=8) as pool:  # `claude auth status` takes ~0.5 s each
+        auths = list(pool.map(auth_status, profs))
+    for p, a in zip(profs, auths):
         checks = []
 
         def add(ok, text, level=None):
             checks.append({"level": level or ("ok" if ok else "error"), "text": text})
 
-        a = auth_status(p)
         add(bool(a and a.get("loggedIn")),
             f"Logged in: {a.get('email')}" if a and a.get("loggedIn") else "Not logged in")
         for f, lab in [(p["config_abs"], ".claude.json"),
@@ -105,14 +115,8 @@ def health():
             if os.path.exists(f):
                 ok = read_json(f) is not None
                 add(ok, f"{lab} {'is valid' if ok else 'is NOT valid JSON'}")
-        lines = history_lines(p)
-        bad = 0
-        for l in lines:
-            try:
-                json.loads(l)
-            except ValueError:
-                bad += 1
-        add(bad == 0, f"Prompt history: {len(lines)} prompts" + (f", {bad} broken lines" if bad else ""))
+        lines, bad = history_stats(p)
+        add(bad == 0, f"Prompt history: {lines} prompts" + (f", {bad} broken lines" if bad else ""))
         for sub in ("skills", "plugins"):
             d = os.path.join(p["dir_abs"], sub)
             if os.path.isdir(d):
@@ -126,14 +130,14 @@ def health():
             for e in entries if isinstance(entries, list) else [entries]:
                 ip = e.get("installPath", "")
                 add(os.path.isdir(ip), f"Plugin {key}" + ("" if os.path.isdir(ip) else ": files missing"))
-        for d in glob.glob(os.path.join(p["dir_abs"], "projects", "*", "memory")):
-            name = os.path.basename(os.path.dirname(d))
-            ml = memory_list(p["id"], name)
-            for f in ml["missing"]:
+        for name, d, _ in project_folders(p, conversations=False):
+            if not os.path.isdir(os.path.join(d, "memory")):
+                continue
+            unindexed, missing = index_check(d)
+            for f in missing:
                 add(False, f"Index of {name}: {f} is missing")
-            for it in ml["items"]:
-                if not it["indexed"]:
-                    add(False, f"{name}: {it['file']} is not in MEMORY.md", "warn")
+            for f in unindexed:
+                add(False, f"{name}: {f} is not in MEMORY.md", "warn")
         if active_session(p):
             add(True, "A session is open right now: writes are atomic, but avoid heavy operations", "warn")
         orphans = []

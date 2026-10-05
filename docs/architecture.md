@@ -16,28 +16,29 @@ The code is one module per area. Each module imports only from the ones above it
 
 | Module | Responsibility |
 |---|---|
-| `core.py` | paths and constants, `san()`, atomic `write_text()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
+| `core.py` | paths and constants, `san()`, atomic `write_text()`, `cached_read()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
 | `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
 | `projects.py` | list, move (with preview), relink, delete, rules |
 | `memories.py` | list, read, save, move, delete |
-| `sharing.py` | symlinks to the source profile |
-| `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md` |
+| `sharing.py` | symlinks to the source profile, with a preview |
+| `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `health.py` | profile summaries, candidate folders, health checks |
-| `backups.py` | list, restore (journal replayed backwards), delete, prune |
+| `backups.py` | list, restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
 | `info.py` | the About panel |
-| `extensions.py` | skills and MCP servers |
+| `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
+| `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
 | `plugins.py` | installed plugins, enable and disable |
-| `editprofile.py` | rename, change command, delete with optional merge |
+| `editprofile.py` | rename, change command, delete with optional merge, with a preview |
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
-| `cli.py` | `serve`, `open`, `install-command`, `label`, argument parsing |
+| `cli.py` | `serve` (with the automatic backup cleanup at start and daily), `open`, `install-command`, `label`, argument parsing |
 
 `server.py` re-exports every public name, so `from cc_profiles import server` and the `cc-profiles` console script keep working. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.
 
@@ -72,7 +73,30 @@ return {"message": "...", "backup": bk.close()}
 
 ### Path resolution
 
-Claude Code names project folders with `san(path)`, which loses information (`/`, ` `, `.` and `+` all become `-`). `path_index()` builds the reverse map from every path mentioned anywhere: the `projects` key of each `.claude.json`, the `project` field of history lines, and the `cwd` of the first lines of each conversation. For names nothing mentions, `resolve_on_disk()` walks from `/` and, at each level, tries entries whose sanitized name is a prefix of what is left, longest first.
+Claude Code names project folders with `san(path)`, which loses information (`/`, ` `, `.` and `+` all become `-`). `path_index()` builds the reverse map from the paths the profiles mention: first the `projects` key of each `.claude.json` and the `project` field of history lines; then, only for folders still without an existing path, the `cwd` of the first lines of their conversations. For names nothing mentions, `resolve_on_disk()` walks from `/` and, at each level, tries entries whose sanitized name is a prefix of what is left, longest first.
+
+### Caches
+
+A large home has tens of thousands of conversation files, so listings keep what they read. Every cache is read-only and lives in the server process; none is written to disk.
+
+| Cache | Where | Keyed on |
+|---|---|---|
+| `cached_read(kind, path, compute)`: the parsed content of a file or the listing of a folder | `core._file_cache` | the file's or folder's `(mtime_ns, size, inode)`, checked with a fresh `stat()` on every use |
+| `load_config()` | `core._file_cache` | `config.json`'s stat; callers get a deep copy |
+| Conversation and memory file names of each project folder (`project_folders()`, `memory_files()`) | `core._file_cache` | the folder's stat (adding, removing or renaming an entry changes its mtime) |
+| `cwd`s of a conversation, projects of `.claude.json`, history summary (prompts, broken lines, projects), `MEMORY.md`, memory and skill text for search, backup manifests | `core._file_cache` | the file's stat |
+| Size of a closed backup | `core._file_cache` | the backup folder's stat (only its manifest is ever rewritten, by `os.replace`) |
+| Size of a profile folder (About) | `backups._size_cache` | time: 60 s |
+| Folders under the search roots, by name (Health, relink candidates) | `health._cand_cache` | time: 60 s, and the search roots |
+| Running `claude` processes | `core._running` | time: 3 s |
+
+Rules that keep this safe:
+
+- A cache keyed on a stat is as current as a new read: a changed file is read again in the same request. Time-keyed caches only serve numbers and suggestions on screen.
+- Before a write, code reads afresh: `history_lines()` (never cached) for history rewrites, `memory_files(d, fresh=True)` before deleting a folder, `read_json()` for manifests being restored.
+- At startup, `cli.warm_caches()` fills the caches in a background thread (projects, backups, profile sizes, search texts), so the first tabs open fast. It only reads.
+
+`tests/bench_home.py` times every tab on a large fake home (see CONTRIBUTING).
 
 ## The UI: `src/cc_profiles/static/index.html`
 

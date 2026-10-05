@@ -43,6 +43,17 @@ A backup can be restored once; afterwards it shows *restored* with the time.
 
 **Delete old backups…** removes in one go every backup older than 7, 30, 90 or 365 days, and shows how many and how much space before you confirm. Keep the backups of operations you might still want to undo.
 
+## Automatic cleanup
+
+**Delete backups older than … automatically**, in the toolbar of the Backups tab, is off by default (*never*). Pick 30, 90, 180 or 365 days to turn it on. From then on cc-profiles deletes the backups older than that when it starts and once a day while it runs. The confirmation shows what goes right away.
+
+The automatic cleanup never deletes:
+
+- a backup of an operation done in the last 24 hours;
+- an [incomplete backup](#incomplete-backups) that has not been restored yet, because it may hold the only way to undo a failed operation.
+
+The setting is stored as `backup_keep_days` in [`config.json`](../configuration.md). Changing it is an operation with its own backup, like any other. The backups it deletes cannot be restored.
+
 ## Without the UI
 
 Backups are plain files. If the app cannot start, you can still read `operation.txt` and copy files back from `file/` by hand, using the journal in `manifest.json` as a map.

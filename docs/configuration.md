@@ -50,7 +50,8 @@ Written on the first run and updated by the UI. You can edit it by hand while th
     { "match": "code/work", "profile": "work" },
     { "exact": "~", "profile": "shared" }
   ],
-  "search_roots": ["~"]
+  "search_roots": ["~"],
+  "backup_keep_days": 90
 }
 ```
 
@@ -80,6 +81,14 @@ Defaults on first run: your home folder and `/` as exact rules, plus `/private/v
 ### `search_roots`
 
 Folders searched (5 levels deep) for candidate folders when relinking an [orphan project](guides/projects.md#orphan-projects). Default `["~"]`. Folders such as `node_modules`, `Library`, build folders and hidden folders are skipped.
+
+### `backup_keep_days`
+
+Optional. When set to `30`, `90`, `180` or `365`, the backups older than that many days are deleted automatically when cc-profiles starts and once a day while it runs. Backups of the last 24 hours and incomplete backups not restored yet are always kept. Absent (the default) means backups are kept until you delete them. Set it from the [Backups tab](guides/backups.md#automatic-cleanup).
+
+## Templates
+
+Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in the export format without conversations, memories or credentials. See [Templates](guides/profiles.md#templates).
 
 ## Files cc-profiles writes outside its data folder
 

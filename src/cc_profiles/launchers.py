@@ -87,3 +87,17 @@ def command_conflict(command, others):
     if existing and not is_our_launcher(existing):
         return f"A program called {command} already exists: pick another name"
     return None
+
+
+def alias_files(command):
+    """The shell rc files that define an alias `command` (what rewrite_alias would touch)."""
+    pat = re.compile(r"^\s*alias\s+" + re.escape(command) + r"=")
+    out = []
+    for rc in RC_FILES:
+        try:
+            with open(rc) as f:
+                if any(pat.match(l) for l in f):
+                    out.append(rc)
+        except OSError:
+            pass
+    return out

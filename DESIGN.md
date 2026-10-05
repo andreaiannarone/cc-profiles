@@ -27,7 +27,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--p0` … `--p5` (+ `-soft`) | green, blue, pink, teal, indigo, amber | lighter versions | profile badges, assigned by the profile's position in the config |
 | `--shared` / `--shared-soft` | `#6d28d9` / `#ede5fb` | `#c4a5ff` / `#2a2140` | the "All profiles" badge |
 | `--ok` | `#15803d` | `#4ade80` | passed checks, "✓ all good" |
-| `--warn` / `--warn-soft` | `#b45309` / `#fdf1dc` | `#fbbf24` / `#3a2c10` | fixable problems, "session open" |
+| `--warn` / `--warn-soft` | `#a84d08` / `#fdf1dc` | `#fbbf24` / `#3a2c10` | fixable problems, "session open" |
 | `--err` / `--err-soft` | `#b91c1c` / `#fbe3e3` | `#f87171` / `#3d1a1a` | errors, missing folders, destructive actions, tab counters |
 | `--logo` / `--logo-back` / `--logo-eye` | `#d97757` / `#e9a98c` / `#1d1c1a` | `#d97757` / `#8a4a33` / `#1d1c1a` | the two pixel mascots next to the page title, nothing else (same colors as `docs/assets/logo.svg`) |
 
@@ -56,10 +56,11 @@ Rules:
 | Component | Class | Notes |
 |---|---|---|
 | Profile card | `.pcard` | name and badge, monospace meta line, three big numbers; `.live` for "session open". `.pcard.add` is the dashed "+ New profile" variant |
-| Tabs | `nav.tabs` | orange underline on the active tab; a red `.count` with the number of problems |
+| Navigation | `.shell`, `nav.tabs#tabs` > `.ngroup` | eleven tabs in four groups (Content, Extensions, Profiles, System), each with an uppercase `.nlabel`. From 1100px a 168px sticky sidebar on the left: the active tab sits on `--panel` with a 2px orange bar at its left. Below, `#ngroups` (a `.seg`) picks the group and only that group's tabs show, in one row with the orange underline; a group remembers its last tab, and a red dot marks a hidden group whose tab has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
+| Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal, drawer or popover open. The header button is hidden on touch screens (`hover: none`) |
 | Filters | `.chip` / `.chip.on` | the active chip is inverted (background `--text`) |
 | Buttons | `.btn` | `.primary` (orange, at most one per row or modal), `.danger` (red text), `.small` |
-| Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-warn`, `.b-err` | always short text, never an icon alone |
+| Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-default`, `.b-warn`, `.b-err` | always short text, never an icon alone; `.b-default` (outlined) marks a setting left at its default. Never fade a badge with `opacity`: it breaks contrast |
 | Table | `.table > table` | header on `--panel-2`; paths in `td.path` (monospace, wrap anywhere); actions aligned right |
 | Side list | `.side` + `.plist` | scrolls on its own (max 62vh); the selected item is on `--accent-soft` |
 | Memory card | `.mcard` / `.mcard.on` | focusable; orange border while open in the editor |
@@ -68,6 +69,8 @@ Rules:
 | Health check | `.check.ok` `.warn` `.error` | ✓ ! ✕ icon in a 16px column |
 | Modal | `modal({ title, sub, body, actions })` | closes with Esc, a click outside, or Cancel; the first field gets focus; actions without a `label` do not appear in the footer |
 | Typed confirmation | "Type *Name* to confirm" field | only for the biggest operations (deleting a profile): the button stays disabled until the text matches |
+| Plan preview | `planDetails(items, to)` → `<details>` with `ul.plan` | "Show the N files and folders it touches", one line per item with its action; `li.conflict` in amber. Used by move, delete profile, share and separate |
+| Apply to all | `applyAll(title, preview, intro, okLabel, post)` | confirmation listing the profiles that change (with the old → new detail) and the ones skipped with the reason; says that one Restore undoes it all |
 | Danger box | `.danger-box` | red border and background, for a risk to read before confirming (e.g. an open session) |
 | Notice | `.notice` | a bar above the profiles for a system-level state (Claude Code missing, installing, not in `PATH`) |
 | Drawer | `.drawer` | right side panel for the About information; sticky header with Refresh and Close |
@@ -94,7 +97,11 @@ Rules:
 - Search fields keep the caret position when the list re-renders.
 - Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons use `--on-accent` (5.2:1 light, 7.2:1 dark). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
 - `prefers-reduced-motion` disables the drawer's slide-in.
+- Landmarks: one `header`, `nav` labelled *Sections*, `main`; the profile cards are a labelled `section`.
+- `tests/test_ui.py` runs axe-core on every tab, the shortcuts dialog, the About panel and phone width, in both themes, and fails on *serious* or *critical* violations.
 
 ## Responsive
 
-There is one breakpoint, at **820px**: the memories grid becomes one column, search fields go full width, settings rows and permission columns stack, and tables scroll horizontally inside their container (the page itself never does). Profile and health cards adapt by themselves with `grid-template-columns: repeat(auto-fit, minmax(…))`.
+There are two breakpoints. At **1100px** the navigation changes: a sidebar with the four groups above it, the group switcher with one row of tabs below it (see *Navigation*); at 375px the switcher and the longest group still fit without scrolling sideways.
+
+At **820px** the memories grid becomes one column, search fields go full width, settings rows and permission columns stack, and tables scroll horizontally inside their container (the page itself never does). Profile and health cards adapt by themselves with `grid-template-columns: repeat(auto-fit, minmax(…))`.

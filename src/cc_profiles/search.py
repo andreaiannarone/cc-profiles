@@ -7,8 +7,8 @@ import os
 import re
 import time
 
-from .core import ApiError, load_settings, parse_memory, pretty, profile, profiles, read_json
-from .paths import memory_files, path_index
+from .core import ApiError, cached_read, load_settings, parse_memory, pretty, profile, profiles, read_json
+from .paths import memory_files, path_index, project_folders
 from .settings import SETTING_FIELDS, effective, settings_files
 from .info import names_in
 from .extensions import mcp_summary
@@ -40,6 +40,14 @@ def snippet(text, q, width=60):
     pre, post = ("…" if a else ""), ("…" if b < len(text) else "")
     flat = re.sub(r"\s", " ", text[a:b])  # same length, so the offsets stay right
     return {"text": pre + flat + post, "at": len(pre) + i - a, "len": len(q)}
+
+
+def warm_search():
+    """Read every memory once, so the first search does not run into its time limit."""
+    for p in profiles():
+        for _, d, _ in project_folders(p):
+            for f in memory_files(d):
+                cached_read("head", os.path.join(d, "memory", f), read_head)
 
 
 def search(q):
@@ -83,7 +91,7 @@ def search(q):
                     projects[name] = {"kind": "project", "profile": p["id"], "profiles": [p["id"]], "title": path,
                                       "snippet": m, "open": {"project": name, "path": path}}
             for f in memory_files(d):
-                text = read_head(os.path.join(d, "memory", f))
+                text = cached_read("head", os.path.join(d, "memory", f), read_head)
                 meta = parse_memory(text)
                 title = meta.get("name") or f[:-3]
                 m = snippet(title, ql) or snippet(meta.get("description", ""), ql) or snippet(text, ql)
@@ -101,7 +109,7 @@ def search(q):
             if real in seen_skills:  # a shared skills folder: one result, every profile that sees it
                 seen_skills[real]["profiles"].append(p["id"])
                 continue
-            text = read_head(md)
+            text = cached_read("head", md, read_head)
             m = snippet(n, ql) or snippet(text, ql)
             if m:
                 item = {"kind": "skill", "profile": p["id"], "profiles": [p["id"]], "title": n,

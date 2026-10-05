@@ -26,6 +26,30 @@ python3 -m venv .venv
 
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
 
+### Coverage
+
+Most of the code runs inside the servers the tests start, so coverage has to follow them into those processes. `COVERAGE_PROCESS_START` does that: with it set, the tests put `tests/coverage_startup/` on the servers' `PYTHONPATH`, and its `sitecustomize.py` starts coverage in each one. The settings are in `pyproject.toml` (`[tool.coverage.*]`).
+
+```sh
+COVERAGE_PROCESS_START=pyproject.toml .venv/bin/python -m coverage run -m pytest
+.venv/bin/python -m coverage combine      # one data file per process -> .coverage
+.venv/bin/python -m coverage report --sort=cover
+.venv/bin/python -m coverage html         # optional: htmlcov/index.html, line by line
+```
+
+CI does the same on Python 3.12 and shows the table in the run's summary.
+
+### How fast it is on a big home
+
+`tests/bench_home.py` is not part of the suite. It builds a large fake home once (4 profiles, 2,000 projects, 20,000 conversations, 5,000 memories, 2,000 backups, about 550 MB), starts the app on it and times every request a tab makes when it opens:
+
+```sh
+.venv/bin/python tests/bench_home.py /tmp/cc-profiles-bench      # right after start
+.venv/bin/python tests/bench_home.py /tmp/cc-profiles-bench 40   # after the startup warm-up
+```
+
+Run it before and after a change that reads many files.
+
 ### The browser smoke test
 
 `tests/test_ui.py` opens every tab of the real page in Chromium and fails on JavaScript errors, Content-Security-Policy violations or a tab stuck loading. It is skipped unless Playwright is installed:
@@ -85,9 +109,16 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
-### Social preview image
+### README images
 
-The image GitHub shows when the repository is shared, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`: the command is at the top of that file. Upload it again under *Settings → General → Social preview* after regenerating it.
+The screenshots, the demo GIF and the social preview in `docs/assets/` are made from the real app on the sandbox home, never by hand. After a change to the UI, regenerate them all (about 30 seconds; the GIF needs `ffmpeg`):
+
+```sh
+.venv/bin/pip install -e ".[ui]" && .venv/bin/python -m playwright install chromium
+.venv/bin/python scripts/make_screenshots.py            # add --no-gif to skip the GIF
+```
+
+The social preview, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`. Upload it again under *Settings → General → Social preview* after regenerating it.
 
 ## Pull requests
 
