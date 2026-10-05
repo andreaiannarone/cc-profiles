@@ -296,6 +296,26 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_several_settings_saved_at_once_in_one_backup(home, app_factory):
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus"})
+    before = home.snapshot()
+    app = app_factory()
+    n = len(app.get("/api/backups"))
+    P = "/api/settings/fields"
+    # one bad value: nothing is written
+    assert "pick one of the options" in app.post_error(P, {"profile": "default", "values": {"language": "Italiano", "timeFormat": "x"}})
+    assert home.snapshot() == before
+    r = app.post(P, {"profile": "default", "values": {"language": "Italiano", "verbose": True, "attribution.commit": False}})
+    assert r["message"].startswith("Saved 3 settings")
+    assert len(app.get("/api/backups")) == n + 1
+    assert json.loads(home.path(".claude/settings.json").read_text()) == {"model": "opus", "language": "Italiano", "attribution": {"commit": ""}}
+    assert json.loads(home.path(".claude.json").read_text())["verbose"] is True
+    assert "Nothing to save" in app.post_error(P, {"profile": "default", "values": {}})
+    restore_newest(app)
+    assert home.snapshot() == before
+
+
 def test_attribution_keys_live_inside_their_object(home, app_factory):
     """attribution is an object: commit and pr are switches, off is an empty text (no
     attribution), on is the key's absence; a custom text counts as on and is kept. The
@@ -310,7 +330,7 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
     assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
 
-    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": "text"})
+    assert "true or false" in app.post_error(P, {"profile": "default", "key": "attribution.commit", "value": 5})
     app.post(P, {"profile": "default", "key": "attribution.commit", "value": False})
     app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
     data = json.loads(home.path(".claude/settings.json").read_text())
@@ -507,8 +527,8 @@ def test_search_finds_everything_and_changes_nothing(home, app_factory):
 
 def test_compare_two_profiles(home, app_factory):
     search_home(home)
-    home.json(".claude/settings.json", {"model": "opus", "permissions": {"allow": ["Bash(ls)", "Read"]}})
-    home.json(".claude-work/settings.local.json", {"model": "sonnet"})
+    home.json(".claude/settings.json", {"language": "English", "permissions": {"allow": ["Bash(ls)", "Read"]}})
+    home.json(".claude-work/settings.local.json", {"language": "Italiano"})
     home.json(".claude-work/settings.json", {"permissions": {"allow": ["Read"], "deny": ["Bash(rm:*)"]}})
     home.write(".claude-work/skills/release-notes/SKILL.md", "---\nname: release-notes\n---\nOther.\n")
     home.write(".claude-work/skills/oncall/SKILL.md", "---\nname: oncall\n---\n")
@@ -519,9 +539,10 @@ def test_compare_two_profiles(home, app_factory):
     before = home.snapshot()
     app = app_factory()
     c = app.get("/api/compare?a=default&b=work")
-    model = next(s for s in c["settings"] if s["key"] == "model")
-    assert (model["a"], model["a_source"], model["b"], model["b_source"], model["same"]) == \
-        ("opus", "settings", "sonnet", "local", False)
+    lang = next(s for s in c["settings"] if s["key"] == "language")
+    assert (lang["a"], lang["a_source"], lang["b"], lang["b_source"], lang["same"]) == \
+        ("English", "settings", "Italiano", "local", False)
+    assert not any(s["key"] == "model" for s in c["settings"])  # the model is picked with /model, not here
     assert c["permissions"]["diff"]["allow"] == {"only_a": ["Bash(ls)"], "only_b": [], "both": ["Read"]}
     assert c["permissions"]["diff"]["deny"]["only_b"] == ["Bash(rm:*)"]
     assert c["permissions"]["b"]["deny"] == ["Bash(rm:*)"]  # full lists, to post a merged one back
@@ -1082,7 +1103,7 @@ def test_share_preview_lists_what_the_link_replaces(home, app_factory):
 def all_home(home):
     """default; lab shares settings.json and skills with default; solo and work have their own."""
     basic_home(home)
-    home.json(".claude/settings.json", {"model": "opus", "timeFormat": "24-hour"})
+    home.json(".claude/settings.json", {"language": "English", "timeFormat": "24-hour"})
     home.write(".claude/skills/review/SKILL.md", "---\nname: review\n---\nReview it.\n")
     cfg = json.loads(home.path(".claude.json").read_text())
     cfg["mcpServers"] = {"files": {"type": "stdio", "command": "npx", "args": ["files"]}}
@@ -1090,10 +1111,10 @@ def all_home(home):
     home.path(".claude-lab").mkdir()
     os.symlink("../.claude/settings.json", home.path(".claude-lab/settings.json"))
     os.symlink("../.claude/skills", home.path(".claude-lab/skills"))
-    home.json(".claude-solo/settings.json", {"model": "haiku"})
+    home.json(".claude-solo/settings.json", {"language": "Français"})
     home.json(".claude-solo/.claude.json", {"mcpServers": {"files": {"type": "stdio", "command": "other"}}})
     home.write(".claude-solo/skills/review/SKILL.md", "my own review\n")
-    home.json(".claude-work/settings.local.json", {"model": "sonnet"})
+    home.json(".claude-work/settings.local.json", {"language": "Italiano"})
 
 
 def restore_newest(app):
@@ -1106,19 +1127,19 @@ def test_apply_a_setting_to_all_profiles_is_undone_by_one_restore(home, app_fact
     before = home.snapshot()
     app = app_factory()
 
-    plan = app.get("/api/settings/field/all/preview?profile=work&key=model")
+    plan = app.get("/api/settings/field/all/preview?profile=work&key=language")
     assert [(a["id"], a["detail"]) for a in plan["apply"]] == [
-        ("default", '"opus" → "sonnet" in settings.json'), ("solo", '"haiku" → "sonnet" in settings.json')]
+        ("default", '"English" → "Italiano" in settings.json'), ("solo", '"Français" → "Italiano" in settings.json')]
     assert plan["skip"] == [{"id": "lab", "label": "Lab", "reason": "shares settings.json with Default"}]
     assert home.snapshot() == before
     n = len(app.get("/api/backups"))
-    r = app.post("/api/settings/field/all", {"profile": "work", "key": "model"})
-    assert r["message"] == 'Model set to "sonnet" in 2 profiles, 1 skipped.'
+    r = app.post("/api/settings/field/all", {"profile": "work", "key": "language"})
+    assert r["message"] == 'Language set to "Italiano" in 2 profiles, 1 skipped.'
     assert len(app.get("/api/backups")) == n + 1
-    assert json.loads(home.path(".claude/settings.json").read_text())["model"] == "sonnet"
-    assert json.loads(home.path(".claude-solo/settings.json").read_text())["model"] == "sonnet"
+    assert json.loads(home.path(".claude/settings.json").read_text())["language"] == "Italiano"
+    assert json.loads(home.path(".claude-solo/settings.json").read_text())["language"] == "Italiano"
     assert home.path(".claude-lab/settings.json").is_symlink()
-    assert "No profile to change" in app.post_error("/api/settings/field/all", {"profile": "work", "key": "model"})
+    assert "No profile to change" in app.post_error("/api/settings/field/all", {"profile": "work", "key": "language"})
     restore_newest(app)
     assert home.snapshot() == before
 
@@ -1149,7 +1170,7 @@ def test_add_a_permission_rule_to_all_profiles_is_undone_by_one_restore(home, ap
     app.post("/api/settings/permissions/all", {"list": "deny", "rule": " Bash(rm -rf:*) "})
     for p in (".claude", ".claude-solo", ".claude-work"):
         assert json.loads(home.path(f"{p}/settings.json").read_text())["permissions"]["deny"] == ["Bash(rm -rf:*)"]
-    assert json.loads(home.path(".claude/settings.json").read_text())["model"] == "opus"  # the rest is kept
+    assert json.loads(home.path(".claude/settings.json").read_text())["language"] == "English"  # the rest is kept
     assert "already in deny" in app.post_error("/api/settings/permissions/all", {"list": "deny", "rule": "Bash(rm -rf:*)"})
     assert "allow, ask or deny" in app.post_error("/api/settings/permissions/all", {"list": "nope", "rule": "x"})
     assert "one rule" in app.post_error("/api/settings/permissions/all", {"list": "deny", "rule": "a\nb"})

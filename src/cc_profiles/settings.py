@@ -50,30 +50,28 @@ _OFF = {"type": "bool", "default": False}
 _GLOBAL = {"file": "global"}
 SETTING_FIELDS = [
     # model and replies
-    {"group": "Model and replies", "key": "model", "type": "text", "label": "Model",
-     "help": "An alias (opus, sonnet, haiku) or a full model name", "suggest": ["opus", "sonnet", "haiku"]},
-    dict(_ON, group="Model and replies", key="alwaysThinkingEnabled", label="Thinking mode", drop_default=True,
+    dict(_ON, group="Replies", key="alwaysThinkingEnabled", label="Thinking mode", drop_default=True,
          help="Claude reasons before answering"),
-    {"group": "Model and replies", "key": "outputStyle", "type": "select", "label": "Output style",
+    {"group": "Replies", "key": "outputStyle", "type": "select", "label": "Output style",
      "default_desc": "Claude Code's standard behavior",
      "help": "Built-in styles plus the profile's custom ones (output-styles/)", "options": "styles"},
-    {"group": "Model and replies", "key": "language", "type": "text", "label": "Language",
+    {"group": "Replies", "key": "language", "type": "text", "label": "Language",
      "help": "Language of the replies, e.g. English, Italiano", "suggest": []},
-    dict(_ON, group="Model and replies", key="promptSuggestionEnabled", label="Prompt suggestions", drop_default=True,
+    dict(_ON, group="Replies", key="promptSuggestionEnabled", label="Prompt suggestions", drop_default=True,
          help="Suggest what to ask next"),
-    dict(_ON, group="Model and replies", key="awaySummaryEnabled", label="Session recap", drop_default=True,
+    dict(_ON, group="Replies", key="awaySummaryEnabled", label="Session recap", drop_default=True,
          help="A summary of what happened while you were away"),
-    dict(_ON, **_GLOBAL, group="Model and replies", key="autoCompactEnabled", label="Auto-compact",
+    dict(_ON, **_GLOBAL, group="Replies", key="autoCompactEnabled", label="Auto-compact",
          help="Compact the conversation when the context fills up"),
-    dict(_ON, group="Model and replies", key="precomputeCompactionEnabled", label="Precompute compaction",
+    dict(_ON, group="Replies", key="precomputeCompactionEnabled", label="Precompute compaction",
          help="Prepare the compaction in advance, so it takes less time"),
-    dict(_ON, **_GLOBAL, group="Model and replies", key="fileCheckpointingEnabled", label="Rewind code (checkpoints)",
+    dict(_ON, **_GLOBAL, group="Replies", key="fileCheckpointingEnabled", label="Rewind code (checkpoints)",
          help="Keep snapshots of the files Claude edits, to undo them with /rewind"),
-    {"group": "Model and replies", "key": "permissions.defaultMode", "type": "select", "default": "default", "label": "Default permission mode",
+    {"group": "Replies", "key": "permissions.defaultMode", "type": "select", "default": "default", "label": "Default permission mode",
      "help": "How a session starts: asking first, planning, or editing on its own",
      "options": [("default", "Ask before acting"), ("plan", "Plan mode"), ("acceptEdits", "Accept edits"),
                  ("auto", "Auto"), ("dontAsk", "Don't ask")]},
-    dict(_ON, group="Model and replies", key="useAutoModeDuringPlan", label="Use auto mode during plan",
+    dict(_ON, group="Replies", key="useAutoModeDuringPlan", label="Use auto mode during plan",
          help="Plan mode runs with auto mode's permissions"),
     # interface
     {"group": "Interface", "key": "theme", "type": "select", "default": "dark", "label": "Theme", "file": "global", "also_settings": True,
@@ -329,7 +327,9 @@ def check_setting_value(fd, prof, value):
     """The value to write (None removes the setting), checked against the field's type."""
     if value is None:
         return None
-    if "off_value" in fd:
+    if "off_value" in fd:  # a switch: true is the default, false the "off" text; a custom text is kept
+        if isinstance(value, str):
+            return value.strip() or fd["off_value"]
         if not isinstance(value, bool):
             raise ApiError("Invalid value: expected true or false")
         return None if value else fd["off_value"]
@@ -364,6 +364,24 @@ def op_setting(pid, key, value):
         msg = f"Saved in {os.path.basename(path)}: {fd['label'].lower()} = {show_value(fd, prof, value)}{shared_note(path)}."
     bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(path)}")
     return {"message": msg, "backup": bk.close()}
+
+
+def op_settings_many(pid, values):
+    """Save several fields of one profile at once: all are checked first, then written
+    in one backup. Each goes where its value lives, as with a single save."""
+    prof = profile(pid)
+    if not isinstance(values, dict) or not values:
+        raise ApiError("Nothing to save")
+    checked = [(setting_field(k), check_setting_value(setting_field(k), prof, v)) for k, v in values.items()]
+    bk = Backup("settings", f"{len(checked)} setting{'s' if len(checked) != 1 else ''} of {prof['label']}")
+    shown = []
+    for fd, value in checked:
+        which = effective(prof, fd["key"])[1] or home_file(fd)
+        write_field(prof, which, fd["key"], value, bk)
+        bk.note(f"{fd['key']} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(field_path(prof, which))}")
+        shown.append(f"{fd['label'].lower()} = {show_value(fd, prof, value)}")
+    return {"message": f"Saved {len(checked)} setting{'s' if len(checked) != 1 else ''}: " + "; ".join(shown) + ".",
+            "backup": bk.close()}
 
 
 # Apply to all profiles: one operation, one backup for every profile it changes. The plan
