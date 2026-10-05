@@ -28,7 +28,24 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[test]"
       - name: Test
+        if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.python == '3.12') }}
         run: python -m pytest -v
+      # One version also measures coverage, including the servers the tests start
+      - name: Test with coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        env:
+          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
+        run: python -m coverage run -m pytest -v
+      - name: Coverage report
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        run: |
+          python -m coverage combine
+          python -m coverage report --sort=cover
+          {
+            echo "### Test coverage (Python ${{ matrix.python }}, servers included)"
+            echo
+            python -m coverage report --sort=cover --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
 
   ui:
     name: UI smoke test

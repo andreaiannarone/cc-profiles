@@ -25,7 +25,7 @@ from .core import (
     write_json,
     write_text,
 )
-from .paths import classify, history_lines, memory_files, path_index
+from .paths import classify, history_lines, memory_files, path_index, project_folders
 
 # ---------------------------------------------------------------------------
 # Projects
@@ -35,18 +35,23 @@ def list_projects():
     idx = path_index()
     rows = {}
     for p in profs:
-        for d in glob.glob(os.path.join(p["dir_abs"], "projects", "*", "")):
-            name = os.path.basename(d.rstrip("/"))
-            convs = glob.glob(os.path.join(d, "*.jsonl"))
-            mtime = max([os.path.getmtime(c) for c in convs] or [0])
+        for name, d, convs in project_folders(p):
+            mtime = 0
+            for c in convs:
+                try:
+                    mtime = max(mtime, os.path.getmtime(os.path.join(d, c)))
+                except OSError:  # removed while listing
+                    pass
             row = rows.setdefault(name, {"name": name, "in": {}})
             row["in"][p["id"]] = {"conv": len(convs), "mem": len(memory_files(d)), "mtime": mtime}
     ids = [p["id"] for p in profs]
+    rules = load_config()["rules"]
+    labels = {p["id"]: p["label"] for p in profs}
     out = []
     for name, row in rows.items():
         path = idx.get(name)
         exists = bool(path) and os.path.isdir(path)
-        expected = classify(path, name)
+        expected = classify(path, name, rules)
         issues = []
         if not exists:
             issues.append({"kind": "orphan", "text": "folder not found on disk" if path else "unknown path"})
@@ -54,7 +59,7 @@ def list_projects():
             for pid, st in row["in"].items():
                 if pid != expected and (st["conv"] or st["mem"]):
                     issues.append({"kind": "profile", "from": pid, "to": expected,
-                                   "text": f"also in {pid_label(pid)}, but belongs to {pid_label(expected)}"})
+                                   "text": f"also in {labels[pid]}, but belongs to {labels[expected]}"})
         if expected is None:
             issues.append({"kind": "unclassified", "text": "not assigned to a profile"})
         row.update({"path": path, "pretty": pretty(path) if path else name,

@@ -89,11 +89,12 @@ def check_delete(pid, merge_into):
     return prof, dst
 
 
-def mergeable_projects(prof):
-    """Project folders a merge moves: those with conversations or memories."""
+def mergeable_projects(prof, fresh=False):
+    """Project folders a merge moves: those with conversations or memories.
+    The merge itself passes fresh=True: a write never trusts the caches."""
     out = []
     for d in sorted(glob.glob(os.path.join(prof["dir_abs"], "projects", "*", ""))):
-        if glob.glob(os.path.join(d, "*.jsonl")) or memory_files(d):
+        if glob.glob(os.path.join(d, "*.jsonl")) or memory_files(d, fresh=fresh):
             out.append(os.path.basename(d.rstrip("/")))
     return out
 
@@ -140,7 +141,7 @@ def op_delete_profile(pid, merge_into=None, force=False):
     moved = conv = hist = 0
     if dst:
         idx = path_index()
-        for name in mergeable_projects(prof):
+        for name in mergeable_projects(prof, fresh=True):
             c, _, h, _ = move_project_into(name, prof, dst, bk, idx.get(name))
             moved, conv, hist = moved + 1, conv + c, hist + h
         hist += move_history(prof, dst, None, bk)  # prompts of projects without a folder

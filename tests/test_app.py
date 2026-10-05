@@ -8,6 +8,7 @@ import io
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -20,7 +21,7 @@ import zipfile
 
 import pytest
 
-from conftest import SRC, free_port, san
+from conftest import SRC, child_env, free_port, san
 
 
 def basic_home(home):
@@ -292,6 +293,33 @@ def test_claude_processes_are_matched_to_profiles(tmp_path):
         ("vim", ["claude.md"]),
     ])
     assert found == {os.path.realpath(os.path.join(home, d)) for d in (".claude", ".claude-work", ".claude-x")}
+
+
+def test_a_running_claude_process_marks_its_profile_active(home, app_factory, tmp_path):
+    """A real process named claude, as `ps -E` (macOS) or /proc (Linux) shows it."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import core
+    home.profile("")
+    work = home.profile("work")  # no conversations: only the process can make it active
+    fake = tmp_path / "bin" / "claude"
+    fake.parent.mkdir()
+    shutil.copy("/bin/sleep", fake)
+    if sys.platform == "darwin":
+        # A copied system binary is killed at launch, and ps -E hides the environment of
+        # system binaries (a link to /bin/sleep runs, but shows no CLAUDE_CONFIG_DIR):
+        # an ad-hoc signature makes the copy an ordinary program, like the real claude.
+        subprocess.run(["codesign", "-f", "-s", "-", str(fake)], check=True, capture_output=True)
+    proc =subprocess.Popen([str(fake), "30"], env={"HOME": str(home.root), "CLAUDE_CONFIG_DIR": str(work)})
+    try:
+        core._running["at"] = 0  # the result is cached for 3 s
+        assert os.path.realpath(work) in core.running_claude_dirs()
+        active = {p["id"]: p["active"] for p in app_factory().get("/api/profiles")}
+        assert active == {"default": False, "work": True}
+    finally:
+        proc.kill()
+        proc.wait()
+    core._running["at"] = 0
+    assert os.path.realpath(work) not in (core.running_claude_dirs() or set())
 
 
 def test_move_preview_lists_what_moves_and_changes_nothing(home, app_factory):
@@ -752,7 +780,7 @@ def test_plugins_are_listed_and_switched(home, app_factory):
 
 # --- command line ---------------------------------------------------------------
 def run_cli(home, *args, **env):
-    e = {"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), **env}
+    e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), **env})
     return subprocess.run([sys.executable, "-m", "cc_profiles", *args], env=e,
                           capture_output=True, text=True, timeout=20)
 
@@ -1056,3 +1084,72 @@ def test_templates_hold_no_credentials_and_create_profiles(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
     assert app.get("/api/templates")["templates"] == []  # restoring the save removes the template too
+
+
+# --- listings and their caches ------------------------------------------------
+def test_listings_follow_changes_on_disk(home, app_factory):
+    """Listings reuse what they read while files and folders are unchanged: a change
+    on disk must show up in the very next request."""
+    basic_home(home)
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    counts = lambda: {p["id"]: (p["conv"], p["memories"]) for p in app.get("/api/profiles")}
+    mems = lambda: {r["name"]: r["count"] for r in app.get("/api/memory/projects?profile=default")}
+    assert counts()["default"] == (3, 1) and mems()[api] == 1
+    assert {r["name"] for r in app.get("/api/projects")} == {api, san(home.path("code/personal/blog")),
+                                                            san(home.path("code/old-name"))}
+
+    home.conversation("", "code/work/api", "s-api-2", {"todo.md": "next steps"})
+    home.conversation("", "code/fresh", "s-fresh")  # a new project, known only from its conversation
+    assert counts()["default"] == (5, 2) and mems()[api] == 2
+    fresh = {r["name"]: r for r in app.get("/api/projects")}[san(home.path("code/fresh"))]
+    assert fresh["path"] == str(home.path("code/fresh")) and fresh["exists"]
+    conv = {r["name"]: r["count"] for r in app.get("/api/conversations/projects?profile=default")}
+    assert conv[api] == 2
+
+    home.json(".claude.json", {"projects": {}})  # what the config said is gone: the conversation still tells
+    with open(home.path(".claude-work/history.jsonl"), "a") as f:
+        f.write("3\n")  # valid JSON, but not a prompt
+    assert {r["name"]: r for r in app.get("/api/projects")}[api]["path"] == str(home.path("code/work/api"))
+
+
+def test_health_reports_problems_and_notices_fixes(home, app_factory):
+    basic_home(home)
+    home.path("elsewhere/old-name").mkdir(parents=True)  # a folder with the lost project's name
+    md = home.path(f".claude/projects/{san(home.path('code/work/api'))}/memory")
+    (md / "loose.md").write_text("---\nname: loose\n---\nnot in the index\n")
+    with open(md / "MEMORY.md", "a") as f:
+        f.write("- [gone](gone.md) — deleted by hand\n")
+    with open(home.path(".claude/history.jsonl"), "a") as f:
+        f.write("not json\n")
+    app = app_factory()
+
+    def report():
+        r = {p["id"]: p for p in app.get("/api/health")}["default"]
+        return [c["text"] for c in r["checks"]], r["orphans"]
+
+    texts, orphans = report()
+    assert "Prompt history: 4 prompts, 1 broken lines" in texts
+    assert any(t.endswith("loose.md is not in MEMORY.md") for t in texts)
+    assert any(t.endswith("gone.md is missing") for t in texts)
+    (orphan,) = orphans
+    assert orphan["name"] == san(home.path("code/old-name")) and orphan["candidates"] == ["~/elsewhere/old-name"]
+    items = app.get(f"/api/memory/list?profile=default&project={md.parent.name}")["items"]
+    assert {i["file"]: i["indexed"] for i in items} == {"api-notes.md": True, "loose.md": False}
+
+    with open(md / "MEMORY.md", "a") as f:
+        f.write("- [loose](loose.md) — now indexed\n")
+    lines = home.path(".claude/history.jsonl").read_text().splitlines()
+    home.write(".claude/history.jsonl", "\n".join(l for l in lines if l != "not json") + "\n")
+    texts, _ = report()
+    assert "Prompt history: 3 prompts" in texts
+    assert not any("loose.md" in t for t in texts) and any(t.endswith("gone.md is missing") for t in texts)
+
+
+def test_about_counts_each_profile(home, app_factory):
+    basic_home(home)
+    about = app_factory().get("/api/about")
+    usage = {p["id"]: p["usage"] for p in about["profiles"]}
+    assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
+    assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0
+    assert about["app"]["Backups"].startswith("0 ·")
