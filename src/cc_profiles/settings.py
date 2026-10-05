@@ -54,8 +54,17 @@ SETTING_FIELDS = [
      "options": [("normal", "Normal"), ("vim", "Vim")]},
     {"key": "tui", "type": "select", "label": "Renderer", "help": "How the UI is drawn in the terminal",
      "options": [("default", "Classic"), ("fullscreen", "Fullscreen, flicker-free")]},
+    # attribution is an object; its three keys are edited one by one. An empty text is a
+    # value of its own: Claude Code then adds no attribution at all.
+    {"key": "attribution.commit", "type": "text", "blank": True, "label": "Commit attribution",
+     "help": "Text Claude adds to its commits, trailers included (e.g. Co-Authored-By: …). Empty: none"},
+    {"key": "attribution.pr", "type": "text", "blank": True, "label": "Pull request attribution",
+     "help": "Text Claude adds to the pull requests it opens. Empty: none"},
+    {"key": "attribution.sessionUrl", "type": "bool", "default": True, "label": "Session link in commits",
+     "help": "From web and Remote Control sessions, link the claude.ai session in commits and pull requests"},
     {"key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits", "deprecated": True,
-     "help": "Deprecated by Claude Code: replaced by “attribution” (advanced editor)"},
+     "only_if_set": True,
+     "help": "Replaced by Commit attribution and Pull request attribution: remove it with ×"},
     {"key": "cleanupPeriodDays", "type": "number", "label": "Days to keep conversations",
      "help": "Older conversations are deleted (default 30, minimum 1)"},
     {"key": "prefersReducedMotion", "type": "bool", "label": "Reduce motion", "help": "Fewer animations in the UI"},
@@ -91,6 +100,43 @@ def field_options(fd, prof, current):
     return [{"value": v, "label": l, "desc": d, "group": g} for v, l, d, g in opts]
 
 
+def get_key(data, key):
+    """(found, value) of a key in settings data; "a.b" is key b inside the object a."""
+    for part in key.split("."):
+        if not isinstance(data, dict) or part not in data:
+            return False, None
+        data = data[part]
+    return True, data
+
+
+def set_key(data, key, value):
+    *parents, last = key.split(".")
+    for part in parents:
+        if not isinstance(data.setdefault(part, {}), dict):
+            raise ApiError(f"“{part}” is not an object in the settings: fix it in the advanced editor")
+        data = data[part]
+    data[last] = value
+
+
+def pop_key(data, key):
+    """Remove a key, and the objects that it leaves empty."""
+    *parents, last = key.split(".")
+    if parents:
+        found, inner = get_key(data, ".".join(parents))
+        if found and isinstance(inner, dict):
+            inner.pop(last, None)
+            if not inner:
+                pop_key(data, ".".join(parents))
+    else:
+        data.pop(last, None)
+
+
+def fields_for(profs):
+    """The fields to show: a deprecated one only while some profile still has it."""
+    return [fd for fd in SETTING_FIELDS
+            if not fd.get("only_if_set") or any(effective(p, fd["key"])[1] for p in profs)]
+
+
 def settings_files(prof):
     d = prof["dir_abs"]
     return {"settings": os.path.join(d, "settings.json"),
@@ -101,12 +147,10 @@ def settings_files(prof):
 def effective(prof, key):
     """Value in use and the file it comes from: settings.local.json wins over settings.json."""
     f = settings_files(prof)
-    local, _ = load_settings(f["local"])
-    if key in local:
-        return local[key], "local"
-    sett, _ = load_settings(f["settings"])
-    if key in sett:
-        return sett[key], "settings"
+    for which in ("local", "settings"):
+        found, value = get_key(load_settings(f[which])[0], key)
+        if found:
+            return value, which
     return None, None
 
 
@@ -121,7 +165,7 @@ def get_settings(pid):
     all_profs = profiles()
     others = [p for p in all_profs if p["id"] != pid]
     fields = []
-    for fd in SETTING_FIELDS:
+    for fd in fields_for(all_profs):
         val, src = effective(prof, fd["key"])
         seen = {v for v in [effective(o, fd["key"])[0] for o in all_profs] if isinstance(v, str)}
         fields.append(dict({k: v for k, v in fd.items() if k != "options"}, value=val, source=src,
@@ -179,7 +223,7 @@ def check_setting_value(fd, prof, value):
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ApiError("Invalid value: expected a whole number greater than zero")
     if fd["type"] == "text":
-        value = str(value).strip() or None
+        value = str(value).strip() or ("" if fd.get("blank") else None)
     if fd["type"] == "select":
         allowed = [o["value"] for o in field_options(fd, prof, effective(prof, fd["key"])[0])]
         if value not in allowed:
@@ -197,10 +241,10 @@ def op_setting(pid, key, value):
     data, _ = load_settings(f[which])
     bk = Backup("setting", f"{fd['label']} of {prof['label']}")
     if value is None:
-        data.pop(key, None)
+        pop_key(data, key)
         msg = f"{fd['label']}: back to the default."
     else:
-        data[key] = value
+        set_key(data, key, value)
         msg = f"Saved in {os.path.basename(f[which])}: {fd['label'].lower()} = {value}{shared_note(f[which])}."
     save_settings_file(prof, which, data, bk)
     bk.note(f"{key} = {json.dumps(value, ensure_ascii=False)} in {os.path.basename(f[which])}")
@@ -212,6 +256,8 @@ def op_setting(pid, key, value):
 def show_value(fd, prof, value):
     if value is None:
         return "the default"
+    if value == "":
+        return "none"
     opt = next((o for o in field_options(fd, prof, value) or [] if o["value"] == value), None)
     return opt["label"] if opt else json.dumps(value, ensure_ascii=False)
 
@@ -221,7 +267,7 @@ def setting_targets(prof, key, value):
     value lives, or every file that has it when the value goes back to the default."""
     f = settings_files(prof)
     if value is None:
-        return [w for w in ("local", "settings") if key in load_settings(f[w])[0]]
+        return [w for w in ("local", "settings") if get_key(load_settings(f[w])[0], key)[0]]
     return [effective(prof, key)[1] or "settings"]
 
 
@@ -288,9 +334,9 @@ def op_setting_all(pid, key):
         for which in setting_targets(o, key, value):
             data, _ = load_settings(f[which])
             if value is None:
-                data.pop(key, None)
+                pop_key(data, key)
             else:
-                data[key] = value
+                set_key(data, key, value)
             save_settings_file(o, which, data, bk)
         bk.note(f"{o['label']}: {t['detail']}")
     for s in plan["skip"]:

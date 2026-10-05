@@ -135,7 +135,7 @@ cc-profiles
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
 - ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
-- 🧭 **Fast to get around**: tabs grouped in a sidebar (Content, Extensions, Profiles, System), keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
+- 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
@@ -248,6 +248,7 @@ cc-profiles                   # starts on http://127.0.0.1:4777 and opens the br
 cc-profiles --port 4800       # another port
 cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
+cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
 cc-profiles install-command   # adds the /cc-profiles command to Claude Code in every profile
 cc-profiles label             # prints the name of the active profile, for status lines
 ```

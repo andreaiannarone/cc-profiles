@@ -56,7 +56,7 @@ Rules:
 | Component | Class | Notes |
 |---|---|---|
 | Profile card | `.pcard` | name and badge, monospace meta line, three big numbers; `.live` for "session open". `.pcard.add` is the dashed "+ New profile" variant |
-| Navigation | `.shell`, `nav.tabs#tabs` > `.ngroup` | eleven tabs in four groups (Content, Extensions, Profiles, System), each with an uppercase `.nlabel`. From 1100px a 168px sticky sidebar on the left: the active tab sits on `--panel` with a 2px orange bar at its left. Below, `#ngroups` (a `.seg`) picks the group and only that group's tabs show, in one row with the orange underline; a group remembers its last tab, and a red dot marks a hidden group whose tab has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
+| Navigation | `nav.tabs#tabs` > `.tabrow`, `.more` | an underline nav like GitHub's, under the profile cards: each tab is a 16px stroke icon (`.ti`) plus its name, muted until hovered (a `--panel-2` rounded background) or active (full text color and a 2px orange underline on the nav's bottom line). Tabs that do not fit move, in order, into the **More** menu (`#moremenu`); the active tab always stays in the row, More is underlined when the active tab is in it, and a red dot marks it when a tab inside has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
 | Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal, drawer or popover open. The header button is hidden on touch screens (`hover: none`) |
 | Filters | `.chip` / `.chip.on` | the active chip is inverted (background `--text`) |
 | Buttons | `.btn` | `.primary` (orange, at most one per row or modal), `.danger` (red text), `.small` |
@@ -102,6 +102,6 @@ Rules:
 
 ## Responsive
 
-There are two breakpoints. At **1100px** the navigation changes: a sidebar with the four groups above it, the group switcher with one row of tabs below it (see *Navigation*); at 375px the switcher and the longest group still fit without scrolling sideways.
+The navigation needs no breakpoint: it measures itself and moves what does not fit into **More** (see *Navigation*), so nothing scrolls sideways even at 375px.
 
 At **820px** the memories grid becomes one column, search fields go full width, settings rows and permission columns stack, and tables scroll horizontally inside their container (the page itself never does). Profile and health cards adapt by themselves with `grid-template-columns: repeat(auto-fit, minmax(…))`.

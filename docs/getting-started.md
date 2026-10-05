@@ -46,7 +46,7 @@ Rename profiles from the **Profiles** tab. The first profile in the list is the 
 
 ## Open it from Claude Code
 
-Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on. Stop the server with the `kill <pid>` command it prints.
+Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on. Stop the server with `cc-profiles stop`, or restart it after an update with `cc-profiles restart`.
 
 The [install script](../install.sh) adds the command for you. Otherwise run:
 
@@ -92,7 +92,7 @@ Each new profile must log in once: run its command and use `/login`. Credentials
 
 ## Finding your way
 
-The tabs are in four groups: **Content** (Projects, Memories, Conversations), **Extensions** (Skills, MCP, Plugins), **Profiles** (Profiles, Compare) and **System** (Backups, Health, Settings). On a wide window they form a sidebar; on a narrow one, pick the group first and then the tab.
+The tabs sit in one row under the profile cards. On a narrow window the ones that do not fit are in the **More** menu at the end of the row.
 
 ### Keyboard shortcuts
 

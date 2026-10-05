@@ -65,6 +65,7 @@ class Shooter:
         self.js("document.querySelectorAll('.toast').forEach(t => t.remove());")
 
     def shot(self, path, keep_toasts=False):
+        self.page.mouse.move(VIEW["width"] - 1, VIEW["height"] - 1)  # no hover left on what was clicked
         if not keep_toasts:
             self.settle()
         else:

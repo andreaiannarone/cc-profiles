@@ -11,6 +11,7 @@ import re
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import time
@@ -276,6 +277,37 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert "cannot be changed" in app.post_error("/api/settings/global", {"profile": "default", "key": "userID", "value": True})
 
     app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_attribution_keys_live_inside_their_object(home, app_factory):
+    """attribution is an object: each of its keys is a field, an empty text means none,
+    and the deprecated includeCoAuthoredBy shows only where a profile still has it."""
+    basic_home(home)
+    home.json(".claude/settings.json", {"includeCoAuthoredBy": False, "attribution": {"pr": "via Claude"}})
+    before = home.snapshot()
+    app = app_factory()
+    P = "/api/settings/field"
+    keys = lambda pid: [f["key"] for f in app.get(f"/api/settings?profile={pid}")["fields"]]
+    assert "includeCoAuthoredBy" in keys("work")  # Default still has it
+    fields = {f["key"]: f for f in app.get("/api/settings?profile=default")["fields"]}
+    assert fields["attribution.pr"]["value"] == "via Claude" and fields["attribution.commit"]["source"] is None
+    assert fields["attribution.sessionUrl"]["default"] is True
+
+    app.post(P, {"profile": "default", "key": "attribution.commit", "value": "  "})
+    app.post(P, {"profile": "default", "key": "attribution.sessionUrl", "value": False})
+    app.post(P, {"profile": "default", "key": "includeCoAuthoredBy", "value": None})
+    data = json.loads(home.path(".claude/settings.json").read_text())
+    assert data == {"attribution": {"pr": "via Claude", "commit": "", "sessionUrl": False}}
+    assert "includeCoAuthoredBy" not in keys("work")
+    for k in ("attribution.pr", "attribution.commit", "attribution.sessionUrl"):
+        app.post(P, {"profile": "default", "key": k, "value": None})
+    assert json.loads(home.path(".claude/settings.json").read_text()) == {}  # the empty object goes too
+
+    home.json(".claude-work/settings.json", {"attribution": "text"})
+    assert "not an object" in app.post_error(P, {"profile": "work", "key": "attribution.pr", "value": "x"})
+    app.restore_all()
+    home.json(".claude-work/settings.json", {})
     assert home.snapshot() == before
 
 
@@ -792,6 +824,20 @@ def test_label_command(home, app_factory):
     assert run_cli(home, "label", CLAUDE_CONFIG_DIR=str(home.path(".claude-work"))).stdout.strip() == "Work"
 
 
+def test_favicons_for_safari(home, app_factory):
+    """Safari ignores the inline SVG favicon: the server also sends a PNG and an .ico."""
+    app = app_factory()
+    html = urllib.request.urlopen(app.base + "/").read().decode()
+    assert 'href="/favicon.png"' in html and 'href="/apple-touch-icon.png"' in html
+    for path, ctype, side in (("/favicon.png", "image/png", 96), ("/apple-touch-icon.png", "image/png", 180)):
+        r = urllib.request.urlopen(app.base + path)
+        data = r.read()
+        assert r.headers["Content-Type"] == ctype and data.startswith(b"\x89PNG\r\n\x1a\n")
+        assert struct.unpack(">II", data[16:24]) == (side, side)
+    ico = urllib.request.urlopen(app.base + "/favicon.ico").read()
+    assert ico[:6] == b"\0\0\1\0\1\0" and ico[6] == 48 and ico[22:26] == b"\x89PNG"
+
+
 def test_open_command(home):
     port = free_port()
     first = run_cli(home, "open", "--no-browser", "--port", str(port))
@@ -804,6 +850,41 @@ def test_open_command(home):
         assert again.returncode == 0 and "already running" in again.stdout
     finally:
         os.kill(pid, signal.SIGTERM)
+
+
+def test_stop_and_restart_commands(home):
+    port = free_port()
+    first = run_cli(home, "open", "--no-browser", "--port", str(port))
+    pid = int(re.search(r"pid (\d+)", first.stdout).group(1))
+    assert f"Stop it with: cc-profiles stop --port {port}" in first.stdout
+    pids = [pid]
+    try:
+        r = run_cli(home, "restart", "--port", str(port))
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"Stopped cc-profiles on http://127.0.0.1:{port} (pid {pid})" in r.stdout
+        new = int(re.search(r"started in the background .* \(pid (\d+)\)", r.stdout).group(1))
+        pids.append(new)
+        assert new != pid and "Reload the page" in r.stdout
+        assert urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5).headers["X-CC-Profiles-Pid"] == str(new)
+        r = run_cli(home, "stop", "--port", str(port))
+        assert r.returncode == 0 and f"(pid {new})" in r.stdout
+        with pytest.raises(OSError):
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2)
+        assert "is not running" in run_cli(home, "stop", "--port", str(port)).stdout
+    finally:
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+
+def test_stop_leaves_other_programs_alone(home):
+    with socket.socket() as other:  # not cc-profiles: nothing to stop
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        r = run_cli(home, "stop", "--port", str(other.getsockname()[1]))
+    assert r.returncode == 0 and "is not running" in r.stdout
 
 
 def test_open_command_port_taken(home):
