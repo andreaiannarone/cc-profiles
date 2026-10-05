@@ -11,6 +11,7 @@ import re
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import time
@@ -790,6 +791,20 @@ def test_label_command(home, app_factory):
     app_factory()  # first run writes the config
     assert run_cli(home, "label").stdout.strip() == "Default"
     assert run_cli(home, "label", CLAUDE_CONFIG_DIR=str(home.path(".claude-work"))).stdout.strip() == "Work"
+
+
+def test_favicons_for_safari(home, app_factory):
+    """Safari ignores the inline SVG favicon: the server also sends a PNG and an .ico."""
+    app = app_factory()
+    html = urllib.request.urlopen(app.base + "/").read().decode()
+    assert 'href="/favicon.png"' in html and 'href="/apple-touch-icon.png"' in html
+    for path, ctype, side in (("/favicon.png", "image/png", 96), ("/apple-touch-icon.png", "image/png", 180)):
+        r = urllib.request.urlopen(app.base + path)
+        data = r.read()
+        assert r.headers["Content-Type"] == ctype and data.startswith(b"\x89PNG\r\n\x1a\n")
+        assert struct.unpack(">II", data[16:24]) == (side, side)
+    ico = urllib.request.urlopen(app.base + "/favicon.ico").read()
+    assert ico[:6] == b"\0\0\1\0\1\0" and ico[6] == 48 and ico[22:26] == b"\x89PNG"
 
 
 def test_open_command(home):

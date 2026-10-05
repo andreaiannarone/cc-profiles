@@ -6,8 +6,10 @@ import json
 import os
 import shutil
 import socketserver
+import struct
 import sys
 import tempfile
+import zlib
 from http.server import BaseHTTPRequestHandler
 from http.server import ThreadingHTTPServer
 from urllib.parse import parse_qs
@@ -83,6 +85,54 @@ class Server(ThreadingHTTPServer):
         # that can take 30 s on some Macs. The name is never used: skip it.
         socketserver.TCPServer.server_bind(self)
         self.server_name, self.server_port = self.server_address[:2]
+
+
+# ---------------------------------------------------------------------------
+# Favicon as PNG and ICO. The page links an inline SVG, which Safari ignores: it
+# wants a PNG or /favicon.ico. Drawn here from the mascot of docs/assets/favicon.svg,
+# so the repo holds no binary copy that could drift.
+# ---------------------------------------------------------------------------
+MASCOT = ("............",
+          "......#.....",
+          ".....#......",
+          "..########..",
+          ".##########.",
+          ".##o####o##.",
+          ".##o####o##.",
+          ".##########.",
+          ".##########.",
+          ".##########.",
+          "..##....##..",
+          "............")
+MASCOT_COLORS = {"#": (0xd9, 0x77, 0x57, 255), "o": (0x1d, 0x1c, 0x1a, 255)}
+
+
+def mascot_png(scale, background=None):
+    """The mascot as a PNG, each pixel of the grid a scale×scale square."""
+    clear = background + (255,) if background else (0, 0, 0, 0)
+    rows = []
+    for line in MASCOT:
+        row = b"".join(bytes(MASCOT_COLORS.get(c, clear)) * scale for c in line)
+        rows += [b"\0" + row] * scale
+    side = len(MASCOT) * scale
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", side, side, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
+
+
+def mascot_ico(scale):
+    """A one-image .ico holding the PNG, which every current browser reads."""
+    png, side = mascot_png(scale), len(MASCOT) * scale
+    return (struct.pack("<HHH", 0, 1, 1) + struct.pack("<BBBBHHII", side % 256, side % 256, 0, 0, 1, 32, len(png), 22) + png)
+
+
+ICONS = {
+    "/favicon.ico": lambda: (mascot_ico(4), "image/x-icon"),                                  # 48px
+    "/favicon.png": lambda: (mascot_png(8), "image/png"),                                     # 96px
+    "/apple-touch-icon.png": lambda: (mascot_png(15, (0xf5, 0xf3, 0xef)), "image/png"),       # 180px, opaque
+}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -177,6 +227,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/", "/index.html"):
                 html = open(os.path.join(STATIC_DIR, "index.html")).read().replace("__TOKEN__", TOKEN)
                 return self._send(200, html, "text/html; charset=utf-8")
+            if u.path in ICONS:
+                return self._send(200, *ICONS[u.path]())
             if u.path == "/api/profiles/export":
                 path, name = export_profile(q["id"], q.get("projects") == "1")
                 return self._send_file(path, name, "application/zip")
