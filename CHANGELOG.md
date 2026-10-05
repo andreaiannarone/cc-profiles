@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- cc-profiles is on PyPI: the install script and the docs install it from there (`pipx install cc-profiles`).
+
 ## [0.2.0] - 2026-10-05
 
 ### Added

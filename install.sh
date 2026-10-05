@@ -9,7 +9,7 @@
 # writes only in your home folder.
 set -eu
 
-SOURCE="${CC_PROFILES_SOURCE:-git+https://github.com/andreaiannarone/cc-profiles.git}"
+SOURCE="${CC_PROFILES_SOURCE:-cc-profiles}"
 ADD_COMMAND=1
 
 usage() {
@@ -25,8 +25,8 @@ Options:
   -h, --help     show this help
 
 Environment:
-  CC_PROFILES_SOURCE   what to install (default: the GitHub repository);
-                       a local folder, or git+https://…@branch
+  CC_PROFILES_SOURCE   what to install (default: cc-profiles from PyPI);
+                       a local folder, or git+https://github.com/andreaiannarone/cc-profiles.git@branch
 EOF
 }
 

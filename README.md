@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.2.0-green" alt="Version 0.2.0"></a>
+  <a href="https://pypi.org/project/cc-profiles/"><img src="https://img.shields.io/pypi/v/cc-profiles?color=green" alt="cc-profiles on PyPI"></a>
   <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
   <a href="https://buymeacoffee.com/andreaiannarone"><img src="https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
@@ -89,14 +89,14 @@ On the first run, cc-profiles finds `~/.claude` and every `~/.claude-<name>` fol
 By hand, with pipx or uv:
 
 ```bash
-pipx install git+https://github.com/andreaiannarone/cc-profiles.git    # or: uv tool install git+…
+pipx install cc-profiles        # or: uv tool install cc-profiles
 cc-profiles install-command     # optional: adds /cc-profiles to Claude Code
 ```
 
 Try it without installing anything:
 
 ```bash
-uvx --from git+https://github.com/andreaiannarone/cc-profiles.git cc-profiles
+uvx cc-profiles
 ```
 
 From the Claude Code plugin marketplace. The command is then `/cc-profiles:open`, because Claude Code prefixes plugin commands with the plugin's name. The plugin only opens the app, so install cc-profiles first:
