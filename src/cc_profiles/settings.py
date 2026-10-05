@@ -5,16 +5,21 @@
 import glob
 import json
 import os
+import shlex
+import subprocess
+import tempfile
 
 from .core import (
     ApiError,
     Backup,
+    find_tool,
     load_settings,
     parse_memory,
     pretty,
     profile,
     profiles,
     read_json,
+    tool_env,
     write_json,
     write_text,
 )
@@ -567,3 +572,220 @@ def op_global(pid, key, value):
     cfg[key] = value
     write_json(prof["config_abs"], cfg)
     return {"message": f"{key}: {'on' if value else 'off'}.", "backup": bk.close()}
+
+
+# ---------------------------------------------------------------------------
+# Status line
+# ---------------------------------------------------------------------------
+# statusLine in settings.json runs a command that prints one line. cc-profiles can write
+# that command itself: a POSIX sh script in the profile folder that reads the JSON Claude
+# Code sends on stdin with jq. It finds the profile's label at run time (in
+# ~/.cc-profiles/config.json), so a script reached through a shared settings.json still
+# names the right profile. Only a script with STATUS_MARK on its first line is rewritten.
+STATUS_MARK = "# managed by cc-profiles: status line"
+STATUS_PARTS = [
+    ("profile", "Profile", "Default"),
+    ("model", "Model", "Opus"),
+    ("folder", "Folder", "api"),
+    ("branch", "Git branch", "main"),
+    ("context", "Context used", "ctx 42%"),
+    ("cost", "Session cost", "$1.27"),
+    ("limit", "5-hour limit used", "5h 18%"),
+]
+STATUS_SNIPPETS = {
+    "profile": 'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h)) == $d) | .label\' '
+               '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}"',
+    "model": 'add "$(j .model.display_name)"',
+    "folder": '[ -n "$cwd" ] && add "$(basename "$cwd")"',
+    "branch": '[ -n "$cwd" ] && add "$(git -C "$cwd" branch --show-current 2>/dev/null)"',
+    "context": 'v=$(j .context_window.used_percentage); [ -n "$v" ] && add "ctx $(printf \'%.0f\' "$v")%"',
+    "cost": 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")"',
+    "limit": 'v=$(j .rate_limits.five_hour.used_percentage); [ -n "$v" ] && add "5h $(printf \'%.0f\' "$v")%"',
+}
+STATUS_SAMPLE = {
+    "model": {"id": "claude-opus-5-5", "display_name": "Opus"},
+    "context_window": {"used_percentage": 42},
+    "cost": {"total_cost_usd": 1.27},
+    "rate_limits": {"five_hour": {"used_percentage": 18}},
+}
+
+
+def status_script(parts):
+    """The status line script for these parts, in STATUS_PARTS order."""
+    parts = [p for p, _, _ in STATUS_PARTS if p in parts]
+    body = "\n".join(STATUS_SNIPPETS[p] for p in parts)
+    return f"""#!/bin/sh
+{STATUS_MARK}
+# parts: {" ".join(parts)}
+# Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the first two lines.
+export LC_NUMERIC=C
+input=$(cat)
+dir=$(cd "${{CLAUDE_CONFIG_DIR:-$HOME/.claude}}" 2>/dev/null && pwd -P)
+name=$(basename "$dir"); case $name in .claude-*) name=${{name#.claude-}} ;; *) name=default ;; esac
+if ! command -v jq >/dev/null 2>&1; then printf '%s (install jq for the rest)' "$name"; exit 0; fi
+j() {{ printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null; }}
+out=
+add() {{ [ -n "$1" ] && out="${{out:+$out · }}$1"; return 0; }}
+cwd=$(j .workspace.current_dir)
+{body}
+printf '%s' "$out"
+"""
+
+
+def status_script_path(prof):
+    return os.path.join(prof["dir_abs"], "statusline.sh")
+
+
+def status_script_parts(path):
+    """The parts of a script cc-profiles wrote, or None for any other file."""
+    try:
+        with open(path) as f:
+            head = f.read(400).split("\n")
+    except OSError:
+        return None
+    if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
+        return None
+    return head[2][len("# parts:"):].split()
+
+
+def status_command(prof):
+    return "sh " + shlex.quote(status_script_path(prof))
+
+
+def get_statusline(pid):
+    prof = profile(pid)
+    value, src = effective(prof, "statusLine")
+    value = value if isinstance(value, dict) else None
+    path = status_script_path(prof)
+    parts = status_script_parts(path)
+    mode = "off"
+    if value:
+        mode = "builtin" if value.get("command") == status_command(prof) and parts is not None else "custom"
+    return {"value": value, "source": src, "mode": mode, "parts": parts or ["profile", "model", "folder", "branch", "context"],
+            "script": pretty(path), "script_is_other": os.path.exists(path) and parts is None,
+            "jq": bool(find_tool("jq")), "parts_available": [{"id": i, "label": l, "sample": s} for i, l, s in STATUS_PARTS]}
+
+
+def statusline_preview(pid, parts):
+    """What the script prints on sample data, run in a temporary file: read-only."""
+    prof = profile(pid)
+    parts = [p for p in parts.split(",") if p in STATUS_SNIPPETS]
+    if not parts:
+        return {"text": ""}
+    sample = dict(STATUS_SAMPLE, workspace={"current_dir": os.getcwd()})
+    with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
+        f.write(status_script(parts))
+    env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
+    try:
+        r = subprocess.run(["sh", f.name], input=json.dumps(sample), capture_output=True, text=True, timeout=5, env=env)
+        return {"text": r.stdout.strip()}
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"text": "", "error": str(e)}
+    finally:
+        os.unlink(f.name)
+
+
+def statusline_value(prof, body):
+    """The statusLine object a request asks for, checked; None turns it off."""
+    mode = body.get("mode")
+    if mode == "off":
+        return None, None
+    if mode == "builtin":
+        parts = [p for p in body.get("parts") or [] if p in STATUS_SNIPPETS]
+        if not parts:
+            raise ApiError("Pick at least one thing to show")
+        command = status_command(prof)
+    elif mode == "custom":
+        command, parts = str(body.get("command") or "").strip(), None
+        if not command:
+            raise ApiError("Write the command that prints the status line")
+    else:
+        raise ApiError("Unknown status line mode")
+    value = {"type": "command", "command": command}
+    for key, low in (("padding", 0), ("refreshInterval", 1)):
+        n = body.get(key)
+        if n in (None, ""):
+            continue
+        if not isinstance(n, int) or isinstance(n, bool) or n < low:
+            raise ApiError(f"Invalid {'padding' if key == 'padding' else 'refresh interval'}: expected a whole number from {low}")
+        value[key] = n
+    if body.get("hideVimModeIndicator") is True:
+        value["hideVimModeIndicator"] = True
+    return value, parts
+
+
+def write_statusline(prof, value, parts, bk):
+    """Write a profile's statusLine (and its script for the built-in one), inside a backup."""
+    path = status_script_path(prof)
+    if parts is not None:
+        if os.path.exists(path) and status_script_parts(path) is None:
+            raise ApiError(f"{pretty(path)} exists and was not made by cc-profiles: rename it, or use it as your own command")
+        bk.copy(path, "statusline.sh")
+        write_text(path, status_script(parts))
+    elif status_script_parts(path) is not None:
+        bk.stash(path, "statusline.sh")  # the old built-in script is no longer used
+    targets = setting_targets(prof, "statusLine", value) if value is None else [effective(prof, "statusLine")[1] or "settings"]
+    for which in targets:
+        write_field(prof, which, "statusLine", value, bk)
+
+
+def op_statusline(pid, body):
+    prof = profile(pid)
+    value, parts = statusline_value(prof, body)
+    bk = Backup("statusline", f"Status line of {prof['label']}")
+    write_statusline(prof, value, parts, bk)
+    bk.note(f"statusLine = {json.dumps(value)}")
+    msg = "Status line turned off." if value is None else "Status line saved: it shows from the next Claude Code session."
+    return {"message": msg, "backup": bk.close()}
+
+
+def statusline_all_plan(pid):
+    """Which profiles get this profile's status line, and which are skipped, with the reason."""
+    prof = profile(pid)
+    cur = get_statusline(pid)
+    apply, skip, written = [], [], {}
+    for o in profiles():
+        if o["id"] == pid:
+            continue
+        mine = get_statusline(o["id"])
+        target = field_path(o, effective(o, "statusLine")[1] or "settings")
+        same = mine["mode"] == cur["mode"] and (
+            mine["mode"] == "off" or (cur["mode"] == "builtin" and mine["parts"] == cur["parts"]
+                                      and {k: v for k, v in mine["value"].items() if k != "command"}
+                                      == {k: v for k, v in cur["value"].items() if k != "command"})
+            or mine["value"] == cur["value"])
+        if same:
+            reason = "already has it"
+        elif file_error(o, effective(o, "statusLine")[1] or "settings"):
+            reason = f"{os.path.basename(target)} has an error: fix it in the advanced editor"
+        elif cur["mode"] == "builtin" and mine["script_is_other"]:
+            reason = f"{mine['script']} was not made by cc-profiles"
+        elif os.path.realpath(target) in written:
+            reason = f"shares {os.path.basename(target)} with {written[os.path.realpath(target)]}"
+        else:
+            written[os.path.realpath(target)] = o["label"]
+            apply.append({"id": o["id"], "label": o["label"], "detail": f"{mine['mode']} → {cur['mode']}"})
+            continue
+        skip.append({"id": o["id"], "label": o["label"], "reason": reason})
+    return {"from": prof["label"], "mode": cur["mode"], "apply": apply, "skip": skip}
+
+
+def op_statusline_all(pid):
+    plan = statusline_all_plan(pid)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    cur = get_statusline(pid)
+    bk = Backup("statusline-all", f"Status line of {plan['from']} in every profile")
+    for t in plan["apply"]:
+        o = profile(t["id"])
+        if cur["mode"] == "off":
+            value, parts = None, None
+        elif cur["mode"] == "builtin":
+            value, parts = dict(cur["value"], command=status_command(o)), cur["parts"]
+        else:
+            value, parts = dict(cur["value"]), None
+        write_statusline(o, value, parts, bk)
+        bk.note(f"{o['label']}: {t['detail']}")
+    for s in plan["skip"]:
+        bk.note(f"skipped {s['label']}: {s['reason']}")
+    return {"message": plan_message("Status line set", plan), "backup": bk.close()}

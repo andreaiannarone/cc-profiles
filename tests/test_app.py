@@ -325,6 +325,67 @@ def test_attribution_keys_live_inside_their_object(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus"})
+    home.write(".claude-work/statusline.sh", "#!/bin/sh\necho mine\n")  # not ours: never overwritten
+    before = home.snapshot()
+    app = app_factory()
+    S = "/api/statusline"
+    assert app.get(S + "?profile=default")["mode"] == "off"
+
+    preview = app.get(S + "/preview?profile=default&parts=profile,model,cost")["text"]
+    if shutil.which("jq"):
+        assert preview == "Default · Opus · $1.27"
+    else:
+        assert "install jq" in preview
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model", "profile"], "refreshInterval": 5})
+    script = home.path(".claude/statusline.sh").read_text()
+    assert "# managed by cc-profiles: status line" in script and "# parts: profile model" in script
+    line = json.loads(home.path(".claude/settings.json").read_text())["statusLine"]
+    assert line["type"] == "command" and line["command"].endswith("/.claude/statusline.sh") and line["refreshInterval"] == 5
+    got = app.get(S + "?profile=default")
+    assert got["mode"] == "builtin" and got["parts"] == ["profile", "model"]
+    if shutil.which("jq"):  # the real script, as Claude Code runs it
+        r = subprocess.run(["sh", "-c", line["command"]], input='{"model": {"display_name": "Opus"}}', capture_output=True,
+                           text=True, env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
+        assert r.stdout == "Default · Opus"
+
+    assert "not made by cc-profiles" in app.post_error(S, {"profile": "work", "mode": "builtin", "parts": ["model"]})
+    assert app.get(S + "/all/preview?profile=default")["skip"][0]["reason"].endswith("was not made by cc-profiles")
+    assert "Pick at least one" in app.post_error(S, {"profile": "default", "mode": "builtin", "parts": []})
+    assert "whole number" in app.post_error(S, {"profile": "default", "mode": "custom", "command": "x", "padding": -1})
+
+    app.post(S, {"profile": "default", "mode": "custom", "command": "echo hi"})
+    assert not home.path(".claude/statusline.sh").exists()  # the unused script goes to the backup
+    assert app.get(S + "?profile=default")["mode"] == "custom"
+    app.post(S, {"profile": "default", "mode": "off"})
+    assert "statusLine" not in json.loads(home.path(".claude/settings.json").read_text())
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):
+    basic_home(home)
+    home.profile("solo")
+    home.json(".claude-solo/settings.json", {"statusLine": {"type": "command", "command": "echo solo"}})
+    before = home.snapshot()
+    app = app_factory()
+    app.post("/api/statusline", {"profile": "default", "mode": "builtin", "parts": ["profile", "branch"], "padding": 1})
+    plan = app.get("/api/statusline/all/preview?profile=default")
+    assert sorted(a["id"] for a in plan["apply"]) == ["solo", "work"]
+    app.post("/api/statusline/all", {"profile": "default"})
+    for d in (".claude-work", ".claude-solo"):  # each profile gets its own script, same parts and options
+        line = json.loads(home.path(f"{d}/settings.json").read_text())["statusLine"]
+        assert line["command"].endswith(f"{d}/statusline.sh") and line["padding"] == 1
+        assert "# parts: profile branch" in home.path(f"{d}/statusline.sh").read_text()
+    assert app.get("/api/statusline/all/preview?profile=default")["apply"] == []
+    for b in app.get("/api/backups")[:2]:  # to every profile, then the one it copied
+        app.post("/api/backups/restore", {"name": b["name"]})
+    assert home.snapshot() == before
+
+
 # --- sessions, move preview, old backups ---------------------------------------
 def test_claude_processes_are_matched_to_profiles(tmp_path):
     sys.path.insert(0, str(SRC))

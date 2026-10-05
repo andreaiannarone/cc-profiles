@@ -255,6 +255,12 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .srow .o code { color: var(--text); }
 textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical; }
 .perm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.slparts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 12px; }
+.slparts label, .slopts label.c { display: flex; gap: 7px; align-items: center; }
+.slpreview { font-family: var(--mono); font-size: 12.5px; background: #1d1c1a; color: #ecebe7; border-radius: 8px; padding: 10px 12px; min-height: 18px; white-space: pre; overflow-x: auto; }
+.slopts { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: end; margin-top: 14px; }
+.slopts label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.slopts input.text { width: 110px; }
 .perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
 .row-end { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 10px; }
@@ -1074,8 +1080,76 @@ async function editMcp(m) {
 // ---------- settings ----------
 async function loadSettings(pid) {
   S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings" }; renderSettings();
-  try { S.set.data = await api("/api/settings?profile=" + pid); } catch (e) { toast(e.message, "", true); }
+  try {
+    [S.set.data, S.set.sl] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid)]);
+    slDraft();
+  } catch (e) { toast(e.message, "", true); }
   renderSettings();
+}
+
+// ---------- status line ----------
+// The draft holds what the form shows until it is saved; switching mode re-renders only this section.
+function slDraft() {
+  const sl = S.set.sl, v = sl.value || {};
+  S.set.slDraft = { mode: sl.mode, parts: [...sl.parts], command: sl.mode === "custom" ? v.command || "" : "",
+                    padding: v.padding ?? "", refreshInterval: v.refreshInterval ?? "", hide: v.hideVimModeIndicator === true };
+}
+function statusLineSection() {
+  const st = S.set, sl = st.sl, dr = st.slDraft;
+  if (!sl) return "";
+  const where = sl.value ? `Now: ${sl.mode === "builtin" ? "made by cc-profiles" : "your command"}, in ${srcBadge(sl.source)}` : "Now: off";
+  return `<section class="sec" id="sl-sec"><div class="h"><h3>Status line</h3><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
+    <div class="b">
+      <div class="seg" style="max-width:460px" role="group" aria-label="Status line">${[["off", "Off"], ["builtin", "Made by cc-profiles"], ["custom", "Your command"]].map(([m, l]) =>
+        `<button data-slmode="${m}" class="${dr.mode === m ? "on" : ""}" aria-pressed="${dr.mode === m}">${l}</button>`).join("")}</div>
+      ${dr.mode === "builtin" ? `
+        <div class="slparts" role="group" aria-label="What to show">${sl.parts_available.map(p => `<label><input type="checkbox" data-slpart="${p.id}" ${dr.parts.includes(p.id) ? "checked" : ""}> ${esc(p.label)}</label>`).join("")}</div>
+        <div class="slpreview" id="sl-preview" aria-live="polite" aria-label="Preview with sample data"></div>
+        <div class="hint" style="margin-top:6px">Preview with sample data; the branch shows inside a git repository. Saved as <code>${esc(sl.script)}</code>, a shell script that reads Claude Code's data with <code>jq</code>.
+          ${sl.jq ? "" : ` <b>jq is not installed</b>: until you install it (<code>brew install jq</code>), the line shows only the profile.`}</div>
+        ${sl.script_is_other ? `<div class="danger-box" style="margin-top:10px"><code>${esc(sl.script)}</code> was not made by cc-profiles and is never overwritten: rename it to use this, or pick <b>Your command</b> to run it.</div>` : ""}` : ""}
+      ${dr.mode === "custom" ? `<div class="slopts" style="margin-top:14px"><label class="f" style="flex:1;min-width:240px">Command<input class="text" style="width:100%" id="sl-cmd" value="${esc(dr.command)}" placeholder="e.g. sh ~/.claude/my-statusline.sh" autocomplete="off" spellcheck="false"></label></div>
+        <div class="hint" style="margin-top:6px">Claude Code runs it with the session's data as JSON on stdin and shows what it prints. cc-profiles never runs it.</div>` : ""}
+      ${dr.mode !== "off" ? `<div class="slopts">
+        <label class="f">Padding<input class="text" type="number" min="0" step="1" id="sl-pad" value="${esc(dr.padding)}" placeholder="0"></label>
+        <label class="f">Refresh every (s)<input class="text" type="number" min="1" step="1" id="sl-ref" value="${esc(dr.refreshInterval)}" placeholder="on events"></label>
+        <label class="c"><input type="checkbox" id="sl-hide" ${dr.hide ? "checked" : ""}> Hide the vim mode indicator</label></div>` : ""}
+      <div class="row-end"><span class="grow"></span><button class="btn" id="sl-all" title="Give every other profile the status line saved in this one">Apply to all…</button><button class="btn primary" id="sl-save">Save status line</button></div>
+    </div></section>`;
+}
+function slRead() {
+  const dr = S.set.slDraft, num = id => { const v = $(id)?.value; return v === undefined ? undefined : v === "" ? "" : parseInt(v, 10); };
+  if (dr.mode === "builtin") dr.parts = [...document.querySelectorAll("[data-slpart]")].filter(c => c.checked).map(c => c.dataset.slpart);
+  if (dr.mode === "custom") dr.command = $("#sl-cmd").value;
+  if (dr.mode !== "off") { dr.padding = num("#sl-pad"); dr.refreshInterval = num("#sl-ref"); dr.hide = $("#sl-hide").checked; }
+}
+async function slPreview() {
+  const box = $("#sl-preview"); if (!box) return;
+  const parts = S.set.slDraft.parts.join(",");
+  try { const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts)}`); if ($("#sl-preview") === box) box.textContent = r.text || (parts ? "" : "Pick something to show"); } catch {}
+}
+function renderStatusLine() {
+  const sec = $("#sl-sec"); if (!sec) return;
+  sec.outerHTML = statusLineSection();
+  bindStatusLine();
+}
+function bindStatusLine() {
+  const st = S.set, pid = st.profile;
+  document.querySelectorAll("[data-slmode]").forEach(b => b.onclick = () => { slRead(); st.slDraft.mode = b.dataset.slmode; renderStatusLine(); });
+  document.querySelectorAll("[data-slpart]").forEach(c => c.onchange = () => { slRead(); slPreview(); });
+  slPreview();
+  $("#sl-save").onclick = async () => {
+    slRead();
+    const dr = st.slDraft, opt = v => v === "" || Number.isNaN(v) ? null : v;
+    const body = { profile: pid, mode: dr.mode, parts: dr.parts, command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
+    try { await run(() => api("/api/statusline", body)); } catch { return; }
+    st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine();
+  };
+  $("#sl-all").onclick = async () => {
+    if (await applyAll("Use this status line in every profile?", `/api/statusline/all/preview?profile=${pid}`,
+        `The status line saved in <b>${esc(label(pid))}</b> goes to every other profile. One made by cc-profiles gets its own script in each profile, and shows each profile's name.`,
+        "Apply to all", () => api("/api/statusline/all", { profile: pid }))) { st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine(); }
+  };
 }
 const fmt = v => v === null || v === undefined ? "default" : v === "" ? "none" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
 const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
@@ -1121,6 +1195,8 @@ function renderSettings() {
       </div>`).join("")}
     </section>
 
+    ${statusLineSection()}
+
     <section class="sec"><div class="h"><h3>Global instructions · CLAUDE.md</h3><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
       <div class="b"><textarea class="code" id="cmd-text" spellcheck="false" aria-label="CLAUDE.md" placeholder="# Context&#10;&#10;In this profile you work on …">${esc(d.claude_md.content)}</textarea>
         <div class="row-end"><span class="grow">${plural(d.claude_md.content ? d.claude_md.content.split("\n").length : 0, "line", "lines")}</span><button class="btn primary" id="cmd-save">Save CLAUDE.md</button></div></div>
@@ -1149,6 +1225,7 @@ function renderSettings() {
 }
 function bindSettings() {
   const st = S.set, d = st.data, pid = st.profile;
+  bindStatusLine();
   const save = async (key, value) => { try { await run(() => api("/api/settings/field", { profile: pid, key, value })); } catch {} loadSettings(pid); };
   document.querySelectorAll("[data-sfield]").forEach(el => {
     const f = d.fields.find(x => x.key === el.dataset.sfield);

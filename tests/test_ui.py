@@ -177,3 +177,15 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     open_tab(page, "backups")
     assert page.query_selector("#bk-auto") is not None
     assert errors == []
+
+
+def test_status_line_section(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    page.click('[data-slmode="builtin"]')
+    page.wait_for_function("() => document.querySelector('#sl-preview')?.textContent.includes('·')")
+    page.click('[data-slmode="custom"]')
+    page.wait_for_selector("#sl-cmd")
+    page.click('[data-slmode="off"]')
+    assert page.query_selector("#sl-cmd") is None and page.query_selector("#sl-preview") is None
+    assert errors == []

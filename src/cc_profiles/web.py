@@ -30,6 +30,7 @@ from .memories import (
 from .sharing import list_sharing, op_share, share_plan
 from .settings import (
     get_settings,
+    get_statusline,
     op_claude_md,
     op_global,
     op_permission_all,
@@ -37,8 +38,12 @@ from .settings import (
     op_setting,
     op_setting_all,
     op_settings_raw,
+    op_statusline,
+    op_statusline_all,
     permission_all_plan,
     setting_all_plan,
+    statusline_all_plan,
+    statusline_preview,
 )
 from .health import candidates, health, list_profiles
 from .backups import backup_auto, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
@@ -251,6 +256,9 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/sharing/preview": lambda: share_plan(q["profile"], q["item"], q["shared"] == "1"),
                 "/api/profiles/delete/preview": lambda: delete_plan(q["id"], q.get("merge_into") or None),
                 "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
+                "/api/statusline": lambda: get_statusline(q["profile"]),
+                "/api/statusline/preview": lambda: statusline_preview(q["profile"], q.get("parts", "")),
+                "/api/statusline/all/preview": lambda: statusline_all_plan(q["profile"]),
                 "/api/settings/permissions/all/preview": lambda: permission_all_plan(q["list"], q["rule"]),
                 "/api/skills/copy-all/preview": lambda: skill_all_plan(q["profile"], q["name"]),
                 "/api/mcp/copy-all/preview": lambda: mcp_all_plan(q["profile"], q["scope"], q["name"]),
@@ -308,6 +316,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),
                 "/api/settings/field/all": lambda: op_setting_all(b["profile"], b["key"]),
+                "/api/statusline": lambda: op_statusline(b["profile"], b),
+                "/api/statusline/all": lambda: op_statusline_all(b["profile"]),
                 "/api/settings/permissions/all": lambda: op_permission_all(b["list"], b["rule"]),
                 "/api/settings/raw": lambda: op_settings_raw(b["profile"], b["file"], b["content"]),
                 "/api/settings/claude-md": lambda: op_claude_md(b["profile"], b.get("content", "")),

@@ -37,6 +37,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/profiles/delete/preview` | `id`, `merge_into` (optional) | `{items: [{action, item, from, to}], projects, conversations, memories, prompts, settings, active, folder, config, into}`: what deleting would do; `action` is `move`, `merge`, `conflict`, `stash` (goes to the backup) or `edit` (a line or entry removed from a file). Changes nothing |
 | `GET /api/sharing/preview` | `profile`, `item`, `shared` (`1` to share, `0` to separate) | `{items: [{action, item, from, to}], source, profile, only_own}`; `action` is `create` (made empty in the source), `stash`, `only-here` (only the own copy has it), `link` or `copy`. Changes nothing |
 | `GET /api/settings/field/all/preview` | `profile`, `key` | `{key, label, value, shown, from, apply: [{id, label, detail}], skip: [{id, label, reason}]}`: which profiles applying the value would change |
+| `GET /api/statusline` | `profile` | `{value, source, mode: off\|builtin\|custom, parts, script, script_is_other, jq, parts_available}` |
+| `GET /api/statusline/preview` | `profile`, `parts` (comma-separated) | `{text}`: what the built-in script prints on sample data |
+| `GET /api/statusline/all/preview` | `profile` | `{from, mode, apply, skip}` |
 | `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
 | `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
@@ -80,6 +83,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |
 | `POST /api/settings/field/all` | `profile`, `key`: the profile's value goes to every other profile, one backup |
+| `POST /api/statusline` | `profile`, `mode` (`off`, `builtin`, `custom`), `parts`, `command`, `padding`, `refreshInterval`, `hideVimModeIndicator` |
+| `POST /api/statusline/all` | `profile`: its status line goes to every other profile, one backup |
 | `POST /api/settings/permissions/all` | `list`, `rule`: added to `settings.json` of every profile, one backup |
 | `POST /api/settings/raw` | `profile`, `file` (`settings` or `local`), `content` (JSON text) |
 | `POST /api/settings/claude-md` | `profile`, `content` |

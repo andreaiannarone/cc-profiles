@@ -2,6 +2,18 @@
 
 Claude Code can run a script to draw a [status line](https://code.claude.com/docs/en/statusline) at the bottom of the terminal. With several profiles, it is useful to see which one you are in.
 
+## From the Settings tab
+
+**Settings → Status line** sets it up without writing anything by hand:
+
+- **Made by cc-profiles**: tick what to show (profile, model, folder, git branch, context used, session cost, 5-hour limit used) and check the preview. cc-profiles writes `statusline.sh` in the profile folder and points `statusLine` to it. The script is plain `sh` and reads Claude Code's data with `jq`, so it adds no Python start-up to every refresh; it finds the profile's name by itself, also through a shared `settings.json`. Without `jq` it shows only the profile. A `statusline.sh` that cc-profiles did not write is never overwritten.
+- **Your command**: any command; cc-profiles saves it and never runs it.
+- **Off**: removes `statusLine` (the script cc-profiles wrote goes to the backup).
+
+Padding, a refresh interval and hiding the vim mode indicator apply to both. **Apply to all…** gives every other profile the same status line, each with its own script, in one backup.
+
+The rest of this page is for writing the script yourself.
+
 ## The `label` command
 
 ```sh
