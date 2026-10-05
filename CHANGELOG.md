@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- CI and release workflows use the current GitHub Actions (checkout and setup-python v7, upload-artifact v7, download-artifact v8), off the deprecated Node 20.
+- Dependabot opens one weekly pull request with GitHub Actions updates; CodeQL scans the Python server and the UI's JavaScript.
+- Security issues are reported privately through GitHub's *Report a vulnerability* (see SECURITY.md).
+- A social preview image for the repository (`docs/assets/social-preview.png`).
+
 ## [0.2.2] - 2026-10-05
 
 ### Added

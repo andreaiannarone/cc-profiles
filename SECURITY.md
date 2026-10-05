@@ -4,7 +4,7 @@ cc-profiles runs a local web server that can read and write your Claude Code pro
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for security problems. Use GitHub's private reporting instead: go to the repository's **Security** tab and choose **Report a vulnerability**.
+Please **do not open a public issue** for security problems. Use GitHub's private reporting instead: **[Report a vulnerability](https://github.com/andreaiannarone/cc-profiles/security/advisories/new)**, also reachable from the repository's **Security** tab. Only the maintainer sees the report until a fix is published.
 
 Include what you found, how to reproduce it, and what an attacker could do with it. You will get an answer within a week.
 
