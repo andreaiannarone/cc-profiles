@@ -26,4 +26,4 @@ The app writes into Claude Code's own files, so it never runs on the real home f
 
 3. Tell the user the URL, the sandbox path and the `kill <pid>` command that `open` printed. When they are done, stop the server with it. The sandbox is a temporary folder: delete it, or keep it to try again later by repeating step 2 with the same path.
 
-To start from a clean sandbox after a change to `server.py`, stop the server, build a new home and start again: the running server does not reload code.
+To start from a clean sandbox after a change to the Python code, stop the server, build a new home and start again: the running server does not reload code.

@@ -12,13 +12,13 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 
 | Path | Role |
 |---|---|
-| `src/cc_profiles/server.py` | HTTP server and all logic, in sections: basics, classification, projects, memories, health, backups, sharing, launchers, new profile, settings, edit/delete profiles, about, installer, HTTP, CLI |
+| `src/cc_profiles/` | the server, one module per area (`core`, `projects`, `memories`, `extensions`, `backups`, …, `web` for HTTP, `cli`); see the table in `docs/architecture.md`. `server.py` only re-exports them; the version is in `__init__.py` |
 | `src/cc_profiles/static/index.html` | the whole UI: one file, inline CSS and vanilla JS, no build step |
 | `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
 | `tests/test_app.py` | end-to-end tests |
 | `DESIGN.md` | the UI's visual system: read it before touching `index.html` |
 | `.claude-plugin/marketplace.json` | makes the repo a Claude Code plugin marketplace |
-| `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `server.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
+| `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `command.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
 | `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |
 | `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command`. POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
 | `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon) |
@@ -79,4 +79,4 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 
 - UI text, messages and comments in English. Sentence case, buttons named after their action, concrete numbers. See `DESIGN.md`.
 - Error messages say what happened and what to do, e.g. `ApiError("Folder does not exist: …")`.
-- Add code to the right section of `server.py` and follow the existing patterns.
+- Add code to the right module and follow the existing patterns. A module imports only from the modules above it in `docs/architecture.md`: if two areas need the same helper, move it down (usually into `core.py`) instead of creating a cycle. Read `core.PORT` and `core.ALLOWED_HOSTS` through `core`, never by name.
