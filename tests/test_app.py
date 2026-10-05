@@ -43,6 +43,15 @@ def test_api_requires_token_and_local_host(home, app_factory):
     assert app.request("/api/projects")[0] == 200
 
 
+def test_page_sends_a_strict_content_security_policy(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    with urllib.request.urlopen(app.base + "/", timeout=5) as r:
+        csp = r.headers["Content-Security-Policy"]
+        assert r.headers["X-Frame-Options"] == "DENY"
+    assert "default-src 'none'" in csp and "connect-src 'self'" in csp and "frame-ancestors 'none'" in csp
+
+
 def test_path_traversal_is_rejected(home, app_factory):
     basic_home(home)
     app = app_factory()
@@ -319,6 +328,27 @@ def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_a_failed_operation_can_still_be_undone(home, app_factory):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_FAULT="create-profile-after-copy")
+    status, body = app.request("/api/profiles/create", {"label": "Half", "id": "half", "base": "default",
+                                                        "include_projects": True, "share": []})
+    assert status == 500 and "fault injected" in body["error"] and "restore the incomplete backup" in body["error"]
+    assert home.path(".claude-half/projects").is_dir()  # the copy happened before the failure
+    newest = app.get("/api/backups")[0]
+    assert newest["failed"] and newest["restorable"]
+    app.post("/api/backups/restore", {"name": newest["name"]})
+    assert home.snapshot() == before
+
+
+def test_a_failure_before_any_change_leaves_no_backup(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    assert app.request("/api/projects/move", {"project": "nope", "from": "default", "to": "work"})[0] == 404
+    assert app.get("/api/backups") == []
 
 
 def test_create_edit_delete_profile(home, app_factory):

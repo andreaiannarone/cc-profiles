@@ -1126,7 +1126,7 @@ function renderBackups() {
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span>
       ${S.backups.length ? `<button class="btn" id="bk-prune" style="margin-left:auto">Delete old backups…</button>` : ""}</div>
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
-        <div class="t">${esc(b.title)} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
+        <div class="t">${esc(b.title)} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;

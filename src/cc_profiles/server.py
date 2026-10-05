@@ -166,6 +166,37 @@ def project_dir(prof, name, must_exist=True):
     return d
 
 
+_tls = threading.local()
+
+
+def _open_backups():
+    """Backups opened by the operation running in this thread and not closed yet."""
+    if not hasattr(_tls, "backups"):
+        _tls.backups = []
+    return _tls.backups
+
+
+def abort_open_backups(error):
+    """An operation failed: close its open backups with what was journaled so far.
+    A backup with no steps has nothing to undo and is removed. Returns whether any
+    step was kept (so the error can say that Restore undoes it)."""
+    kept = False
+    for bk in list(_open_backups()):
+        if bk.journal:
+            bk.close(failed=error)
+            kept = True
+        else:
+            _open_backups().remove(bk)
+            shutil.rmtree(bk.dir, ignore_errors=True)
+    return kept
+
+
+def fault_point(name):
+    """Tests only: fail on purpose at a named point, to check what a failure leaves behind."""
+    if os.environ.get("CC_PROFILES_FAULT") == name:
+        raise RuntimeError(f"fault injected at {name}")
+
+
 class Backup:
     """Backup of a single operation, with a journal so it can be undone.
 
@@ -179,6 +210,7 @@ class Backup:
     """
 
     def __init__(self, op, title=""):
+        _open_backups().append(self)
         stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         base = os.path.join(BACKUP_DIR, f"{stamp}_{op}")
         d, i = base, 2
@@ -236,10 +268,16 @@ class Backup:
     def note(self, msg):
         self.log.append(msg)
 
-    def close(self):
-        write_json(os.path.join(self.dir, "manifest.json"),
-                   {"title": self.title, "created": time.time(), "log": self.log,
-                    "journal": self.journal, "version": __version__})
+    def close(self, failed=None):
+        """Write the journal. failed: the error that stopped the operation halfway; the
+        steps done until then are journaled anyway, so Restore can undo them."""
+        if self in _open_backups():
+            _open_backups().remove(self)
+        man = {"title": self.title, "created": time.time(), "log": self.log,
+               "journal": self.journal, "version": __version__}
+        if failed:
+            man["failed"] = failed
+        write_json(os.path.join(self.dir, "manifest.json"), man)
         write_text(os.path.join(self.dir, "operation.txt"), "\n".join([self.title] + self.log) + "\n")
         return pretty(self.dir)
 
@@ -1241,6 +1279,7 @@ def list_backups():
                     "log": man.get("log", []),
                     "steps": len(man.get("journal", [])),
                     "restorable": bool(man.get("journal")) and not man.get("restored"),
+                    "failed": man.get("failed"),
                     "restored": man.get("restored")})
     out.sort(key=lambda b: b["created"], reverse=True)  # chronological: names only have seconds
     return out
@@ -1594,9 +1633,10 @@ def op_create_profile(label, pid, base, include_projects, share):
         # Login credentials are never copied: each profile logs in on its own,
         # a copied token can be invalidated when the original refreshes it.
         skip = RUNTIME | set(share) | (set() if include_projects else PROJECT_DATA)
+        bk.created(new)  # journaled first: a failure while copying leaves a folder that Restore removes
         shutil.copytree(src["dir_abs"], new, symlinks=True,
                         ignore=lambda d, names: [n for n in names if n in skip] if d == src["dir_abs"] else [])
-        bk.created(new)
+        fault_point("create-profile-after-copy")
         if not include_projects:  # the general (home) memory comes along anyway
             hm = os.path.join(src["dir_abs"], "projects", san(HOME), "memory")
             if os.path.isdir(hm):
@@ -1610,8 +1650,8 @@ def op_create_profile(label, pid, base, include_projects, share):
             for f in glob.glob(os.path.join(new, "plugins", "*.json")):  # absolute paths point to the copy
                 write_text(f, open(f).read().replace(src["dir_abs"] + "/plugins/", new + "/plugins/"))
     else:
-        os.makedirs(new)
         bk.created(new)
+        os.makedirs(new)
         if "settings.json" not in share:  # a shared settings.json is linked below instead
             settings = {}
             sl = (read_json(os.path.join(primary()["dir_abs"], "settings.json"), {}) or {}).get("statusLine")
@@ -2305,10 +2345,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         sys.stderr.write("  " + (fmt % args) + "\n")
 
+    # The page may run only its own inline code and talk only to this server: an escaping
+    # mistake cannot load code from elsewhere or send data out. Inline <script>/<style>
+    # are allowed because the whole UI is one file.
+    CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
+           "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+
     def _send(self, status, body, ctype="application/json; charset=utf-8"):
         data = body if isinstance(body, bytes) else body.encode()
         self.send_response(status)
         self.send_header("Content-Type", ctype)
+        if ctype.startswith("text/html"):
+            self.send_header("Content-Security-Policy", self.CSP)
+            self.send_header("X-Frame-Options", "DENY")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -2414,11 +2463,16 @@ class Handler(BaseHTTPRequestHandler):
             with _lock:
                 self._json(200, routes[self.path]())
         except ApiError as e:
-            self._json(e.status, {"error": str(e)})
+            self._json(e.status, {"error": self._failed(str(e))})
         except KeyError as e:
-            self._json(400, {"error": f"Missing parameter: {e}"})
+            self._json(400, {"error": self._failed(f"Missing parameter: {e}")})
         except Exception as e:  # noqa: BLE001
-            self._json(500, {"error": f"{type(e).__name__}: {e}"})
+            self._json(500, {"error": self._failed(f"{type(e).__name__}: {e}")})
+
+    def _failed(self, error):
+        if abort_open_backups(error):
+            error += " Some changes were made before the error: restore the incomplete backup to undo them."
+        return error
 
 
 # ---------------------------------------------------------------------------

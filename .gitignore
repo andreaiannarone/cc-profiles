@@ -12,3 +12,5 @@ htmlcov/
 # local Claude Code settings and app data never belong in the repo
 .claude/settings.local.json
 .cc-profiles/
+# isolated copies made by Claude Code agents
+.claude/worktrees/
