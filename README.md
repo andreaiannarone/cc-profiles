@@ -131,7 +131,7 @@ cc-profiles
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere. The confirmation previews what the link replaces.
 - ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution and a status line you build by ticking boxes, with a live preview, with dropdowns that offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
-- ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go, or let cc-profiles delete those older than 30 to 365 days automatically (off by default).
+- ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go, or let cc-profiles delete those older than 15 to 90 days automatically (off by default).
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
 - ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.

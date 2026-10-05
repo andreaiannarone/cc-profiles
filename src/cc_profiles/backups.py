@@ -151,13 +151,14 @@ def op_backup_prune(days):
 # Automatic cleanup, off by default: "backup_keep_days" in config.json. The server prunes
 # when it starts and once a day while it runs. It never deletes a backup from the last
 # 24 hours, nor an incomplete one (a failed operation) that has not been restored yet.
-AUTO_PRUNE_CHOICES = (30, 90, 180, 365)
+AUTO_PRUNE_CHOICES = (15, 30, 60, 90)
+AUTO_PRUNE_LEGACY = (180, 365)  # offered by 0.4.0–0.4.1: kept if already set, never offered again
 AUTO_PRUNE = {"last": None, "message": ""}  # the last automatic cleanup in this process
 
 
 def keep_days():
     days = load_config().get("backup_keep_days")
-    return days if days in AUTO_PRUNE_CHOICES else None
+    return days if days in AUTO_PRUNE_CHOICES + AUTO_PRUNE_LEGACY else None
 
 
 def auto_prune():
@@ -173,13 +174,14 @@ def auto_prune():
 
 
 def backup_auto():
-    return {"days": keep_days(), "choices": list(AUTO_PRUNE_CHOICES), "last": AUTO_PRUNE["last"],
+    days = keep_days()
+    return {"days": days, "choices": sorted(set(AUTO_PRUNE_CHOICES) | ({days} if days else set())), "last": AUTO_PRUNE["last"],
             "message": AUTO_PRUNE["message"], "config": pretty(CONFIG_FILE)}
 
 
 def op_backup_auto(days):
     if days is not None and days not in AUTO_PRUNE_CHOICES:
-        raise ApiError("Pick 30, 90, 180 or 365 days, or turn the cleanup off")
+        raise ApiError("Pick 15, 30, 60 or 90 days, or turn the cleanup off")
     if days == keep_days():
         raise ApiError("Nothing to change")
     bk = Backup("backup-cleanup", "Automatic backup cleanup: " + (f"older than {days} days" if days else "off"))

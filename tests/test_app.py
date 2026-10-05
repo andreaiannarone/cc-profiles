@@ -1207,6 +1207,13 @@ def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory
     app.post("/api/backups/auto", {"days": None})
     assert "backup_keep_days" not in json.loads(home.path(".cc-profiles/config.json").read_text())
 
+    # a value only older versions offered keeps working, and stays selectable; it cannot be picked anew
+    assert app.request("/api/backups/auto", {"days": 365})[0] == 400
+    cfg = json.loads(home.path(".cc-profiles/config.json").read_text())
+    home.json(".cc-profiles/config.json", dict(cfg, backup_keep_days=365))
+    auto = app.get("/api/backups/auto")
+    assert auto["days"] == 365 and auto["choices"] == [15, 30, 60, 90, 365]
+
 
 # --- profile templates ------------------------------------------------------------
 def test_templates_hold_no_credentials_and_create_profiles(home, app_factory):

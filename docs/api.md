@@ -98,7 +98,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |
 | `POST /api/backups/prune` | `days` (integer, 1 or more): permanently deletes the backups older than that |
-| `POST /api/backups/auto` | `days` (`30`, `90`, `180`, `365`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
+| `POST /api/backups/auto` | `days` (`15`, `30`, `60`, `90`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 
