@@ -37,10 +37,29 @@ def runs_app(words):
 SEPARATORS = ";&|()\n"
 
 
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
+
+
+def drop_heredocs(command):
+    """Remove the bodies of here-documents (<<EOF … EOF): they are text, not commands."""
+    out, end = [], None
+    for line in command.split("\n"):
+        if end is not None:
+            if line.strip() == end:
+                end = None
+            continue
+        out.append(line)
+        m = HEREDOC.search(line)
+        if m:
+            end = m.group(2)
+    return "\n".join(out)
+
+
 def simple_commands(command):
     """Split a shell command line into its simple commands, as lists of words.
     Quotes are read first, so a separator inside a string (a commit message
     over several lines, say) does not start a new command."""
+    command = drop_heredocs(command)
     lex = shlex.shlex(command, posix=True, punctuation_chars=SEPARATORS)
     lex.whitespace = " \t\r"  # a newline separates commands, like ;
     lex.whitespace_split = True

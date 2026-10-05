@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- New profiles get the `/cc-profiles` command automatically.
+
+### Fixed
+- Creating an empty profile that shares `settings.json` failed with "File exists".
+- Items chosen for sharing when creating a profile are created in the source profile if missing, instead of being silently left out.
+
 ### Changed
 - cc-profiles is on PyPI: the install script and the docs install it from there (`pipx install cc-profiles`).
 

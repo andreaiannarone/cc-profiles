@@ -31,6 +31,7 @@ def guard(command, tool="Bash"):
     "git status\ncc-profiles open",  # a new line outside quotes separates commands
     "(cc-profiles open)",
     "echo $(cc-profiles open)",
+    "cat <<'EOF'\ntext\nEOF\ncc-profiles open",  # once the here-document ends, commands count again
 ])
 def test_guard_blocks_the_app_on_the_real_home(command):
     assert guard(command) == 2
@@ -50,6 +51,8 @@ def test_guard_blocks_the_app_on_the_real_home(command):
     "git commit -m 'run cc-profiles open'",
     'git commit -m "Fix startup\n\ncc-profiles open gave up waiting."',  # a new line inside quotes
     "echo \"cc-profiles; cc-profiles open\"",
+    "git commit -F - <<'EOF'\nFix it\n\ncc-profiles did not write this file\nEOF\ngit push",  # a here-document is text
+    "cat > notes.md <<EOF\ncc-profiles open\nEOF",
     "",
 ])
 def test_guard_allows_everything_else(command):

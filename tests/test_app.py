@@ -293,6 +293,34 @@ def test_mcp_servers_are_managed_and_undoable(home, app_factory):
 
 
 # --- profiles -----------------------------------------------------------------
+def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
+    basic_home(home)
+    home.write(".claude-work/commands/cc-profiles.md", "my own command\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    app.post("/api/profiles/create", {"label": "Empty", "id": "empty", "base": "", "share": []})
+    text = home.path(".claude-empty/commands/cc-profiles.md").read_text()
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+
+    # sharing commands with the source: the command goes into the source, through the link
+    app.post("/api/profiles/create", {"label": "Shared", "id": "shared-cmd", "base": "", "share": ["commands"]})
+    assert home.path(".claude-shared-cmd/commands").is_symlink()
+    assert home.path(".claude/commands/cc-profiles.md").read_text() == text
+
+    # a copy of a profile whose cc-profiles.md is someone else's keeps it as it is
+    app.post("/api/profiles/create", {"label": "Copy", "id": "copy", "base": "work", "share": []})
+    assert home.path(".claude-copy/commands/cc-profiles.md").read_text() == "my own command\n"
+
+    # an empty profile that shares settings.json links it instead of writing its own
+    app.post("/api/profiles/create", {"label": "Shared settings", "id": "shared-set", "base": "",
+                                      "share": ["settings.json"]})
+    assert home.path(".claude-shared-set/settings.json").is_symlink()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 def test_create_edit_delete_profile(home, app_factory):
     basic_home(home)
     home.write(".claude/.credentials.json", "{\"secret\": 1}")

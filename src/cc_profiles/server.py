@@ -1516,6 +1516,26 @@ def is_our_command(path):
         return False
 
 
+def command_state(dir_abs):
+    """"missing", "outdated", "current" or "foreign" (a cc-profiles.md cc-profiles did not write)."""
+    path = os.path.join(dir_abs, "commands", COMMAND_NAME)
+    if not os.path.lexists(path):
+        return "missing"
+    if not is_our_command(path):
+        return "foreign"
+    return "current" if open(path).read() == COMMAND_TEXT else "outdated"
+
+
+def write_command(dir_abs, bk, label):
+    """Write /cc-profiles into a profile folder, inside an open backup. When the
+    profile shares `commands`, the file is written through the link, into the source."""
+    path = os.path.join(dir_abs, "commands", COMMAND_NAME)
+    bk.mkdir(os.path.dirname(path))
+    bk.copy(path, f"command-{label}")
+    write_text(path, COMMAND_TEXT)
+    bk.note(f"/cc-profiles command: {pretty(path)}")
+
+
 def install_command():
     """Write /cc-profiles into every profile that does not get it through sharing.
     Returns (lines to print, backup path or None)."""
@@ -1528,18 +1548,16 @@ def install_command():
             lines.append(f"{p['label']}: skipped, {pretty(p['dir_abs'])} does not exist")
             continue
         path = os.path.join(p["dir_abs"], "commands", COMMAND_NAME)
-        if os.path.lexists(path) and not is_our_command(path):
+        state = command_state(p["dir_abs"])
+        if state == "foreign":
             lines.append(f"{p['label']}: skipped, {pretty(path)} exists and was not created by cc-profiles")
             continue
-        if os.path.exists(path) and open(path).read() == COMMAND_TEXT:
+        if state == "current":
             lines.append(f"{p['label']}: already up to date")
             continue
         if bk is None:
             bk = Backup("slash-command", "Add the /cc-profiles command")
-        bk.mkdir(os.path.dirname(path))
-        bk.copy(path, f"command-{p['id']}")
-        write_text(path, COMMAND_TEXT)
-        bk.note(f"{p['label']}: {pretty(path)}")
+        write_command(p["dir_abs"], bk, p["id"])
         lines.append(f"{p['label']}: added {pretty(path)}")
     return lines, (bk.close() if bk else None)
 
@@ -1593,15 +1611,25 @@ def op_create_profile(label, pid, base, include_projects, share):
     else:
         os.makedirs(new)
         bk.created(new)
-        settings = {}
-        sl = (read_json(os.path.join(primary()["dir_abs"], "settings.json"), {}) or {}).get("statusLine")
-        if sl and "settings.json" not in share:
-            settings["statusLine"] = sl
-        write_json(os.path.join(new, "settings.json"), settings)
+        if "settings.json" not in share:  # a shared settings.json is linked below instead
+            settings = {}
+            sl = (read_json(os.path.join(primary()["dir_abs"], "settings.json"), {}) or {}).get("statusLine")
+            if sl:
+                settings["statusLine"] = sl
+            write_json(os.path.join(new, "settings.json"), settings)
+    kinds = {i: k for i, k, _ in SHARE_ITEMS}
     for item in share:
         s = os.path.join(primary()["dir_abs"], item)
-        if os.path.lexists(s):
-            os.symlink(os.path.relpath(s, new), os.path.join(new, item))
+        if not os.path.lexists(s):  # the source does not have it yet: create it empty, as op_share does
+            if kinds[item] == "dir":
+                bk.mkdir(s)
+            else:
+                bk.copy(s)
+                write_text(s, "{}\n" if item.endswith(".json") else "")
+        os.symlink(os.path.relpath(s, new), os.path.join(new, item))
+    # every new profile gets /cc-profiles (a cc-profiles.md written by someone else is left alone)
+    if command_state(new) in ("missing", "outdated"):
+        write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
     cfg = load_config()
     cfg["profiles"].append({"id": pid, "label": label, "dir": f"~/.claude-{pid}",
