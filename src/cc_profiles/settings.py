@@ -583,36 +583,53 @@ def op_global(pid, key, value):
 # ~/.cc-profiles/config.json), so a script reached through a shared settings.json still
 # names the right profile. Only a script with STATUS_MARK on its first line is rewritten.
 STATUS_MARK = "# managed by cc-profiles: status line"
-# (id, label, sample, sh code). The code reads the JSON with j and adds one piece with
-# add TEXT [SGR color]; $cwd is the session's folder. Colors are the terminal's own 16.
+# (id, label, sample, brackets by default, sh code). The code reads the JSON with j and
+# adds one piece with add TEXT [SGR color]; $cwd is the session's folder, $cfg the
+# profile's .claude.json. Colors are the terminal's own 16 (90 is its grey).
 STATUS_PARTS = [
-    ("profile", "Profile", "Default",
-     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h)) == $d) | .label\' '
-     '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" "1;33"'),
-    ("model", "Model", "Opus", 'add "$(j .model.display_name)" 36'),
-    ("effort", "Effort", "high", 'add "$(j .effort.level)" 36'),
-    ("style", "Output style", "Explanatory", 'add "$(j .output_style.name)" 35'),
-    ("folder", "Folder", "api", '[ -n "$cwd" ] && add "$(basename "$cwd")" 34'),
-    ("branch", "Git branch", "main", '[ -n "$cwd" ] && add "$(git -C "$cwd" branch --show-current 2>/dev/null)" 35'),
-    ("pr", "Pull request", "PR #42", 'v=$(j .pr.number); [ -n "$v" ] && add "PR #$v" 35'),
-    ("context", "Context used", "ctx 42%",
-     'v=$(j \'.context_window.used_percentage | floor\'); if [ -n "$v" ]; then c=32; [ "$v" -ge 50 ] && c=33; '
-     '[ "$v" -ge 80 ] && c=31; add "ctx $v%" $c; fi'),
-    ("cost", "Session cost", "$1.27", 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")" 32'),
-    ("lines", "Lines changed", "+120 -34",
+    ("path", "Path", "~/code/api", "none",
+     'if [ -n "$cwd" ]; then case $cwd in "$HOME") p="~" ;; "$HOME"/*) p="~${cwd#"$HOME"}" ;; *) p=$cwd ;; esac; add "$p" 36; fi'),
+    ("folder", "Folder", "api", "none", '[ -n "$cwd" ] && add "$(basename "$cwd")" 36'),
+    ("branch", "Git branch (* when changed)", "main*", "round",
+     'if [ -n "$cwd" ]; then b=$(git -C "$cwd" --no-optional-locks branch --show-current 2>/dev/null)\n'
+     '[ -z "$b" ] && b=$(git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null)\n'
+     'if [ -n "$b" ]; then git -C "$cwd" --no-optional-locks diff --quiet --ignore-submodules HEAD 2>/dev/null || b="$b*"; '
+     'add "$b" "2;36"; fi; fi'),
+    ("profile", "Profile", "Default", "round",
+     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
+     '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" 1'),
+    ("email", "Account email", "me@example.com", "none", 'add "$(jq -r \'.oauthAccount.emailAddress // empty\' "$cfg" 2>/dev/null)" 90'),
+    ("model", "Model", "Opus", "square", 'add "$(j .model.display_name)" 35'),
+    ("effort", "Effort", "high", "none", 'add "$(j .effort.level)" 35'),
+    ("style", "Output style", "Explanatory", "curly", 'add "$(j .output_style.name)" 33'),
+    ("pr", "Pull request", "PR #42", "none", 'v=$(j .pr.number); [ -n "$v" ] && add "PR #$v" 35'),
+    ("context", "Context used", "ctx:42%", "angle",
+     'v=$(j \'.context_window.used_percentage | floor\'); if [ -n "$v" ]; then c=34; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "ctx:$v%" $c; fi'),
+    ("cost", "Session cost", "$1.27", "none", 'v=$(j .cost.total_cost_usd); [ -n "$v" ] && add "$(printf \'$%.2f\' "$v")" 32'),
+    ("lines", "Lines changed", "+120 -34", "none",
      'a=$(j .cost.total_lines_added); r=$(j .cost.total_lines_removed)\n'
      'if [ -n "$a$r" ]; then if [ "$C" = 1 ]; then add "$(printf \'\\033[32m+%s\\033[0m \\033[31m-%s\\033[0m\' "${a:-0}" "${r:-0}")"; '
      'else add "+${a:-0} -${r:-0}"; fi; fi'),
-    ("duration", "Session time", "12m",
+    ("duration", "Session time", "12m", "none",
      'v=$(j \'.cost.total_duration_ms | floor\'); if [ -n "$v" ]; then m=$((v / 60000)); '
      'if [ "$m" -ge 60 ]; then add "$((m / 60))h $(printf %02d $((m % 60)))m" 2; else add "${m}m" 2; fi; fi'),
-    ("limit", "5-hour limit used", "5h 18%", 'v=$(j \'.rate_limits.five_hour.used_percentage | floor\'); [ -n "$v" ] && add "5h $v%" 33'),
-    ("week", "Weekly limit used", "7d 41%", 'v=$(j \'.rate_limits.seven_day.used_percentage | floor\'); [ -n "$v" ] && add "7d $v%" 33'),
-    ("time", "Time", "14:05", 'add "$(date +%H:%M)" 2'),
+    ("limit", "5-hour limit used", "5h:18%", "none",
+     'v=$(j \'.rate_limits.five_hour.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "5h:$v%" $c; fi'),
+    ("week", "Weekly limit used", "7d:41%", "none",
+     'v=$(j \'.rate_limits.seven_day.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
+     '[ "$v" -ge 90 ] && c=31; add "7d:$v%" $c; fi'),
+    ("terminal", "Terminal", "iTerm", "round",
+     'case $TERM_PROGRAM in Apple_Terminal) t=Terminal ;; iTerm.app) t=iTerm ;; WarpTerminal) t=Warp ;; vscode) t="VS Code" ;; '
+     'ghostty) t=Ghostty ;; "") t=$TERM ;; *) t=$TERM_PROGRAM ;; esac; add "$t" 32'),
+    ("time", "Time", "14:05", "none", 'add "$(date +%H:%M)" 2'),
 ]
-STATUS_CODE = {i: code for i, _, _, code in STATUS_PARTS}
-STATUS_DEFAULT_PARTS = ["profile", "model", "folder", "branch", "context"]
-STATUS_SEPARATORS = {"dot": " · ", "bar": " | ", "arrow": " › ", "space": "  "}
+STATUS_CODE = {x[0]: x[4] for x in STATUS_PARTS}
+STATUS_DEFAULT_BRACKETS = {x[0]: x[3] for x in STATUS_PARTS}
+STATUS_DEFAULT_PARTS = ["path", "branch", "profile", "model", "context"]
+STATUS_SEPARATORS = {"space": " ", "dot": " · ", "bar": " | ", "arrow": " › "}
+STATUS_BRACKETS = {"none": ("", ""), "round": ("(", ")"), "square": ("[", "]"), "curly": ("{", "}"), "angle": ("⟨", "⟩")}
 STATUS_SAMPLE = {
     "model": {"id": "claude-opus-5-5", "display_name": "Opus"},
     "effort": {"level": "high"},
@@ -624,36 +641,50 @@ STATUS_SAMPLE = {
 }
 
 
+def status_parts(items):
+    """[(id, brackets)] from "id" or "id:brackets" items: unknown ids and repeats dropped."""
+    out, seen = [], set()
+    for item in items:
+        pid, _, br = str(item).partition(":")
+        if pid not in STATUS_CODE or pid in seen:
+            continue
+        if br and br not in STATUS_BRACKETS:
+            raise ApiError("Unknown brackets")
+        seen.add(pid)
+        out.append((pid, br or STATUS_DEFAULT_BRACKETS[pid]))
+    return out
+
+
 def status_style(separator, colors):
     if separator not in STATUS_SEPARATORS:
         raise ApiError("Unknown separator")
     return separator, bool(colors)
 
 
-def status_script(parts, separator="dot", colors=True):
-    """The status line script: the parts in the given order."""
-    parts = [p for p in parts if p in STATUS_CODE]
-    body = "\n".join(STATUS_CODE[p] for p in parts)
-    sep = STATUS_SEPARATORS[separator]
+def status_script(parts, separator="space", colors=True):
+    """The status line script: parts are (id, brackets) in the order to show them."""
+    body = "\n".join(f"L='{STATUS_BRACKETS[br][0]}' R='{STATUS_BRACKETS[br][1]}'\n{STATUS_CODE[pid]}" for pid, br in parts)
     return f"""#!/bin/sh
 {STATUS_MARK}
-# parts: {" ".join(parts)}
+# parts: {" ".join(f"{pid}:{br}" for pid, br in parts)}
 # style: separator={separator} colors={1 if colors else 0}
 # Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the second line.
-export LC_NUMERIC=C
+# Bytes stay bytes (LC_ALL=C): the shell cannot mangle ⟨ ⟩ or · whatever the terminal's locale.
+export LC_ALL=C
 C={1 if colors else 0}
-SEP='{sep}'
+SEP='{STATUS_SEPARATORS[separator]}'
 [ "$C" = 1 ] && SEP=$(printf '\\033[2m%s\\033[0m' "$SEP")
 input=$(cat)
 dir=$(cd "${{CLAUDE_CONFIG_DIR:-$HOME/.claude}}" 2>/dev/null && pwd -P)
 name=$(basename "$dir"); case $name in .claude-*) name=${{name#.claude-}} ;; *) name=default ;; esac
+cfg="$dir/.claude.json"; [ -f "$cfg" ] || cfg="$HOME/.claude.json"  # the default profile keeps it in the home
 if ! command -v jq >/dev/null 2>&1; then printf '%s (install jq for the rest)' "$name"; exit 0; fi
 j() {{ printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null; }}
 out=
 add() {{
   [ -n "$1" ] || return 0
-  s=$1
-  [ "$C" = 1 ] && [ -n "$2" ] && s=$(printf '\\033[%sm%s\\033[0m' "$2" "$1")
+  s="$L$1$R"
+  [ "$C" = 1 ] && [ -n "$2" ] && s=$(printf '\\033[%sm%s\\033[0m' "$2" "$s")
   out="${{out:+$out$SEP}}$s"
 }}
 cwd=$(j .workspace.current_dir)
@@ -667,16 +698,24 @@ def status_script_path(prof):
 
 
 def status_script_info(path):
-    """{parts, separator, colors} of a script cc-profiles wrote, or None for any other file."""
+    """{parts: [(id, brackets)], separator, colors} of a script cc-profiles wrote, or None
+    for any other file. Scripts from before per-piece brackets list bare ids."""
     try:
         with open(path) as f:
-            head = f.read(600).split("\n")
+            head = f.read(800).split("\n")
     except OSError:
         return None
     if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
         return None
-    info = {"parts": head[2][len("# parts:"):].split(), "separator": "dot", "colors": False}
-    if len(head) > 3 and head[3].startswith("# style:"):  # scripts from 0.4.2 on
+    old = ":" not in head[2]
+    try:
+        parts = status_parts(head[2][len("# parts:"):].split())
+    except ApiError:
+        return None
+    if old:
+        parts = [(pid, "none") for pid, _ in parts]
+    info = {"parts": parts, "separator": "dot", "colors": False}
+    if len(head) > 3 and head[3].startswith("# style:"):
         style = dict(x.split("=", 1) for x in head[3][len("# style:"):].split() if "=" in x)
         info["separator"] = style.get("separator") if style.get("separator") in STATUS_SEPARATORS else "dot"
         info["colors"] = style.get("colors") == "1"
@@ -696,18 +735,19 @@ def get_statusline(pid):
     mode = "off"
     if value:
         mode = "builtin" if value.get("command") == status_command(prof) and info is not None else "custom"
-    info = info or {"parts": STATUS_DEFAULT_PARTS, "separator": "dot", "colors": True}
-    return {"value": value, "source": src, "mode": mode, "parts": info["parts"], "separator": info["separator"],
-            "colors": info["colors"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
+    info = info or {"parts": status_parts(STATUS_DEFAULT_PARTS), "separator": "space", "colors": True}
+    return {"value": value, "source": src, "mode": mode, "parts": [f"{pid}:{br}" for pid, br in info["parts"]],
+            "separator": info["separator"], "colors": info["colors"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
             "jq": bool(find_tool("jq")), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
-            "parts_available": [{"id": i, "label": l, "sample": x} for i, l, x, _ in STATUS_PARTS]}
+            "brackets": [{"id": k, "left": v[0], "right": v[1]} for k, v in STATUS_BRACKETS.items()],
+            "parts_available": [{"id": x[0], "label": x[1], "sample": x[2], "brackets": x[3]} for x in STATUS_PARTS]}
 
 
-def statusline_preview(pid, parts, separator="dot", colors="1"):
+def statusline_preview(pid, parts, separator="space", colors="1"):
     """What the script prints on sample data, and the script itself. It runs from a
     temporary file, never the profile's: read-only."""
     prof = profile(pid)
-    parts = [p for p in parts.split(",") if p in STATUS_CODE]
+    parts = status_parts(x for x in parts.split(",") if x)
     separator, colors = status_style(separator, colors == "1")
     script = status_script(parts, separator, colors)
     if not parts:
@@ -732,14 +772,12 @@ def statusline_value(prof, body):
     if mode == "off":
         return None, None
     if mode == "builtin":
-        parts = []
-        for x in body.get("parts") or []:
-            if x in STATUS_CODE and x not in parts:
-                parts.append(x)
+        parts = status_parts(body.get("parts") or [])
         if not parts:
             raise ApiError("Pick at least one thing to show")
-        separator, colors = status_style(body.get("separator") or "dot", body.get("colors", True))
-        info, command = {"parts": parts, "separator": separator, "colors": colors}, status_command(prof)
+        separator, colors = status_style(body.get("separator") or "space", body.get("colors", True))
+        info = {"parts": parts, "separator": separator, "colors": colors}
+        command = status_command(prof)
     elif mode == "custom":
         command, info = str(body.get("command") or "").strip(), None
         if not command:
@@ -779,7 +817,7 @@ def op_statusline(pid, body):
     value, info = statusline_value(prof, body)
     bk = Backup("statusline", f"Status line of {prof['label']}")
     write_statusline(prof, value, info, bk)
-    bk.note(f"statusLine = {json.dumps(value)}" + (f", script: {' '.join(info['parts'])}" if info else ""))
+    bk.note(f"statusLine = {json.dumps(value)}" + (f", script: {' '.join(p for p, _ in info['parts'])}" if info else ""))
     msg = "Status line turned off." if value is None else "Status line saved: it shows from the next Claude Code session."
     return {"message": msg, "backup": bk.close()}
 
@@ -825,7 +863,8 @@ def op_statusline_all(pid):
     if not plan["apply"]:
         raise no_targets(plan)
     cur = get_statusline(pid)
-    info = {k: cur[k] for k in ("parts", "separator", "colors")} if cur["mode"] == "builtin" else None
+    info = ({"parts": status_parts(cur["parts"]), "separator": cur["separator"], "colors": cur["colors"]}
+            if cur["mode"] == "builtin" else None)
     bk = Backup("statusline-all", f"Status line of {plan['from']} in every profile")
     for t in plan["apply"]:
         o = profile(t["id"])

@@ -334,27 +334,31 @@ def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
     S = "/api/statusline"
     assert app.get(S + "?profile=default")["mode"] == "off"
 
-    preview = app.get(S + "/preview?profile=default&parts=cost,profile,model&colors=0")["text"]
-    colored = app.get(S + "/preview?profile=default&parts=model,context&separator=bar")
+    preview = app.get(S + "/preview?profile=default&parts=cost,profile,model&separator=dot&colors=0")["text"]
+    colored = app.get(S + "/preview?profile=default&parts=model:none,context:none&separator=bar")
+    square = app.get(S + "/preview?profile=default&parts=model:square,cost:square&colors=0")["text"]
+    assert "Unknown brackets" in app.request(S + "/preview?profile=default&parts=model:x")[1]["error"]
     if shutil.which("jq"):
-        assert preview == "$1.27 · Default · Opus"  # in the order picked
-        assert colored["text"] == "\x1b[36mOpus\x1b[0m\x1b[2m | \x1b[0m\x1b[32mctx 42%\x1b[0m"
+        assert square == "[Opus] [$1.27]"
+        assert preview == "$1.27 · (Default) · [Opus]"  # in the order picked, each with its own brackets
+        assert colored["text"] == "\x1b[35mOpus\x1b[0m\x1b[2m | \x1b[0m\x1b[34mctx:42%\x1b[0m"
     else:
         assert "install jq" in preview
     assert "# style: separator=bar colors=1" in colored["script"]
     assert "Unknown separator" in app.request(S + "/preview?profile=default&parts=model&separator=x")[1]["error"]
-    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model", "profile", "nope"], "refreshInterval": 5,
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["model:none", "profile", "nope"], "refreshInterval": 5,
                  "separator": "bar", "colors": False})
     script = home.path(".claude/statusline.sh").read_text()
-    assert "# managed by cc-profiles: status line" in script and "# parts: model profile" in script
+    assert "# managed by cc-profiles: status line" in script and "# parts: model:none profile:round" in script
     line = json.loads(home.path(".claude/settings.json").read_text())["statusLine"]
     assert line["type"] == "command" and line["command"].endswith("/.claude/statusline.sh") and line["refreshInterval"] == 5
     got = app.get(S + "?profile=default")
-    assert got["mode"] == "builtin" and got["parts"] == ["model", "profile"] and got["separator"] == "bar" and not got["colors"]
+    assert got["mode"] == "builtin" and got["parts"] == ["model:none", "profile:round"]
+    assert got["separator"] == "bar" and not got["colors"]
     if shutil.which("jq"):  # the real script, as Claude Code runs it
         r = subprocess.run(["sh", "-c", line["command"]], input='{"model": {"display_name": "Opus"}}', capture_output=True,
                            text=True, env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
-        assert r.stdout == "Opus | Default"
+        assert r.stdout == "Opus | (Default)"
 
     assert "not made by cc-profiles" in app.post_error(S, {"profile": "work", "mode": "builtin", "parts": ["model"]})
     assert app.get(S + "/all/preview?profile=default")["skip"][0]["reason"].endswith("was not made by cc-profiles")
@@ -384,7 +388,7 @@ def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory
     for d in (".claude-work", ".claude-solo"):  # each profile gets its own script, same parts and options
         line = json.loads(home.path(f"{d}/settings.json").read_text())["statusLine"]
         assert line["command"].endswith(f"{d}/statusline.sh") and line["padding"] == 1
-        assert "# parts: profile branch" in home.path(f"{d}/statusline.sh").read_text()
+        assert "# parts: profile:round branch:round" in home.path(f"{d}/statusline.sh").read_text()
     assert app.get("/api/statusline/all/preview?profile=default")["apply"] == []
     for b in app.get("/api/backups")[:2]:  # to every profile, then the one it copied
         app.post("/api/backups/restore", {"name": b["name"]})

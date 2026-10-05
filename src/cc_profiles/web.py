@@ -257,7 +257,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/profiles/delete/preview": lambda: delete_plan(q["id"], q.get("merge_into") or None),
                 "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
                 "/api/statusline": lambda: get_statusline(q["profile"]),
-                "/api/statusline/preview": lambda: statusline_preview(q["profile"], q.get("parts", ""), q.get("separator", "dot"),
+                "/api/statusline/preview": lambda: statusline_preview(q["profile"], q.get("parts", ""), q.get("separator", "space"),
                                                                      q.get("colors", "1")),
                 "/api/statusline/all/preview": lambda: statusline_all_plan(q["profile"]),
                 "/api/settings/permissions/all/preview": lambda: permission_all_plan(q["list"], q["rule"]),
