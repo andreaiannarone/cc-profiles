@@ -92,7 +92,7 @@ Each new profile must log in once: run its command and use `/login`. Credentials
 
 ## Finding your way
 
-The tabs sit in one row under the header. On a narrow window the ones that do not fit are in the **More** menu at the end of the row.
+The tabs sit in one row under the profile cards. On a narrow window the ones that do not fit are in the **More** menu at the end of the row.
 
 ### Keyboard shortcuts
 

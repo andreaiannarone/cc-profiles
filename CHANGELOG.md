@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `cc-profiles restart` stops the server running in the background and starts it again, for example after an update; `cc-profiles stop` only stops it. A write in progress finishes first, and only cc-profiles is ever stopped: every response now carries the server's pid.
 
 ### Changed
-- The tabs are a single row under the header again, styled like GitHub's: an icon before each name, an orange underline on the active one. The sidebar and the group switcher of 0.4.0 are gone: on a narrow window the tabs that do not fit go into a **More** menu, and the active tab always stays in view.
+- The tabs are a single row again, under the profile cards, styled like GitHub's: an icon before each name, an orange underline on the active one. The sidebar and the group switcher of 0.4.0 are gone: on a narrow window the tabs that do not fit go into a **More** menu, and the active tab always stays in view.
 
 ### Fixed
 - The favicon now shows in Safari, which ignores the inline SVG one: the server also sends it as PNG, `/favicon.ico` and `apple-touch-icon.png`, drawn from the same pixel mascot.
