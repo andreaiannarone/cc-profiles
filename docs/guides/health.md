@@ -29,6 +29,12 @@ The ⓘ button at the top right opens a panel with:
   - contents: skills, plugins, subagents, slash commands, output styles, MCP servers, hooks, `CLAUDE.md`, shared items.
 - **cc-profiles**: version, code and data locations, number and size of backups, address, Python version.
 
+## Updating cc-profiles
+
+At the bottom of the About panel, **Check for updates** asks PyPI for the latest version of cc-profiles. It runs only when you click: this and the Claude Code installer are the only times cc-profiles reaches the internet, and PyPI sees your IP address.
+
+When a newer version exists, **Update to …** runs the update for the way you installed cc-profiles, `pipx upgrade cc-profiles` or `uv tool upgrade cc-profiles`, then restarts the app on the same port; the page reloads by itself. Your profiles, backups and settings are not touched. A copy run from the source folder, or installed with plain pip, shows the command to run by hand instead.
+
 ## Installing Claude Code
 
 If Claude Code is not found, a notice at the top of the page offers **Install Claude Code…**. The same button is in the About panel. You pick one of the official methods from the [Claude Code setup guide](https://code.claude.com/docs/en/setup):

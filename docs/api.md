@@ -32,6 +32,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
+| `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |
 
 Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a profile it does not belong to; includes `from` and `to`), `unclassified` (no rule matches).
@@ -66,6 +67,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |
 | `POST /api/backups/prune` | `days` (integer, 1 or more): permanently deletes the backups older than that |
+| `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 
 ## Example
