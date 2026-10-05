@@ -15,7 +15,8 @@ from .paths import path_index, project_folders
 # ---------------------------------------------------------------------------
 # Prices
 # ---------------------------------------------------------------------------
-# Anthropic's list prices in USD per million tokens, checked on 2026-10-06. They are
+# Anthropic's list prices in USD per million tokens, checked on 2026-10-06 against
+# https://platform.claude.com/docs/en/about-claude/pricing. They are
 # estimates: subscription plans (Pro, Max, Team) are not billed per token, and cloud
 # providers have their own prices. Cache write is the 5-minute price (1.25 × input);
 # writes Claude Code reports as 1-hour ones count at 2 × input. The first pattern that
@@ -31,7 +32,8 @@ PRICES = [
     (r"haiku-4", "Haiku 4.5", 1.00, 5.00, 1.25, 0.10),
     (r"3-5-haiku|haiku-3-5", "Haiku 3.5", 0.80, 4.00, 1.00, 0.08),
     (r"haiku", "Haiku 3", 0.25, 1.25, 0.30, 0.03),
-    (r"fable|mythos", "Fable 5", 10.00, 50.00, 12.50, 0.25),
+    (r"(fable|mythos)-5-[1-9]", "Fable / Mythos 5.1", 10.00, 50.00, 12.50, 0.25),
+    (r"fable|mythos", "Fable / Mythos 5", 10.00, 50.00, 12.50, 1.00),
 ]
 _PRICE_RE = [(re.compile(p), fam, prices) for p, fam, *prices in PRICES]
 _price_memo = {}
