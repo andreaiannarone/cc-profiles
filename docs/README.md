@@ -2,7 +2,7 @@
 
 ## Using cc-profiles
 
-1. [Getting started](getting-started.md): install, first run, launcher commands
+1. [Getting started](getting-started.md): install, first run, launcher commands, [keyboard shortcuts](getting-started.md#keyboard-shortcuts)
 2. [Concepts](concepts.md): profiles, the source profile, projects, rules, sharing, backups
 3. Guides by tab:
    - [Projects](guides/projects.md): move, relink, assign

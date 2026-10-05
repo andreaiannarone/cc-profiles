@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Keyboard shortcuts: `/` focuses the search, `g` then a letter opens a tab (`g p` Projects, `g h` Health…), `?` lists them all. A keyboard button in the header shows the same list.
+- The browser smoke test runs axe-core on every tab, the shortcuts dialog, the About panel and phone width, in light and dark themes, and fails on serious or critical accessibility problems (`axe-playwright-python` in the `ui` extra).
+
+### Changed
+- The eleven tabs are grouped: Content, Extensions, Profiles and System. From 1100px they form a sidebar; on narrower windows a group switcher shows one group's tabs at a time, with a red dot on a group that needs attention.
+- Better contrast: the amber of "session open" and warnings is darker in the light theme, and the *default* badge in Settings is outlined instead of faded (both were under 4.5:1).
+
 ## [0.3.0] - 2026-10-05
 
 ### Added

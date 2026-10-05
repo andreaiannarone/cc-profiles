@@ -90,6 +90,24 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Each new profile must log in once: run its command and use `/login`. Credentials are never copied between profiles.
 
+## Finding your way
+
+The tabs are in four groups: **Content** (Projects, Memories, Conversations), **Extensions** (Skills, MCP, Plugins), **Profiles** (Profiles, Compare) and **System** (Backups, Health, Settings). On a wide window they form a sidebar; on a narrow one, pick the group first and then the tab.
+
+### Keyboard shortcuts
+
+| Keys | What they do |
+|---|---|
+| `/` | Search everything |
+| `g` then `p`, `m`, `c` | Projects, Memories, Conversations |
+| `g` then `s`, `x`, `l` | Skills, MCP, Plugins |
+| `g` then `r`, `o` | Profiles, Compare |
+| `g` then `b`, `h`, `t` | Backups, Health, Settings |
+| `?` | Show the list of shortcuts |
+| `Esc` | Close the search, a dialog or a panel |
+
+Shortcuts are ignored while you type in a field or while a dialog is open. The keyboard button in the header shows the same list.
+
 ## Next steps
 
 - Read [Concepts](concepts.md): five minutes that make everything else obvious.

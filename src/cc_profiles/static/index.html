@@ -16,7 +16,7 @@
   --p0: #047857; --p0-soft: #ddf3ea; --p1: #1d4ed8; --p1-soft: #e3ebfd; --p2: #be185d; --p2-soft: #fbe2ee;
   --p3: #0f766e; --p3-soft: #d5f2ee; --p4: #4338ca; --p4-soft: #e5e6fb; --p5: #854d0e; --p5-soft: #fbf0d4;
   --shared: #6d28d9; --shared-soft: #ede5fb;
-  --ok: #15803d; --warn: #b45309; --warn-soft: #fdf1dc; --err: #b91c1c; --err-soft: #fbe3e3;
+  --ok: #15803d; --warn: #a84d08; --warn-soft: #fdf1dc; --err: #b91c1c; --err-soft: #fbe3e3;
   --logo: #d97757; --logo-back: #e9a98c; --logo-eye: #1d1c1a;
   --radius: 10px; --mono: ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: light;
@@ -84,11 +84,38 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .live { font-size: 11.5px; color: var(--warn); background: var(--warn-soft); padding: 1px 7px; border-radius: 99px; margin-left: auto; }
 code, .mono { font-family: var(--mono); font-size: 12.5px; }
 
-nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
-nav.tabs button { background: none; border: 0; padding: 9px 14px; cursor: pointer; color: var(--muted);
-  border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 550; }
-nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
-nav.tabs .count { font-size: 11px; background: var(--err-soft); color: var(--err); border-radius: 99px; padding: 0 6px; margin-left: 4px; }
+/* navigation: a sidebar of four groups from 1100px, a group switcher plus one row of tabs below */
+.shell { display: grid; grid-template-columns: 168px minmax(0, 1fr); grid-template-areas: "nav lead" "nav main"; column-gap: 28px; align-items: start; }
+.shell > .lead { grid-area: lead; }
+.shell > .navcol { grid-area: nav; position: sticky; top: 16px; }
+.shell > main { grid-area: main; min-width: 0; }
+nav.tabs { display: grid; gap: 14px; }
+nav.tabs .ngroup { display: grid; gap: 1px; }
+nav.tabs .nlabel { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 0 10px 4px; }
+nav.tabs button { display: flex; align-items: center; justify-content: space-between; gap: 6px; text-align: left; background: none; border: 0;
+  padding: 6px 10px; border-radius: 7px; cursor: pointer; color: var(--muted); font-weight: 550; }
+nav.tabs button:hover { color: var(--text); background: var(--panel-2); }
+nav.tabs button.on { color: var(--text); background: var(--panel); box-shadow: inset 2px 0 0 var(--accent), 0 0 0 1px var(--line); }
+nav.tabs .count { font-size: 11px; background: var(--err-soft); color: var(--err); border-radius: 99px; padding: 0 6px; }
+.seg.ngroups { display: none; }
+.ngroups .gdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--err); margin-left: 5px; vertical-align: 2px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 1099px) {
+  .shell { display: block; }
+  .shell > .navcol { position: static; }
+  .seg.ngroups { display: flex; margin-bottom: 6px; }
+  .ngroups button { padding: 6px 4px; font-weight: 550; white-space: nowrap; }
+  nav.tabs { display: flex; box-shadow: inset 0 -1px 0 var(--line); margin-bottom: 16px; overflow-x: auto; }
+  nav.tabs .ngroup, nav.tabs .nlabel { display: none; }
+  nav.tabs .ngroup.cur { display: flex; gap: 4px; }
+  nav.tabs button { justify-content: flex-start; padding: 9px 14px; border-radius: 0; border-bottom: 2px solid transparent; white-space: nowrap; }
+  nav.tabs button:hover { background: none; }
+  nav.tabs button.on { background: none; box-shadow: none; border-bottom-color: var(--accent); }
+}
+kbd { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--panel-2); }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; align-items: center; }
+.keys dt { white-space: nowrap; } .keys dd { margin: 0; color: var(--muted); }
+@media (hover: none) { #keys-btn { display: none; } }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
@@ -120,6 +147,7 @@ td.acts .btn + .btn { margin-left: 6px; }
 .b-p4 { background: var(--p4-soft); color: var(--p4); } .b-p5 { background: var(--p5-soft); color: var(--p5); }
 .b-shared { background: var(--shared-soft); color: var(--shared); }
 .b-none { background: var(--panel-2); color: var(--muted); }
+.b-default { background: none; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
 .b-warn { background: var(--warn-soft); color: var(--warn); }
 .b-err { background: var(--err-soft); color: var(--err); }
 .issue { font-size: 12.5px; color: var(--warn); }
@@ -304,25 +332,49 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
     <button class="iconbtn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
     </button>
+    <button class="iconbtn" id="keys-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+    </button>
     <button class="iconbtn" id="about-btn" title="About Claude Code on this computer" aria-label="About Claude Code on this computer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
     </button></header>
-  <div id="notice"></div>
-  <section class="profiles" id="profiles"></section>
-  <nav class="tabs" id="tabs">
-    <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
-    <button data-tab="memories">Memories</button>
-    <button data-tab="conversations">Conversations</button>
-    <button data-tab="profiles">Profiles</button>
-    <button data-tab="compare">Compare</button>
-    <button data-tab="skills">Skills</button>
-    <button data-tab="mcp">MCP</button>
-    <button data-tab="plugins">Plugins</button>
-    <button data-tab="backups">Backups</button>
-    <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
-    <button data-tab="settings">Settings</button>
-  </nav>
-  <main id="main"></main>
+  <div class="shell">
+    <div class="lead">
+      <div id="notice"></div>
+      <section class="profiles" id="profiles" aria-label="Profiles"></section>
+    </div>
+    <div class="navcol">
+      <!-- narrow screens only: pick a group, its tabs show under it -->
+      <div class="seg ngroups" id="ngroups" role="group" aria-label="Section groups">
+        <button data-group="content" class="on" aria-pressed="true">Content<span class="gdot" hidden><span class="vh"> (needs attention)</span></span></button>
+        <button data-group="extensions" aria-pressed="false">Extensions<span class="gdot" hidden><span class="vh"> (needs attention)</span></span></button>
+        <button data-group="profiles" aria-pressed="false">Profiles<span class="gdot" hidden><span class="vh"> (needs attention)</span></span></button>
+        <button data-group="system" aria-pressed="false">System<span class="gdot" hidden><span class="vh"> (needs attention)</span></span></button>
+      </div>
+      <nav class="tabs" id="tabs" aria-label="Sections">
+        <div class="ngroup cur" data-group="content" role="group" aria-labelledby="ng-content"><div class="nlabel" id="ng-content">Content</div>
+          <button data-tab="projects" class="on" aria-current="page">Projects <span class="count" id="cnt-projects" hidden></span></button>
+          <button data-tab="memories">Memories</button>
+          <button data-tab="conversations">Conversations</button>
+        </div>
+        <div class="ngroup" data-group="extensions" role="group" aria-labelledby="ng-extensions"><div class="nlabel" id="ng-extensions">Extensions</div>
+          <button data-tab="skills">Skills</button>
+          <button data-tab="mcp">MCP</button>
+          <button data-tab="plugins">Plugins</button>
+        </div>
+        <div class="ngroup" data-group="profiles" role="group" aria-labelledby="ng-profiles"><div class="nlabel" id="ng-profiles">Profiles</div>
+          <button data-tab="profiles">Profiles</button>
+          <button data-tab="compare">Compare</button>
+        </div>
+        <div class="ngroup" data-group="system" role="group" aria-labelledby="ng-system"><div class="nlabel" id="ng-system">System</div>
+          <button data-tab="backups">Backups</button>
+          <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
+          <button data-tab="settings">Settings</button>
+        </div>
+      </nav>
+    </div>
+    <main id="main"></main>
+  </div>
 </div>
 <div class="toasts" id="toasts"></div>
 
@@ -368,7 +420,7 @@ async function run(fn) {
 }
 
 // ---------- modal ----------
-function modal({ title, sub, body = "", actions = [] }) {
+function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
   return new Promise(resolve => {
     const bg = document.createElement("div");
     bg.className = "modal-bg";
@@ -376,7 +428,7 @@ function modal({ title, sub, body = "", actions = [] }) {
       <h2>${esc(title)}</h2>${sub ? `<div class="hint">${sub}</div>` : ""}
       <div class="body">${body}</div>
       <div class="foot">${actions.map((a, i) => a.label ? `<button class="btn ${a.kind || ""}" data-i="${i}">${esc(a.label)}</button>` : "").join("")}
-        <button class="btn" data-close>Cancel</button></div></div>`;
+        <button class="btn" data-close>${esc(cancel)}</button></div></div>`;
     const close = v => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
     const onKey = e => { if (e.key === "Escape") close(null); };
     document.addEventListener("keydown", onKey);
@@ -412,7 +464,7 @@ async function loadProfiles() {
 async function loadProjects() {
   S.projects = await api("/api/projects");
   const n = S.projects.filter(r => r.issues.length).length;
-  const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n;
+  const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n; syncNav();
 }
 async function refresh() { await Promise.all([loadProfiles(), loadProjects()]); render(); }
 
@@ -667,7 +719,7 @@ async function loadHealth() {
   S.health = null; renderHealth();
   S.health = await api("/api/health");
   const n = S.health.reduce((a, h) => a + h.checks.filter(c => c.level === "error").length + h.orphans.length, 0);
-  const c = $("#cnt-health"); c.hidden = !n; c.textContent = n;
+  const c = $("#cnt-health"); c.hidden = !n; c.textContent = n; syncNav();
   renderHealth();
 }
 function renderHealth() {
@@ -951,7 +1003,7 @@ async function loadSettings(pid) {
 }
 const fmt = v => v === null || v === undefined ? "default" : typeof v === "boolean" ? (v ? "on" : "off") : String(v);
 const srcBadge = src => src === "local" ? `<span class="badge b-warn src" title="settings.local.json wins over settings.json">settings.local.json</span>`
-  : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-none src" style="opacity:.7">default</span>`;
+  : src === "settings" ? `<span class="badge b-none src">settings.json</span>` : `<span class="badge b-default src">default</span>`;
 function selectOptions(f) {
   const opt = o => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`;
   const groups = [...new Set(f.options.map(o => o.group))];
@@ -1308,7 +1360,7 @@ const SKINDS = [["projects", "Projects"], ["memories", "Memories"], ["skills", "
 S.search = { q: "", data: null, error: null, prev: "projects", timer: null };
 function goTab(tab) {
   S.tab = tab;
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  markTab(tab);
 }
 function highlight(sn) {
   const t = sn.text;
@@ -1519,12 +1571,67 @@ async function deleteBackup(name) {
   loadBackups();
 }
 
+// ---------- navigation and keyboard shortcuts ----------
+// Tabs sit in four groups: a sidebar on wide screens; below 1100px the group
+// switcher (#ngroups) shows one group's tabs at a time and remembers the last tab of each.
+const NAV = { group: "content", last: {} };
+function markTab(tab) {
+  document.querySelectorAll("#tabs button").forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle("on", on);
+    if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  const g = $(`#tabs button[data-tab="${tab}"]`)?.closest(".ngroup")?.dataset.group;
+  if (g) { NAV.group = g; NAV.last[g] = tab; }
+  syncNav();
+}
+function syncNav() {
+  document.querySelectorAll("#tabs .ngroup").forEach(n => n.classList.toggle("cur", n.dataset.group === NAV.group));
+  document.querySelectorAll("#ngroups button").forEach(b => {
+    const g = b.dataset.group, cur = g === NAV.group;
+    b.classList.toggle("on", cur); b.setAttribute("aria-pressed", cur);
+    $(".gdot", b).hidden = cur || !$(`#tabs .ngroup[data-group="${g}"] .count:not([hidden])`);
+  });
+}
+function openGroup(g) {
+  const tab = NAV.last[g] || $(`#tabs .ngroup[data-group="${g}"] button`).dataset.tab;
+  $(`#tabs button[data-tab="${tab}"]`).click();
+}
+// g then a letter: the tab's initial, or a distinctive letter when the initial is taken
+const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["s", "skills"], ["x", "mcp"], ["l", "plugins"],
+                 ["r", "profiles"], ["o", "compare"], ["b", "backups"], ["h", "health"], ["t", "settings"]];
+function showKeys() {
+  const name = tab => $(`#tabs button[data-tab="${tab}"]`).firstChild.textContent.trim();
+  const row = (k, what) => `<dt>${k}</dt><dd>${what}</dd>`;
+  modal({ title: "Keyboard shortcuts", cancel: "Close",
+    sub: "They work anywhere except while you type in a field or a dialog is open.",
+    body: `<dl class="keys">${row("<kbd>/</kbd>", "Search everything")}${row("<kbd>Esc</kbd>", "Close the search, a dialog or a panel")}${row("<kbd>?</kbd>", "Show this list")}
+      ${GO_KEYS.map(([k, tab]) => row(`<kbd>g</kbd> <kbd>${k}</kbd>`, "Go to " + esc(name(tab)))).join("")}</dl>` });
+}
+let goPending = 0;
+document.addEventListener("keydown", e => {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  const el = e.target;
+  if (el.isContentEditable || el.closest?.("input, textarea, select")) return;
+  if (document.querySelector(".modal-bg, .drawer, .popover")) return;
+  if (goPending && Date.now() - goPending < 1500) {
+    goPending = 0;
+    const tab = GO_KEYS.find(([k]) => k === e.key.toLowerCase())?.[1];
+    if (tab) { e.preventDefault(); $(`#tabs button[data-tab="${tab}"]`).click(); }
+    return;
+  }
+  goPending = 0;
+  if (e.key === "/") { e.preventDefault(); $("#gsearch").focus(); $("#gsearch").select(); }
+  else if (e.key === "?") { e.preventDefault(); showKeys(); }
+  else if (e.key === "g") goPending = Date.now();
+});
+
 // ---------- events ----------
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.tab) {
     S.tab = t.dataset.tab;
-    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b === t));
+    markTab(S.tab);
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "conversations" && !S.conv.profile) { S.conv.profile = S.profiles[0]?.id; await loadConvProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
@@ -1536,13 +1643,15 @@ document.addEventListener("click", async e => {
     if (S.tab === "backups") return loadBackups();
     return render();
   }
+  if (t.id === "keys-btn") return showKeys();
   if (t.hasAttribute("data-newprofile")) return newProfile();
   if (t.hasAttribute("data-install")) return installClaude();
   if (t.hasAttribute("data-install-log")) return showInstallLog();
   if (t.dataset.pedit) return editProfile(t.dataset.pedit);
   if (t.dataset.pexport) return exportProfile(t.dataset.pexport);
   if (t.hasAttribute("data-pimport")) return importProfile();
-  if (t.dataset.pext) { S.tab = t.dataset.ext; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab)); return loadExt(t.dataset.pext); }
+  if (t.dataset.pext) { S.tab = t.dataset.ext; markTab(S.tab); return loadExt(t.dataset.pext); }
+  if (t.dataset.group) return openGroup(t.dataset.group);
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);

@@ -28,7 +28,7 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest>=7"]
 # the browser smoke test (tests/test_ui.py), run in CI; locally also needs: python -m playwright install chromium
-ui = ["pytest>=7", "playwright>=1.40"]
+ui = ["pytest>=7", "playwright>=1.40", "axe-playwright-python>=0.1.4"]
 
 [project.scripts]
 cc-profiles = "cc_profiles.server:main"
