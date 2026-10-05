@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-05
+
 ### Added
 - Keyboard shortcuts: `/` focuses the search, `g` then a letter opens a tab (`g p` Projects, `g h` Health…), `?` lists them all. A keyboard button in the header shows the same list.
 - The browser smoke test runs axe-core on every tab, the shortcuts dialog, the About panel and phone width, in light and dark themes, and fails on serious or critical accessibility problems (`axe-playwright-python` in the `ui` extra).
@@ -107,7 +109,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...v0.2.1
