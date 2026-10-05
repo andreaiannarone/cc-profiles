@@ -30,6 +30,8 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_QUIET` | if set, do not log HTTP requests to the terminal |
 | `CC_PROFILES_INSTALL_DRYRUN` | **for tests**: the Claude Code installer runs `echo` instead of installing |
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
+| `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
+| `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
 | `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile |
 
 ## `~/.cc-profiles/config.json`

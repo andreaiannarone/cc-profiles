@@ -132,7 +132,8 @@ cc-profiles
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
-- 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is ever sent anywhere.
+- 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
+- 🔄 **Updates from the app**: **Check for updates** in the (i) panel asks PyPI for the latest version and, for a pipx or uv install, updates and restarts cc-profiles with one click.
 
 ---
 
@@ -337,7 +338,7 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Writes are atomic (temporary file, then rename), so Claude Code never reads a half-written file, even while it is running.
 - Names of projects, memories, skills and backups are validated against path traversal.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
-- The only network access is the optional Claude Code installer, which runs only if you click **Install**.
+- cc-profiles reaches the internet only when you click: **Check for updates** asks pypi.org for the latest version (PyPI sees your IP address), and **Install** runs the official Claude Code installer.
 
 See [SECURITY.md](SECURITY.md) to report a vulnerability.
 

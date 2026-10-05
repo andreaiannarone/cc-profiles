@@ -389,6 +389,38 @@ def test_install_failure_is_reported(home, app_factory):
     assert wait_job(app)["job"]["code"] == 7
 
 
+# --- updating cc-profiles (PyPI replaced by a local file) ------------------------
+def pypi(tmp_path, version):
+    f = tmp_path / f"pypi-{version}.json"
+    f.write_text(json.dumps({"info": {"version": version}}))
+    return f.as_uri()
+
+
+def test_update_check_compares_with_pypi(home, app_factory, tmp_path):
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    current = server.__version__
+    newer = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0")).get("/api/update")
+    assert newer["current"] == current and newer["latest"] == "99.0.0" and newer["newer"] is True
+    # the tests run from the source folder: no self-update, but the way to do it by hand
+    assert newer["kind"] == "source" and newer["can_update"] is False and "git pull" in newer["manual"]
+    same = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, current))
+    assert same.get("/api/update")["newer"] is False
+    assert "already the latest" in same.post("/api/update", {})["message"]
+    src = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"))
+    assert "cannot update itself" in src.post_error("/api/update", {})
+    offline = app_factory(CC_PROFILES_PYPI_URL=(tmp_path / "missing.json").as_uri())
+    status, body = offline.request("/api/update")
+    assert status == 502 and "Could not reach PyPI" in body["error"]
+
+
+def test_version_order():
+    sys.path.insert(0, str(SRC))
+    from cc_profiles.server import version_key
+    assert version_key("0.10.1") > version_key("0.9") > version_key("0.2.1") > version_key("0.2.0")
+    assert version_key("1.0.0rc1") == version_key("1.0.0")  # pre-releases are not offered as newer
+
+
 # --- command line ---------------------------------------------------------------
 def run_cli(home, *args, **env):
     e = {"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), **env}
