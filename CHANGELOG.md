@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-05
+
 ### Added
 - `cc-profiles restart` stops the server running in the background and starts it again, for example after an update; `cc-profiles stop` only stops it. A write in progress finishes first, and only cc-profiles is ever stopped: every response now carries the server's pid.
 
@@ -120,7 +122,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.1...v0.2.2
