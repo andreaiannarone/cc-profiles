@@ -15,7 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - CI runs `install.sh` on Linux and macOS and lints it with shellcheck.
 - Claude Code plugin marketplace in this repository, with the `/cc-profiles:open` command that runs `cc-profiles open`.
 - Project logo, also next to the web UI's title, a one-mascot favicon, and technology badges in the README.
-- Skills & MCP tab: for each profile, browse, create, edit, copy and delete skills, and add, edit, copy and remove MCP servers (user or project scope). Values of environment variables and headers stay out of the list.
+- Skills and MCP tabs: for each profile, browse, create, edit, copy and delete skills, and add, edit, copy and remove MCP servers (user or project scope). Values of environment variables and headers stay out of the list.
 - Profile cards and the Profiles tab show the account each profile is signed in with.
 
 ### Changed

@@ -263,7 +263,8 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
     <button data-tab="projects" class="on">Projects <span class="count" id="cnt-projects" hidden></span></button>
     <button data-tab="memories">Memories</button>
     <button data-tab="profiles">Profiles</button>
-    <button data-tab="ext">Skills &amp; MCP</button>
+    <button data-tab="skills">Skills</button>
+    <button data-tab="mcp">MCP</button>
     <button data-tab="backups">Backups</button>
     <button data-tab="health">Health <span class="count" id="cnt-health" hidden></span></button>
     <button data-tab="settings">Settings</button>
@@ -276,7 +277,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
-            health: null, ext: { profile: null, skills: null, mcp: null, skill: null, content: "", files: [], q: "" } };
+            health: null, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 const $ = (s, el = document) => el.querySelector(s);
@@ -567,7 +568,7 @@ function renderSharing() {
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
         <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
-      <div class="acts"><button class="btn small" data-pext="${p.id}">Skills &amp; MCP</button><button class="btn small" data-pedit="${p.id}">Edit</button>
+      <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
@@ -654,13 +655,23 @@ async function deleteProfile(id) {
 }
 
 // ---------- skills and MCP servers ----------
+const EXT_TABS = ["skills", "mcp"];
 async function loadExt(pid) {
-  const x = S.ext;
+  const x = S.ext, tab = S.tab;
   if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; }
   x.profile = x.profile || S.profiles[0]?.id;
-  x.skills = null; x.mcp = null; renderExt();
-  [x.skills, x.mcp] = await Promise.all([api("/api/skills?profile=" + x.profile), api("/api/mcp?profile=" + x.profile)]);
-  if (x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
+  x.error = null;
+  if (tab === "skills") x.skills = null; else x.mcp = null;
+  renderExt();
+  try {
+    if (tab === "skills") x.skills = await api("/api/skills?profile=" + x.profile);
+    else x.mcp = await api("/api/mcp?profile=" + x.profile);
+  } catch (e) {
+    // "Not found" means the page is newer than the running server: the page is read from disk at every load
+    x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server. Stop it (ctrl+C, or kill the process) and start it again." : e.message;
+    return renderExt();
+  }
+  if (x.skills && x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
   renderExt();
 }
 async function openSkill(name) {
@@ -676,16 +687,21 @@ async function pickProfile(title, sub, pid, okLabel) {
 }
 const scopeLabel = s => s === "user" ? "All projects" : basename(s);
 function renderExt() {
-  if (S.tab !== "ext") return;
-  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile);
+  if (!EXT_TABS.includes(S.tab)) return;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = S.tab === "skills" ? x.skills : x.mcp;
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
-  if (!x.skills || !x.mcp) { $("#main").innerHTML = `<div class="toolbar">${seg}</div><div class="empty"><span class="spinner"></span></div>`; return; }
+  const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
+  if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }
+  if (!data) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading ${S.tab === "skills" ? "skills" : "MCP servers"}…</div>`; return; }
+  return S.tab === "skills" ? renderSkills(head) : renderMcp(head);
+}
+function renderSkills(head) {
+  const x = S.ext;
   const q = x.q.toLowerCase();
   const skills = x.skills.skills.filter(k => !q || (k.name + " " + k.description).toLowerCase().includes(q));
   const cur = x.skills.skills.find(k => k.name === x.skill);
-  $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>
-
-    <div class="ext-head"><h3>Skills</h3><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
+  $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h3>Skills</h3><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
       <input class="search" style="margin:0" placeholder="Filter skills…" value="${esc(x.q)}" id="extq" aria-label="Filter skills">
       <button class="btn primary" id="sknew">New skill…</button></div>
     <div class="cards skgrid">${skills.map(k => `<div class="mcard ${k.name === x.skill ? "on" : ""}" data-skill="${esc(k.name)}" tabindex="0" role="button">
@@ -695,32 +711,10 @@ function renderExt() {
       <textarea id="sktext" spellcheck="false" aria-label="SKILL.md">${esc(x.content)}</textarea>
       <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
         <button class="btn danger" id="skdel">Delete</button><button class="btn" id="skcopy">Copy to…</button>
-        <button class="btn primary" id="sksave">Save</button></div></div>` : ""}
-
-    <div class="ext-head"><h3>MCP servers</h3><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
-      <button class="btn primary" id="mcpnew">Add server…</button></div>
-    <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
-        <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
-        <div class="mcp-target">${esc(m.target)}</div>
-        ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
-      <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button>
-        <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>`;
+        <button class="btn primary" id="sksave">Save</button></div></div>` : ""}`;
 
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#sknew").onclick = newSkill;
-  $("#mcpnew").onclick = () => editMcp(null);
-  document.querySelectorAll("[data-mcpedit]").forEach(b => b.onclick = () => editMcp(x.mcp.servers[b.dataset.mcpedit]));
-  document.querySelectorAll("[data-mcpcopy]").forEach(b => b.onclick = async () => {
-    const m = x.mcp.servers[b.dataset.mcpcopy];
-    const to = await pickProfile("Copy MCP server", `<code>${esc(m.name)}</code> is added to the other profile for every project. Its sign-in, if any, is not copied.`, x.profile, "Copy");
-    if (to) { try { await run(() => api("/api/mcp/copy", { profile: x.profile, scope: m.scope, name: m.name, to })); } catch {} }
-  });
-  document.querySelectorAll("[data-mcpdel]").forEach(b => b.onclick = async () => {
-    const m = x.mcp.servers[b.dataset.mcpdel];
-    if (!(await confirmBox(`Remove ${m.name}?`, `It is removed from <code>${esc(x.mcp.config)}</code> (${esc(scopeLabel(m.scope))}). The file goes to the backup first.`, "Remove", "danger"))) return;
-    try { await run(() => api("/api/mcp/delete", { profile: x.profile, scope: m.scope, name: m.name })); } catch {}
-    loadExt();
-  });
   if (cur) {
     $("#sksave").onclick = async () => { try { await run(() => api("/api/skills/save", { profile: x.profile, name: x.skill, content: $("#sktext").value })); x.content = $("#sktext").value; } catch {} };
     $("#skdel").onclick = async () => {
@@ -734,6 +728,32 @@ function renderExt() {
       if (to) { try { await run(() => api("/api/skills/copy", { profile: x.profile, name: x.skill, to })); } catch {} }
     };
   }
+}
+function renderMcp(head) {
+  const x = S.ext;
+  $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h3>MCP servers</h3><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
+      <button class="btn primary" id="mcpnew">Add server…</button></div>
+    <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
+        <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
+        <div class="mcp-target">${esc(m.target)}</div>
+        ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
+      <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button>
+        <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>`;
+
+  $("#mcpnew").onclick = () => editMcp(null);
+  document.querySelectorAll("[data-mcpedit]").forEach(b => b.onclick = () => editMcp(x.mcp.servers[b.dataset.mcpedit]));
+  document.querySelectorAll("[data-mcpcopy]").forEach(b => b.onclick = async () => {
+    const m = x.mcp.servers[b.dataset.mcpcopy];
+    const to = await pickProfile("Copy MCP server", `<code>${esc(m.name)}</code> is added to the other profile for every project. Its sign-in, if any, is not copied.`, x.profile, "Copy");
+    if (to) { try { await run(() => api("/api/mcp/copy", { profile: x.profile, scope: m.scope, name: m.name, to })); } catch {} }
+  });
+  document.querySelectorAll("[data-mcpdel]").forEach(b => b.onclick = async () => {
+    const m = x.mcp.servers[b.dataset.mcpdel];
+    if (!(await confirmBox(`Remove ${m.name}?`, `It is removed from <code>${esc(x.mcp.config)}</code> (${esc(scopeLabel(m.scope))}). The file goes to the backup first.`, "Remove", "danger"))) return;
+    try { await run(() => api("/api/mcp/delete", { profile: x.profile, scope: m.scope, name: m.name })); } catch {}
+    loadExt();
+  });
 }
 async function newSkill() {
   const x = S.ext;
@@ -1039,7 +1059,7 @@ document.addEventListener("click", async e => {
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
     if (S.tab === "profiles") return loadSharing();
-    if (S.tab === "ext") return loadExt();
+    if (EXT_TABS.includes(S.tab)) return loadExt();
     if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
     if (S.tab === "backups") return loadBackups();
     return render();
@@ -1048,7 +1068,7 @@ document.addEventListener("click", async e => {
   if (t.hasAttribute("data-install")) return installClaude();
   if (t.hasAttribute("data-install-log")) return showInstallLog();
   if (t.dataset.pedit) return editProfile(t.dataset.pedit);
-  if (t.dataset.pext) { S.tab = "ext"; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === "ext")); return loadExt(t.dataset.pext); }
+  if (t.dataset.pext) { S.tab = t.dataset.ext; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab)); return loadExt(t.dataset.pext); }
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
@@ -1080,7 +1100,7 @@ function render() {
   else if (S.tab === "memories") renderMemories();
   else if (S.tab === "settings") renderSettings();
   else if (S.tab === "profiles") renderSharing();
-  else if (S.tab === "ext") renderExt();
+  else if (EXT_TABS.includes(S.tab)) renderExt();
   else if (S.tab === "backups") renderBackups();
   else renderHealth();
 }

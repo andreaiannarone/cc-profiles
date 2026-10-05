@@ -1,6 +1,6 @@
 # Skills and MCP servers
 
-The **Skills & MCP** tab manages, for one profile at a time, the skills in its `skills/` folder and the MCP servers in its `.claude.json`. Pick the profile at the top, or click **Skills & MCP** on a profile in the **Profiles** tab. The line next to the selector shows the account the profile is signed in with.
+Two tabs manage, for one profile at a time, the skills in its `skills/` folder (**Skills**) and the MCP servers in its `.claude.json` (**MCP**). Pick the profile at the top of either tab: the choice carries over when you switch between the two. You can also click **Skills** or **MCP** on a profile in the **Profiles** tab. The line next to the selector shows the account the profile is signed in with.
 
 Every change goes to a backup first, like any other operation, and applies from the next Claude Code session in that profile.
 
