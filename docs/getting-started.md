@@ -18,15 +18,15 @@ The script installs cc-profiles with `pipx` or `uv`, whichever you have, then ad
 Or install it by hand:
 
 ```sh
-pipx install git+https://github.com/andreaiannarone/cc-profiles.git
+pipx install cc-profiles
 # or
-uv tool install git+https://github.com/andreaiannarone/cc-profiles.git
+uv tool install cc-profiles
 ```
 
 Both put a `cc-profiles` command in `~/.local/bin`, in an isolated environment, so nothing else on your system is affected. To try it once without installing:
 
 ```sh
-uvx --from git+https://github.com/andreaiannarone/cc-profiles.git cc-profiles
+uvx cc-profiles
 ```
 
 ## First run
