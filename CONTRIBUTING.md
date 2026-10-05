@@ -63,7 +63,7 @@ HOME="$SANDBOX" PATH=/usr/bin:/bin CC_PROFILES_INSTALL_DRYRUN=1 .venv/bin/cc-pro
 ## Project layout
 
 ```
-src/cc_profiles/server.py        HTTP server and all the logic, organized in sections
+src/cc_profiles/                 the server: one module per area (see docs/architecture.md)
 src/cc_profiles/static/index.html the whole UI: one file, inline CSS and vanilla JS
 tests/                           end-to-end tests on a fake home, plus documentation link checks
 docs/                            user guide and developer reference (start at docs/README.md)
@@ -103,7 +103,7 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 
 ## Releasing (maintainers)
 
-1. Update `__version__` in `src/cc_profiles/server.py` and `version` in `plugin/.claude-plugin/plugin.json`, then move the **Unreleased** entries in `CHANGELOG.md` under a new `## [x.y.z] - date` section (and fix the compare links at the bottom).
+1. Update `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`, then move the **Unreleased** entries in `CHANGELOG.md` under a new `## [x.y.z] - date` section (and fix the compare links at the bottom).
 2. Merge that into `main`, then tag it: `git tag v0.2.0 && git push origin v0.2.0`.
 3. The **Release** workflow (`.github/workflows/release.yml`) does the rest: it checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes.
 

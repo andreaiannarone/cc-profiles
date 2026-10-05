@@ -1,10 +1,10 @@
 ---
 name: check-settings-schema
-description: Check the Settings tab dropdowns (SETTING_FIELDS in server.py) against the settings schema inside the installed Claude Code binary, report what changed and update them. Use after a Claude Code update, or when asked whether the settings options are still current.
+description: Check the Settings tab dropdowns (SETTING_FIELDS in settings.py) against the settings schema inside the installed Claude Code binary, report what changed and update them. Use after a Claude Code update, or when asked whether the settings options are still current.
 ---
 # Check the settings schema
 
-The dropdown options in `SETTING_FIELDS` (`src/cc_profiles/server.py`) come from the settings schema compiled into the Claude Code binary. `SCHEMA_VERSION` records the version they were last checked against. Claude Code does not document this schema, so the only source is the binary itself.
+The dropdown options in `SETTING_FIELDS` (`src/cc_profiles/settings.py`) come from the settings schema compiled into the Claude Code binary. `SCHEMA_VERSION` records the version they were last checked against. Claude Code does not document this schema, so the only source is the binary itself.
 
 ## 1. Extract the strings
 

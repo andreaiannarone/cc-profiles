@@ -86,7 +86,7 @@ strings -n 6 "$(readlink -f "$(which claude)")" | grep -o 'effortLevel:()=>[^)]*
 - `o()` is any string: the UI shows a free text field.
 - `B(name)` refers to a list defined elsewhere as `name=[...]`.
 
-The values used by the UI are in `SETTING_FIELDS` in `server.py`, checked against `SCHEMA_VERSION`. When updating them, keep any current value that is not in the new list as a selectable option.
+The values used by the UI are in `SETTING_FIELDS` in `settings.py`, checked against `SCHEMA_VERSION`. When updating them, keep any current value that is not in the new list as a selectable option.
 
 ## Login
 

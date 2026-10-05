@@ -3,34 +3,43 @@
 cc-profiles is two files and a test suite, on purpose: no framework, no build step, no dependencies.
 
 ```
-browser ──HTTP (token)──► server.py ──reads/writes──► ~/.claude*, ~/.claude.json
+browser ──HTTP (token)──► cc_profiles ──reads/writes──► ~/.claude*, ~/.claude.json
    ▲                          │
    └──── index.html ◄─────────┘        ~/.cc-profiles/{config.json, backups/}
 ```
 
-## The server: `src/cc_profiles/server.py`
+## The server: `src/cc_profiles/`
 
 A `ThreadingHTTPServer` from the standard library, bound to `127.0.0.1`. `GET /` serves `static/index.html` with a fresh token inside. Everything else is a JSON API under `/api/` (see [API](api.md)).
 
-The file is organized in sections, top to bottom:
+The code is one module per area. Each module imports only from the ones above it in this table, so there are no import cycles:
 
-| Section | Responsibility |
+| Module | Responsibility |
 |---|---|
-| Basics | paths, `san()`, atomic `write_text()`, config loading and first-run detection, `Backup` |
-| Classification and path resolution | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
-| Projects | list, move, relink, delete, rules |
-| Memories | list, read, save, move, delete |
-| Profiles and health | profile summaries, candidate folders, health checks |
-| Backups and restore | list, restore (journal replayed backwards), delete |
-| Sharing | symlinks to the source profile |
-| Launchers | `~/.local/bin` scripts and legacy shell aliases |
-| New profile | copy or create, never copying credentials |
-| Claude Code settings | schema-checked fields, permissions, raw JSON, `CLAUDE.md` |
-| Edit and delete profiles | rename, change command, delete with optional merge |
-| Claude Code information | the About panel |
-| Installing Claude Code | official install methods, background job with live log |
-| HTTP | routing, error handling, the security guard |
-| Command line | `serve`, `label`, argument parsing |
+| `core.py` | paths and constants, `san()`, atomic `write_text()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
+| `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
+| `projects.py` | list, move (with preview), relink, delete, rules |
+| `memories.py` | list, read, save, move, delete |
+| `sharing.py` | symlinks to the source profile |
+| `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md` |
+| `health.py` | profile summaries, candidate folders, health checks |
+| `backups.py` | list, restore (journal replayed backwards), delete, prune |
+| `info.py` | the About panel |
+| `extensions.py` | skills and MCP servers |
+| `conversations.py` | list, view, move one, delete |
+| `search.py` | global search and profile comparison (read-only) |
+| `command.py` | the `/cc-profiles` command file |
+| `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |
+| `newprofile.py` | copy or create, never copying credentials |
+| `transfer.py` | export and import of a profile as a `.zip` |
+| `plugins.py` | installed plugins, enable and disable |
+| `editprofile.py` | rename, change command, delete with optional merge |
+| `installer.py` | official Claude Code install methods, background job with live log |
+| `updater.py` | check for updates on PyPI, update and restart |
+| `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
+| `cli.py` | `serve`, `open`, `install-command`, `label`, argument parsing |
+
+`server.py` re-exports every public name, so `from cc_profiles import server` and the `cc-profiles` console script keep working. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.
 
 ### Request flow
 
