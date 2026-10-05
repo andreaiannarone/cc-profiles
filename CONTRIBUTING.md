@@ -109,9 +109,16 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
-### Social preview image
+### README images
 
-The image GitHub shows when the repository is shared, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`: the command is at the top of that file. Upload it again under *Settings → General → Social preview* after regenerating it.
+The screenshots, the demo GIF and the social preview in `docs/assets/` are made from the real app on the sandbox home, never by hand. After a change to the UI, regenerate them all (about 30 seconds; the GIF needs `ffmpeg`):
+
+```sh
+.venv/bin/pip install -e ".[ui]" && .venv/bin/python -m playwright install chromium
+.venv/bin/python scripts/make_screenshots.py            # add --no-gif to skip the GIF
+```
+
+The social preview, `docs/assets/social-preview.png`, is rendered from `docs/assets/social-preview.html`. Upload it again under *Settings → General → Social preview* after regenerating it.
 
 ## Pull requests
 

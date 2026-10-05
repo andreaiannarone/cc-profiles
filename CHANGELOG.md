@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Profile templates: save a profile's settings, `CLAUDE.md`, permissions, skills, agents, commands, output styles and MCP servers as `~/.cc-profiles/templates/<name>.zip` (never conversations, memories or credentials) and pick *From template: …* in New profile. **Templates…** in the Profiles tab lists, saves and deletes them.
 - Test coverage, servers started by the tests included, measured in CI and shown in the run summary (see CONTRIBUTING).
 - `tests/bench_home.py` times every tab on a large generated home.
+- `scripts/make_screenshots.py` regenerates the README screenshots (now six: Conversations and Compare added), the demo GIF and the social preview from the real app on the sandbox home.
 - A test that starts a real process named `claude` and checks that its profile is reported as in use.
 
 ### Changed

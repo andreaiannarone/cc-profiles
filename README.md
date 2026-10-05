@@ -35,7 +35,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.gif">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.gif">
-    <img src="docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, the skills, the MCP servers, the settings and the backup of the move are shown" width="860">
+    <img src="docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, a conversation, the skills, an MCP server, the comparison of two profiles and the backup of the move are shown" width="860">
   </picture>
 </p>
 
@@ -135,6 +135,7 @@ cc-profiles
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
 - ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
+- 🧭 **Fast to get around**: tabs grouped in a sidebar (Content, Extensions, Profiles, System), keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
@@ -156,14 +157,22 @@ cc-profiles
     </td>
     <td width="50%" valign="top">
       <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/conversations-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/conversations-light.jpg">
+        <img src="docs/assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the projects of a profile, the conversations of the selected one, and a read-only viewer of its messages">
+      </picture>
+      <p align="center"><b>Conversations</b>: read, move or delete a single conversation</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/skills-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/skills-light.jpg">
         <img src="docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
       </picture>
       <p align="center"><b>Skills</b>: browse, create, edit and copy skills</p>
     </td>
-  </tr>
-  <tr>
     <td width="50%" valign="top">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/mcp-dark.jpg">
@@ -172,13 +181,23 @@ cc-profiles
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/compare-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/compare-light.jpg">
+        <img src="docs/assets/screenshots/compare-light.jpg" alt="The Compare tab: the settings of two profiles side by side, with the differences highlighted and buttons to copy them">
+      </picture>
+      <p align="center"><b>Compare</b>: two profiles side by side, one-click copies</p>
+    </td>
     <td width="50%" valign="top">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/settings-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/settings-light.jpg">
         <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: model, effort level, output style and theme, the file each value comes from, and the values of the other profiles">
       </picture>
-      <p align="center"><b>Settings</b>: safe dropdowns, compared across profiles</p>
+      <p align="center"><b>Settings</b>: safe dropdowns, applied to one profile or all</p>
     </td>
   </tr>
 </table>
