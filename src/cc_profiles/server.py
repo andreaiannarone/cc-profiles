@@ -31,7 +31,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 HOME = os.path.expanduser("~")
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
