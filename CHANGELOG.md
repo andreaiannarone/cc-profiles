@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-06
+
 ### Changed
 - Settings → General no longer lists Model: pick it with `/model` in Claude Code, or edit `model` in the advanced editor. The first group is now called Replies.
 - Settings → General: changes wait for **Save changes** (or **Cancel**) in a bar at the bottom, which counts them and marks the changed rows, and are saved together in one backup. The page no longer jumps to the top after a save, in General, CLAUDE.md, permissions and the advanced editor.
@@ -135,7 +137,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.3.0...v0.4.0
