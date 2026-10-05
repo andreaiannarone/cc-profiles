@@ -87,7 +87,8 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 
 ## Releasing (maintainers)
 
-1. Update `__version__` in `src/cc_profiles/server.py` and move the **Unreleased** entries in `CHANGELOG.md` under the new version.
-2. Commit, then tag: `git tag v0.2.0 && git push --tags`.
-3. Create a GitHub release from the tag, with the changelog entries as notes.
-4. Build and upload: `python -m build && python -m twine upload dist/*`.
+1. Update `__version__` in `src/cc_profiles/server.py` and `version` in `plugin/.claude-plugin/plugin.json`, then move the **Unreleased** entries in `CHANGELOG.md` under a new `## [x.y.z] - date` section (and fix the compare links at the bottom).
+2. Merge that into `main`, then tag it: `git tag v0.2.0 && git push origin v0.2.0`.
+3. The **Release** workflow (`.github/workflows/release.yml`) does the rest: it checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes.
+
+PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.

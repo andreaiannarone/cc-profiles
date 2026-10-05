@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
 ### Added
 - Documentation in `docs/`: getting started, concepts, a guide per tab, status line, configuration reference, troubleshooting, architecture, Claude Code's on-disk formats, HTTP API.
 - Tests that check every relative link and anchor in the documentation.
@@ -45,5 +47,6 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/andreaiannarone/cc-profiles/releases/tag/v0.1.0
