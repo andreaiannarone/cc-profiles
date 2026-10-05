@@ -12,7 +12,7 @@ The **Health** tab checks every profile:
 | `skills`, `plugins` | the folder is a broken link (shared items show where they point) |
 | Plugins | an installed plugin's files are missing |
 | Memory indexes | `MEMORY.md` lists a missing file (error), or a memory is not listed (warning) |
-| Open session | warning only: a conversation was written in the last 2 minutes |
+| Open session | warning only: a `claude` process is running in the profile, or one of its conversations was written in the last 2 minutes |
 
 Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…** and **Delete**.
 

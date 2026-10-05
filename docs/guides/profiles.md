@@ -39,7 +39,7 @@ In both cases the profile leaves `config.json` and its launcher (or shell alias)
 Deleting is refused:
 
 - for the source profile, because the others share from it;
-- while a session is open in the profile (a conversation was written in the last 2 minutes), because a running Claude Code would keep writing into a folder that is gone.
+- while a session is open in the profile (a `claude` process is running in the profile, or one of its conversations was written in the last 2 minutes), because a running Claude Code would keep writing into a folder that is gone.
 
 ## Share items
 

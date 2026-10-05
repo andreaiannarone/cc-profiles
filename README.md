@@ -121,14 +121,14 @@ cc-profiles
 
 ### Key Features
 
-- 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
+- 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty or copied from another one; rename it, change its command, or delete it, optionally merging its content into another profile first.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile.
 - 🔌 **MCP servers**: add, edit, copy and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere.
 - ⚙️ **Settings**: model, effort, output style, theme and more, with dropdowns that offer only the values Claude Code accepts and show which file each value comes from. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
-- ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone.
+- ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go when they take too much space.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
@@ -345,8 +345,8 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ## Limitations
 
-- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.287; the **About** panel shows which version you have.
-- The "session open" warning is a heuristic: a conversation written in the last 2 minutes.
+- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.289; the **About** panel shows which version you have.
+- "Session open" means a `claude` process is running in the profile (read from the process list on macOS and from `/proc` on Linux), or a conversation was written in the last 2 minutes.
 - Claude Code keeps `.claude.json` in memory while it runs: restart open sessions after changing their MCP servers.
 - Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it.
 

@@ -28,6 +28,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
+| `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
@@ -64,6 +65,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/profiles/delete` | `id`, `merge_into` (optional), `force` (skip the open-session check) |
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |
+| `POST /api/backups/prune` | `days` (integer, 1 or more): permanently deletes the backups older than that |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 
 ## Example

@@ -165,6 +165,53 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert home.snapshot() == before
 
 
+# --- sessions, move preview, old backups ---------------------------------------
+def test_claude_processes_are_matched_to_profiles(tmp_path):
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    home = str(tmp_path)
+    work = os.path.join(home, ".claude-work")
+    found = server.parse_claude_processes([
+        ("claude", [f"HOME={home}"]),                                          # default profile
+        ("/Users/x/.local/share/claude/versions/2.1.289", [f"CLAUDE_CONFIG_DIR={work}", f"HOME={home}"]),
+        ("node", ["/usr/lib/node_modules/@anthropic-ai/claude-code/cli.js", "CLAUDE_CONFIG_DIR=~/.claude-x", f"HOME={home}"]),
+        ("/usr/bin/python3", ["CLAUDE_CONFIG_DIR=/nope", f"HOME={home}"]),     # not Claude Code
+        ("vim", ["claude.md"]),
+    ])
+    assert found == {os.path.realpath(os.path.join(home, d)) for d in (".claude", ".claude-work", ".claude-x")}
+
+
+def test_move_preview_lists_what_moves_and_changes_nothing(home, app_factory):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    plan = app.get(f"/api/projects/move/preview?project={api}&from=default&to=work")
+    actions = {(i["action"], i["item"]) for i in plan["items"]}
+    assert ("move", "s-api.jsonl") in actions and ("move", "memory/api-notes.md") in actions
+    assert ("merge", "memory/MEMORY.md") in actions and ("move", "file-history/s-api") in actions  # snapshots too
+    assert plan["prompts"] == 1 and plan["settings"] is True
+    assert home.snapshot() == before
+    assert "same profile" in app.request(f"/api/projects/move/preview?project={api}&from=work&to=work")[1]["error"]
+
+
+def test_old_backups_are_pruned(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    app.post("/api/rules", {"match": "code/personal", "profile": "default"})
+    app.post("/api/rules", {"match": "code/work", "profile": "work"})
+    names = [b["name"] for b in app.get("/api/backups")]
+    man = home.path(f".cc-profiles/backups/{names[-1]}/manifest.json")  # the oldest
+    data = json.loads(man.read_text())
+    data["created"] -= 40 * 86400
+    man.write_text(json.dumps(data))
+    r = app.post("/api/backups/prune", {"days": 30})
+    assert r["message"].startswith("Deleted 1 backup older than 30 days")
+    assert [b["name"] for b in app.get("/api/backups")] == names[:-1]
+    assert "No backups older" in app.post("/api/backups/prune", {"days": 30})["message"]
+    assert app.request("/api/backups/prune", {"days": 0})[0] == 400
+
+
 # --- skills and MCP servers --------------------------------------------------
 def test_skills_are_managed_and_undoable(home, app_factory):
     basic_home(home)

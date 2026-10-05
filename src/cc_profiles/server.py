@@ -552,8 +552,51 @@ def op_move(name, src_id, dst_id):
     bk = Backup(f"move-{src_id}-{dst_id}", f"Move {pretty(path) or name}: {src['label']} → {dst['label']}")
     conv, fh, hist, cfg = move_project_into(name, src, dst, bk, path)
     bk.note(f"conversations {conv}, snapshots {fh}, prompts {hist}, settings {'yes' if cfg else 'no'}")
-    return {"message": f"Moved to {dst['label']}: {conv} conversations, {hist} prompts, {fh} snapshots.",
-            "backup": bk.close()}
+    msg = f"Moved to {dst['label']}: {conv} conversations, {hist} prompts, {fh} snapshots."
+    open_in = [p["label"] for p in (src, dst) if active_session(p)]
+    if cfg and open_in:
+        msg += (f" Restart the open Claude Code sessions in {' and '.join(open_in)}: they keep .claude.json"
+                " in memory and could write the old project settings back.")
+    return {"message": msg, "backup": bk.close()}
+
+
+def move_plan(name, src_id, dst_id):
+    """What moving a project would do, without doing it: the same rules as move_project_into."""
+    src, dst = profile(src_id), profile(dst_id)
+    if src_id == dst_id:
+        raise ApiError("Source and target are the same profile")
+    S = project_dir(src, name)
+    D = project_dir(dst, name, must_exist=False)
+    path = path_index().get(name)
+    items = []
+
+    def add(action, a, b):
+        # "item": short, relative to the project folder (or to the profile, for file snapshots)
+        base = S if a.startswith(S + os.sep) else src["dir_abs"]
+        items.append({"action": action, "item": os.path.relpath(a, base), "from": pretty(a), "to": pretty(b)})
+
+    for e in sorted(os.listdir(S)):
+        s, d = os.path.join(S, e), os.path.join(D, e)
+        if e == "memory" and os.path.isdir(s):
+            for m in sorted(os.listdir(s)):
+                ms, md = os.path.join(s, m), os.path.join(d, m)
+                if m == "MEMORY.md":
+                    add("merge", ms, md)
+                else:
+                    add("conflict" if os.path.exists(md) else "move", ms, md)
+        else:
+            add("conflict" if os.path.exists(d) else "move", s, d)
+    for sid in sessions_of(S):
+        a = os.path.join(src["dir_abs"], "file-history", sid)
+        b = os.path.join(dst["dir_abs"], "file-history", sid)
+        if os.path.isdir(a) and not os.path.exists(b):
+            add("move", a, b)
+    prompts = sum(1 for l in history_lines(src) if path and matches((json.loads(l) if l.startswith("{") else {}).get("project"), path))
+    sc = read_json(src["config_abs"], {}) or {}
+    settings = bool(path and path in (sc.get("projects") or {}))
+    return {"items": items, "prompts": prompts, "settings": settings,
+            "history": pretty(os.path.join(src["dir_abs"], "history.jsonl")),
+            "config": pretty(src["config_abs"])}
 
 
 def move_project_into(name, src, dst, bk, path):
@@ -971,8 +1014,62 @@ def op_mcp_copy(pid, scope, name, to_pid):
 # ---------------------------------------------------------------------------
 # Profiles and health
 # ---------------------------------------------------------------------------
+def parse_claude_processes(entries):
+    """Config folders used by claude processes. entries: (argv0, [other words of the
+    command line and the environment, as NAME=value]) for each process."""
+    dirs = set()
+    for argv0, words in entries:
+        node_cli = any("@anthropic-ai/claude-code/" in w for w in words)
+        if os.path.basename(argv0) != "claude" and "/claude/versions/" not in argv0 and not node_cli:
+            continue
+        env = dict(w.split("=", 1) for w in words if "=" in w and not w.startswith("="))
+        home = env.get("HOME") or HOME  # the process's home, not this server's (which may be a sandbox)
+        cfg = env.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
+        if cfg.startswith("~"):
+            cfg = home + cfg[1:]
+        dirs.add(os.path.realpath(cfg).rstrip("/"))
+    return dirs
+
+
+_running = {"at": 0.0, "dirs": None}
+
+
+def running_claude_dirs():
+    """Config folders of the claude processes running now for this user, or None when
+    the processes cannot be read. Cached for a few seconds: every list asks for it."""
+    if time.time() - _running["at"] < 3:
+        return _running["dirs"]
+    entries = None
+    try:
+        if sys.platform == "darwin":
+            # -E appends each process's environment to its command line (own processes only)
+            out = subprocess.run(["ps", "-Eww", "-o", "pid=,command=", "-U", str(os.getuid())],
+                                 capture_output=True, text=True, timeout=5).stdout
+            entries = [(w[1], w[2:]) for w in (l.split() for l in out.splitlines()) if len(w) > 1]
+        elif os.path.isdir("/proc"):
+            entries = []
+            for pid in filter(str.isdigit, os.listdir("/proc")):
+                try:
+                    with open(f"/proc/{pid}/cmdline", "rb") as f:
+                        argv = [a.decode(errors="replace") for a in f.read().split(b"\0") if a]
+                    with open(f"/proc/{pid}/environ", "rb") as f:
+                        env = [e.decode(errors="replace") for e in f.read().split(b"\0") if e]
+                except OSError:
+                    continue
+                if argv:
+                    entries.append((argv[0], argv[1:] + env))
+    except (OSError, subprocess.SubprocessError):
+        entries = None
+    _running.update(at=time.time(), dirs=None if entries is None else parse_claude_processes(entries))
+    return _running["dirs"]
+
+
 def active_session(prof, window=120):
-    """A conversation written in the last 2 minutes = a session is probably open."""
+    """A claude process runs in this profile, or a conversation was written in the
+    last 2 minutes (a session that is open but idle, when processes cannot be read)."""
+    running = running_claude_dirs()
+    if running and os.path.realpath(prof["dir_abs"]).rstrip("/") in running:
+        return True
     now = time.time()
     for f in glob.glob(os.path.join(prof["dir_abs"], "projects", "*", "*.jsonl")):
         try:
@@ -1205,6 +1302,21 @@ def op_restore(name):
 def op_backup_delete(name):
     shutil.rmtree(backup_path(name))
     return {"message": "Backup permanently deleted."}
+
+
+def op_backup_prune(days):
+    """Permanently delete the backups created more than `days` days ago."""
+    if not isinstance(days, int) or isinstance(days, bool) or days < 1:
+        raise ApiError("Pick a number of days, 1 or more")
+    limit = time.time() - days * 86400
+    old = [b for b in list_backups() if b["created"] < limit]
+    freed = sum(b["size"] for b in old)
+    for b in old:
+        shutil.rmtree(backup_path(b["name"]))
+    if not old:
+        return {"message": f"No backups older than {days} days."}
+    n = len(old)
+    return {"message": f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."}
 
 
 # ---------------------------------------------------------------------------
@@ -1509,7 +1621,7 @@ def op_create_profile(label, pid, base, include_projects, share):
 # Dropdown options come from the settings schema inside the Claude Code binary
 # (version SCHEMA_VERSION): where the schema only accepts some values there is a
 # dropdown, where it accepts any string a free text field.
-SCHEMA_VERSION = "2.1.287"
+SCHEMA_VERSION = "2.1.289"
 # Built-in output styles and their descriptions, as in the Claude Code binary. "default"
 # is left out: it is the same as no value ("— default —" in the UI); field_options()
 # still lists it when a profile has it set explicitly.
@@ -1530,7 +1642,7 @@ SETTING_FIELDS = [
      "help": "Built-in styles plus the profile's custom ones (output-styles/)", "options": "styles"},
     {"key": "language", "type": "text", "label": "Response language", "help": "Free text, e.g. English, Italiano",
      "suggest": []},
-    {"key": "theme", "type": "select", "label": "Theme", "help": "Colors of the terminal UI",
+    {"key": "theme", "type": "select", "label": "Theme", "help": "Colors of the terminal UI; custom themes (custom:…) are kept",
      "options": [("auto", "Auto"), ("dark", "Dark"), ("light", "Light"), ("dark-daltonized", "Dark, colorblind-friendly"),
                  ("light-daltonized", "Light, colorblind-friendly"), ("dark-ansi", "Dark, ANSI colors only"),
                  ("light-ansi", "Light, ANSI colors only")]},
@@ -2137,6 +2249,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/list": lambda: memory_list(q["profile"], q["project"]),
                 "/api/memory/file": lambda: memory_read(q["profile"], q["project"], q["file"]),
                 "/api/backups": lambda: list_backups(),
+                "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
@@ -2173,6 +2286,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/delete": lambda: op_memory_delete(b["profile"], b["project"], b["file"]),
                 "/api/backups/restore": lambda: op_restore(b["name"]),
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),
+                "/api/backups/prune": lambda: op_backup_prune(b.get("days")),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),

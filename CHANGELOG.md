@@ -20,7 +20,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Theme button next to (i): System, Light or Dark, remembered per browser and applied before the page is drawn.
 
+- Move preview: every file and folder a project move touches, before confirming.
+- Delete old backups: every backup older than 7, 30, 90 or 365 days, in one go.
+
 ### Changed
+- "Session open" also detects running `claude` processes and the profile they use, not only conversations written in the last 2 minutes. Moves warn when a session may write `.claude.json` back.
+- Settings checked against Claude Code 2.1.289; custom themes (`custom:…`) are kept.
 - License: GPL-3.0-or-later instead of MIT, from this release on. Version 0.1.0 stays available under MIT.
 - Settings: output styles use Claude Code's own descriptions, shown under the menu, are grouped into built-in and custom, and the duplicate "Default" entry is gone.
 

@@ -37,6 +37,8 @@ A backup can be restored once; afterwards it shows *restored* with the time.
 
 **Delete** erases a backup folder for good. It is the only action in cc-profiles that really deletes data. Backups take space, especially after deleting or merging whole profiles; the tab shows the total size.
 
+**Delete old backups…** removes in one go every backup older than 7, 30, 90 or 365 days, and shows how many and how much space before you confirm. Keep the backups of operations you might still want to undo.
+
 ## Without the UI
 
 Backups are plain files. If the app cannot start, you can still read `operation.txt` and copy files back from `file/` by hand, using the journal in `manifest.json` as a map.

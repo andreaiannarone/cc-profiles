@@ -22,6 +22,10 @@ Moving takes everything that belongs to the project in the source profile:
 | prompts typed in that project | `history.jsonl` |
 | per-project settings (trust, allowed tools, MCP servers) | `projects` key of `.claude.json` |
 
+Before confirming, *Show the files and folders it touches* lists every item and what happens to it: moved, merged into the target's `MEMORY.md`, or kept in the backup because the target already has it. The preview changes nothing.
+
+If a Claude Code session is open in either profile, the confirmation says so: Claude Code keeps `.claude.json` in memory and could write the old project settings back. Close it first, or restart it after moving.
+
 If the target profile already has something with the same name, the target's version is kept and the incoming one goes to the backup. Index lines of `MEMORY.md` are merged. Prompts already present in the target history (same text and timestamp) are not duplicated.
 
 ## Orphan projects

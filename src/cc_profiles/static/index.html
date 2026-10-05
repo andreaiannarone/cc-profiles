@@ -184,6 +184,9 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .prow .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .prow .acts { display: flex; gap: 6px; flex: none; }
 .section-title { font-size: 13px; font-weight: 600; color: var(--muted); margin: 22px 0 8px; }
+.plan { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); max-height: 220px; overflow-y: auto; }
+.plan li { margin: 2px 0; overflow-wrap: anywhere; }
+.plan li.conflict { color: var(--warn); }
 .danger-box { border: 1px solid var(--err); background: var(--err-soft); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .setgrid { display: grid; gap: 16px; }
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
@@ -420,10 +423,19 @@ function renderProjects() {
 }
 const byName = n => S.projects.find(r => r.name === n);
 
+const PLAN = { move: to => `moves to ${to}`, merge: to => `is merged into the index of ${to}`, conflict: to => `${to} already has it: the original goes to the backup` };
 async function doMove(r, from, to) {
   const s = r.in[from];
+  let plan = null;
+  try { plan = await api(`/api/projects/move/preview?project=${encodeURIComponent(r.name)}&from=${from}&to=${to}`); } catch {}
+  const open = S.profiles.filter(p => (p.id === from || p.id === to) && p.active).map(p => esc(p.label));
+  const details = plan ? `<details style="margin-top:10px"><summary>Show the ${plural(plan.items.length, "file or folder", "files and folders")} it touches</summary>
+      <ul class="plan">${plan.items.map(i => `<li class="${i.action}" title="${esc(i.from)} → ${esc(i.to)}"><code>${esc(i.item)}</code> ${PLAN[i.action](esc(label(to)))}</li>`).join("")}
+        ${plan.prompts ? `<li>${plural(plan.prompts, "prompt", "prompts")} ${plan.prompts === 1 ? "moves" : "move"} from <code>${esc(plan.history)}</code></li>` : ""}
+        ${plan.settings ? `<li>The project settings move from <code>${esc(plan.config)}</code></li>` : ""}</ul></details>` : "";
+  const warn = open.length ? `<div class="danger-box" style="margin-top:10px">A Claude Code session is open in ${open.join(" and ")}. It keeps <code>.claude.json</code> in memory and could write the old project settings back: close it first, or restart it after moving.</div>` : "";
   if (!(await confirmBox(`Move to ${label(to)}?`,
-      `<code>${esc(r.pretty)}</code><br>From ${esc(label(from))} to ${esc(label(to))}: ${plural(s.conv, "conversation", "conversations")}, ${plural(s.mem, "memory", "memories")}, the prompt history and the project settings. Anything ${esc(label(to))} already has goes to the backup.`, "Move"))) return;
+      `<code>${esc(r.pretty)}</code><br>From ${esc(label(from))} to ${esc(label(to))}: ${plural(s.conv, "conversation", "conversations")}, ${plural(s.mem, "memory", "memories")}, the prompt history and the project settings. Anything ${esc(label(to))} already has goes to the backup.${warn}${details}`, "Move"))) return;
   await run(() => api("/api/projects/move", { project: r.name, from, to })); await refresh();
 }
 async function doRelink(r, pid) {
@@ -1078,12 +1090,30 @@ function renderBackups() {
   if (!S.backups) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span></div>`; return; }
   const tot = S.backups.reduce((a, b) => a + b.size, 0);
   const where = S.backups[0]?.path.replace(/\/[^/]+$/, "") || "~/.cc-profiles/backups";
-  $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span></div>
+  $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span>
+      ${S.backups.length ? `<button class="btn" id="bk-prune" style="margin-left:auto">Delete old backups…</button>` : ""}</div>
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
         <div class="t">${esc(b.title)} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
+  $("#bk-prune")?.addEventListener("click", pruneBackups);
+}
+async function pruneBackups() {
+  const old = days => S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400);
+  const line = days => { const o = old(days); return o.length ? `${plural(o.length, "backup", "backups")}, ${size(o.reduce((a, b) => a + b.size, 0))}` : "none"; };
+  const resP = modal({ title: "Delete old backups",
+    sub: "Deleted backups cannot be restored afterwards: keep the ones of operations you might still want to undo.",
+    body: `<div class="form"><label class="f">Delete the backups older than
+        <select id="pr-days">${[7, 30, 90, 365].map(d => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} days</option>`).join("")}</select></label>
+      <div class="hint" id="pr-what"></div></div>`,
+    actions: [{ label: "Delete permanently", kind: "danger", value: "ok" }] });
+  const sel = $("#pr-days"), what = () => { $("#pr-what").textContent = "To delete: " + line(+sel.value); };
+  sel.onchange = what; what();
+  const res = await resP;
+  if (!res) return;
+  await run(() => api("/api/backups/prune", { days: +$("#pr-days", res.el).value })).catch(() => {});
+  loadBackups();
 }
 async function restoreBackup(name) {
   const b = S.backups.find(x => x.name === name);

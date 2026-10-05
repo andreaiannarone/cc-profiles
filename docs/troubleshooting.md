@@ -34,7 +34,7 @@ No file mentions the project's real path, and the folder name could not be match
 
 ## "A session is open"
 
-A conversation in that profile was written in the last 2 minutes. Close Claude Code in that profile, wait two minutes, and try again. The check exists because a running session would keep writing into folders being moved.
+A `claude` process is running in that profile, or a conversation in it was written in the last 2 minutes. Close Claude Code in that profile (every terminal and editor that runs it), wait two minutes, and try again. The check exists because a running session would keep writing into folders being moved.
 
 ## A restore reports "steps not restored"
 
