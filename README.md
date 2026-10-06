@@ -79,6 +79,7 @@ cc-profiles          # starts on http://127.0.0.1:4777 and opens your browser
 
 ```
 /cc-profiles         # inside any Claude Code session: opens the app and the session goes on
+/cc-profiles restart # restarts it, e.g. after an update (/cc-profiles stop stops it)
 ```
 
 On the first run, cc-profiles finds `~/.claude` and every `~/.claude-<name>` folder that looks like a profile. Rename them from the **Profiles** tab.
@@ -256,7 +257,7 @@ cc-profiles label             # prints the name of the active profile, for statu
 
 ### Open it from Claude Code
 
-Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. The command is a small file, `commands/cc-profiles.md`, that `cc-profiles install-command` writes in every profile; profiles you create from the app get it automatically. Profiles that share `commands` with the source profile get it through the link.
+Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. `/cc-profiles restart` and `/cc-profiles stop` restart or stop the app. The command is a small file, `commands/cc-profiles.md`, that `cc-profiles install-command` writes in every profile; profiles you create from the app get it automatically. Profiles that share `commands` with the source profile get it through the link.
 
 ### Commands for each profile
 

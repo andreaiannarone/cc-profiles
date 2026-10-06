@@ -6,6 +6,17 @@ description: Check the Settings tab dropdowns (SETTING_FIELDS in settings.py) ag
 
 The dropdown options in `SETTING_FIELDS` (`src/cc_profiles/settings.py`) come from the settings schema compiled into the Claude Code binary. `SCHEMA_VERSION` records the version they were last checked against. Claude Code does not document this schema, so the only source is the binary itself.
 
+## 0. Run the script first
+
+```sh
+.venv/bin/python scripts/check_settings_schema.py            # the claude on PATH
+.venv/bin/python scripts/check_settings_schema.py <binary>   # or a given binary
+```
+
+It reads the binary directly and does steps 1 to 3 below for every field: enum values added or removed (inline lists, lists referenced by name, lists that spread other lists), type changes, missing keys, the `"file": "global"` fields against the `/config` panel, and `/config` items that are new or gone compared with its `CONFIG_IDS` mapping. It prints a Markdown report and exits with 0 (no differences), 1 (differences) or 2 (the binary's layout changed and the script needs updating). The same script runs every week in CI (`.github/workflows/claude-code-schema.yml`) and opens an issue when it exits with 1.
+
+Use the manual steps below to confirm what it reports, to read the `.describe("…")` texts, when it exits with 2, or when it flags values *computed at runtime*. When you add or remove a field, or decide to leave a new `/config` item out, update `CONFIG_IDS` (and `LEFT_OUT` for schema values left out on purpose) in the script too.
+
 ## 1. Extract the strings
 
 ```sh

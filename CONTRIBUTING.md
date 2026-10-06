@@ -105,7 +105,7 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 - `settings.json` pre-approves the test suite, `claude plugin validate` and read-only git commands.
 - `hooks/sandbox_guard.py` blocks any command that would start cc-profiles on your real home folder: only `label`, `--version` and `--help` may run there. Use a sandbox `HOME` instead.
 - `/sandbox` builds a fake home with sample data and starts the app on it.
-- `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release.
+- `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release. It starts from `scripts/check_settings_schema.py`, which the *Claude Code settings schema* workflow (`.github/workflows/claude-code-schema.yml`) also runs every week against the latest Claude Code, opening an issue when something differs.
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
@@ -134,8 +134,22 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 
 ## Releasing (maintainers)
 
-1. Update `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`, then move the **Unreleased** entries in `CHANGELOG.md` under a new `## [x.y.z] - date` section (and fix the compare links at the bottom).
-2. Merge that into `main`, then tag it: `git tag v0.2.0 && git push origin v0.2.0`.
-3. The **Release** workflow (`.github/workflows/release.yml`) does the rest: it checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes.
+With the changes listed under **Unreleased** in `CHANGELOG.md`, on an up-to-date `main`:
+
+```sh
+.venv/bin/python scripts/release.py 0.5.0 --dry-run   # prints every step and command, changes nothing
+.venv/bin/python scripts/release.py 0.5.0
+```
+
+It needs `git`, and `gh` logged in to GitHub, and takes 5 to 15 minutes. Step by step:
+
+1. **Checks**: on `main`, a clean tree, the same commit as `origin/main`, a version greater than `__version__`, something under `## [Unreleased]`.
+2. **Bump**: `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`; in `CHANGELOG.md` a `## [x.y.z] - date` heading goes under `## [Unreleased]` (which stays, empty), and the compare links at the bottom are updated. Older entries are not touched.
+3. **Pull request**: branch `release-x.y.z`, commit `Release x.y.z`, `gh pr create`. If GitHub reports no checks after a minute (it happens), it pushes an empty `Trigger CI` commit. It waits for every check and stops if one fails.
+4. **Merge and tag**: squash merge as `Release x.y.z (#n)`, pull `main`, tag `vx.y.z` and push the tag.
+5. **Publish**: it waits for the **Release** workflow (`.github/workflows/release.yml`), which checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes. Then it waits, up to 15 minutes, until the wheel is in PyPI's download index (`/simple/`), which lags a few minutes behind the JSON API the app's update check reads.
+6. **Clean up**: deletes the release branch, locally and on GitHub, and prints how to upgrade.
+
+If it stops halfway, it says why: carry on by hand from that step. Nothing it writes carries an attribution line.
 
 PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.
