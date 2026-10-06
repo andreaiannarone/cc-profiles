@@ -23,11 +23,11 @@ The code is one module per area. Each module imports only from the ones above it
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `health.py` | profile summaries, candidate folders, health checks |
-| `backups.py` | list, restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
+| `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |
-| `usage.py` | tokens and estimated cost per day, project, model and profile, from the usage of every reply (read-only); the list-price table |
+| `usage.py` | tokens and estimated cost per day, project, model, profile and conversation, and the CSV export, from the usage of every reply (read-only); the list-price table |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |

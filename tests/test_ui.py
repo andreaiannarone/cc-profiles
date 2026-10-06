@@ -256,3 +256,41 @@ def test_general_settings_wait_for_save(page_on_sandbox):
     assert abs(page.evaluate("window.scrollY") - y) < 5  # the page stays where it was
     assert errors == []
 
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_backup_changes_view(page_on_sandbox, theme):
+    page, errors = page_on_sandbox
+    page.evaluate(f"setTheme('{theme}')")
+    page.evaluate("api('/api/settings/field', { profile: 'default', key: 'timeFormat', value: '12-hour' })")
+    open_tab(page, "backups")
+    page.click("[data-bchanges]")
+    page.wait_for_selector(".drawer.wide pre.diff span.a")
+    text = page.inner_text(".drawer")
+    assert "Files copied before a change" in text and "settings.json" in text and "12-hour" in text
+    assert page.get_attribute(".drawer", "role") == "dialog"
+    page.wait_for_function("() => document.querySelector('.drawer').getAnimations().every(a => a.playState === 'finished')")
+    pytest.importorskip("axe_playwright_python")
+    assert axe_violations(page) == []
+    page.keyboard.press("Escape")
+    assert page.query_selector(".drawer") is None
+    assert page.evaluate("document.activeElement.dataset.bchanges")  # focus back on the button
+    assert errors == []
+
+
+def test_usage_export_and_sessions(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "usage")
+    page.wait_for_selector(".usess [data-usess]")
+    assert page.inner_text(".usess thead th") == "Conversation"
+    assert page.eval_on_selector_all(".usess tbody tr", "rs => rs.length") <= 10
+    with page.expect_download() as dl:
+        page.click("#u-csv")
+    assert dl.value.suggested_filename == "cc-profiles-usage-all-30d.csv"
+    title = page.inner_text(".usess [data-usess]")
+    page.click(".usess [data-usess]")
+    page.wait_for_selector('#tabs button[data-tab="conversations"][aria-current="page"]')
+    page.wait_for_selector(".ccard.on")
+    page.wait_for_selector(".convview")
+    assert title in page.inner_text(".ccard.on") or title == "No prompt"
+    assert errors == []

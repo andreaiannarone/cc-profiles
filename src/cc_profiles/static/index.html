@@ -336,6 +336,30 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 .bk .t { font-weight: 600; }
 .bk .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .bk .acts { display: flex; gap: 6px; flex: none; }
+/* what a backup changed: a wide drawer, one collapsible block per file with a unified diff */
+.drawer.wide { width: min(960px, 100vw); }
+.chsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.chsteps li { overflow-wrap: anywhere; }
+.chsteps .k { color: var(--muted); }
+details.chg { border-top: 1px solid var(--line); padding: 8px 0; }
+details.chg:first-of-type { border-top: 0; }
+details.chg summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; overflow-wrap: anywhere; }
+details.chg summary::-webkit-details-marker { display: none; }
+details.chg summary::before { content: "▸"; color: var(--muted); width: 10px; }
+details.chg[open] summary::before { content: "▾"; }
+details.chg summary code { flex: 1; min-width: 200px; }
+details.chg .st { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+details.chg .notes { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+pre.diff { margin: 8px 0 0; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; padding: 6px 0; }
+pre.diff span { display: block; padding: 0 10px; white-space: pre; min-width: max-content; }
+pre.diff .a { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); }
+pre.diff .d { background: var(--err-soft); }
+pre.diff .h { color: var(--muted); background: var(--panel-2); }
+pre.diff .f { color: var(--muted); }
+.ext-head h2 { margin: 0; font-size: 15px; }
+.linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.linkbtn:hover { text-decoration: underline; }
 .toasts { position: fixed; bottom: 18px; right: 18px; display: grid; gap: 8px; z-index: 20; max-width: min(440px, calc(100vw - 36px)); }
 .toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
 .toast.err { background: var(--err); color: #fff; }
@@ -1599,15 +1623,20 @@ async function exportProfile(id) {
   if (!res) return;
   const projects = $("#ex-proj", res.el).checked ? 1 : 0;
   try {
-    const r = await fetch(`/api/profiles/export?id=${encodeURIComponent(id)}&projects=${projects}`, { headers: { "X-Token": TOKEN } });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
-    const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || `cc-profiles-${id}.zip`;
-    const url = URL.createObjectURL(await r.blob());
-    const a = Object.assign(document.createElement("a"), { href: url, download: name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const name = await download(`/api/profiles/export?id=${encodeURIComponent(id)}&projects=${projects}`, `cc-profiles-${id}.zip`);
     toast(`Exported ${p.label}`, name);
   } catch (e) { toast(e.message, "", true); }
+}
+// A download needs the token header, so it is fetched and saved from a Blob, not linked.
+async function download(path, fallback) {
+  const r = await fetch(path, { headers: { "X-Token": TOKEN } });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || fallback;
+  const url = URL.createObjectURL(await r.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return name;
 }
 async function importProfile() {
   const resP = modal({ title: "Import profile",
@@ -1942,14 +1971,15 @@ function renderUsage() {
       <div class="seg" role="group" aria-label="Profile">${[["all", "All profiles"], ...S.profiles.map(p => [p.id, p.label])].map(([id, l]) =>
         `<button data-uprof="${esc(id)}" class="${u.profile === id ? "on" : ""}" aria-pressed="${u.profile === id}">${esc(l)}</button>`).join("")}</div>
       <div class="seg" role="group" aria-label="Period">${[7, 30, 90, 365].map(n =>
-        `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div></div>`;
-  if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return; }
-  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return; }
+        `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div>
+      <button class="btn" id="u-csv" style="margin-left:auto">Export CSV</button></div>`;
+  if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return bindUsage(); }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return bindUsage(); }
   const T = d.totals, who = d.profile === "all" ? "all profiles" : label(d.profile);
   const note = `<p class="hint">Cost is an estimate at Anthropic's list prices per token (checked ${esc(d.prices_checked)}), from the usage Claude Code records on every reply. Subscription plans (Pro, Max, Team) are not billed per token: for them it shows what the same use would cost through the API.${T.unpriced_tokens ? ` ${tok(T.unpriced_tokens)} tokens come from models without a list price and are not in the cost.` : ""}</p>`;
   if (!T.replies) {
     $("#main").innerHTML = `${head}<div class="empty">No replies from Claude in ${esc(who)} in the last ${d.days} days.</div>${note}`;
-    return;
+    return bindUsage();
   }
   // a row whose tokens all come from models without a price has no cost; a partial one gets a *
   const cost = x => x.tokens && x.unpriced_tokens === x.tokens ? `<span class="hint">no list price</span>` : usd(x.cost) + (x.unpriced_tokens ? "*" : "");
@@ -1960,6 +1990,9 @@ function renderUsage() {
   const models = d.models.map(m => `<tr><td><code>${esc(m.model)}</code>${m.family ? ` <span class="hint">${esc(m.family)} price</span>` : ""}</td>
       <td class="r">${n(m.replies)}</td><td class="r">${tok(m.input)}</td><td class="r">${tok(m.output)}</td>
       <td class="r">${tok(m.cache_write)}</td><td class="r">${tok(m.cache_read)}</td><td class="r">${cost(m)}</td></tr>`).join("");
+  const sessions = d.sessions.map((x, i) => `<tr><td>${x.exists ? `<button class="linkbtn" data-usess="${i}">${esc(x.title) || "No prompt"}</button>` : `<span class="hint">only subagent replies</span>`}</td>
+      <td class="path"><code>${esc(x.pretty)}</code></td>${all ? `<td>${badge(x.profile)}</td>` : ""}<td class="nums">${esc(dayLabel(x.date, true))}</td>
+      <td class="r">${n(x.replies)}</td><td class="r">${tok(x.tokens)}</td><td class="r">${cost(x)}</td></tr>`).join("");
   const profs = (d.profiles || []).map(p => `<tr><td>${badge(p.id)}</td><td class="r">${n(p.replies)}</td>
       <td class="r">${tok(p.tokens)}</td><td class="r">${p.tokens ? cost(p) : "$0"}</td></tr>`).join("");
   $("#main").innerHTML = `${head}
@@ -1973,11 +2006,29 @@ function renderUsage() {
     ${note}
     <div class="ext-head"><h3>Top projects</h3><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
     <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
+    <div class="ext-head"><h2>Most expensive sessions</h2><span class="hint">the ${plural(d.sessions.length, "conversation", "conversations")} with the highest estimated cost, then the most tokens · open one to read it</span></div>
+    <div class="table usess"><table><thead><tr><th>Conversation</th><th>Project</th>${all ? "<th>Profile</th>" : ""}<th>Last reply</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${sessions}</tbody></table></div>
     <div class="ext-head"><h3>Models</h3><span class="hint">cache write and cache read are priced differently from input</span></div>
     <div class="table"><table><thead><tr><th>Model</th><th class="r">Replies</th><th class="r">Input</th><th class="r">Output</th><th class="r">Cache write</th><th class="r">Cache read</th><th class="r">Estimated cost</th></tr></thead><tbody>${models}</tbody></table></div>
     ${profs ? `<div class="ext-head"><h3>Profiles</h3><span class="hint">a reply copied into another conversation or profile counts once</span></div>
     <div class="table"><table><thead><tr><th>Profile</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${profs}</tbody></table></div>` : ""}
     ${T.unpriced_tokens ? `<p class="hint">* without the tokens of models that have no list price.</p>` : ""}`;
+  bindUsage();
+}
+function bindUsage() {
+  const u = S.use;
+  $("#u-csv").onclick = async () => {
+    try { toast("Exported usage as CSV", await download(`/api/usage.csv?profile=${encodeURIComponent(u.profile)}&days=${u.days}`, "cc-profiles-usage.csv")); }
+    catch (e) { toast(e.message, "", true); }
+  };
+  document.querySelectorAll("[data-usess]").forEach(b => b.onclick = () => openUsageSession(u.data.sessions[+b.dataset.usess]));
+}
+// A session of the Usage tab opens in the Conversations tab, like a search result opens its tab.
+async function openUsageSession(x) {
+  goTab("conversations");
+  Object.assign(S.conv, { profile: x.profile, q: "" });
+  try { await loadConvProjects(); await openConvProject(x.project); await openConversation(x.session); }
+  catch (e) { toast(e.message, "", true); }
 }
 
 // ---------- backups ----------
@@ -2000,7 +2051,8 @@ function renderBackups() {
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
         <div class="t">${esc(b.title)} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
-      <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
+      <div class="acts">${b.steps ? `<button class="btn small" data-bchanges="${esc(b.name)}">Show changes</button>` : ""}
+        ${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
   $("#bk-auto")?.addEventListener("change", autoCleanup);
@@ -2042,6 +2094,49 @@ async function restoreBackup(name) {
   const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
   if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
   await refresh(); loadBackups();
+}
+// Read-only: every step of a backup in plain words, and for each file copied before a
+// change a diff between that copy and the file as it is now.
+const DIFF_STATUS = { same: "same as now", "hidden-only": "only hidden values changed", secret: "contents hidden",
+  "too-big": "too big to compare", binary: "not a text file", dir: "now a folder", unavailable: "copy not available" };
+function diffHtml(lines) {
+  const kind = l => l.startsWith("@@") ? "h" : l.startsWith("+++ ") || l.startsWith("--- ") ? "f" : l[0] === "+" ? "a" : l[0] === "-" ? "d" : "";
+  return `<pre class="diff" tabindex="0" aria-label="Diff: lines starting with - are in the backup, lines starting with + are there now">${lines.map(l => `<span class="${kind(l)}">${esc(l) || " "}</span>`).join("")}</pre>`;
+}
+async function showChanges(name, trigger) {
+  const b = S.backups.find(x => x.name === name);
+  const bg = document.createElement("div"); bg.className = "drawer-bg";
+  const dr = document.createElement("aside"); dr.className = "drawer wide"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true");
+  dr.setAttribute("aria-label", `Changes of ${b.title}`);
+  dr.innerHTML = `<div class="dh"><h2>${esc(b.title)}</h2><button class="btn small" id="ch-close">Close</button></div>
+    <div class="db" id="ch-body"><div class="empty"><span class="spinner"></span> Comparing the backup with the files as they are now…</div></div>`;
+  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); trigger?.focus(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  bg.onclick = close; document.addEventListener("keydown", onKey);
+  document.body.append(bg, dr);
+  $("#ch-close", dr).onclick = close; $("#ch-close", dr).focus();
+  let c;
+  try { c = await api(`/api/backups/changes?name=${encodeURIComponent(name)}`); }
+  catch (e) { $("#ch-body", dr).innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; return; }
+  const files = c.steps.filter(x => x.op === "copy"), other = c.steps.filter(x => x.op !== "copy");
+  const open = files.length <= 3;
+  const fileBlock = x => {
+    const d = x.diff;
+    const st = d.status === "changed" ? `+${d.added} −${d.removed}` : DIFF_STATUS[d.status] || d.status;
+    return `<details class="chg" ${open && d.lines.length ? "open" : ""}><summary><code>${esc(x.path)}</code><span class="st">${esc(st)}</span></summary>
+      ${d.notes.length ? `<ul class="notes">${d.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+      ${d.lines.length ? diffHtml(d.lines) : d.status === "same" ? `<div class="hint" style="margin-top:6px">The file is the same as the copy in the backup${c.restored ? ": the backup was restored" : ""}.</div>` : ""}</details>`;
+  };
+  const now = x => x.op === "absent" || x.op === "mkdir" || x.op === "created" ? (x.now ? "" : " · no longer there") : "";
+  const stepLine = x => `<li>${esc(x.text)}: <code>${esc(x.path)}</code>${x.to ? ` <span class="k">→</span> <code>${esc(x.to)}</code>${x.now ? "" : ` <span class="k">· no longer there</span>`}` : ""}${now(x) ? `<span class="k">${now(x)}</span>` : ""}</li>`;
+  $("#ch-body", dr).innerHTML = `
+    <div class="card"><h3>What this operation did</h3>
+      <div class="hint">${esc(when(c.created))} · ${plural(c.steps.length, "step", "steps")} · ${plural(files.length, "file", "files")} copied before a change${files.length ? `, ${c.files_changed} different now` : ""}
+        ${c.failed ? ` · <span class="issue">incomplete: ${esc(c.failed)}</span>` : ""}${c.restored ? ` · restored ${esc(when(c.restored))}` : ""}</div>
+      <p class="hint" style="margin-bottom:0">Read-only. Each diff compares the copy kept in the backup (<code>-</code>) with the file as it is now (<code>+</code>), so it also shows changes made later. JSON is shown with sorted keys; login credentials, MCP environment variables and headers, and token-like values are hidden.</p></div>
+    ${files.length ? `<div class="card"><h3>Files copied before a change</h3>${files.map(fileBlock).join("")}</div>` : ""}
+    ${other.length ? `<div class="card"><h3>Other steps</h3><ul class="chsteps">${other.map(stepLine).join("")}</ul></div>` : ""}
+    ${c.log.length ? `<div class="card"><h3>Notes</h3><ul class="chsteps">${c.log.map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}`;
 }
 async function deleteBackup(name) {
   const b = S.backups.find(x => x.name === name);
@@ -2147,6 +2242,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
+  if (t.dataset.bchanges) return showChanges(t.dataset.bchanges, t);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
   if (t.dataset.uprof) { S.use.profile = t.dataset.uprof; return loadUsage(); }
   if (t.dataset.udays) { S.use.days = +t.dataset.udays; return loadUsage(); }

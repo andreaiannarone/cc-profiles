@@ -23,6 +23,14 @@ The journal lists every step in order:
 
 Only the first copy of a file is kept, because it is the state before the operation. Modified files are stored through symlinks, so restoring a shared file writes the real file and keeps the link.
 
+## Show changes
+
+**Show changes**, next to Restore, opens a read-only panel with what the operation did, in plain words: every file copied before a change, every file that did not exist before, every item moved (from → to), every folder or link created and everything moved to the backup instead of being deleted.
+
+For each file copied before a change it shows a diff between the copy in the backup (lines starting with `-`) and the file **as it is now** (`+`). That is what Restore would undo; if the file changed again after the operation, the diff includes those later changes too, and a note says so. Other notes say when the file no longer exists, is not a text file, or is too big to compare (over 512 KB). A long diff stops after 2,000 lines.
+
+JSON files are compared with their keys sorted, so a different key order is not a change. Secrets are never shown: `.credentials.json` is not opened at all, and in JSON files the values under `env` and `headers` (as in the MCP tab), keys that look like secrets (`token`, `apiKey`, `password`, `Authorization`, …) and values that look like a token (`sk-…`, `ghp_…`, `Bearer …`) are replaced by `•••• hidden`.
+
 ## Incomplete backups
 
 If an operation fails halfway (a disk error, a file Claude Code locked, a bug), the steps it had already done stay journaled: the backup is closed anyway and labelled **incomplete**, and the error message says so. **Restore** undoes those steps like any other backup. A failure before any change leaves no backup.

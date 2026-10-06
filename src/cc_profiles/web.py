@@ -47,7 +47,7 @@ from .settings import (
     statusline_preview,
 )
 from .health import candidates, health, list_profiles
-from .backups import backup_auto, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
+from .backups import backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
 from .info import about
 from .extensions import (
     list_mcp,
@@ -73,7 +73,7 @@ from .conversations import (
     op_conversation_delete,
     op_conversation_move,
 )
-from .usage import usage
+from .usage import usage, usage_csv
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
@@ -178,6 +178,17 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, status, obj):
         self._send(status, json.dumps(obj, ensure_ascii=False))
 
+    def _send_download(self, data, name, ctype):
+        """Send bytes made in memory as a download."""
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _send_file(self, path, name, ctype):
         """Stream a file as a download, then delete it (a temporary export)."""
         try:
@@ -239,6 +250,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/profiles/export":
                 path, name = export_profile(q["id"], q.get("projects") == "1")
                 return self._send_file(path, name, "application/zip")
+            if u.path == "/api/usage.csv":
+                return self._send_download(*usage_csv(q.get("profile", "all"), q.get("days", "30")), "text/csv; charset=utf-8")
             routes = {
                 "/api/profiles": lambda: list_profiles(),
                 "/api/projects": lambda: list_projects(),
@@ -251,6 +264,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/conversations": lambda: list_conversations(q["profile"], q["project"]),
                 "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
                 "/api/backups": lambda: list_backups(),
+                "/api/backups/changes": lambda: backup_changes(q["name"]),
                 "/api/search": lambda: search(q.get("q", "")),
                 "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
