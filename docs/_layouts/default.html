@@ -1,0 +1,70 @@
+<!doctype html>
+{%- comment -%}
+The documentation site's only layout: the app's header, colors and theme switch,
+a sidebar from _data/nav.yml, and the page's Markdown in the middle.
+{%- endcomment -%}
+{%- assign page_title = page.title | default: site.title -%}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page_title != site.title %}{{ page_title }} · {% endif %}{{ site.title }}</title>
+<meta name="description" content="{{ page.description | default: site.description }}">
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:image" content="{{ '/assets/social-preview.png' | absolute_url }}">
+<script>try { const v = localStorage.getItem("cc-profiles.theme"); if (v === "light" || v === "dark") document.documentElement.dataset.theme = v; } catch (e) {}</script>
+<link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ '/' | relative_url }}">{% include logo.svg %}<span>cc-profiles</span></a>
+  <span class="sub">documentation</span>
+  <span class="grow"></span>
+  <a class="toplink" href="https://pypi.org/project/cc-profiles/">PyPI</a>
+  <a class="toplink" href="https://github.com/andreaiannarone/cc-profiles">GitHub</a>
+  <button class="iconbtn" id="theme-btn" type="button" title="Theme: system" aria-label="Theme: system">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
+  </button>
+</header>
+<div class="layout">
+  <nav class="side" aria-label="Documentation">
+    <details open id="side-menu"><summary>Menu</summary>
+    {%- for group in site.data.nav %}
+      <div class="ngroup"><div class="nlabel">{{ group.title }}</div>
+      {%- for item in group.pages %}
+        {%- if item.url == "README.md" %}{% assign href = '/' | relative_url %}{% else %}{% assign href = item.url | replace: '.md', '.html' | relative_url %}{% endif %}
+        <a href="{{ href }}"{% if page.path == item.url %} class="on" aria-current="page"{% endif %}>{{ item.title }}</a>
+      {%- endfor %}
+      </div>
+    {%- endfor %}
+    </details>
+  </nav>
+  <main class="doc">
+    {{ content }}
+    <footer class="foot">
+      <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
+      <span>·</span><span>GPL-3.0-or-later</span>
+      <span>·</span><span>Built with Claude Code · Made for Claude Code</span>
+    </footer>
+  </main>
+</div>
+<script>
+(() => {
+  // System → light → dark, remembered like in the app.
+  const order = ["system", "light", "dark"], btn = document.getElementById("theme-btn");
+  const cur = () => document.documentElement.dataset.theme || "system";
+  const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); };
+  btn.addEventListener("click", () => {
+    const next = order[(order.indexOf(cur()) + 1) % order.length];
+    if (next === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
+    try { next === "system" ? localStorage.removeItem("cc-profiles.theme") : localStorage.setItem("cc-profiles.theme", next); } catch (e) {}
+    show();
+  });
+  show();
+  // the menu starts closed on phones
+  if (matchMedia("(max-width: 860px)").matches) document.getElementById("side-menu").open = false;
+})();
+</script>
+</body>
+</html>

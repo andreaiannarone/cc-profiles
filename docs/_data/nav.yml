@@ -1,0 +1,30 @@
+# The sidebar of the documentation site, in order. url is the page's .md path.
+- title: Start
+  pages:
+    - { title: Overview, url: README.md }
+    - { title: Getting started, url: getting-started.md }
+    - { title: Concepts, url: concepts.md }
+- title: Guides
+  pages:
+    - { title: Projects, url: guides/projects.md }
+    - { title: Memories, url: guides/memories.md }
+    - { title: Conversations, url: guides/conversations.md }
+    - { title: Usage, url: guides/usage.md }
+    - { title: Profiles and sharing, url: guides/profiles.md }
+    - { title: Skills and MCP servers, url: guides/skills-and-mcp.md }
+    - { title: Search and compare, url: guides/search-and-compare.md }
+    - { title: Plugins, url: guides/plugins.md }
+    - { title: Export and import, url: guides/export-import.md }
+    - { title: Settings, url: guides/settings.md }
+    - { title: Backups, url: guides/backups.md }
+    - { title: Health and About, url: guides/health.md }
+    - { title: Status line, url: status-line.md }
+- title: Reference
+  pages:
+    - { title: Configuration, url: configuration.md }
+    - { title: Troubleshooting, url: troubleshooting.md }
+- title: Working on cc-profiles
+  pages:
+    - { title: Architecture, url: architecture.md }
+    - { title: Claude Code's formats, url: claude-code-formats.md }
+    - { title: HTTP API, url: api.md }
