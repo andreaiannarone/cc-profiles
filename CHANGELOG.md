@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Documentation site, search engines and AI assistants: a meta description per page, canonical URLs, link previews (Open Graph, Twitter), structured data (the app, each page, breadcrumbs, the FAQ), `sitemap.xml`, `robots.txt` that welcomes AI crawlers, `llms.txt` and `llms-full.txt`, a 404 page, and a new **FAQ** page.
 - Documentation site: a copy icon on every code block copies the command with one click (a check mark confirms it); an **On this page** column on the right lists the page's sections and highlights the one you are reading, and scrolls smoothly to the one you click (unless the system asks for reduced motion); an **Install** button in the header opens the install instructions.
 
 ## [0.4.8] - 2026-10-06
