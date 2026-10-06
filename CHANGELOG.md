@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-10-06
+
 ### Added
 - Settings → Status line: **Presets** fill the editor in one click (pieces, order, brackets, separator, colors and rate limits): *Essential*, *Developer*, *Usage* and *Like a hand-made one*. Nothing is saved until **Save status line**; the preset that matches the editor is shown as selected.
 - Search in the documentation site: a box in the header (`/` focuses it, arrow keys and Enter pick a result, Esc closes) over `search.json`, built by GitHub Pages from the sidebar's pages. Every word must match; titles rank first; up to 8 results with the words highlighted.
@@ -184,7 +186,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.2...v0.4.3
