@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Status line: with the rate limits shown as left, a reset less than a minute away reads `<1m` instead of `0m`.
 - Accessibility: section titles in the tabs are `h2` (and their groups `h3`) under the page's `h1`, instead of skipping a level; they look the same. The browser test now also fails on axe's `heading-order` rule.
 - `scripts/release.py`: the last step deletes the release branch on origin only if `git ls-remote` still lists it, and otherwise says GitHub already deleted it, instead of printing a failed push.
+### Changed
+- Tests: coverage of the servers the tests start is measured again (their SIGTERM handler skipped saving it), new tests bring it from 90% to 94%, and CI fails when the total drops below 92%.
 
 ## [0.4.5] - 2026-10-06
 
