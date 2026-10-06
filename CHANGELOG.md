@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-10-06
+
 ### Changed
 - Usage: the periods are 7, 14, 30 and 90 days (365 is gone).
 
@@ -189,7 +191,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.7...HEAD
+[0.4.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.3...v0.4.4

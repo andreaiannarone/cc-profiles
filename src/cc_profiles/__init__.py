@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: a local web UI to manage multiple Claude Code profiles."""
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"
