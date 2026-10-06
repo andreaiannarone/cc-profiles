@@ -981,7 +981,7 @@ async function loadExt(pid) {
     else x.mcp = await api("/api/mcp?profile=" + x.profile);
   } catch (e) {
     // "Not found" means the page is newer than the running server: the page is read from disk at every load
-    x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server. Stop it (ctrl+C, or kill the process) and start it again." : e.message;
+    x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server: run cc-profiles restart (or /cc-profiles restart in Claude Code), then reload the page." : e.message;
     return renderExt();
   }
   if (x.skills && x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;

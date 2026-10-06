@@ -2,9 +2,9 @@
   <br>
   <a href="https://github.com/andreaiannarone/cc-profiles">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg">
-      <img src="docs/assets/logo-light.svg" alt="cc-profiles" width="400">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/logo-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/logo-light.svg">
+      <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/logo-light.svg" alt="cc-profiles" width="400">
     </picture>
   </a>
 </h1>
@@ -12,7 +12,7 @@
 <h4 align="center">A local web UI to manage multiple <a href="https://code.claude.com" target="_blank">Claude Code</a> profiles on one machine.</h4>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
+  <a href="https://github.com/andreaiannarone/cc-profiles/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <a href="https://pypi.org/project/cc-profiles/"><img src="https://img.shields.io/pypi/v/cc-profiles?color=green" alt="cc-profiles on PyPI"></a>
   <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
   <a href="https://buymeacoffee.com/andreaiannarone"><img src="https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
@@ -33,9 +33,9 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.gif">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.gif">
-    <img src="docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, a conversation, the skills, an MCP server, the comparison of two profiles and the backup of the move are shown" width="860">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-dark.gif">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-light.gif">
+    <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, a conversation, the skills, an MCP server, the comparison of two profiles and the backup of the move are shown" width="860">
   </picture>
 </p>
 
@@ -45,7 +45,7 @@
   <a href="#screenshots">Screenshots</a> •
   <a href="#how-it-works">How It Works</a> •
   <a href="#usage">Usage</a> •
-  <a href="#documentation">Documentation</a> •
+  <a href="https://cc-profiles.andreaia.com">Documentation</a> •
   <a href="#configuration">Configuration</a> •
   <a href="#troubleshooting">Troubleshooting</a> •
   <a href="#license">License</a>
@@ -65,7 +65,7 @@ Install with a single command:
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 ```
 
-The script installs cc-profiles with `pipx` or `uv`, whichever you have, and adds a `/cc-profiles` command to Claude Code in every profile. It never uses `sudo` and writes only in your home folder; [read it](install.sh) first if you like. Run it again to update. To install the app without touching your profiles:
+The script installs cc-profiles with `pipx` or `uv`, whichever you have, and adds a `/cc-profiles` command to Claude Code in every profile. It never uses `sudo` and writes only in your home folder; [read it](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) first if you like. Run it again to update. To install the app without touching your profiles:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh -s -- --no-command
@@ -132,14 +132,14 @@ cc-profiles
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere. The confirmation previews what the link replaces.
-- ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution and a status line you build by ticking boxes, with a live preview, with dropdowns that offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
+- ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution and a status line you build by ticking boxes, with a live preview. Dropdowns offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go, or let cc-profiles delete those older than 15 to 90 days automatically (off by default).
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
 - ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
-- ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session; `cc-profiles label` shows the active profile in your status line.
-- 🌓 **Light and dark**: the theme button next to (i) picks System, Light or Dark; System follows your operating system.
+- ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
+- 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
 - 🔄 **Updates from the app**: **Check for updates** in the (i) panel asks PyPI for the latest version and, for a pipx or uv install, updates and restarts cc-profiles with one click.
 
@@ -151,17 +151,17 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/memories-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/memories-light.jpg">
-        <img src="docs/assets/screenshots/memories-light.jpg" alt="The Memories tab: projects on the left, the memories of the selected project with their descriptions, and an editor">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-light.jpg" alt="The Memories tab: projects on the left, the memories of the selected project with their descriptions, and an editor">
       </picture>
       <p align="center"><b>Memories</b>: every project's memories, with an editor</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/conversations-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/conversations-light.jpg">
-        <img src="docs/assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the projects of a profile, the conversations of the selected one, and a read-only viewer of its messages">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the projects of a profile, the conversations of the selected one, and a read-only viewer of its messages">
       </picture>
       <p align="center"><b>Conversations</b>: read, move or delete a single conversation</p>
     </td>
@@ -169,17 +169,17 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/usage-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/usage-light.jpg">
-        <img src="docs/assets/screenshots/usage-light.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-light.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
       </picture>
       <p align="center"><b>Usage</b>: tokens and estimated cost per day, project and model</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/statusline-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/statusline-light.jpg">
-        <img src="docs/assets/screenshots/statusline-light.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-light.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
       </picture>
       <p align="center"><b>Status line</b>: build it by ticking boxes, with a live preview</p>
     </td>
@@ -187,17 +187,17 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/skills-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/skills-light.jpg">
-        <img src="docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
       </picture>
       <p align="center"><b>Skills</b>: browse, create, edit and copy skills</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/mcp-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/mcp-light.jpg">
-        <img src="docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available">
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
     </td>
@@ -205,24 +205,24 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/compare-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/compare-light.jpg">
-        <img src="docs/assets/screenshots/compare-light.jpg" alt="The Compare tab: the settings of two profiles side by side, with the differences highlighted and buttons to copy them">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-light.jpg" alt="The Compare tab: the settings of two profiles side by side, with the differences highlighted and buttons to copy them">
       </picture>
       <p align="center"><b>Compare</b>: two profiles side by side, one-click copies</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/settings-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/settings-light.jpg">
-        <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
       </picture>
       <p align="center"><b>Settings</b>: everything in /config, applied to one profile or all</p>
     </td>
   </tr>
 </table>
 
-The screenshots show sample data from the [/sandbox skill](.claude/skills/sandbox/SKILL.md). GitHub shows them in your theme, light or dark.
+The screenshots show sample data from the [/sandbox skill](https://github.com/andreaiannarone/cc-profiles/blob/main/.claude/skills/sandbox/SKILL.md). GitHub shows them in your theme, light or dark.
 
 ---
 
@@ -250,14 +250,14 @@ cc-profiles does all of this for you, from a page in your browser.
 
 **Core components:**
 
-1. **Local server**: one Python file, standard library only. It listens on `127.0.0.1`, checks the `Host` header against DNS rebinding and a random token against requests from other websites.
-2. **Single-page UI**: one HTML file with inline CSS and vanilla JavaScript, no build step and nothing loaded from the internet. Light and dark themes follow your system.
+1. **Local server**: a small Python package, standard library only, one module per area. It listens on `127.0.0.1`, checks the `Host` header against DNS rebinding and a random token against requests from other websites.
+2. **Single-page UI**: one HTML file with inline CSS and vanilla JavaScript, no build step and nothing loaded from the internet. Light and dark themes, or the system's.
 3. **Backups with a journal**: before any change, the files it touches are copied to `~/.cc-profiles/backups/<date>_<operation>/`, and every step (copy, move, new folder, new link) is written to a `manifest.json`. **Restore** replays the journal backwards.
 4. **Atomic writes**: every file is written to a temporary file in the same folder and then renamed, so a running Claude Code never reads a half-written file. Writes follow symlinks, so shared files stay shared.
 5. **Path recovery**: Claude Code's project folder names cannot be turned back into paths. cc-profiles rebuilds them from config files, prompt history and the `cwd` of conversations, and walks the disk when nothing mentions them.
 6. **Launchers and commands**: new profiles get a small `claude-<id>` script in `~/.local/bin`; `cc-profiles install-command` adds `/cc-profiles` to Claude Code. Files cc-profiles creates carry a mark, and it never overwrites a file without it.
 
-See [Architecture](docs/architecture.md) and [Claude Code's on-disk formats](docs/claude-code-formats.md) for details.
+See [Architecture](https://cc-profiles.andreaia.com/architecture.html) and [Claude Code's on-disk formats](https://cc-profiles.andreaia.com/claude-code-formats.html) for details.
 
 ---
 
@@ -311,36 +311,40 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 ## Documentation
 
-📚 **[Full documentation](docs/README.md)**
+📚 **[Full documentation](https://cc-profiles.andreaia.com)** at cc-profiles.andreaia.com
 
 ### Getting Started
 
-- **[Getting started](docs/getting-started.md)**: install, first run, launcher commands, `/cc-profiles`
-- **[Concepts](docs/concepts.md)**: profiles, the source profile, projects, rules, sharing, backups
+- **[Getting started](https://cc-profiles.andreaia.com/getting-started.html)**: install, first run, launcher commands, `/cc-profiles`
+- **[Concepts](https://cc-profiles.andreaia.com/concepts.html)**: profiles, the source profile, projects, rules, sharing, backups
 
 ### Guides by Tab
 
-- **[Projects](docs/guides/projects.md)**: move, relink, assign
-- **[Memories](docs/guides/memories.md)**: browse, edit, move
-- **[Usage](docs/guides/usage.md)**: tokens and estimated cost per day, project, model and profile
-- **[Profiles and sharing](docs/guides/profiles.md)**: create, edit, delete, share
-- **[Skills and MCP servers](docs/guides/skills-and-mcp.md)**: create, edit, copy, delete
-- **[Settings](docs/guides/settings.md)**: general settings, `CLAUDE.md`, permissions, raw JSON
-- **[Backups](docs/guides/backups.md)**: what gets saved and how restoring works
-- **[Health and About](docs/guides/health.md)**: checks, orphan projects, installing Claude Code
+- **[Projects](https://cc-profiles.andreaia.com/guides/projects.html)**: move, relink, assign
+- **[Memories](https://cc-profiles.andreaia.com/guides/memories.html)**: browse, edit, move
+- **[Conversations](https://cc-profiles.andreaia.com/guides/conversations.html)**: read, move one to another profile, delete
+- **[Usage](https://cc-profiles.andreaia.com/guides/usage.html)**: tokens and estimated cost per day, project, model and profile
+- **[Profiles and sharing](https://cc-profiles.andreaia.com/guides/profiles.html)**: create, edit, delete, share
+- **[Skills and MCP servers](https://cc-profiles.andreaia.com/guides/skills-and-mcp.html)**: create, edit, copy, delete
+- **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and turn them on or off
+- **[Search and compare](https://cc-profiles.andreaia.com/guides/search-and-compare.html)**: search every profile at once, compare two side by side
+- **[Export and import](https://cc-profiles.andreaia.com/guides/export-import.html)**: move a profile to another computer
+- **[Settings](https://cc-profiles.andreaia.com/guides/settings.html)**: the `/config` settings, `CLAUDE.md`, permissions, raw JSON
+- **[Status line](https://cc-profiles.andreaia.com/status-line.html)**: build Claude Code's status line in Settings, or write your own
+- **[Backups](https://cc-profiles.andreaia.com/guides/backups.html)**: what gets saved and how restoring works
+- **[Health and About](https://cc-profiles.andreaia.com/guides/health.html)**: checks, orphan projects, installing Claude Code
 
 ### Reference
 
-- **[Configuration](docs/configuration.md)**: `config.json`, command line, environment variables
-- **[Status line](docs/status-line.md)**: show the active profile in Claude Code
-- **[Troubleshooting](docs/troubleshooting.md)**: common problems and their fixes
+- **[Configuration](https://cc-profiles.andreaia.com/configuration.html)**: `config.json`, command line, environment variables
+- **[Troubleshooting](https://cc-profiles.andreaia.com/troubleshooting.html)**: common problems and their fixes
 
 ### For Contributors
 
-- **[Architecture](docs/architecture.md)**: how the code is organized and why
-- **[Claude Code's on-disk formats](docs/claude-code-formats.md)**: what the app reads and writes
-- **[HTTP API](docs/api.md)**: every endpoint the UI uses
-- **[Contributing](CONTRIBUTING.md)** and **[design system](DESIGN.md)**
+- **[Architecture](https://cc-profiles.andreaia.com/architecture.html)**: how the code is organized and why
+- **[Claude Code's on-disk formats](https://cc-profiles.andreaia.com/claude-code-formats.html)**: what the app reads and writes
+- **[HTTP API](https://cc-profiles.andreaia.com/api.html)**: every endpoint the UI uses
+- **[Contributing](https://github.com/andreaiannarone/cc-profiles/blob/main/CONTRIBUTING.md)** and **[design system](https://github.com/andreaiannarone/cc-profiles/blob/main/DESIGN.md)**
 
 ---
 
@@ -362,7 +366,7 @@ cc-profiles keeps its own data in `~/.cc-profiles/`, never in the repository:
 | `CC_PROFILES_HOME` | data folder instead of `~/.cc-profiles` |
 | `CC_PROFILES_QUIET` | if set, do not log HTTP requests to the terminal |
 
-See the **[Configuration reference](docs/configuration.md)** for `config.json` and every option.
+See the **[Configuration reference](https://cc-profiles.andreaia.com/configuration.html)** for `config.json` and every option.
 
 ---
 
@@ -386,7 +390,7 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
 - cc-profiles reaches the internet only when you click: **Check for updates** asks pypi.org for the latest version (PyPI sees your IP address), and **Install** runs the official Claude Code installer.
 
-See [SECURITY.md](SECURITY.md) to report a vulnerability.
+See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 
 ---
 
@@ -403,14 +407,14 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 | Problem | Fix |
 |---|---|
-| "Port 4777 is busy" | cc-profiles is already running: open the URL, or start it with `--port 4800` |
-| A tab says the page is newer than the server | you updated cc-profiles while it was running: stop it and start it again |
+| "Port 4777 is busy" | cc-profiles is already running: open the URL, or start it with `--port 4778` |
+| A tab says the page is newer than the server | you updated cc-profiles while it was running: run `cc-profiles restart` (or `/cc-profiles restart` in Claude Code), then reload the page |
 | `cc-profiles: command not found` | run `pipx ensurepath` (or `uv tool update-shell`) and open a new terminal |
 | `/cc-profiles` does not appear in Claude Code | run `cc-profiles install-command`, then restart the session |
 | A project shows "folder not found on disk" | click **Relink…** and pick the folder where it lives now |
 | A setting has no effect | the **Settings** tab shows which file the value comes from: `settings.local.json` wins over `settings.json` |
 
-See the **[Troubleshooting guide](docs/troubleshooting.md)** for more.
+See the **[Troubleshooting guide](https://cc-profiles.andreaia.com/troubleshooting.html)** for more.
 
 ---
 
@@ -424,13 +428,13 @@ Contributions are welcome! Please:
 4. Update the documentation and `CHANGELOG.md`
 5. Open a pull request
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to run the app and the tests locally. If you use Claude Code, the repository's `.claude/` folder keeps you on a sandbox and has skills for the common chores. Good first contributions: translations (the UI is English only), Windows support, a "dry run" preview for big operations.
+See [CONTRIBUTING.md](https://github.com/andreaiannarone/cc-profiles/blob/main/CONTRIBUTING.md) to run the app and the tests locally. If you use Claude Code, the repository's `.claude/` folder keeps you on a sandbox and has skills for the common chores. Good first contributions: translations (the UI is English only), Windows support, a "dry run" preview for big operations.
 
 ---
 
 ## License
 
-cc-profiles is licensed under the **[GNU General Public License v3.0 or later](LICENSE)**. © Andrea Iannarone
+cc-profiles is licensed under the **[GNU General Public License v3.0 or later](https://github.com/andreaiannarone/cc-profiles/blob/main/LICENSE)**. © Andrea Iannarone
 
 You can use, study, change and share it freely. If you distribute it, modified or not, you must do so under the same license and with the source code. Version 0.1.0 was released under MIT and stays available under it.
 
@@ -438,7 +442,7 @@ You can use, study, change and share it freely. If you distribute it, modified o
 
 ## Support
 
-- **Documentation**: [docs/](docs/README.md)
+- **Documentation**: [cc-profiles.andreaia.com](https://cc-profiles.andreaia.com)
 - **Issues**: [GitHub Issues](https://github.com/andreaiannarone/cc-profiles/issues)
 - **Repository**: [github.com/andreaiannarone/cc-profiles](https://github.com/andreaiannarone/cc-profiles)
 - **Buy me a coffee**: [buymeacoffee.com/andreaiannarone](https://buymeacoffee.com/andreaiannarone)

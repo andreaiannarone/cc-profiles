@@ -6,7 +6,7 @@ If a file is [shared](../concepts.md#sharing), a *shared with …* label warns t
 
 ## General
 
-The same settings as the `/config` panel of Claude Code, in five groups, plus the attribution texts.
+The same settings as the `/config` panel of Claude Code, in five groups, with commit and pull request attribution as on/off switches.
 
 | Setting | Key | Control |
 |---|---|---|
@@ -108,3 +108,7 @@ Edits the whole `settings.json` or `settings.local.json`: hooks, `env`, `attribu
 ## Global
 
 `.claude.json` is mostly Claude Code's internal state (caches, counters, tips already seen) and is shown read-only. The only setting you can change here is **Auto-updates** (`autoUpdates`).
+
+## Status line
+
+Below General, **Status line** builds the line Claude Code shows under the prompt: tick the pieces, put them in order, pick brackets, separator and colors, and check the preview; or set your own command. See [Status line](../status-line.md).

@@ -94,7 +94,9 @@ HOME="$SANDBOX" PATH=/usr/bin:/bin CC_PROFILES_INSTALL_DRYRUN=1 .venv/bin/cc-pro
 src/cc_profiles/                 the server: one module per area (see docs/architecture.md)
 src/cc_profiles/static/index.html the whole UI: one file, inline CSS and vanilla JS
 tests/                           end-to-end tests on a fake home, plus documentation link checks
-docs/                            user guide and developer reference (start at docs/README.md)
+docs/                            user guide and developer reference, published at cc-profiles.andreaia.com
+scripts/                         release, README images, JavaScript and settings-schema checks, Homebrew formula
+.github/workflows/               CI, release to PyPI, CodeQL, the weekly Claude Code schema check
 DESIGN.md                        the UI's visual system: read it before touching index.html
 CLAUDE.md                        notes for AI coding assistants (also useful for humans)
 .claude/                         Claude Code project setup: permissions, a hook, two skills (see below)
@@ -111,7 +113,7 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 - `/sandbox` builds a fake home with sample data and starts the app on it.
 - `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release. It starts from `scripts/check_settings_schema.py`, which the *Claude Code settings schema* workflow (`.github/workflows/claude-code-schema.yml`) also runs every week against the latest Claude Code, opening an issue when something differs.
 
-Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
+Claude Code runs the hook only after you trust the folder. It is about 120 lines of standard-library Python: read it first if you like.
 
 ### README images
 
@@ -162,5 +164,5 @@ PyPI accepts the upload through *trusted publishing*: no token is stored in the 
 
 ### Homebrew and the documentation site
 
-- **Homebrew**: after a release is on PyPI, `python3 scripts/homebrew_formula.py <version> > Formula/cc-profiles.rb` in the tap repository `andreaiannarone/homebrew-tap`, then commit and push there. Users install with `brew install andreaiannarone/tap/cc-profiles`.
+- **Homebrew** (not published yet): `python3 scripts/homebrew_formula.py <version>` prints a formula for a release on PyPI, ready for a tap repository once there is one.
 - **Documentation site**: GitHub Pages publishes `docs/` from `main` with Jekyll (`docs/_config.yml`): `README.md` is the home page and links between `.md` files become pages. Link files outside `docs/` with their full GitHub URL, or they break on the site.

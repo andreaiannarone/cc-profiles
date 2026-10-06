@@ -1,6 +1,6 @@
 # Architecture
 
-cc-profiles is two files and a test suite, on purpose: no framework, no build step, no dependencies.
+cc-profiles is a small Python package (one module per area), one HTML file for the UI and a test suite, on purpose: no framework, no build step, no dependencies.
 
 ```
 browser ──HTTP (token)──► cc_profiles ──reads/writes──► ~/.claude*, ~/.claude.json

@@ -4,6 +4,10 @@
 
 cc-profiles is probably already running in another terminal: open `http://127.0.0.1:4777`, or start another instance with `--port 4778`.
 
+## A tab says the page is newer than the server
+
+You updated cc-profiles while it was running: the page comes from the new version, the server is still the old one. Run `cc-profiles restart` (or `/cc-profiles restart` in Claude Code) and reload the page.
+
 ## The page shows "Missing or wrong token"
 
 The page is from an older run of the server. Every start generates a new token: reload the page.
