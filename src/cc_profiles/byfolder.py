@@ -87,7 +87,8 @@ def profile_dir(p):
 
 def shell_line(shell):
     """The line that turns the feature on in a shell's startup file."""
-    return f'eval "$(cc-profiles shell-init {shell})"  {SHELL_MARK}'
+    # guarded: if cc-profiles is uninstalled later, new shells start without an error
+    return f'command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init {shell})"  {SHELL_MARK}'
 
 
 def shell_function(shell):

@@ -1862,7 +1862,7 @@ def test_backup_changes_notes_and_guards(home, app_factory):
 
 
 # --- profile by folder (cc-profiles which, shell-init, the rc line) ------------
-SHELL_LINE = 'eval "$(cc-profiles shell-init {})"  # cc-profiles: profile by folder'
+SHELL_LINE = 'command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init {})"  # cc-profiles: profile by folder'
 
 
 def folder_home(home, app_factory, **env):

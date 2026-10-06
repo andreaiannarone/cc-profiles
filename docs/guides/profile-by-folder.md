@@ -9,7 +9,7 @@ The profile comes from the same [rules](../concepts.md#rules) the Projects tab u
 In the **Profiles** tab, the **Profile by folder** section has a switch: **Pick the profile from the folder when I run claude**. The confirmation shows the exact line and file:
 
 ```sh
-eval "$(cc-profiles shell-init zsh)"  # cc-profiles: profile by folder
+command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init zsh)"  # cc-profiles: profile by folder
 ```
 
 - With zsh, the line goes at the end of `~/.zshrc` (created if it does not exist).
