@@ -41,7 +41,7 @@ PRICES = [
 _PRICE_RE = [(re.compile(p), fam, prices) for p, fam, *prices in PRICES]
 _price_memo = {}
 
-DAY_CHOICES = (7, 30, 90, 365)
+DAY_CHOICES = (7, 14, 30, 90)
 TOP_PROJECTS = 10
 TOP_SESSIONS = 10
 
@@ -217,7 +217,7 @@ def _collect(pid, days):
     except (TypeError, ValueError):
         n_days = 0
     if n_days not in DAY_CHOICES or str(days).strip() != str(n_days):
-        raise ApiError(f"Invalid period: {days}. Pick 7, 30, 90 or 365 days.")
+        raise ApiError(f"Invalid period: {days}. Pick 7, 14, 30 or 90 days.")
     profs = profiles() if pid == "all" else [profile(pid)]
 
     today = datetime.date.today()

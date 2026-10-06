@@ -152,8 +152,8 @@ def test_usage_tab(page_on_sandbox):
     page.wait_for_selector(".uchart svg")
     assert "~/code/work/api" in page.inner_text("#main")  # work, last 7 days
     assert "~/code/personal/blog" not in page.inner_text("#main")
-    page.click('[data-udays="365"]')
-    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 365")
+    page.click('[data-udays="14"]')
+    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 14")
     assert page.evaluate("document.documentElement.scrollWidth") <= 1440
     assert errors == []
 
