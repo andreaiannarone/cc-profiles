@@ -1,0 +1,25 @@
+---
+layout: null
+permalink: /llms-full.txt
+sitemap: false
+---
+{%- comment -%}
+The whole documentation as plain text for language models, page by page in sidebar order.
+{%- endcomment -%}
+# cc-profiles documentation (full text)
+
+cc-profiles is a free local web UI to manage multiple Claude Code profiles and accounts on one computer. Source: https://github.com/andreaiannarone/cc-profiles. Site: {{ "/" | absolute_url }}
+{% for group in site.data.nav %}{% for item in group.pages %}
+{%- assign found = site.pages | where: "path", item.url -%}
+{%- for p in found limit: 1 -%}
+{%- if item.url == "README.md" -%}{%- assign href = "/" | absolute_url -%}{%- else -%}{%- assign href = item.url | replace: ".md", ".html" | absolute_url -%}{%- endif %}
+
+---
+
+Page: {{ item.title }} ({{ group.title }})
+URL: {{ href }}
+Summary: {{ item.description }}
+
+{{ p.content | markdownify | strip_html | strip }}
+{%- endfor -%}
+{% endfor %}{% endfor %}

@@ -1,31 +1,34 @@
 # The sidebar of the documentation site, in order. url is the page's .md path.
+# description is the page's meta description (search results, link previews, llms.txt):
+# one sentence, under 160 characters, saying what the reader gets from the page.
 - title: Start
   pages:
-    - { title: Overview, url: README.md }
-    - { title: Getting started, url: getting-started.md }
-    - { title: Concepts, url: concepts.md }
+    - { title: Overview, url: README.md, description: "cc-profiles is a free local web UI to manage multiple Claude Code profiles and accounts: move projects, memories and settings, with a backup for every change." }
+    - { title: Getting started, url: getting-started.md, description: "Install cc-profiles with one command (pipx or uv), open it, and start Claude Code in the right profile with claude-<profile> launchers or /cc-profiles." }
+    - { title: Concepts, url: concepts.md, description: "How Claude Code profiles work with CLAUDE_CONFIG_DIR, and what cc-profiles means by source profile, projects, rules, sharing and backups." }
+    - { title: FAQ, url: faq.md, description: "Answers to common questions: using several Claude Code accounts, switching profile per project, credentials, safety, and how to undo a change." }
 - title: Guides
   pages:
-    - { title: Projects, url: guides/projects.md }
-    - { title: Memories, url: guides/memories.md }
-    - { title: Conversations, url: guides/conversations.md }
-    - { title: Usage, url: guides/usage.md }
-    - { title: Profiles and sharing, url: guides/profiles.md }
-    - { title: Profile by folder, url: guides/profile-by-folder.md }
-    - { title: Skills and MCP servers, url: guides/skills-and-mcp.md }
-    - { title: Search and compare, url: guides/search-and-compare.md }
-    - { title: Plugins, url: guides/plugins.md }
-    - { title: Export and import, url: guides/export-import.md }
-    - { title: Settings, url: guides/settings.md }
-    - { title: Status line, url: status-line.md }
-    - { title: Backups, url: guides/backups.md }
-    - { title: Health and About, url: guides/health.md }
+    - { title: Projects, url: guides/projects.md, description: "See which Claude Code profile each project belongs to, move a project between profiles with its conversations and memories, and relink moved folders." }
+    - { title: Memories, url: guides/memories.md, description: "Browse, edit, move and delete Claude Code memories of every project, keeping the MEMORY.md index of each project in sync." }
+    - { title: Conversations, url: guides/conversations.md, description: "Read Claude Code conversations of every project, move one to another profile with its file snapshots, or delete it." }
+    - { title: Usage, url: guides/usage.md, description: "Claude Code token usage and estimated cost per day, project, model and profile, the most expensive sessions, and a CSV export." }
+    - { title: Profiles and sharing, url: guides/profiles.md, description: "Create, rename and delete Claude Code profiles, start one from a template, and share skills, plugins, agents and settings between profiles." }
+    - { title: Profile by folder, url: guides/profile-by-folder.md, description: "Start Claude Code in the right profile automatically from the folder you are in, using the same rules as the Projects tab." }
+    - { title: Skills and MCP servers, url: guides/skills-and-mcp.md, description: "Create, edit and copy Claude Code skills and MCP servers, for one profile or all of them, with secrets kept out of view." }
+    - { title: Search and compare, url: guides/search-and-compare.md, description: "Search projects, memories, skills, MCP servers and CLAUDE.md in every Claude Code profile, and compare two profiles side by side." }
+    - { title: Plugins, url: guides/plugins.md, description: "See the Claude Code plugins installed in each profile, their version and marketplace, and turn them on or off." }
+    - { title: Export and import, url: guides/export-import.md, description: "Move a Claude Code profile to another computer as a .zip, with or without conversations; login credentials never travel." }
+    - { title: Settings, url: guides/settings.md, description: "Edit every Claude Code /config setting per profile, with safe dropdowns, commit attribution switches, permissions, CLAUDE.md and raw JSON." }
+    - { title: Status line, url: status-line.md, description: "Build a Claude Code status line without code: profile, model, branch, context, tokens, cost and rate limits, with a live preview." }
+    - { title: Backups, url: guides/backups.md, description: "Every cc-profiles change is backed up and can be undone: restore, see what a backup changed, keep backups, automatic cleanup." }
+    - { title: Health and About, url: guides/health.md, description: "Check Claude Code profiles for login, broken links and missing project folders, install Claude Code, and update cc-profiles." }
 - title: Reference
   pages:
-    - { title: Configuration, url: configuration.md }
-    - { title: Troubleshooting, url: troubleshooting.md }
+    - { title: Configuration, url: configuration.md, description: "cc-profiles command line, config.json, folder rules and environment variables, with every option explained." }
+    - { title: Troubleshooting, url: troubleshooting.md, description: "Fixes for common cc-profiles and Claude Code profile problems: busy port, missing command, moved folders, settings with no effect." }
 - title: Working on cc-profiles
   pages:
-    - { title: Architecture, url: architecture.md }
-    - { title: Claude Code's formats, url: claude-code-formats.md }
-    - { title: HTTP API, url: api.md }
+    - { title: Architecture, url: architecture.md, description: "How cc-profiles is built: a standard-library Python server, one HTML file, journaled backups, atomic writes and caches." }
+    - { title: Claude Code's formats, url: claude-code-formats.md, description: "Claude Code's on-disk formats: projects, conversations, memories, settings, .claude.json and prompt history, as cc-profiles reads them." }
+    - { title: HTTP API, url: api.md, description: "Every endpoint of the cc-profiles local HTTP API, with parameters and responses." }

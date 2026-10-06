@@ -86,7 +86,7 @@ def test_plugin_marketplace_manifests():
 
 
 # The only files of the docs site that are Liquid by design: everything else is rendered as written.
-DOCS_LIQUID = {"_layouts/default.html", "search.json"}
+DOCS_LIQUID = {"_layouts/default.html", "search.json", "llms.txt", "llms-full.txt"}
 # What GitHub Pages' Jekyll 3.10 (Liquid 4) offers and search.json may use: no plugin adds filters there.
 JEKYLL_FILTERS = {"strip_html", "markdownify", "jsonify", "truncate", "relative_url", "where", "replace"}
 
@@ -104,6 +104,10 @@ def test_docs_build_on_github_pages():
     for url in __import__("re").findall(r"url: ([\w/.-]+\.md)", nav):
         assert (ROOT / "docs" / url).is_file(), f"docs/_data/nav.yml links {url}, which does not exist"
     assert (ROOT / "docs" / "CNAME").read_text().strip() == "cc-profiles.andreaia.com"
+    # every page is in the sidebar (and so in search, llms.txt and the sitemap's order), except the 404 page
+    pages = {p.relative_to(ROOT / "docs").as_posix() for p in (ROOT / "docs").rglob("*.md") if "assets" not in p.parts}
+    linked = set(__import__("re").findall(r"url: ([\w/.-]+\.md)", nav))
+    assert pages - linked == {"404.md"}, pages - linked
 
 
 def test_docs_search_index_uses_only_github_pages_filters():
@@ -130,4 +134,26 @@ def test_docs_code_blocks_have_a_copy_button():
     assert ".doc .copy" in css and 'aria-label", "Copy the code"' in layout  # an icon, always visible
     assert 'id="toc"' in layout and ".toc a.on" in css  # On this page
     assert "/getting-started.html#install" in layout and "## Install" in (ROOT / "docs" / "getting-started.md").read_text()
+
+
+def test_docs_seo_and_llms_files():
+    """Every sidebar page has a meta description under 160 characters; the FAQ page and the
+    FAQPage data ask the same questions; robots.txt points to the sitemap and lets AI crawlers in."""
+    import re
+    nav = (ROOT / "docs" / "_data" / "nav.yml").read_text()
+    entries = re.findall(r"\{ title: ([^,]+), url: ([\w/.-]+\.md)(?:, description: \"([^\"]*)\")? \}", nav)
+    assert entries and all(d and len(d) <= 160 for _, _, d in entries), [t for t, _, d in entries if not d or len(d) > 160]
+    faq_page = (ROOT / "docs" / "faq.md").read_text()
+    faq_data = re.findall(r"^- q: (.+)$", (ROOT / "docs" / "_data" / "faq.yml").read_text(), re.M)
+    assert faq_data and re.findall(r"^## (.+)$", faq_page, re.M) == faq_data
+    robots = (ROOT / "docs" / "robots.txt").read_text()
+    assert "Sitemap: https://cc-profiles.andreaia.com/sitemap.xml" in robots and "ClaudeBot" in robots and "GPTBot" in robots
+    config = (ROOT / "docs" / "_config.yml").read_text()
+    assert "jekyll-sitemap" in config and "url: https://cc-profiles.andreaia.com" in config
+    layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
+    for tag in ('rel="canonical"', 'og:description', 'twitter:card', 'application/ld+json', '"FAQPage"', '"SoftwareApplication"'):
+        assert tag in layout, tag
+    for name in ("llms.txt", "llms-full.txt"):
+        text = (ROOT / "docs" / name).read_text()
+        assert text.startswith(f"---\nlayout: null\npermalink: /{name}\n"), name
 

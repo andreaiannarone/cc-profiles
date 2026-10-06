@@ -1,0 +1,27 @@
+---
+layout: null
+permalink: /llms.txt
+sitemap: false
+---
+{%- comment -%}
+llms.txt (https://llmstxt.org): what cc-profiles is, in a few lines, and every page of the
+documentation with its description, from _data/nav.yml. llms-full.txt has their full text.
+{%- endcomment -%}
+# cc-profiles
+
+> cc-profiles is a free, open-source local web UI to manage multiple Claude Code profiles (configuration folders such as ~/.claude and ~/.claude-work, selected with CLAUDE_CONFIG_DIR) on one macOS or Linux computer. It moves projects, memories and conversations between profiles, edits every /config setting, builds the status line, shares skills and plugins, shows token usage, and backs up every change so it can be undone.
+
+- Install: `curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh`, or `pipx install cc-profiles`, then `cc-profiles open` (or `/cc-profiles` inside Claude Code).
+- Runs on 127.0.0.1 only, Python 3.9+ standard library, no dependencies; never copies login credentials between profiles.
+- License GPL-3.0-or-later. Author: Andrea Iannarone (https://andreaiannarone.com). Source: https://github.com/andreaiannarone/cc-profiles. Package: https://pypi.org/project/cc-profiles/.
+{% for group in site.data.nav %}
+## {{ group.title }}
+{% for item in group.pages %}
+{%- if item.url == "README.md" -%}{%- assign href = "/" | absolute_url -%}{%- else -%}{%- assign href = item.url | replace: ".md", ".html" | absolute_url -%}{%- endif %}
+- [{{ item.title }}]({{ href }}): {{ item.description }}
+{%- endfor %}
+{% endfor %}
+## Optional
+
+- [Full text of the documentation]({{ "/llms-full.txt" | absolute_url }}): every page above in one plain-text file
+- [Changelog](https://github.com/andreaiannarone/cc-profiles/blob/main/CHANGELOG.md): what changed in each version

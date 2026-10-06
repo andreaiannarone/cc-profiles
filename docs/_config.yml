@@ -1,8 +1,14 @@
 # GitHub Pages: the docs folder is published as is, Markdown rendered by Jekyll.
 # Links between .md files are rewritten to pages; README.md is the home page.
 title: cc-profiles
-description: A local web UI to manage multiple Claude Code profiles
+description: A free local web UI to manage multiple Claude Code profiles and accounts on one computer
+url: https://cc-profiles.andreaia.com
+lang: en
+author:
+  name: Andrea Iannarone
+  url: https://andreaiannarone.com
 plugins:
+  - jekyll-sitemap
   - jekyll-titles-from-headings
   - jekyll-relative-links
   - jekyll-readme-index
@@ -16,3 +22,4 @@ defaults:
     values: { layout: default }
 exclude:
   - assets/social-preview.html
+  - assets/screenshots/README.md

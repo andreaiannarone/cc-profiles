@@ -318,6 +318,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 - **[Getting started](https://cc-profiles.andreaia.com/getting-started.html)**: install, first run, launcher commands, `/cc-profiles`
 - **[Concepts](https://cc-profiles.andreaia.com/concepts.html)**: profiles, the source profile, projects, rules, sharing, backups
+- **[FAQ](https://cc-profiles.andreaia.com/faq.html)**: several accounts, a profile per project, credentials, safety, undo
 
 ### Guides by Tab
 

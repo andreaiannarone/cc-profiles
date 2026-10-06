@@ -43,7 +43,8 @@ def test_relative_links_and_anchors_exist():
 
 def test_every_doc_page_is_linked_from_the_index():
     index = (ROOT / "docs" / "README.md").read_text()
-    pages = [p.relative_to(ROOT / "docs").as_posix() for p in ROOT.glob("docs/**/*.md") if p.name != "README.md"]
+    pages = [p.relative_to(ROOT / "docs").as_posix() for p in ROOT.glob("docs/**/*.md")
+             if p.name not in ("README.md", "404.md")]  # 404.md: the site's "page not found", reached by mistake only
     missing = [p for p in pages if f"({p}" not in index]
     assert not missing, f"pages not linked from docs/README.md: {missing}"
 

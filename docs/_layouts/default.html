@@ -4,15 +4,77 @@ The documentation site's only layout: the app's header, colors and theme switch,
 a search box over search.json, a sidebar from _data/nav.yml, and the page's Markdown in the middle.
 {%- endcomment -%}
 {%- assign page_title = page.title | default: site.title -%}
+{%- assign nav_item = nil -%}{%- assign nav_group = nil -%}
+{%- for g in site.data.nav -%}{%- for it in g.pages -%}{%- if it.url == page.path -%}{%- assign nav_item = it -%}{%- assign nav_group = g.title -%}{%- endif -%}{%- endfor -%}{%- endfor -%}
+{%- assign is_home = false -%}{%- if page.path == "README.md" -%}{%- assign is_home = true -%}{%- endif -%}
+{%- assign desc = nav_item.description | default: page.description | default: site.description -%}
+{%- if is_home -%}{%- assign full_title = site.title | append: ": manage multiple Claude Code profiles and accounts" -%}
+{%- else -%}{%- assign full_title = page_title | append: " · " | append: site.title | append: " docs" -%}{%- endif -%}
+{%- assign canonical = page.url | replace: "index.html", "" | absolute_url -%}
+{%- assign image = "/assets/social-preview.png" | absolute_url -%}
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% if page_title != site.title %}{{ page_title }} · {% endif %}{{ site.title }}</title>
-<meta name="description" content="{{ page.description | default: site.description }}">
+<title>{{ full_title }}</title>
+<meta name="description" content="{{ desc | escape }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="author" content="{{ site.author.name }}">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161513" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
-<meta property="og:title" content="{{ page_title }}">
-<meta property="og:image" content="{{ '/assets/social-preview.png' | absolute_url }}">
+<link rel="sitemap" type="application/xml" href="{{ '/sitemap.xml' | relative_url }}">
+<link rel="alternate" type="text/plain" title="llms.txt" href="{{ '/llms.txt' | relative_url }}">
+<meta property="og:type" content="{% if is_home %}website{% else %}article{% endif %}">
+<meta property="og:site_name" content="cc-profiles documentation">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="{{ full_title | escape }}">
+<meta property="og:description" content="{{ desc | escape }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:image" content="{{ image }}">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="cc-profiles, a local web UI to manage multiple Claude Code profiles">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ full_title | escape }}">
+<meta name="twitter:description" content="{{ desc | escape }}">
+<meta name="twitter:image" content="{{ image }}">
+{%- assign author_ld = '{"@type": "Person", "name": "Andrea Iannarone", "url": "https://andreaiannarone.com"}' -%}
+{%- assign site_url = "/" | absolute_url -%}
+{%- if is_home %}
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@graph": [
+  {"@type": "WebSite", "@id": "{{ site_url }}#website", "name": "cc-profiles documentation", "url": "{{ site_url }}",
+   "description": {{ desc | jsonify }}, "inLanguage": "en", "publisher": {{ author_ld }}},
+  {"@type": "SoftwareApplication", "@id": "{{ site_url }}#app", "name": "cc-profiles", "url": "{{ site_url }}",
+   "description": {{ desc | jsonify }}, "applicationCategory": "DeveloperApplication", "operatingSystem": "macOS, Linux",
+   "softwareRequirements": "Python 3.9 or later", "installUrl": "{{ '/getting-started.html#install' | absolute_url }}",
+   "downloadUrl": "https://pypi.org/project/cc-profiles/", "screenshot": "{{ image }}",
+   "license": "https://www.gnu.org/licenses/gpl-3.0.html", "isAccessibleForFree": true,
+   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+   "author": {{ author_ld }}, "sameAs": ["https://github.com/andreaiannarone/cc-profiles", "https://pypi.org/project/cc-profiles/"]}
+]}
+</script>
+{%- else %}
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@graph": [
+  {"@type": "TechArticle", "headline": {{ page_title | jsonify }}, "description": {{ desc | jsonify }}, "url": "{{ canonical }}",
+   "inLanguage": "en", "author": {{ author_ld }}, "publisher": {{ author_ld }}, "image": "{{ image }}",
+   "isPartOf": {"@type": "WebSite", "@id": "{{ site_url }}#website", "name": "cc-profiles documentation", "url": "{{ site_url }}"},
+   "about": {"@type": "SoftwareApplication", "name": "cc-profiles", "applicationCategory": "DeveloperApplication", "operatingSystem": "macOS, Linux"}},
+  {"@type": "BreadcrumbList", "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "cc-profiles documentation", "item": "{{ site_url }}"},
+    {"@type": "ListItem", "position": 2, "name": {{ page_title | jsonify }}, "item": "{{ canonical }}"}]}
+  {%- if page.path == "faq.md" -%},
+  {"@type": "FAQPage", "mainEntity": [
+    {%- for f in site.data.faq %}
+    {"@type": "Question", "name": {{ f.q | jsonify }}, "acceptedAnswer": {"@type": "Answer", "text": {{ f.a | jsonify }}}}{% unless forloop.last %},{% endunless %}
+    {%- endfor %}]}
+  {%- endif %}
+]}
+</script>
+{%- endif %}
 <script>try { const v = localStorage.getItem("cc-profiles.theme"); if (v === "light" || v === "dark") document.documentElement.dataset.theme = v; } catch (e) {}</script>
 <link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}">
 </head>
