@@ -20,6 +20,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 - `/api/templates` lists what each shareable item of a template holds (`counts`), and `/api/templates/create` takes `share` like `/api/profiles/create`.
+- Backups: **Show changes** lists what an operation did in plain words (files copied before a change, files that did not exist, moves from → to, folders and links created, items kept instead of deleted) and, for each copied text file, a diff between the copy in the backup and the file as it is now. JSON is compared with sorted keys; login credentials, MCP environment variables and headers and token-like values are never shown. Diffs stop at 2,000 lines, and files over 512 KB or binary are only named. `GET /api/backups/changes`, read-only.
+- Usage: **Export CSV** downloads the current profile and period, one row per day and model with tokens by kind, replies and estimated cost (`GET /api/usage.csv`).
+- Usage: **Most expensive sessions**, the 10 conversations with the highest estimated cost in the period, with their first prompt, project, profile, date, replies and tokens; a click opens the conversation in the Conversations tab.
+
+### Fixed
+- The Conversations tab no longer fails on a conversation with a malformed line (a `message` that is not an object).
 
 ## [0.4.5] - 2026-10-06
 
