@@ -2081,7 +2081,7 @@ function renderUsage() {
   const head = `<div class="useg">
       <div class="seg" role="group" aria-label="Profile">${[["all", "All profiles"], ...S.profiles.map(p => [p.id, p.label])].map(([id, l]) =>
         `<button data-uprof="${esc(id)}" class="${u.profile === id ? "on" : ""}" aria-pressed="${u.profile === id}">${esc(l)}</button>`).join("")}</div>
-      <div class="seg" role="group" aria-label="Period">${[7, 30, 90, 365].map(n =>
+      <div class="seg" role="group" aria-label="Period">${[7, 14, 30, 90].map(n =>
         `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div>
       <button class="btn" id="u-csv" style="margin-left:auto">Export CSV</button></div>`;
   if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return bindUsage(); }

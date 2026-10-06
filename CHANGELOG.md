@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Usage: the periods are 7, 14, 30 and 90 days (365 is gone).
+
 ## [0.4.6] - 2026-10-06
 
 ### Added

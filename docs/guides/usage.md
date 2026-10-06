@@ -5,7 +5,7 @@ The **Usage** tab (`g u`) shows how many tokens Claude used in each profile, per
 ## Pick what to see
 
 - **Profile**: *All profiles* or one of them. With *All profiles* a table at the bottom splits the totals by profile.
-- **Period**: the last 7, 30, 90 or 365 days, today included, in your computer's time zone.
+- **Period**: the last 7, 14, 30 or 90 days, today included, in your computer's time zone.
 
 ## What it shows
 

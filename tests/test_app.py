@@ -1667,11 +1667,11 @@ def test_usage_rejects_bad_parameters(home, app_factory):
     app = app_factory()
     for q in ("days=10", "days=abc", "days=030", "days=-7", "days=7.0"):
         status, data = app.request("/api/usage?profile=all&" + q)
-        assert status == 400 and "Pick 7, 30, 90 or 365 days" in data["error"], q
+        assert status == 400 and "Pick 7, 14, 30 or 90 days" in data["error"], q
     status, data = app.request("/api/usage?profile=nope&days=7")
     assert status == 400 and "Unknown profile" in data["error"]
-    r = app.get("/api/usage?profile=default&days=365")
-    assert r["totals"]["replies"] == 0 and len(r["daily"]) == 365 and r["models"] == [] and r["projects"] == []
+    r = app.get("/api/usage?profile=default&days=90")
+    assert r["totals"]["replies"] == 0 and len(r["daily"]) == 90 and r["models"] == [] and r["projects"] == []
 
 
 def test_usage_csv_has_one_row_per_day_and_model(home, app_factory):
