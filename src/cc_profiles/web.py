@@ -81,6 +81,7 @@ from .templates import list_templates, op_create_from_template, op_template_dele
 from .plugins import list_plugins, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
+from .launchers import op_shell, shell_state, shell_which
 from .updater import check_update, op_update
 
 # ---------------------------------------------------------------------------
@@ -285,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/plugins": lambda: list_plugins(q["profile"]),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
+                "/api/shell": lambda: shell_state(),
+                "/api/shell/which": lambda: shell_which(q.get("path", "")),
                 "/api/claude/status": lambda: claude_status(),
                 "/api/update": lambda: check_update(),
                 "/api/skills": lambda: list_skills(q["profile"]),
@@ -343,6 +346,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/settings/claude-md": lambda: op_claude_md(b["profile"], b.get("content", "")),
                 "/api/settings/global": lambda: op_global(b["profile"], b["key"], b.get("value")),
                 "/api/claude/install": lambda: op_install(b.get("method", "")),
+                "/api/shell": lambda: op_shell(bool(b["install"])),
                 "/api/update": lambda: op_update(),
                 "/api/skills/save": lambda: op_skill_save(b["profile"], b["name"], b["content"]),
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),

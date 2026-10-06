@@ -213,6 +213,13 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .share .txt { flex: 1; }
 .share .txt b { font-weight: 600; font-family: var(--mono); font-size: 12.5px; }
 .share .txt div { color: var(--muted); font-size: 12.5px; }
+.bf-switch { border-top: 0; margin-top: 4px; }
+.share .bf-t { font-weight: 600; }
+.bf-rules { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.bf-rules li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
+.share .txt .bf-try { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.bf-try input.text { flex: 1; min-width: 200px; }
+#bf-result { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
 .pcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; cursor: pointer; color: var(--muted); font-weight: 550; min-height: 110px; background: transparent; }
 .pcard.add:hover { color: var(--text); border-color: var(--faint); }
 .form { display: grid; gap: 12px; }
@@ -834,7 +841,8 @@ function renderHealth() {
 // ---------- profiles and sharing ----------
 async function loadSharing() {
   S.sharing = null; renderSharing();
-  S.sharing = await api("/api/sharing"); renderSharing();
+  const [sharing, shell] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; renderSharing();
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -859,8 +867,10 @@ function renderSharing() {
         <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
         <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
-      </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>`;
+      </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>
+    ${byFolderHtml()}`;
   $("#ptemplates").onclick = manageTemplates;
+  wireByFolder();
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
@@ -875,6 +885,60 @@ function renderSharing() {
   });
 }
 const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
+
+// ---------- profile by folder ----------
+function byFolderHtml() {
+  const x = S.shell;
+  if (!x) return "";
+  const on = x.installed.length > 0, files = l => l.map(f => `<code>${esc(f)}</code>`).join(", ");
+  const rules = x.rules.map(r => `<li><code>${esc(r.text)}</code> <span class="hint">${r.exact ? "this folder only" : "any path containing it"}</span>
+      <span aria-hidden="true">→</span> ${r.profile === "shared" ? `<span class="badge b-shared">All profiles</span> <span class="hint">default profile</span>` : badge(r.profile)}</li>`).join("");
+  const state = on ? `On: the line is in ${files(x.installed)}.`
+    : x.targets.length ? `Off. Turning it on adds one line to ${files(x.targets.map(t => t.file))}.`
+    : `Off. Your shell (${esc(x.shell || "unknown")}) is not zsh or bash: add the output of <code>cc-profiles shell-init bash</code> to its startup file by hand.`;
+  return `<h2 class="section-title">Profile by folder</h2>
+    <div class="sec"><div class="b">
+      <div class="hint">The rules below link folders to profiles; the Projects tab uses the same ones. When this is on, typing <code>claude</code> in a terminal starts Claude Code in the profile of the folder you are in, and folders without a rule keep the default profile.</div>
+      <div class="share bf-switch">
+        <div class="txt"><span class="bf-t">Pick the profile from the folder when I run claude</span><div>${state}${x.on_path ? "" : ` <span class="issue">cc-profiles was not found in <code>PATH</code>: the line needs it in your terminal.</span>`}</div></div>
+        <label class="switch" title="${on ? "On" : "Off"}"><input type="checkbox" id="bf-switch" ${on ? "checked" : ""} aria-label="Pick the profile from the folder when I run claude"><span></span></label>
+      </div>
+      <div class="share"><div class="txt"><span class="bf-t">Rules: folder → profile</span>
+        ${rules ? `<ul class="bf-rules">${rules}</ul>` : `<div>No rules yet: add one from the Projects tab with Assign….</div>`}</div></div>
+      <div class="share"><div class="txt"><span class="bf-t">Try a folder</span>
+        <div class="bf-try"><input class="text mono" id="bf-path" list="bf-list" placeholder="~/code/work/api" aria-label="Folder to try">
+          <datalist id="bf-list">${x.projects.map(p => `<option value="${esc(p.path)}">`).join("")}</datalist>
+          <button class="btn" id="bf-go">Try</button></div>
+        <div id="bf-result" role="status"></div></div></div>
+    </div></div>`;
+}
+function wireByFolder() {
+  const sw = $("#bf-switch");
+  if (!sw) return;
+  sw.onchange = async () => {
+    const x = S.shell, on = sw.checked;
+    const sub = on
+      ? `Adds one line at the end of ${plural(x.targets.length, "file", "files")}.` + x.targets.map(t => `<div style="margin-top:8px">To <code>${esc(t.file)}</code>:</div><pre class="log" style="margin-top:4px">${esc(t.line)}</pre>`).join("")
+        + `<div style="margin-top:8px">The file is backed up first. Open a new terminal afterwards. A <code>CLAUDE_CONFIG_DIR</code> you set yourself still wins.</div>`
+      : `Removes the line ending in <code># cc-profiles: profile by folder</code> from ${x.installed.map(f => `<code>${esc(f)}</code>`).join(", ")}, and nothing else. In new terminals <code>claude</code> then always starts in the default profile.`;
+    if (!(await confirmBox(on ? "Pick the profile from the folder?" : "Stop picking the profile from the folder?", sub, on ? "Turn on" : "Turn off"))) { sw.checked = !on; return; }
+    try { await run(() => api("/api/shell", { install: on })); } catch {}
+    loadSharing();
+  };
+  const go = async () => {
+    const out = $("#bf-result"), path = $("#bf-path").value.trim();
+    if (!/^[\/~]/.test(path)) { out.innerHTML = `<span class="issue err">Type an absolute folder, or one starting with ~</span>`; return; }
+    try {
+      const w = await api("/api/shell/which?path=" + encodeURIComponent(path));
+      const where = `<code>${esc(w.path)}</code>${w.exists ? "" : " (not on disk yet)"}`;
+      out.innerHTML = w.profile
+        ? `${where}: ${badge(w.profile)} ` + (w.default ? `the default profile, <code>CLAUDE_CONFIG_DIR</code> left unset.` : `<code>CLAUDE_CONFIG_DIR=${esc(w.dir)}</code>`)
+        : `${where}: ` + (w.rule === "shared" ? `a rule says all profiles, so claude starts in the default profile.` : `no rule matches, so claude starts in the default profile.`);
+    } catch (e) { out.innerHTML = `<span class="issue err">${esc(e.message)}</span>`; }
+  };
+  $("#bf-go").onclick = go;
+  $("#bf-path").onkeydown = e => { if (e.key === "Enter") go(); };
+}
 async function newProfile() {
   let tpl = [];
   try { tpl = (await api("/api/templates")).templates; } catch {}

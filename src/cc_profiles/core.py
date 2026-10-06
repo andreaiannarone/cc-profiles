@@ -27,6 +27,7 @@ import threading
 import time
 
 from . import __version__
+from . import byfolder
 
 HOME = os.path.expanduser("~")
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,9 +74,7 @@ def pretty(p):
     return "~" + p[len(HOME):] if p == HOME or p.startswith(HOME + "/") else p
 
 
-def san(path):
-    """Directory name Claude Code uses in projects/: every non-alphanumeric char -> '-'."""
-    return re.sub(r"[^A-Za-z0-9]", "-", path)
+san = byfolder.san  # one definition, shared with `cc-profiles which`
 
 
 def read_json(path, default=None):
