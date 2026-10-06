@@ -141,13 +141,15 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 With the changes listed under **Unreleased** in `CHANGELOG.md`, on an up-to-date `main`:
 
 ```sh
-.venv/bin/python scripts/release.py 0.5.0 --dry-run   # prints every step and command, changes nothing
-.venv/bin/python scripts/release.py 0.5.0
+.venv/bin/python scripts/release.py next --dry-run   # prints every step and command, changes nothing
+.venv/bin/python scripts/release.py next             # or the version itself, e.g. 0.4.4
 ```
+
+**Version numbers move one step at a time**: only the last number goes up, to 9, then the one before it (0.4.8 → 0.4.9 → 0.5.0; 0.9.9 → 1.0.0). `next` picks that version; any other number is refused unless you add `--force-version`.
 
 It needs `git`, and `gh` logged in to GitHub, and takes 5 to 15 minutes. Step by step:
 
-1. **Checks**: on `main`, a clean tree, the same commit as `origin/main`, a version greater than `__version__`, something under `## [Unreleased]`.
+1. **Checks**: on `main`, a clean tree, the same commit as `origin/main`, the next version after `__version__`, something under `## [Unreleased]`.
 2. **Bump**: `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`; in `CHANGELOG.md` a `## [x.y.z] - date` heading goes under `## [Unreleased]` (which stays, empty), and the compare links at the bottom are updated. Older entries are not touched.
 3. **Pull request**: branch `release-x.y.z`, commit `Release x.y.z`, `gh pr create`. If GitHub reports no checks after a minute (it happens), it pushes an empty `Trigger CI` commit. It waits for every check and stops if one fails.
 4. **Merge and tag**: squash merge as `Release x.y.z (#n)`, pull `main`, tag `vx.y.z` and push the tag.

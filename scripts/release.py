@@ -54,6 +54,17 @@ def is_newer(new, old):
     return version_key(new) > version_key(old)
 
 
+def next_version(v):
+    """The version after v in this project's numbering: only the last number moves, up to
+    9, then the one before it (0.4.8 -> 0.4.9 -> 0.5.0; 0.9.9 -> 1.0.0)."""
+    major, minor, patch = version_key(v)
+    if patch < 9:
+        return f"{major}.{minor}.{patch + 1}"
+    if minor < 9:
+        return f"{major}.{minor + 1}.0"
+    return f"{major + 1}.0.0"
+
+
 def read_version(init_text):
     m = re.search(r'^__version__ = "([^"]+)"', init_text, re.M)
     if not m:
@@ -118,6 +129,7 @@ def wheel_listed(html, version):
 class Releaser:
     def __init__(self, root, dry_run, out=sys.stdout):
         self.root, self.dry, self.out = root, dry_run, out
+        self.force_version = False
         self.step_no = 0
 
     def say(self, text=""):
@@ -183,6 +195,9 @@ class Releaser:
         self.step("Check the repository")
         if not is_newer(new, prev):
             raise ReleaseError(f"{new} is not greater than the current version {prev}.")
+        if new != next_version(prev) and not self.force_version:
+            raise ReleaseError(f"The version after {prev} is {next_version(prev)}, not {new}: versions move one step "
+                               "at a time (see CONTRIBUTING). Pass --force-version to release it anyway.")
         self.say(f"version: {prev} -> {new}")
         if plugin_version(plugin) != prev:
             raise ReleaseError(f"{PLUGIN} has version {plugin_version(plugin)}, {INIT} has {prev}: fix them first.")
@@ -311,7 +326,8 @@ class Releaser:
 
 def main(argv=None, out=sys.stdout):
     ap = argparse.ArgumentParser(description="Release a new version of cc-profiles.")
-    ap.add_argument("version", help="the new version, x.y.z")
+    ap.add_argument("version", help='the new version, x.y.z, or "next" for the one after the current version')
+    ap.add_argument("--force-version", action="store_true", help="allow a version that is not the next one")
     ap.add_argument("--dry-run", action="store_true", help="print every step and command, change nothing")
     ap.add_argument("--root", default=ROOT, help=argparse.SUPPRESS)  # tests: a copy of the release files
     ap.add_argument("--date", default=None, help=argparse.SUPPRESS)  # tests: a fixed date
@@ -320,9 +336,14 @@ def main(argv=None, out=sys.stdout):
     rel = Releaser(args.root, args.dry_run, out)
     if args.dry_run:
         rel.say("Dry run: nothing is changed, only read-only commands run.")
+    rel.force_version = args.force_version
     try:
-        version_key(args.version)
-        rel.release(args.version, date)
+        version = args.version
+        if version == "next":
+            version = next_version(read_version(rel.read(INIT)))
+            rel.say(f"next version: {version}")
+        version_key(version)
+        rel.release(version, date)
     except ReleaseError as e:
         print(f"\nRelease stopped: {e}", file=sys.stderr)
         return 1

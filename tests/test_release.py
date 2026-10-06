@@ -98,7 +98,7 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
     root = release_files(tmp_path)
     before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
     out = io.StringIO()
-    code = release.main(["0.5.0", "--dry-run", "--root", str(root), "--date", "2026-10-07"], out=out)
+    code = release.main(["0.4.4", "--dry-run", "--root", str(root), "--date", "2026-10-07"], out=out)
     text = out.getvalue()
     assert code == 0, text
     assert {p: p.read_bytes() for p in root.rglob("*") if p.is_file()} == before
@@ -108,27 +108,27 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "$ git fetch origin main",
         "$ git rev-parse origin/main",
         "would edit src/cc_profiles/__init__.py",
-        '+__version__ = "0.5.0"',
+        '+__version__ = "0.4.4"',
         "would edit plugin/.claude-plugin/plugin.json",
-        "+## [0.5.0] - 2026-10-07",
-        f"+[0.5.0]: {URL}/compare/v0.4.3...v0.5.0",
-        "$ git switch -c release-0.5.0",
-        "$ git commit -m 'Release 0.5.0'",
-        "$ git push -u origin release-0.5.0",
-        "$ gh pr create --base main --head release-0.5.0 --title 'Release 0.5.0' "
-        "--body 'Bump the version to 0.5.0 and date the CHANGELOG section.'",
+        "+## [0.4.4] - 2026-10-07",
+        f"+[0.4.4]: {URL}/compare/v0.4.3...v0.4.4",
+        "$ git switch -c release-0.4.4",
+        "$ git commit -m 'Release 0.4.4'",
+        "$ git push -u origin release-0.4.4",
+        "$ gh pr create --base main --head release-0.4.4 --title 'Release 0.4.4' "
+        "--body 'Bump the version to 0.4.4 and date the CHANGELOG section.'",
         "$ gh pr checks '<n>' --json name",
         "$ git commit --allow-empty -m 'Trigger CI'",
         "$ gh pr checks '<n>' --watch --interval 10",
-        "$ gh pr merge '<n>' --squash --subject 'Release 0.5.0 (#<n>)' --body ''",
+        "$ gh pr merge '<n>' --squash --subject 'Release 0.4.4 (#<n>)' --body ''",
         "$ git pull --ff-only origin main",
-        "$ git tag v0.5.0",
-        "$ git push origin v0.5.0",
-        "$ gh run list --workflow release.yml --branch v0.5.0",
+        "$ git tag v0.4.4",
+        "$ git push origin v0.4.4",
+        "$ gh run list --workflow release.yml --branch v0.4.4",
         "$ gh run watch '<run id>' --exit-status",
         "GET https://pypi.org/simple/cc-profiles/ (Cache-Control: no-cache)",
-        "$ git branch -D release-0.5.0",
-        "$ git push origin --delete release-0.5.0",
+        "$ git branch -D release-0.4.4",
+        "$ git push origin --delete release-0.4.4",
         "pipx upgrade cc-profiles",
     ]
     pos = 0
@@ -143,10 +143,26 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
 @pytest.mark.parametrize("args,changelog,message", [
     (["0.4.3"], CHANGELOG, "not greater than the current version 0.4.3"),
     (["0.5"], CHANGELOG, "Not a version"),
-    (["0.5.0"], CHANGELOG.replace("### Added\n- A new thing.\n\n### Fixed\n- A bug.\n\n", ""), "Nothing under"),
+    (["0.4.4"], CHANGELOG.replace("### Added\n- A new thing.\n\n### Fixed\n- A bug.\n\n", ""), "Nothing under"),
 ])
 def test_dry_run_stops_on_bad_input(tmp_path, args, changelog, message):
     root = release_files(tmp_path, changelog)
     r = subprocess.run([sys.executable, str(SCRIPT), *args, "--dry-run", "--root", str(root)],
                        capture_output=True, text=True)
     assert r.returncode == 1 and message in r.stderr
+
+
+def test_versions_move_one_step_at_a_time():
+    assert [release.next_version(v) for v in ("0.4.3", "0.4.8", "0.4.9", "0.9.9", "1.2.9")] == \
+        ["0.4.4", "0.4.9", "0.5.0", "1.0.0", "1.3.0"]
+
+
+def test_release_takes_next_and_refuses_a_jump(tmp_path):
+    root = release_files(tmp_path)
+    run = lambda *a: (lambda out: (release.main([*a, "--dry-run", "--root", str(root), "--date", "2026-10-07"], out=out), out.getvalue()))(io.StringIO())
+    code, out = run("next")
+    assert "next version: 0.4.4" in out and '+__version__ = "0.4.4"' in out
+    code, _ = run("0.5.0")
+    assert code == 1  # a jump: the version after 0.4.3 is 0.4.4
+    code, out = run("0.5.0", "--force-version")
+    assert '+__version__ = "0.5.0"' in out
