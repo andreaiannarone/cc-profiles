@@ -206,6 +206,8 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   const mark = () => {
     let cur = heads[0];
     for (const h of heads) { if (h.getBoundingClientRect().top < 120) cur = h; else break; }
+    // at the bottom of the page the last sections cannot reach the top: the last one is being read
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) cur = heads[heads.length - 1];
     links.forEach((a, i) => { const on = heads[i] === cur; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
   };
   addEventListener("scroll", mark, { passive: true }); mark();
