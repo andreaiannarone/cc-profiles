@@ -25,7 +25,8 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/conversations/projects` | `profile` | the profile's projects that have conversations, with `count` |
 | `GET /api/conversations` | `profile`, `project` | `{conversations: [{session, title, prompts, replies, first, last, mtime, size, snapshots}], path}`, newest first |
 | `GET /api/conversations/view` | `profile`, `project`, `session` | `{messages: [{role, time, text}], truncated, total}`: prompts, replies and one line per tool call; the last 300 |
-| `GET /api/usage` | `profile` (`all` or an id, default `all`), `days` (`7`, `30`, `90` or `365`, default `30`) | `{profile, days, start, end, currency, prices_checked, prices, totals, daily, projects, projects_count, models, profiles}`. Every total has `input`, `output`, `cache_write`, `cache_read`, `tokens`, `replies`, `cost` (estimated USD at list price) and `unpriced_tokens` (tokens of models without a price); `totals` adds `cache_read_share`. `daily` has one entry per day of the period, zeros included, with `date` (local); `projects` the top 10 with `profile`, `name`, `pretty`; `models` has `model` and `family` (`null` without a price); `profiles` only with `all`. A reply counts once per message and request id. Read-only |
+| `GET /api/usage` | `profile` (`all` or an id, default `all`), `days` (`7`, `30`, `90` or `365`, default `30`) | `{profile, days, start, end, currency, prices_checked, prices, totals, daily, projects, projects_count, models, profiles}`. Every total has `input`, `output`, `cache_write`, `cache_read`, `tokens`, `replies`, `cost` (estimated USD at list price) and `unpriced_tokens` (tokens of models without a price); `totals` adds `cache_read_share`. `daily` has one entry per day of the period, zeros included, with `date` (local); `projects` the top 10 with `profile`, `name`, `pretty`; `models` has `model` and `family` (`null` without a price); `profiles` only with `all`; `sessions` the 10 conversations with the highest cost, then the most tokens, with `profile`, `project`, `pretty`, `session`, `title`, `exists` (the main conversation file is there), `date` and `last` of the last reply. A reply counts once per message and request id. Read-only |
+| `GET /api/usage.csv` | the same as `/api/usage` | a `text/csv; charset=utf-8` download, `cc-profiles-usage-<profile>-<days>d.csv`: one row per day and model with `date`, `model`, `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens`, `replies`, `estimated_cost_usd` (empty without a list price). Needs the `X-Token` header like every API call. Read-only |
 | `GET /api/skills` | `profile` | `{skills: [{name, title, description, files, linked}], dir, shared}` |
 | `GET /api/skills/file` | `profile`, `name` | `{content}` of `SKILL.md` and the other `files` in the folder |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
@@ -44,8 +45,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
 | `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
-| `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, size}], dir}` |
+| `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, counts, size}], dir}`; `counts`: entries per shareable item the template holds, e.g. `{skills: 3, "CLAUDE.md": 1}` |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
+| `GET /api/backups/changes` | `name` | `{name, title, created, log, failed, restored, steps, files_changed, max_lines, max_bytes}`: each journal step with `op`, `text` (in plain words), `path`, `to` (moves), `now` (`file`, `folder`, `link` or `null`); `copy` steps add `diff` with `status` (`changed`, `same`, `hidden-only`, `secret`, `too-big`, `binary`, `dir`, `unavailable`), `lines` (unified diff, the backup copy against the file now, at most 2,000 lines), `added`, `removed`, `truncated`, `notes`. JSON is compared with sorted keys and secrets masked; `.credentials.json` is never read. Read-only |
 | `GET /api/backups/auto` | | `{days, choices, last, message, config}`: the automatic cleanup setting (`days` is `null` when off) and its last run |
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
@@ -53,6 +55,8 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |
+| `GET /api/shell` | | profile by folder: `{installed, targets: [{file, shell, line}], shell, lines, on_path, rules: [{text, exact, profile, label}], projects: [{path, rule, profile, label}]}`: the rc files that have the line, the ones turning it on would write, the rules, and what `cc-profiles which` gives each known project |
+| `GET /api/shell/which` | `path` (absolute or starting with `~`) | `{path, exists, rule, profile, label, dir, default}`: the profile `claude` would start in there. `rule` is what the rules say (`shared` included), `profile` is `null` when claude keeps the default profile; `default` is true for `~/.claude`, where `CLAUDE_CONFIG_DIR` stays unset |
 
 Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a profile it does not belong to; includes `from` and `to`), `unclassified` (no rule matches).
 
@@ -94,7 +98,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/profiles/create` | `label`, `id`, `base` (profile id or empty), `include_projects`, `share` (list) |
 | `POST /api/templates/save` | `profile`, `name` (letters, digits, spaces, `.`, `-`, `_`, up to 48) |
 | `POST /api/templates/delete` | `name`: the file goes to the backup |
-| `POST /api/templates/create` | `name`, `label`, `id`: a new profile from the template, through the import code |
+| `POST /api/templates/create` | `name`, `label`, `id`, `share` (as in `/api/profiles/create`: those items are linked to the source profile instead of being filled from the template): a new profile from the template, through the import code |
 | `POST /api/profiles/update` | `id`, `label`, `command` |
 | `POST /api/profiles/delete` | `id`, `merge_into` (optional), `force` (skip the open-session check) |
 | `POST /api/backups/restore` | `name` |
@@ -103,6 +107,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/auto` | `days` (`15`, `30`, `60`, `90`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
+| `POST /api/shell` | `install` (`true` or `false`): adds the profile by folder line to the shell rc files, or removes it. Without anything to change it returns a `message` and no `backup` |
 
 ## Example
 

@@ -23,7 +23,7 @@ from .core import (
     write_json,
     write_text,
 )
-from .sharing import SHARE_ITEMS, primary
+from .sharing import link_shared, primary, share_items
 from .command import command_state, write_command
 from .launchers import command_conflict, launcher_dir_in_path, write_launcher
 
@@ -64,7 +64,7 @@ def add_profile_to_config(label, pid, command):
 
 def op_create_profile(label, pid, base, include_projects, share):
     label, pid, new, command = check_new_profile(label, pid)
-    share = [i for i in share if i in {x for x, _, _ in SHARE_ITEMS}]
+    share = share_items(share)
     bk = Backup("new-profile", f"New profile {label} ({pretty(new)})")
     bk.copy(CONFIG_FILE, "config.json")
     src = profile(base) if base else None
@@ -97,16 +97,7 @@ def op_create_profile(label, pid, base, include_projects, share):
             if sl:
                 settings["statusLine"] = sl
             write_json(os.path.join(new, "settings.json"), settings)
-    kinds = {i: k for i, k, _ in SHARE_ITEMS}
-    for item in share:
-        s = os.path.join(primary()["dir_abs"], item)
-        if not os.path.lexists(s):  # the source does not have it yet: create it empty, as op_share does
-            if kinds[item] == "dir":
-                bk.mkdir(s)
-            else:
-                bk.copy(s)
-                write_text(s, "{}\n" if item.endswith(".json") else "")
-        os.symlink(os.path.relpath(s, new), os.path.join(new, item))
+    link_shared(new, share, bk)
     # every new profile gets /cc-profiles (a cc-profiles.md written by someone else is left alone)
     if command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)

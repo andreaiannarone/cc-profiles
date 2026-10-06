@@ -47,7 +47,7 @@ from .settings import (
     statusline_preview,
 )
 from .health import candidates, health, list_profiles
-from .backups import backup_auto, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
+from .backups import backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
 from .info import about
 from .extensions import (
     list_mcp,
@@ -73,7 +73,7 @@ from .conversations import (
     op_conversation_delete,
     op_conversation_move,
 )
-from .usage import usage
+from .usage import usage, usage_csv
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
@@ -81,6 +81,7 @@ from .templates import list_templates, op_create_from_template, op_template_dele
 from .plugins import list_plugins, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
+from .launchers import op_shell, shell_state, shell_which
 from .updater import check_update, op_update
 
 # ---------------------------------------------------------------------------
@@ -178,6 +179,17 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, status, obj):
         self._send(status, json.dumps(obj, ensure_ascii=False))
 
+    def _send_download(self, data, name, ctype):
+        """Send bytes made in memory as a download."""
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _send_file(self, path, name, ctype):
         """Stream a file as a download, then delete it (a temporary export)."""
         try:
@@ -239,6 +251,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/profiles/export":
                 path, name = export_profile(q["id"], q.get("projects") == "1")
                 return self._send_file(path, name, "application/zip")
+            if u.path == "/api/usage.csv":
+                return self._send_download(*usage_csv(q.get("profile", "all"), q.get("days", "30")), "text/csv; charset=utf-8")
             routes = {
                 "/api/profiles": lambda: list_profiles(),
                 "/api/projects": lambda: list_projects(),
@@ -251,6 +265,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/conversations": lambda: list_conversations(q["profile"], q["project"]),
                 "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
                 "/api/backups": lambda: list_backups(),
+                "/api/backups/changes": lambda: backup_changes(q["name"]),
                 "/api/search": lambda: search(q.get("q", "")),
                 "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
@@ -271,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/plugins": lambda: list_plugins(q["profile"]),
                 "/api/settings": lambda: get_settings(q["profile"]),
                 "/api/about": lambda: about(),
+                "/api/shell": lambda: shell_state(),
+                "/api/shell/which": lambda: shell_which(q.get("path", "")),
                 "/api/claude/status": lambda: claude_status(),
                 "/api/update": lambda: check_update(),
                 "/api/skills": lambda: list_skills(q["profile"]),
@@ -314,7 +331,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/backups/auto": lambda: op_backup_auto(b.get("days")),
                 "/api/templates/save": lambda: op_template_save(b["profile"], b["name"]),
                 "/api/templates/delete": lambda: op_template_delete(b["name"]),
-                "/api/templates/create": lambda: op_create_from_template(b["name"], b["label"], b["id"]),
+                "/api/templates/create": lambda: op_create_from_template(b["name"], b["label"], b["id"],
+                                                                         b.get("share") or []),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
@@ -328,6 +346,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/settings/claude-md": lambda: op_claude_md(b["profile"], b.get("content", "")),
                 "/api/settings/global": lambda: op_global(b["profile"], b["key"], b.get("value")),
                 "/api/claude/install": lambda: op_install(b.get("method", "")),
+                "/api/shell": lambda: op_shell(bool(b["install"])),
                 "/api/update": lambda: op_update(),
                 "/api/skills/save": lambda: op_skill_save(b["profile"], b["name"], b["content"]),
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),

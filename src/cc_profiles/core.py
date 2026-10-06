@@ -27,6 +27,7 @@ import threading
 import time
 
 from . import __version__
+from . import byfolder
 
 HOME = os.path.expanduser("~")
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,9 +74,7 @@ def pretty(p):
     return "~" + p[len(HOME):] if p == HOME or p.startswith(HOME + "/") else p
 
 
-def san(path):
-    """Directory name Claude Code uses in projects/: every non-alphanumeric char -> '-'."""
-    return re.sub(r"[^A-Za-z0-9]", "-", path)
+san = byfolder.san  # one definition, shared with `cc-profiles which`
 
 
 def read_json(path, default=None):
@@ -303,6 +302,30 @@ class Backup:
         write_json(os.path.join(self.dir, "manifest.json"), man)
         write_text(os.path.join(self.dir, "operation.txt"), "\n".join([self.title] + self.log) + "\n")
         return pretty(self.dir)
+
+
+HIDDEN = "•••• hidden"
+SECRET_FILES = {".credentials.json"}  # login credentials: never shown, not even masked
+# The same rule as the MCP tab and the search (extensions.mcp_summary): the names under
+# "env" and "headers" are shown, their values never. Plus keys and values that look like
+# a token anywhere else (primaryApiKey, an Authorization header, an "sk-ant-…" string).
+SECRET_HOLDERS = {"env", "headers"}
+SECRET_KEY = re.compile(r"token|secret|password|passwd|api[-_]?key|authorization|credential|cookie|private[-_]?key", re.I)
+SECRET_VALUE = re.compile(r"^(sk-|ghp_|gho_|ghs_|ghu_|github_pat_|xox[abprs]-|AKIA|AIza|Bearer\s)")
+
+
+def redact_secrets(value, hide=False):
+    """A copy of parsed JSON with secret values replaced by HIDDEN. Keys stay visible."""
+    if isinstance(value, dict):
+        return {k: redact_secrets(v, hide or k in SECRET_HOLDERS or bool(SECRET_KEY.search(str(k))))
+                for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact_secrets(v, hide) for v in value]
+    if isinstance(value, str) and (hide or SECRET_VALUE.match(value)):
+        return HIDDEN
+    if hide and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return HIDDEN
+    return value
 
 
 def pid_label(pid):

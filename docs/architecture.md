@@ -16,6 +16,7 @@ The code is one module per area. Each module imports only from the ones above it
 
 | Module | Responsibility |
 |---|---|
+| `byfolder.py` | rule matching (`match_rule()`, `san()`), `cc-profiles which` and `shell-init`. Imports nothing from the package, so `which` starts fast on every `claude` launch |
 | `core.py` | paths and constants, `san()`, atomic `write_text()`, `cached_read()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
 | `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
 | `projects.py` | list, move (with preview), relink, delete, rules |
@@ -23,14 +24,14 @@ The code is one module per area. Each module imports only from the ones above it
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `health.py` | profile summaries, candidate folders, health checks |
-| `backups.py` | list, restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
+| `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |
-| `usage.py` | tokens and estimated cost per day, project, model and profile, from the usage of every reply (read-only); the list-price table |
+| `usage.py` | tokens and estimated cost per day, project, model, profile and conversation, and the CSV export, from the usage of every reply (read-only); the list-price table |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
-| `launchers.py` | `~/.local/bin` scripts and legacy shell aliases |
+| `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
 | `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
@@ -40,8 +41,9 @@ The code is one module per area. Each module imports only from the ones above it
 | `updater.py` | check for updates on PyPI, update and restart |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
 | `cli.py` | `serve` (with the automatic backup cleanup at start and daily), `open`, `stop`, `restart`, `install-command`, `label`, argument parsing |
+| `entry.py` | the console script: `which` and `shell-init` go to `byfolder.py` without loading the server, everything else to `cli.main` |
 
-`server.py` re-exports every public name, so `from cc_profiles import server` and the `cc-profiles` console script keep working. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.
+`server.py` re-exports every public name, so `from cc_profiles import server` keeps working; the `cc-profiles` console script is `entry.main`. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.
 
 ### Request flow
 

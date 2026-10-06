@@ -8,7 +8,17 @@ Claude Code can run a script to draw a [status line](https://code.claude.com/doc
 
 - **Made by cc-profiles**: tick what to show (path or folder, git branch with `*` when there are uncommitted changes, profile, account email, model, effort, output style, pull request, context used, session cost, lines changed, session time, tokens, 5-hour and weekly limits, terminal, time), put it in order by dragging or with the arrows, give each piece its brackets (none, `( )`, `[ ]`, `{ }` or `⟨ ⟩`, or the same for all), pick the separator, how to show the rate limits and whether to use colors, and check the preview. With colors on, each piece has its own color from your terminal's palette and the context and limits turn yellow at 70% used and red at 90%. **Show the script** shows what will be saved. The script sets `LC_ALL=C`, so brackets like `⟨ ⟩` survive a shell with a broken locale.
   - **Tokens** shows `question:12k session:1.2M`: the tokens since the last prompt you typed (tool results do not count as prompts) and in the whole session, adding up input, cache and output tokens of every reply. It reads the conversation file Claude Code passes (`transcript_path`) at each refresh, so on a very long session it costs a little time; without the file it shows nothing.
-  - **Rate limits: Used** shows the share of each limit used (`5h:78% 7d:41%`). **Left** shows the share left instead and, once half or less is left, the time until it resets: `5h:22%→1h20m 7d:59%` (`3d11h`, `2h13m` or `45m`). The colors still follow the share used. Scripts saved before this option show the share used.
+  - **Rate limits: Used** shows the share of each limit used (`5h:78% 7d:41%`). **Left** shows the share left instead and, once half or less is left, the time until it resets: `5h:22%→1h20m 7d:59%` (`3d11h`, `2h13m`, `45m`, or `<1m` in the last minute). The colors still follow the share used. Scripts saved before this option show the share used.
+  - **Presets** fill the editor in one click; nothing is saved until **Save status line**, and you can change anything afterwards. The preset that matches what the editor shows is selected:
+
+    | Preset | Shows | Brackets | Separator | Limits |
+    |---|---|---|---|---|
+    | Essential | profile, model, context | none | `·` | |
+    | Developer | path, branch, profile, model, context (the editor's starting point) | each piece's own | space | |
+    | Usage | model, tokens, cost, 5-hour and weekly limits | none | `\|` | left |
+    | Like a hand-made one | path, branch, profile, email, model, output style, tokens, context, 5-hour and weekly limits, terminal | each piece's own | space | left |
+
+    All of them use colors. They are defined in `STATUS_PRESETS` (`settings.py`).
 - **Your command**: any command; cc-profiles saves it and never runs it.
 - **Off**: removes `statusLine` (the script cc-profiles wrote goes to the backup).
 

@@ -9,6 +9,8 @@ cc-profiles stop [--port PORT]
 cc-profiles restart [--port PORT]
 cc-profiles install-command
 cc-profiles label
+cc-profiles which [PATH] [--dir]
+cc-profiles shell-init [zsh|bash]
 cc-profiles --version
 ```
 
@@ -21,6 +23,8 @@ cc-profiles --version
 | `restart` | | `stop`, then `open` without the browser: use it after an update, then reload the page |
 | `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date |
 | `label` | | print the active profile's name and exit (see [Status line](status-line.md)) |
+| `which [PATH]` | the current folder | print the name of the profile the [rules](concepts.md#rules) give `PATH`; with `--dir`, its config folder as an absolute path. Prints nothing and exits with status 1 when no rule matches, the rule says `shared`, or it names a profile that no longer exists. Read-only and fast (it does not load the server): it runs every time the [profile by folder](guides/profile-by-folder.md) function starts `claude` |
+| `shell-init [zsh\|bash]` | from `$SHELL` | print the `claude` shell function of [profile by folder](guides/profile-by-folder.md), for `eval "$(cc-profiles shell-init zsh)"` in your shell's startup file |
 | `--version` | | print the version and exit |
 
 You can also run it as a module: `python3 -m cc_profiles`.
@@ -39,7 +43,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv` or `source`), for the update tests |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
 | `CC_PROFILES_SOURCE` | for `install.sh`: install from this folder instead of PyPI |
-| `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile |
+| `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile; when it is set, the [profile by folder](guides/profile-by-folder.md) function leaves it as it is |
 
 ## `~/.cc-profiles/config.json`
 
@@ -103,4 +107,4 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 |---|---|
 | profile folders and `~/.claude.json` | the operations you run |
 | `~/.local/bin/<command>` | creating, editing or deleting a profile (launcher scripts). Only files containing `# managed by cc-profiles` are ever rewritten or removed |
-| `~/.zshrc`, `~/.bashrc`, `~/.bash_profile` | only to rename or remove a profile alias that was already there, together with the `# Claude Code:` comment line above it |
+| `~/.zshrc`, `~/.bashrc`, `~/.bash_profile` | only to rename or remove a profile alias that was already there, together with the `# Claude Code:` comment line above it; and to add or remove the one line ending in `# cc-profiles: profile by folder` when you turn [profile by folder](guides/profile-by-folder.md) on or off |

@@ -15,6 +15,7 @@ import webbrowser
 from . import __version__
 from . import core
 from .core import CONFIG_FILE, DATA_DIR, expand, find_tool, load_config, pretty, profiles, read_json
+from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import install_command
 from .projects import list_projects
@@ -184,6 +185,7 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true", help="do not open the browser")
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("label", help="print the label of the active profile (for status lines)")
+    add_parsers(sub)  # which, shell-init: entry.main runs them without loading the server
     sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
@@ -199,6 +201,8 @@ def main(argv=None):
     if args.cmd == "label":
         print(current_label())
         return
+    if args.cmd in ("which", "shell-init"):
+        sys.exit(run_byfolder(args))
     if os.name == "nt":
         print("cc-profiles supports macOS and Linux only for now.")
         sys.exit(1)

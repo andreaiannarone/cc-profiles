@@ -61,6 +61,29 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
     assert "cc-profiles" in page.inner_text(".drawer")
+    link = page.locator('.drawer a[href="https://andreaiannarone.com"]')
+    assert link.inner_text() == "Andrea Iannarone" and link.get_attribute("rel") == "noopener"
+    assert link.get_attribute("target") == "_blank" and "© 2026" in page.inner_text(".drawer")
+    assert errors == []
+
+
+def test_new_profile_from_a_template_offers_sharing(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate('api("/api/templates/save", { profile: "default", name: "Base" })')
+    page.click("[data-newprofile]")
+    page.wait_for_selector("#np-label")
+    shared = 'input[name="share"]'
+    assert page.eval_on_selector_all(shared + ":checked", "cs => cs.map(c => c.value)") == ["skills", "plugins"]
+    page.check('input[name="base"][value="template:Base"]')
+    assert page.is_visible("#np-share") and page.is_visible("#np-tpl")
+    assert page.eval_on_selector_all(shared + ":checked", "cs => cs.map(c => c.value)") == ["plugins"]
+    assert "Plugins are never in a template" in page.inner_text("#np-tpl")
+    page.check(shared + '[value="skills"]')
+    assert "skills: shared with Default, the template's" in page.inner_text("#np-tpl")
+    assert "skills are not copied" in page.inner_text("#np-tpl")
+    page.check('input[name="base"][value=""]')
+    assert page.is_hidden("#np-tpl") and page.is_checked(shared + '[value="skills"]'), "a choice made by hand stays"
+    cancel(page)
     assert errors == []
 
 
@@ -135,12 +158,17 @@ def test_usage_tab(page_on_sandbox):
     assert errors == []
 
 
+# Rules that fail the test at any impact: headings that skip a level (h1 then h3) are only
+# "moderate" for axe, but they break navigating the page by headings.
+AXE_ALWAYS = {"heading-order"}
+
+
 def axe_violations(page):
-    """Serious and critical axe-core violations on the page as it is now."""
+    """Serious and critical axe-core violations on the page as it is now, plus AXE_ALWAYS."""
     from axe_playwright_python.sync_playwright import Axe
     res = Axe().run(page, options={"resultTypes": ["violations"]}).response
     return [f"{v['id']} ({v['impact']}): {v['help']} at " + ", ".join(str(n["target"]) for n in v["nodes"][:4])
-            for v in res["violations"] if v["impact"] in ("serious", "critical")]
+            for v in res["violations"] if v["impact"] in ("serious", "critical") or v["id"] in AXE_ALWAYS]
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
@@ -202,6 +230,29 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     assert errors == []
 
 
+def test_profile_by_folder_section(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.wait_for_selector("#bf-switch", state="attached")
+    assert "Rules: folder → profile" in page.inner_text("#main")
+    page.fill("#bf-path", "~/code/work/api")
+    page.click("#bf-go")
+    page.wait_for_function("() => document.querySelector('#bf-result').textContent.includes('~/code/work/api')")
+    page.fill("#bf-path", "relative/path")
+    page.press("#bf-path", "Enter")
+    page.wait_for_function("() => document.querySelector('#bf-result').textContent.includes('absolute')")
+    page.click("label.switch:has(#bf-switch)")
+    page.wait_for_selector(".modal pre.log")
+    assert "cc-profiles shell-init" in page.inner_text(".modal pre.log")
+    cancel(page)
+    assert not page.is_checked("#bf-switch")  # cancelled: the switch flips back
+    page.click("label.switch:has(#bf-switch)")
+    page.click('.modal button:has-text("Turn on")')
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => document.querySelector('#bf-switch')?.checked")
+    assert errors == []
+
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")
@@ -234,6 +285,31 @@ def test_status_line_section(page_on_sandbox):
     assert errors == []
 
 
+def test_status_line_presets_fill_the_draft(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    page.click('[data-slmode="builtin"]')
+    pressed = lambda: page.eval_on_selector_all("[data-slpreset][aria-pressed=true]", "bs => bs.map(b => b.dataset.slpreset)")
+    assert pressed() == ["developer"]  # the editor starts from the same pieces
+    page.click("#sl-save")
+    page.wait_for_function("() => document.querySelector('#sl-save')?.disabled")
+    page.click('[data-slpreset="usage"]')
+    assert pressed() == ["usage"] and page.is_enabled("#sl-save")  # filled, not saved
+    assert page.get_attribute('[data-slpreset="usage"]', "title").startswith("Model, tokens")
+    page.wait_for_function("() => /^Opus \\| question:12k session:340k \\| \\$1\\.27 \\| 5h:22%→1h20m \\| 7d:59%$/"
+                           ".test(document.querySelector('#sl-preview').textContent)")
+    order = page.eval_on_selector_all("[data-slitem] input:checked", "cs => cs.map(c => c.dataset.slpart)")
+    assert order == ["model", "tokens", "cost", "limit", "week"]
+    assert page.get_attribute('[data-sllim="left"]', "aria-pressed") == "true"
+    page.click("#sl-colors")  # any change of its own: no preset matches any more
+    assert pressed() == []
+    page.click('[data-slpreset="essential"]')
+    page.wait_for_function("() => document.querySelector('#sl-preview').textContent === 'Default · Opus · ctx:42%'")
+    page.click('[data-slpreset="developer"]')  # back to what is saved
+    assert page.is_disabled("#sl-save") and pressed() == ["developer"]
+    assert errors == []
+
+
 def test_general_settings_wait_for_save(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")
@@ -256,3 +332,41 @@ def test_general_settings_wait_for_save(page_on_sandbox):
     assert abs(page.evaluate("window.scrollY") - y) < 5  # the page stays where it was
     assert errors == []
 
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_backup_changes_view(page_on_sandbox, theme):
+    page, errors = page_on_sandbox
+    page.evaluate(f"setTheme('{theme}')")
+    page.evaluate("api('/api/settings/field', { profile: 'default', key: 'timeFormat', value: '12-hour' })")
+    open_tab(page, "backups")
+    page.click("[data-bchanges]")
+    page.wait_for_selector(".drawer.wide pre.diff span.a")
+    text = page.inner_text(".drawer")
+    assert "Files copied before a change" in text and "settings.json" in text and "12-hour" in text
+    assert page.get_attribute(".drawer", "role") == "dialog"
+    page.wait_for_function("() => document.querySelector('.drawer').getAnimations().every(a => a.playState === 'finished')")
+    pytest.importorskip("axe_playwright_python")
+    assert axe_violations(page) == []
+    page.keyboard.press("Escape")
+    assert page.query_selector(".drawer") is None
+    assert page.evaluate("document.activeElement.dataset.bchanges")  # focus back on the button
+    assert errors == []
+
+
+def test_usage_export_and_sessions(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "usage")
+    page.wait_for_selector(".usess [data-usess]")
+    assert page.inner_text(".usess thead th") == "Conversation"
+    assert page.eval_on_selector_all(".usess tbody tr", "rs => rs.length") <= 10
+    with page.expect_download() as dl:
+        page.click("#u-csv")
+    assert dl.value.suggested_filename == "cc-profiles-usage-all-30d.csv"
+    title = page.inner_text(".usess [data-usess]")
+    page.click(".usess [data-usess]")
+    page.wait_for_selector('#tabs button[data-tab="conversations"][aria-current="page"]')
+    page.wait_for_selector(".ccard.on")
+    page.wait_for_selector(".convview")
+    assert title in page.inner_text(".ccard.on") or title == "No prompt"
+    assert errors == []

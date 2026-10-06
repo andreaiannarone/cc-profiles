@@ -131,6 +131,7 @@ cc-profiles
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
+- 📁 **Profile by folder**: type `claude` in a work folder and it starts in your Work profile. One switch in the Profiles tab adds one marked line to your `~/.zshrc` (backed up, undoable); the folder rules you already use for projects decide the profile, and a `CLAUDE_CONFIG_DIR` you set yourself still wins.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere. The confirmation previews what the link replaces.
 - ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution and a status line you build by ticking boxes, with a live preview. Dropdowns offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Delete the old ones in one go, or let cc-profiles delete those older than 15 to 90 days automatically (off by default).
@@ -325,6 +326,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 - **[Conversations](https://cc-profiles.andreaia.com/guides/conversations.html)**: read, move one to another profile, delete
 - **[Usage](https://cc-profiles.andreaia.com/guides/usage.html)**: tokens and estimated cost per day, project, model and profile
 - **[Profiles and sharing](https://cc-profiles.andreaia.com/guides/profiles.html)**: create, edit, delete, share
+- **[Profile by folder](https://cc-profiles.andreaia.com/guides/profile-by-folder.html)**: `claude` starts in the profile of the folder you are in
 - **[Skills and MCP servers](https://cc-profiles.andreaia.com/guides/skills-and-mcp.html)**: create, edit, copy, delete
 - **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and turn them on or off
 - **[Search and compare](https://cc-profiles.andreaia.com/guides/search-and-compare.html)**: search every profile at once, compare two side by side
@@ -451,3 +453,4 @@ You can use, study, change and share it freely. If you distribute it, modified o
 ---
 
 <p align="center"><b>Built with Claude Code</b> | <b>Made for Claude Code</b> | <b>Pure Python standard library</b></p>
+<p align="center">© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a></p>

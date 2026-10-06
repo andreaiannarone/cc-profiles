@@ -1,7 +1,7 @@
 <!doctype html>
 {%- comment -%}
 The documentation site's only layout: the app's header, colors and theme switch,
-a sidebar from _data/nav.yml, and the page's Markdown in the middle.
+a search box over search.json, a sidebar from _data/nav.yml, and the page's Markdown in the middle.
 {%- endcomment -%}
 {%- assign page_title = page.title | default: site.title -%}
 <html lang="en">
@@ -21,6 +21,15 @@ a sidebar from _data/nav.yml, and the page's Markdown in the middle.
   <a class="brand" href="{{ '/' | relative_url }}">{% include logo.svg %}<span>cc-profiles</span></a>
   <span class="sub">documentation</span>
   <span class="grow"></span>
+  <div class="search" role="search">
+    <label class="sr" for="search-q">Search the documentation</label>
+    <input id="search-q" type="search" placeholder="Search" autocomplete="off" spellcheck="false"
+      role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-list"
+      data-index="{{ '/search.json' | relative_url }}">
+    <kbd class="skey" aria-hidden="true">/</kbd>
+    <ul id="search-list" class="sresults" role="listbox" aria-label="Search results" hidden></ul>
+    <div class="sr" id="search-status" aria-live="polite"></div>
+  </div>
   <a class="toplink" href="https://pypi.org/project/cc-profiles/">PyPI</a>
   <a class="toplink" href="https://github.com/andreaiannarone/cc-profiles">GitHub</a>
   <button class="iconbtn" id="theme-btn" type="button" title="Theme: system" aria-label="Theme: system">
@@ -45,6 +54,7 @@ a sidebar from _data/nav.yml, and the page's Markdown in the middle.
     <footer class="foot">
       <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
       <span>·</span><span>GPL-3.0-or-later</span>
+      <span>·</span><span>© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a></span>
       <span>·</span><span>Built with Claude Code · Made for Claude Code</span>
     </footer>
   </main>
@@ -64,6 +74,84 @@ a sidebar from _data/nav.yml, and the page's Markdown in the middle.
   show();
   // the menu starts closed on phones
   if (matchMedia("(max-width: 860px)").matches) document.getElementById("side-menu").open = false;
+})();
+(() => {
+  // Search: search.json is fetched once, on first use. Every word must match; pages whose
+  // title holds the words come first, then by how often the words appear in the text.
+  const q = document.getElementById("search-q"), list = document.getElementById("search-list");
+  const status = document.getElementById("search-status");
+  let index = null, loading = null, results = [], active = -1;
+  const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const reEsc = s => s.replace(/[.*+?^$()|[\]\\{}]/g, "\\$&");
+  const decode = document.createElement("textarea");
+  const plain = s => { decode.innerHTML = s; return decode.value.replace(/\s+/g, " ").trim(); };
+  const load = () => loading || (loading = fetch(q.dataset.index).then(r => r.json()).then(data => {
+    index = data.map(d => ({ ...d, text: plain(d.text || ""), lt: (d.title || "").toLowerCase() }));
+    index.forEach(d => { d.lx = d.text.toLowerCase(); });
+  }).catch(() => { index = []; status.textContent = "Search is not available right now."; }));
+  const count = (hay, w) => { let n = 0, i = hay.indexOf(w); while (i >= 0 && n < 50) { n++; i = hay.indexOf(w, i + w.length); } return n; };
+  const excerpt = (d, words) => {
+    let at = -1;
+    for (const w of words) { const i = d.lx.indexOf(w); if (i >= 0 && (at < 0 || i < at)) at = i; }
+    if (at < 0) return d.text.slice(0, 140);
+    let start = Math.max(0, at - 50);
+    const sp = start ? d.text.indexOf(" ", start) : -1;
+    if (sp >= 0 && sp < at) start = sp + 1;  // start on a whole word
+    const cut = d.text.slice(start, start + 160);
+    return (start ? "…" : "") + cut + (start + 160 < d.text.length ? "…" : "");
+  };
+  const mark = (s, words) => {
+    const re = new RegExp("(" + words.map(reEsc).join("|") + ")", "gi");
+    return s.split(re).map((part, i) => i % 2 ? "<mark>" + esc(part) + "</mark>" : esc(part)).join("");
+  };
+  const close = () => { list.hidden = true; q.setAttribute("aria-expanded", "false"); q.removeAttribute("aria-activedescendant"); active = -1; };
+  const setActive = i => {
+    const items = list.querySelectorAll("[role=option]");
+    if (!items.length) return;
+    active = (i + items.length) % items.length;
+    items.forEach((el, k) => el.setAttribute("aria-selected", k === active ? "true" : "false"));
+    q.setAttribute("aria-activedescendant", items[active].id);
+    items[active].scrollIntoView({ block: "nearest" });
+  };
+  const render = () => {
+    const words = [...new Set(q.value.toLowerCase().split(/\s+/).filter(Boolean))];
+    if (!words.length || !index) { close(); status.textContent = ""; return; }
+    results = index.map(d => {
+      const hay = d.lt + " " + d.lx;
+      if (!words.every(w => hay.includes(w))) return null;
+      const inTitle = words.filter(w => d.lt.includes(w)).length;
+      return { d, inTitle, hits: words.reduce((n, w) => n + count(d.lx, w), 0) };
+    }).filter(Boolean).sort((a, b) => b.inTitle - a.inTitle || b.hits - a.hits).slice(0, 8);
+    list.innerHTML = results.length ? results.map((r, i) => `<li role="option" id="search-opt-${i}" aria-selected="false">
+      <a href="${esc(r.d.url)}" tabindex="-1"><span class="st"><span>${mark(r.d.title, words)}</span><span class="ss">${esc(r.d.section || "")}</span></span>
+      <span class="sx">${mark(excerpt(r.d, words), words)}</span></a></li>`).join("")
+      : `<li class="snone">No page matches “${esc(q.value.trim())}”.</li>`;
+    list.hidden = false; q.setAttribute("aria-expanded", "true"); active = -1; q.removeAttribute("aria-activedescendant");
+    status.textContent = results.length ? results.length + (results.length === 1 ? " result" : " results") : "No results";
+  };
+  q.addEventListener("focus", () => { load().then(() => { if (q.value.trim()) render(); }); });
+  q.addEventListener("input", () => { load().then(render); });
+  q.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (list.hidden) render();
+      setActive(active < 0 && e.key === "ArrowUp" ? -1 : active + (e.key === "ArrowDown" ? 1 : -1));
+      e.preventDefault();
+    } else if (e.key === "Enter") {
+      const r = results[active < 0 ? 0 : active];
+      if (r && !list.hidden) { e.preventDefault(); location.href = r.d.url; }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      if (!list.hidden) close(); else { q.value = ""; q.blur(); }
+    }
+  });
+  list.addEventListener("mousedown", e => e.preventDefault());  // keep the focus in the box while clicking
+  document.addEventListener("click", e => { if (!e.target.closest(".search")) close(); });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    e.preventDefault(); q.focus(); q.select();
+  });
 })();
 </script>
 </body>

@@ -2,11 +2,25 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: Backups and restore."""
 
+import difflib
+import json
 import os
 import shutil
 import time
 
-from .core import ApiError, BACKUP_DIR, Backup, CONFIG_FILE, cached_read, load_config, pretty, read_json, write_json
+from .core import (
+    ApiError,
+    BACKUP_DIR,
+    Backup,
+    CONFIG_FILE,
+    SECRET_FILES,
+    cached_read,
+    load_config,
+    pretty,
+    read_json,
+    redact_secrets,
+    write_json,
+)
 
 # ---------------------------------------------------------------------------
 # Backups and restore
@@ -67,6 +81,156 @@ def list_backups():
                     "restored": man.get("restored")})
     out.sort(key=lambda b: b["created"], reverse=True)  # chronological: names only have seconds
     return out
+
+
+# ---------------------------------------------------------------------------
+# What a backup changed (read-only)
+# ---------------------------------------------------------------------------
+DIFF_MAX_BYTES = 512 * 1024  # per side: bigger files get no diff
+DIFF_MAX_LINES = 2000        # lines of diff shown per file
+CHANGED_AGAIN = 2            # seconds after the backup closed: a later mtime means a later change
+
+
+def _read_side(path):
+    """(text, problem) of one side of a diff. problem: "missing", "dir", "too-big", "binary"."""
+    try:
+        if os.path.isdir(path):
+            return None, "dir"
+        if os.path.getsize(path) > DIFF_MAX_BYTES:
+            return None, "too-big"
+        with open(path, "rb") as f:
+            data = f.read()
+    except OSError:
+        return None, "missing"
+    if b"\0" in data:
+        return None, "binary"
+    try:
+        return data.decode("utf-8"), None
+    except UnicodeDecodeError:
+        return None, "binary"
+
+
+def _for_diff(path, text):
+    """JSON pretty-printed with sorted keys and its secrets masked, so a diff shows real
+    changes and no secret. Other text as it is."""
+    if not path.endswith(".json"):
+        return text
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return text
+    return json.dumps(redact_secrets(data), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+
+def file_diff(old_path, new_path, closed_at=None):
+    """Unified diff between a copy kept in a backup and the file as it is now."""
+    out = {"status": "same", "lines": [], "added": 0, "removed": 0, "truncated": False, "notes": []}
+    if os.path.basename(new_path) in SECRET_FILES:
+        out["status"] = "secret"
+        out["notes"].append("Login credentials: the contents are never shown.")
+        return out
+    old, problem = _read_side(old_path) if old_path else (None, "missing")
+    if problem == "missing":
+        out["status"] = "unavailable"
+        out["notes"].append("The copy is no longer in the backup.")
+        return out
+    new, now_problem = _read_side(new_path)
+    if now_problem == "missing":
+        out["notes"].append("The file no longer exists: the diff shows its whole content as removed.")
+        new = ""
+    for p in (problem, now_problem):
+        if p == "too-big":
+            out["status"] = "too-big"
+            out["notes"].append(f"Too big to compare (over {DIFF_MAX_BYTES // 1024} KB).")
+            return out
+        if p == "binary":
+            out["status"] = "binary"
+            out["notes"].append("Not a text file: no diff.")
+            return out
+        if p == "dir":
+            out["status"] = "dir"
+            out["notes"].append("Now a folder, not a file: no diff.")
+            return out
+    if closed_at and now_problem is None:
+        try:
+            if os.path.getmtime(new_path) > closed_at + CHANGED_AGAIN:
+                out["notes"].append("Changed again after this operation: the diff includes the later changes too.")
+        except OSError:
+            pass
+    a, b = _for_diff(new_path, old), _for_diff(new_path, new)
+    if a == b:
+        if old != new:
+            out["status"] = "hidden-only"
+            out["notes"].append("Only hidden values or the order of the keys changed.")
+        return out
+    lines = list(difflib.unified_diff(a.splitlines(), b.splitlines(), "in the backup", "now", n=3, lineterm=""))
+    for ln in lines[2:]:
+        if ln.startswith("+"):
+            out["added"] += 1
+        elif ln.startswith("-"):
+            out["removed"] += 1
+    out["status"] = "changed"
+    out["truncated"] = len(lines) > DIFF_MAX_LINES
+    out["lines"] = lines[:DIFF_MAX_LINES]
+    if out["truncated"]:
+        out["notes"].append(f"Only the first {DIFF_MAX_LINES:,} lines of the diff, of {len(lines):,}.")
+    return out
+
+
+def _kind_now(path):
+    if os.path.islink(path):
+        return "link"
+    if os.path.isdir(path):
+        return "folder"
+    if os.path.exists(path):
+        return "file"
+    return None
+
+
+def _in_backup(d, rel):
+    """A path inside the backup folder, from the manifest: never outside it."""
+    p = os.path.realpath(os.path.join(d, rel or ""))
+    return p if rel and p.startswith(os.path.realpath(d) + os.sep) else None
+
+
+def backup_changes(name):
+    """Every journaled step of a backup in plain words, with a diff for each file copied
+    before a change. Read-only: it never writes anything."""
+    d = backup_path(name)
+    man = read_json(os.path.join(d, "manifest.json")) or {}
+    closed_at = man.get("created")
+    steps = []
+    for e in man.get("journal") or []:
+        op = e.get("op")
+        path = e.get("path") or e.get("from") or ""
+        now = _kind_now(path) if path else None
+        step = {"op": op, "path": pretty(path), "now": now}
+        if op == "copy":
+            step["text"] = "Copied before a change"
+            step["diff"] = file_diff(_in_backup(d, e.get("file")), path, closed_at)
+        elif op == "absent":
+            step["text"] = "Did not exist before: the operation created it"
+        elif op == "stash":
+            kept = _in_backup(d, e.get("file"))
+            what = _kind_now(kept) if kept else None
+            step["text"] = f"{'Folder' if what == 'folder' else 'Link' if what == 'link' else 'File' if what else 'Item'} " \
+                           "moved to the backup instead of being deleted"
+            if not what:
+                step["text"] += " (put back by a restore)"
+        elif op == "move":
+            step.update(text="Moved", to=pretty(e.get("to")), now=_kind_now(e.get("to") or ""))
+        elif op == "mkdir":
+            step["text"] = "Folder created"
+        elif op == "created":
+            step["text"] = {"link": "Link created", "folder": "Folder created", "file": "File created"}.get(now, "Created")
+        else:
+            step["text"] = f"Step {op}"
+        steps.append(step)
+    copies = [s for s in steps if s["op"] == "copy"]
+    return {"name": name, "title": man.get("title", name), "created": closed_at, "log": man.get("log", []),
+            "failed": man.get("failed"), "restored": man.get("restored"), "steps": steps,
+            "files_changed": sum(1 for s in copies if s["diff"]["status"] in ("changed", "hidden-only")),
+            "max_lines": DIFF_MAX_LINES, "max_bytes": DIFF_MAX_BYTES}
 
 
 def op_restore(name):

@@ -128,6 +128,8 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "$ gh run watch '<run id>' --exit-status",
         "GET https://pypi.org/simple/cc-profiles/ (Cache-Control: no-cache)",
         "$ git branch -D release-0.4.4",
+        "$ git ls-remote --heads origin release-0.4.4",
+        "deleted only if listed",
         "$ git push origin --delete release-0.4.4",
         "pipx upgrade cc-profiles",
     ]
@@ -166,3 +168,24 @@ def test_release_takes_next_and_refuses_a_jump(tmp_path):
     assert code == 1  # a jump: the version after 0.4.3 is 0.4.4
     code, out = run("0.5.0", "--force-version")
     assert '+__version__ = "0.5.0"' in out
+
+
+@pytest.mark.parametrize("listed,deletes", [("", False), ("abc123\trefs/heads/release-0.4.4", True), (None, True)])
+def test_remote_branch_deleted_only_when_still_there(listed, deletes):
+    """GitHub deletes a merged branch by itself: then the release says so instead of a failed push."""
+    out = io.StringIO()
+    rel = release.Releaser(".", False, out)
+    ran = []
+
+    def run(cmd, capture=False, readonly=False, check=True):
+        ran.append(cmd)
+        if cmd[1] == "ls-remote":
+            if listed is None:
+                raise release.ReleaseError("git ls-remote ended with code 128")
+            return listed
+        return ""
+    rel.run = run
+    rel.delete_remote_branch("release-0.4.4")
+    assert ran[0] == ["git", "ls-remote", "--heads", "origin", "release-0.4.4"]
+    assert (["git", "push", "origin", "--delete", "release-0.4.4"] in ran) == deletes
+    assert ("already gone from origin" in out.getvalue()) == (listed == "")

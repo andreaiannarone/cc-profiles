@@ -46,3 +46,11 @@ def test_every_doc_page_is_linked_from_the_index():
     pages = [p.relative_to(ROOT / "docs").as_posix() for p in ROOT.glob("docs/**/*.md") if p.name != "README.md"]
     missing = [p for p in pages if f"({p}" not in index]
     assert not missing, f"pages not linked from docs/README.md: {missing}"
+
+
+def test_copyright_links_to_the_author():
+    line = '© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a>'
+    assert line in (ROOT / "README.md").read_text(), "README footer: absolute link, it is shown on PyPI too"
+    assert line in (ROOT / "docs" / "_layouts" / "default.html").read_text()
+    ui = (ROOT / "src" / "cc_profiles" / "static" / "index.html").read_text()
+    assert '© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a>' in ui

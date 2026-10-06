@@ -32,11 +32,17 @@ def conversation_path(prof, name, session, must_exist=True):
     return f
 
 
+def message_of(j):
+    """The "message" object of a line, or {} when a line is malformed."""
+    m = j.get("message")
+    return m if isinstance(m, dict) else {}
+
+
 def prompt_text(j):
     """The text a person typed, or None for tool results, meta lines and commands."""
     if j.get("type") != "user" or j.get("isMeta"):
         return None
-    c = (j.get("message") or {}).get("content")
+    c = message_of(j).get("content")
     if isinstance(c, list):
         c = "\n".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
     if not isinstance(c, str) or not c.strip():
@@ -48,7 +54,7 @@ def prompt_text(j):
 
 
 def assistant_text(j):
-    c = (j.get("message") or {}).get("content")
+    c = message_of(j).get("content")
     if isinstance(c, str):
         return c.strip() or None
     if isinstance(c, list):
@@ -70,6 +76,8 @@ def conversation_summary(f):
             try:
                 j = json.loads(line)
             except ValueError:
+                continue
+            if not isinstance(j, dict):
                 continue
             t = j.get("type")
             if t == "ai-title" and j.get("aiTitle"):
@@ -128,13 +136,15 @@ def conversation_view(pid, name, session):
                 j = json.loads(line)
             except ValueError:
                 continue
+            if not isinstance(j, dict):
+                continue
             ts = j.get("timestamp")
             if j.get("type") == "user":
                 text = prompt_text(j)
                 if text:
                     msgs.append({"role": "user", "time": ts, "text": text})
                 continue
-            c = (j.get("message") or {}).get("content")
+            c = message_of(j).get("content")
             text = assistant_text(j)
             if text:
                 msgs.append({"role": "assistant", "time": ts, "text": text})

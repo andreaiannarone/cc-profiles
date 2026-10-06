@@ -37,7 +37,9 @@ COVERAGE_PROCESS_START=pyproject.toml .venv/bin/python -m coverage run -m pytest
 .venv/bin/python -m coverage html         # optional: htmlcov/index.html, line by line
 ```
 
-CI does the same on Python 3.12 and shows the table in the run's summary.
+The server stops on SIGTERM with `os._exit()`, which skips coverage's own save: `sitecustomize.py` saves the data just before it, so keep that hook if you change how the server exits.
+
+CI does the same on Python 3.12, shows the table in the run's summary and **fails when the total is below 92%** (`coverage report --fail-under=92` in `.github/workflows/ci.yml`; the suite reached 93.7% without the browser smoke test, which that job does not run). New code comes with tests that keep the total above it. When the total rises well above the threshold, raise the threshold to a point or two below the new total. Do not lower it to make a change pass. `tests/test_coverage_extra.py` covers helpers and error paths that the end-to-end tests in `test_app.py` do not reach.
 
 ### How fast it is on a big home
 
@@ -166,3 +168,4 @@ PyPI accepts the upload through *trusted publishing*: no token is stored in the 
 
 - **Homebrew** (not published yet): `python3 scripts/homebrew_formula.py <version>` prints a formula for a release on PyPI, ready for a tap repository once there is one.
 - **Documentation site**: GitHub Pages publishes `docs/` from `main` with Jekyll (`docs/_config.yml`): `README.md` is the home page and links between `.md` files become pages. Link files outside `docs/` with their full GitHub URL, or they break on the site.
+- **Docs search**: the search box in the site's header (`/` focuses it) reads `docs/search.json`, which Jekyll builds with Liquid from the pages listed in `docs/_data/nav.yml`. A new page is searchable once it is in the sidebar. `search.json` and `_layouts/default.html` are the only files with Liquid; pages must not contain `{{` or `{%`, and `search.json` may use only filters GitHub Pages' Jekyll 3.10 has (`tests/test_tooling.py` checks both). Jekyll does not run locally: to try the search box, render a few pages into the layout with a throwaway script and serve them with `python3 -m http.server`.

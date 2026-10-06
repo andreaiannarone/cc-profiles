@@ -6,30 +6,19 @@ import glob
 import json
 import os
 
-from .core import cached_read, expand, load_config, profiles, read_json, san
+from .byfolder import match_rule
+from .core import cached_read, load_config, profiles, read_json, san
 
 # ---------------------------------------------------------------------------
 # Classification and path resolution
 # ---------------------------------------------------------------------------
 def classify(path, dirname, rules=None):
     """Expected profile for a project: a profile id, 'shared' or None.
-    Pass `rules` when classifying many projects, to read the config once."""
+    Pass `rules` when classifying many projects, to read the config once.
+    The matching itself is byfolder.match_rule, shared with `cc-profiles which`."""
     if rules is None:
         rules = load_config()["rules"]
-    for r in rules:
-        if "exact" in r:
-            target = expand(r["exact"]).rstrip("/") or "/"
-            if path == target or (path is None and dirname == san(target)):
-                return r["profile"]
-    for r in rules:
-        m = r.get("match")
-        if not m:
-            continue
-        if path is not None and m in path:
-            return r["profile"]
-        if path is None and san(m) in dirname:
-            return r["profile"]
-    return None
+    return match_rule(rules, path, dirname)
 
 
 def _read_history(path):

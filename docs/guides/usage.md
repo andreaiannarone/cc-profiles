@@ -17,7 +17,12 @@ The **Usage** tab (`g u`) shows how many tokens Claude used in each profile, per
 | **Cache read share** | the part of the input tokens served from the prompt cache. A high share is normal for Claude Code and keeps costs down |
 | **Tokens per day** | one bar per day, every day of the period (empty days included), split into output, input and cache write, and cache read. Hover a bar to read its numbers |
 | **Top projects** | the 10 projects with the most tokens, with their profile |
+| **Most expensive sessions** | the 10 conversations with the highest estimated cost in the period (then the most tokens): their first prompt, project, profile, last reply, replies, tokens and cost. Subagent replies count for the conversation that started them. Click the title to open the conversation in the Conversations tab |
 | **Models** | each model's replies and tokens by kind, and its cost |
+
+## Export CSV
+
+**Export CSV** downloads the profile and period you are looking at as `cc-profiles-usage-<profile>-<days>d.csv`: one row per day and model with replies, oldest first, with the columns `date`, `model`, `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens`, `replies` and `estimated_cost_usd` (empty for a model without a list price). The numbers are the same as the tab's.
 
 ## Where the numbers come from
 

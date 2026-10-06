@@ -85,13 +85,39 @@ def test_plugin_marketplace_manifests():
     assert 'argument-hint: "[restart|stop]"' in command and "allowed-tools: Bash(cc-profiles open:*)" in command
 
 
+# The only files of the docs site that are Liquid by design: everything else is rendered as written.
+DOCS_LIQUID = {"_layouts/default.html", "search.json"}
+# What GitHub Pages' Jekyll 3.10 (Liquid 4) offers and search.json may use: no plugin adds filters there.
+JEKYLL_FILTERS = {"strip_html", "markdownify", "jsonify", "truncate", "relative_url", "where", "replace"}
+
+
 def test_docs_build_on_github_pages():
     """GitHub Pages renders docs/ with Jekyll: Liquid tags in a page break the build,
     and every page in the sidebar must exist."""
-    for md in (ROOT / "docs").rglob("*.md"):
-        text = md.read_text()
-        assert "{{" not in text and "{%" not in text, f"{md.relative_to(ROOT)}: Liquid syntax breaks the docs site"
+    for f in (ROOT / "docs").rglob("*"):
+        rel = f.relative_to(ROOT / "docs").as_posix()
+        if not f.is_file() or f.suffix not in (".md", ".html", ".json", ".yml", ".css", ".svg") or rel in DOCS_LIQUID:
+            continue
+        text = f.read_text()
+        assert "{{" not in text and "{%" not in text, f"docs/{rel}: Liquid syntax breaks the docs site"
     nav = (ROOT / "docs" / "_data" / "nav.yml").read_text()
     for url in __import__("re").findall(r"url: ([\w/.-]+\.md)", nav):
         assert (ROOT / "docs" / url).is_file(), f"docs/_data/nav.yml links {url}, which does not exist"
     assert (ROOT / "docs" / "CNAME").read_text().strip() == "cc-profiles.andreaia.com"
+
+
+def test_docs_search_index_uses_only_github_pages_filters():
+    """search.json is built by GitHub Pages' Jekyll, which we cannot run here: check that it is
+    a page without layout and that its Liquid uses only filters Jekyll 3.10 / Liquid 4 have."""
+    import re
+    text = (ROOT / "docs" / "search.json").read_text()
+    assert text.startswith("---\nlayout: null\n---\n"), "search.json needs front matter, or Jekyll copies it as is"
+    used = set()
+    for out, tag in re.findall(r"\{\{-?(.*?)-?\}\}|\{%-?(.*?)-?%\}", text, re.S):
+        body = re.sub(r'"[^"]*"|\'[^\']*\'', '""', out or tag)  # a | inside a string is no filter
+        used |= set(re.findall(r"\|\s*(\w+)", body))
+    assert "jsonify" in used and "site.data.nav" in text
+    assert used <= JEKYLL_FILTERS, f"filters GitHub Pages' Jekyll does not have: {used - JEKYLL_FILTERS}"
+    layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
+    assert "'/search.json' | relative_url" in layout, "the search box reads the index through relative_url"
+    assert "<script src" not in layout, "the docs site loads no external script"

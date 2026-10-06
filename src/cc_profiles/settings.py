@@ -670,6 +670,30 @@ STATUS_BRACKETS = {"none": ("", ""), "round": ("(", ")"), "square": ("[", "]"), 
 # How the 5-hour and weekly limits read: the share used, or the share left with the time
 # until the reset when half or less is left. Scripts without it in their header show "used".
 STATUS_LIMITS = ("used", "left")
+# Presets that fill the editor in one click (nothing is saved until Save): (id, label,
+# description, parts in order, brackets, separator, colors, limits). Brackets "default" gives
+# every piece its own (STATUS_PARTS), any other id the same brackets to all of them.
+STATUS_PRESETS = [
+    ("essential", "Essential", "Profile, model and context used, between dots",
+     ["profile", "model", "context"], "none", "dot", True, "used"),
+    ("developer", "Developer", "Path, git branch, profile, model and context, each in its own brackets",
+     ["path", "branch", "profile", "model", "context"], "default", "space", True, "used"),
+    ("usage", "Usage", "Model, tokens, cost and the quota left on the 5-hour and weekly limits",
+     ["model", "tokens", "cost", "limit", "week"], "none", "bar", True, "left"),
+    ("handmade", "Like a hand-made one", "Everything a typical hand-written status line shows, quota left included",
+     ["path", "branch", "profile", "email", "model", "style", "tokens", "context", "limit", "week", "terminal"],
+     "default", "space", True, "left"),
+]
+
+
+def status_presets():
+    """STATUS_PRESETS as the editor uses them: parts as "id:brackets" in line order."""
+    return [{"id": pid, "label": label, "description": desc,
+             "parts": [f"{p}:{STATUS_DEFAULT_BRACKETS[p] if br == 'default' else br}" for p in parts],
+             "brackets": None if br == "default" else br, "separator": sep, "colors": colors, "limits": limits}
+            for pid, label, desc, parts, br, sep, colors, limits in STATUS_PRESETS]
+
+
 STATUS_SAMPLE_LEFT = {"limit": "5h:22%→1h20m", "week": "7d:59%"}
 # The preview's data. No transcript_path: the preview adds one to a sample conversation of its
 # own, so it never reads a file it did not write. resets_at is added relative to now.
@@ -754,7 +778,8 @@ lim() {{
     d=$((r - $(date +%s)))
     if [ "$d" -ge 86400 ]; then s=$(printf '%s→%sd%sh' "$s" $((d / 86400)) $((d % 86400 / 3600)))
     elif [ "$d" -ge 3600 ]; then s=$(printf '%s→%sh%sm' "$s" $((d / 3600)) $((d % 3600 / 60)))
-    elif [ "$d" -gt 0 ]; then s=$(printf '%s→%sm' "$s" $((d / 60))); fi
+    elif [ "$d" -ge 60 ]; then s=$(printf '%s→%sm' "$s" $((d / 60)))
+    elif [ "$d" -gt 0 ]; then s=$(printf '%s→<1m' "$s"); fi
   fi
   add "$s" $c
 }}
@@ -779,7 +804,7 @@ def status_script_info(path):
         return None
     if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
         return None
-    old = ":" not in head[2]
+    old = ":" not in head[2][len("# parts:"):]
     try:
         parts = status_parts(head[2][len("# parts:"):].split())
     except ApiError:
@@ -811,7 +836,7 @@ def get_statusline(pid):
     info = info or {"parts": status_parts(STATUS_DEFAULT_PARTS), "separator": "space", "colors": True, "limits": "used"}
     return {"value": value, "source": src, "mode": mode, "parts": [f"{pid}:{br}" for pid, br in info["parts"]],
             "separator": info["separator"], "colors": info["colors"], "limits": info["limits"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
-            "jq": bool(find_tool("jq")), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
+            "jq": bool(find_tool("jq")), "presets": status_presets(), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
             "brackets": [{"id": k, "left": v[0], "right": v[1]} for k, v in STATUS_BRACKETS.items()],
             "parts_available": [dict({"id": x[0], "label": x[1], "sample": x[2], "brackets": x[3]},
                                      **({"sample_left": STATUS_SAMPLE_LEFT[x[0]]} if x[0] in STATUS_SAMPLE_LEFT else {}))

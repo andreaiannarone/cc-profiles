@@ -74,7 +74,7 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .cmp tr.diff td { background: var(--warn-soft); }
 .cmp .src { font-family: inherit; font-size: 11px; color: var(--muted); margin-left: 6px; }
 .ext-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 8px; }
-.ext-head h3 { margin: 0; font-size: 15px; }
+.ext-head h2 { margin: 0; font-size: 15px; }
 .ext-head .hint { flex: 1; min-width: 200px; }
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .plug-row .m code { font-size: 11.5px; }
@@ -187,8 +187,8 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 
 .health { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
 .hcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
-.hcard h3 { margin: 0 0 10px; font-size: 15px; }
-.hcard h4 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.hcard h2 { margin: 0 0 10px; font-size: 15px; }
+.hcard h3 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .check { display: flex; gap: 8px; padding: 3px 0; font-size: 13px; }
 .check .i { width: 16px; flex: none; text-align: center; }
 .check.ok .i { color: var(--ok); } .check.warn .i { color: var(--warn); } .check.error .i { color: var(--err); }
@@ -213,6 +213,13 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .share .txt { flex: 1; }
 .share .txt b { font-weight: 600; font-family: var(--mono); font-size: 12.5px; }
 .share .txt div { color: var(--muted); font-size: 12.5px; }
+.bf-switch { border-top: 0; margin-top: 4px; }
+.share .bf-t { font-weight: 600; }
+.bf-rules { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.bf-rules li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
+.share .txt .bf-try { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.bf-try input.text { flex: 1; min-width: 200px; }
+#bf-result { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
 .pcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; cursor: pointer; color: var(--muted); font-weight: 550; min-height: 110px; background: transparent; }
 .pcard.add:hover { color: var(--text); border-color: var(--faint); }
 .form { display: grid; gap: 12px; }
@@ -220,6 +227,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .form .radio { display: grid; gap: 6px; }
 .form .radio label, .form .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13.5px; }
 .form .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.np-list { margin: 6px 0 0; padding-left: 18px; }
 .prow { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .prow:last-child { border-bottom: 0; }
 .prow .txt { flex: 1; min-width: 0; }
@@ -237,7 +245,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .setgrid { display: grid; gap: 16px; }
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .sec > .h { display: flex; gap: 10px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.sec > .h h3 { margin: 0; font-size: 15px; }
+.sec > .h h2 { margin: 0; font-size: 15px; }
 .sec > .h .hint { flex: 1; }
 .sec > .b { padding: 12px 16px; }
 .srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
@@ -287,6 +295,8 @@ textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-s
 .slopts input.text { width: 110px; }
 details.slscript { margin-top: 10px; } details.slscript summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
 details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 12px; }
+.slpresets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; }
+.slpresets .hint { margin-right: 4px; }
 .slsep { max-width: 240px; } .slsep button { font-family: var(--mono); font-size: 15px; font-weight: 700; padding: 3px 0; }
 .perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
@@ -336,6 +346,30 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 .bk .t { font-weight: 600; }
 .bk .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .bk .acts { display: flex; gap: 6px; flex: none; }
+/* what a backup changed: a wide drawer, one collapsible block per file with a unified diff */
+.drawer.wide { width: min(960px, 100vw); }
+.chsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.chsteps li { overflow-wrap: anywhere; }
+.chsteps .k { color: var(--muted); }
+details.chg { border-top: 1px solid var(--line); padding: 8px 0; }
+details.chg:first-of-type { border-top: 0; }
+details.chg summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; overflow-wrap: anywhere; }
+details.chg summary::-webkit-details-marker { display: none; }
+details.chg summary::before { content: "▸"; color: var(--muted); width: 10px; }
+details.chg[open] summary::before { content: "▾"; }
+details.chg summary code { flex: 1; min-width: 200px; }
+details.chg .st { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+details.chg .notes { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+pre.diff { margin: 8px 0 0; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; padding: 6px 0; }
+pre.diff span { display: block; padding: 0 10px; white-space: pre; min-width: max-content; }
+pre.diff .a { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); }
+pre.diff .d { background: var(--err-soft); }
+pre.diff .h { color: var(--muted); background: var(--panel-2); }
+pre.diff .f { color: var(--muted); }
+.ext-head h2 { margin: 0; font-size: 15px; }
+.linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.linkbtn:hover { text-decoration: underline; }
 .toasts { position: fixed; bottom: 18px; right: 18px; display: grid; gap: 8px; z-index: 20; max-width: min(440px, calc(100vw - 36px)); }
 .toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
 .toast.err { background: var(--err); color: #fff; }
@@ -792,9 +826,9 @@ function renderHealth() {
   if (!S.health) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Checking login, files, links, skills, plugins, memories and folders…</div>`; return; }
   const icon = { ok: "✓", warn: "!", error: "✕" };
   $("#main").innerHTML = `<div class="toolbar"><button class="btn" id="rehealth">Run the checks again</button></div>
-    <div class="health">${S.health.map(h => `<div class="hcard"><h3>${esc(h.label)}</h3>
+    <div class="health">${S.health.map(h => `<div class="hcard"><h2>${esc(h.label)}</h2>
       ${h.checks.map(c => `<div class="check ${c.level}"><span class="i" aria-hidden="true">${icon[c.level]}</span><span>${esc(c.text)}</span></div>`).join("")}
-      <h4>Projects whose folder is gone (${h.orphans.length})</h4>
+      <h3>Projects whose folder is gone (${h.orphans.length})</h3>
       ${h.orphans.map(o => `<div class="orphan"><div class="p">${esc(o.pretty)}</div>
         <div class="hint">${plural(o.conv, "conversation", "conversations")} · ${plural(o.mem, "memory", "memories")}</div>
         <div class="c">${o.candidates.map(c => `<button class="btn small primary" data-hlink="${esc(o.name)}" data-prof="${h.id}" data-path="${esc(c)}">Relink to ${esc(c)}</button>`).join("")}
@@ -807,7 +841,8 @@ function renderHealth() {
 // ---------- profiles and sharing ----------
 async function loadSharing() {
   S.sharing = null; renderSharing();
-  S.sharing = await api("/api/sharing"); renderSharing();
+  const [sharing, shell] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; renderSharing();
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -827,13 +862,15 @@ function renderSharing() {
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
-    <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
+    <div class="health">${S.sharing.map(p => `<div class="hcard"><h2>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h2>
       ${p.items.map(it => `<div class="share">
         <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
         <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
-      </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>`;
+      </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>
+    ${byFolderHtml()}`;
   $("#ptemplates").onclick = manageTemplates;
+  wireByFolder();
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
@@ -846,6 +883,61 @@ function renderSharing() {
     try { await run(() => api("/api/sharing", { profile: p.id, item: it.item, shared: on })); } catch {}
     loadSharing();
   });
+}
+const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
+
+// ---------- profile by folder ----------
+function byFolderHtml() {
+  const x = S.shell;
+  if (!x) return "";
+  const on = x.installed.length > 0, files = l => l.map(f => `<code>${esc(f)}</code>`).join(", ");
+  const rules = x.rules.map(r => `<li><code>${esc(r.text)}</code> <span class="hint">${r.exact ? "this folder only" : "any path containing it"}</span>
+      <span aria-hidden="true">→</span> ${r.profile === "shared" ? `<span class="badge b-shared">All profiles</span> <span class="hint">default profile</span>` : badge(r.profile)}</li>`).join("");
+  const state = on ? `On: the line is in ${files(x.installed)}.`
+    : x.targets.length ? `Off. Turning it on adds one line to ${files(x.targets.map(t => t.file))}.`
+    : `Off. Your shell (${esc(x.shell || "unknown")}) is not zsh or bash: add the output of <code>cc-profiles shell-init bash</code> to its startup file by hand.`;
+  return `<h2 class="section-title">Profile by folder</h2>
+    <div class="sec"><div class="b">
+      <div class="hint">The rules below link folders to profiles; the Projects tab uses the same ones. When this is on, typing <code>claude</code> in a terminal starts Claude Code in the profile of the folder you are in, and folders without a rule keep the default profile.</div>
+      <div class="share bf-switch">
+        <div class="txt"><span class="bf-t">Pick the profile from the folder when I run claude</span><div>${state}${x.on_path ? "" : ` <span class="issue">cc-profiles was not found in <code>PATH</code>: the line needs it in your terminal.</span>`}</div></div>
+        <label class="switch" title="${on ? "On" : "Off"}"><input type="checkbox" id="bf-switch" ${on ? "checked" : ""} aria-label="Pick the profile from the folder when I run claude"><span></span></label>
+      </div>
+      <div class="share"><div class="txt"><span class="bf-t">Rules: folder → profile</span>
+        ${rules ? `<ul class="bf-rules">${rules}</ul>` : `<div>No rules yet: add one from the Projects tab with Assign….</div>`}</div></div>
+      <div class="share"><div class="txt"><span class="bf-t">Try a folder</span>
+        <div class="bf-try"><input class="text mono" id="bf-path" list="bf-list" placeholder="~/code/work/api" aria-label="Folder to try">
+          <datalist id="bf-list">${x.projects.map(p => `<option value="${esc(p.path)}">`).join("")}</datalist>
+          <button class="btn" id="bf-go">Try</button></div>
+        <div id="bf-result" role="status"></div></div></div>
+    </div></div>`;
+}
+function wireByFolder() {
+  const sw = $("#bf-switch");
+  if (!sw) return;
+  sw.onchange = async () => {
+    const x = S.shell, on = sw.checked;
+    const sub = on
+      ? `Adds one line at the end of ${plural(x.targets.length, "file", "files")}.` + x.targets.map(t => `<div style="margin-top:8px">To <code>${esc(t.file)}</code>:</div><pre class="log" style="margin-top:4px">${esc(t.line)}</pre>`).join("")
+        + `<div style="margin-top:8px">The file is backed up first. Open a new terminal afterwards. A <code>CLAUDE_CONFIG_DIR</code> you set yourself still wins.</div>`
+      : `Removes the line ending in <code># cc-profiles: profile by folder</code> from ${x.installed.map(f => `<code>${esc(f)}</code>`).join(", ")}, and nothing else. In new terminals <code>claude</code> then always starts in the default profile.`;
+    if (!(await confirmBox(on ? "Pick the profile from the folder?" : "Stop picking the profile from the folder?", sub, on ? "Turn on" : "Turn off"))) { sw.checked = !on; return; }
+    try { await run(() => api("/api/shell", { install: on })); } catch {}
+    loadSharing();
+  };
+  const go = async () => {
+    const out = $("#bf-result"), path = $("#bf-path").value.trim();
+    if (!/^[\/~]/.test(path)) { out.innerHTML = `<span class="issue err">Type an absolute folder, or one starting with ~</span>`; return; }
+    try {
+      const w = await api("/api/shell/which?path=" + encodeURIComponent(path));
+      const where = `<code>${esc(w.path)}</code>${w.exists ? "" : " (not on disk yet)"}`;
+      out.innerHTML = w.profile
+        ? `${where}: ${badge(w.profile)} ` + (w.default ? `the default profile, <code>CLAUDE_CONFIG_DIR</code> left unset.` : `<code>CLAUDE_CONFIG_DIR=${esc(w.dir)}</code>`)
+        : `${where}: ` + (w.rule === "shared" ? `a rule says all profiles, so claude starts in the default profile.` : `no rule matches, so claude starts in the default profile.`);
+    } catch (e) { out.innerHTML = `<span class="issue err">${esc(e.message)}</span>`; }
+  };
+  $("#bf-go").onclick = go;
+  $("#bf-path").onkeydown = e => { if (e.key === "Enter") go(); };
 }
 async function newProfile() {
   let tpl = [];
@@ -860,18 +952,42 @@ async function newProfile() {
       <div class="radio">${opts}<label><input type="radio" name="base" value=""> Empty</label></div>
       <label class="check" id="np-projwrap"><input type="checkbox" id="np-proj"> also copy project conversations, history and memories</label>
       <div id="np-share"><div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
-      <div class="checks">${["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"].map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
-      <div class="hint" id="np-tpl" hidden>The profile gets the template's own copies: settings, CLAUDE.md, permissions, skills, agents, commands, output styles and MCP servers. Nothing is shared; you can share items later.</div>
+      <div class="checks">${SHARE_NEW.map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
+      <div class="hint" id="np-tpl" hidden></div>
     </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
   const L = $("#np-label"), I = $("#np-id"); let touched = false;
   const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
   const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
   L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
   I.oninput = () => { touched = true; upd(); };
+  // A template fills the items it holds; an item shared with the source is linked instead,
+  // and the hint says which of the template's copies that skips. Plugins are never in a template.
+  const src = esc(S.profiles[0].label);
+  let shareTouched = false;
+  const shareBoxes = () => [...document.querySelectorAll('input[name="share"]')];
+  const tplHint = () => {
+    const base = document.querySelector('input[name="base"]:checked')?.value || "";
+    const t = base.startsWith("template:") && tpl.find(x => x.name === base.slice(9));
+    $("#np-tpl").hidden = !t;
+    if (!t) return;
+    const nouns = { skills: ["skill", "skills"], agents: ["agent", "agents"], commands: ["command", "commands"] };
+    const lines = shareBoxes().filter(c => c.checked).map(c => {
+      const i = c.value, n = (t.counts || {})[i] || 0;
+      if (i === "plugins") return `<code>plugins</code>: shared with ${src}`;
+      if (!n) return `<code>${esc(i)}</code>: shared with ${src} (the template has none)`;
+      return `<code>${esc(i)}</code>: shared with ${src}, the template's ${nouns[i] ? `${plural(n, ...nouns[i])} ${n === 1 ? "is" : "are"}` : `<code>${esc(i)}</code> is`} not copied`;
+    });
+    $("#np-tpl").innerHTML = `The profile gets the template's own copies of what is not shared: settings, <code>CLAUDE.md</code>, permissions, skills, agents, commands, output styles and MCP servers.
+      Plugins are never in a template: share <code>plugins</code> to give the new profile the plugins of ${src}.`
+      + (lines.length ? `<ul class="np-list">${lines.map(l => `<li>${l}</li>`).join("")}</ul>` : "");
+  };
+  shareBoxes().forEach(c => c.addEventListener("change", () => { shareTouched = true; tplHint(); }));
   document.querySelectorAll('input[name="base"]').forEach(r => r.onchange = () => {
     const isTpl = r.value.startsWith("template:");
     $("#np-projwrap").style.display = r.value && !isTpl ? "" : "none";
-    $("#np-share").hidden = isTpl; $("#np-tpl").hidden = !isTpl;
+    // until the choices are changed by hand: a template keeps its own skills, plugins come from the source
+    if (!shareTouched) shareBoxes().forEach(c => { c.checked = c.value === "plugins" || (!isTpl && c.value === "skills"); });
+    tplHint();
   });
   const res = await resP;
   if (!res) return;
@@ -881,7 +997,7 @@ async function newProfile() {
     base, include_projects: v("#np-proj").checked,
     share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value) };
   const req = base.startsWith("template:")
-    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id })
+    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id, share: body.share })
     : () => api("/api/profiles/create", body);
   try { await run(req); } catch { return; }
   await refresh(); if (S.tab === "profiles") loadSharing();
@@ -1014,7 +1130,7 @@ function renderSkills(head) {
   const skills = x.skills.skills.filter(k => !q || (k.name + " " + k.description).toLowerCase().includes(q));
   const cur = x.skills.skills.find(k => k.name === x.skill);
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Skills</h3><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
+    <div class="ext-head" style="margin-top:0"><h2>Skills</h2><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
       <input class="search" style="margin:0" placeholder="Filter skills…" value="${esc(x.q)}" id="extq" aria-label="Filter skills">
       <button class="btn primary" id="sknew">New skill…</button></div>
     <div class="cards skgrid">${skills.map(k => `<div class="mcard ${k.name === x.skill ? "on" : ""}" data-skill="${esc(k.name)}" tabindex="0" role="button">
@@ -1049,7 +1165,7 @@ function renderSkills(head) {
 function renderMcp(head) {
   const x = S.ext;
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>MCP servers</h3><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
+    <div class="ext-head" style="margin-top:0"><h2>MCP servers</h2><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
       <button class="btn primary" id="mcpnew">Add server…</button></div>
     <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
         <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
@@ -1200,6 +1316,16 @@ function ansiHtml(text) {
   }
   return out + "</span>".repeat(open);
 }
+// A preset fills the draft (nothing is saved): it is "on" while the draft is exactly that preset.
+const slPresetOn = (dr, p) => slParts(dr).join(",") === p.parts.join(",") && dr.separator === p.separator && dr.colors === p.colors && dr.limits === p.limits;
+function slApplyPreset(p) {
+  const dr = S.set.slDraft, ids = p.parts.map(x => x.split(":")[0]);
+  dr.parts = ids;
+  dr.order = [...ids, ...dr.order.filter(i => !ids.includes(i))];
+  S.set.sl.parts_available.forEach(x => { dr.brackets[x.id] = p.brackets || x.brackets; });
+  p.parts.forEach(x => { const [id, br] = x.split(":"); dr.brackets[id] = br; });
+  Object.assign(dr, { separator: p.separator, colors: p.colors, limits: p.limits });
+}
 const slBr = (sl, br, text) => { const b = sl.brackets.find(x => x.id === br); return b ? b.left + text + b.right : text; };
 function statusLineSection() {
   const st = S.set, sl = st.sl, dr = st.slDraft;
@@ -1207,11 +1333,12 @@ function statusLineSection() {
   const where = sl.value ? `Now: ${sl.mode === "builtin" ? "made by cc-profiles" : "your command"}, in ${srcBadge(sl.source)}` : "Now: off";
   const byId = Object.fromEntries(sl.parts_available.map(p => [p.id, p]));
   const dirty = slKey(dr) !== st.slSaved;
-  return `<section class="sec" id="sl-sec"><div class="h"><h3>Status line</h3><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
+  return `<section class="sec" id="sl-sec"><div class="h"><h2>Status line</h2><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
     <div class="b">
       <div class="seg" style="max-width:460px" role="group" aria-label="Status line">${[["off", "Off"], ["builtin", "Made by cc-profiles"], ["custom", "Your command"]].map(([m, l]) =>
         `<button data-slmode="${m}" class="${dr.mode === m ? "on" : ""}" aria-pressed="${dr.mode === m}">${l}</button>`).join("")}</div>
       ${dr.mode === "builtin" ? `
+        ${sl.presets?.length ? `<div class="slpresets" role="group" aria-label="Presets"><span class="hint">Presets</span>${sl.presets.map(p => { const on = slPresetOn(dr, p); return `<button class="chip ${on ? "on" : ""}" data-slpreset="${p.id}" aria-pressed="${on}" title="${esc(p.description)}">${esc(p.label)}</button>`; }).join("")}</div>` : ""}
         <div class="slgrid">
           <ul class="slparts" aria-label="What to show, in order: drag or use the arrows">${dr.order.map((id, i) => { const p = byId[id], on = dr.parts.includes(id); return `
             <li class="${on ? "" : "off"}" draggable="true" data-slitem="${id}">
@@ -1252,6 +1379,10 @@ function slDirty() {
   const dirty = slKey(S.set.slDraft) !== S.set.slSaved;
   $("#sl-dirty").textContent = dirty ? "Unsaved changes" : "";
   $("#sl-save").disabled = !dirty;
+  document.querySelectorAll("[data-slpreset]").forEach(b => {  // the colors switch changes the draft without a re-render
+    const on = slPresetOn(S.set.slDraft, S.set.sl.presets.find(p => p.id === b.dataset.slpreset));
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
 }
 let slSeq = 0;
 async function slPreview() {
@@ -1286,6 +1417,9 @@ function bindStatusLine() {
     slRead(); const v = b.dataset.slbrall;
     st.sl.parts_available.forEach(p => { dr.brackets[p.id] = v === "default" ? p.brackets : v; });
     renderStatusLine(`[data-slbrall="${v}"]`);
+  });
+  document.querySelectorAll("[data-slpreset]").forEach(b => b.onclick = () => {
+    slRead(); slApplyPreset(st.sl.presets.find(p => p.id === b.dataset.slpreset)); renderStatusLine(`[data-slpreset="${b.dataset.slpreset}"]`);
   });
   document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
   document.querySelectorAll("[data-sllim]").forEach(b => b.onclick = () => { slRead(); dr.limits = b.dataset.sllim; renderStatusLine(`[data-sllim="${dr.limits}"]`); });
@@ -1358,8 +1492,8 @@ function renderSettings() {
   const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
   <div class="setgrid">${errs}
-    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
-      ${d.fields.map((f, i) => { const shownF = f.key in st.draft ? { ...f, value: storedOf(f, st.draft[f.key]) } : f; return `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow" data-srow="${f.key}">
+    <section class="sec"><div class="h"><h2>General</h2><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
+      ${d.fields.map((f, i) => { const shownF = f.key in st.draft ? { ...f, value: storedOf(f, st.draft[f.key]) } : f; return `${f.group && f.group !== d.fields[i - 1]?.group ? `<h3 class="sgroup">${esc(f.group)}</h3>` : ""}<div class="srow" data-srow="${f.key}">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
         <div class="v">${fieldInput(shownF)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
@@ -1373,25 +1507,25 @@ function renderSettings() {
 
     ${statusLineSection()}
 
-    <section class="sec"><div class="h"><h3>Global instructions · CLAUDE.md</h3><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
+    <section class="sec"><div class="h"><h2>Global instructions · CLAUDE.md</h2><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
       <div class="b"><textarea class="code" id="cmd-text" spellcheck="false" aria-label="CLAUDE.md" placeholder="# Context&#10;&#10;In this profile you work on …">${esc(d.claude_md.content)}</textarea>
         <div class="row-end"><span class="grow">${plural(d.claude_md.content ? d.claude_md.content.split("\n").length : 0, "line", "lines")}</span><button class="btn primary" id="cmd-save">Save CLAUDE.md</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Permissions</h3><span class="hint">One rule per line, in <code>settings.json</code>. E.g. <code>Bash(npm run test:*)</code>, <code>Read(~/Documents/**)</code>, <code>mcp__claude_ai_Gmail</code></span></div>
+    <section class="sec"><div class="h"><h2>Permissions</h2><span class="hint">One rule per line, in <code>settings.json</code>. E.g. <code>Bash(npm run test:*)</code>, <code>Read(~/Documents/**)</code>, <code>mcp__claude_ai_Gmail</code></span></div>
       <div class="b"><div class="perm">${[["allow", "Allow without asking"], ["ask", "Always ask"], ["deny", "Block"]].map(([k, l]) => `<label class="f">${l} <code>${k}</code>
           <textarea class="text" id="perm-${k}" spellcheck="false">${esc((d.permissions[k] || []).join("\n"))}</textarea>
           ${(d.permissions_local[k] || []).length ? `<span class="hint">+ ${d.permissions_local[k].length} in settings.local.json (edit them in the advanced editor)</span>` : ""}</label>`).join("")}</div>
         <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn" id="perm-all">Add a rule to every profile…</button><button class="btn primary" id="perm-save">Save permissions</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Advanced editor</h3><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
+    <section class="sec"><div class="h"><h2>Advanced editor</h2><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
       <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
         <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
         <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Global</h3><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
+    <section class="sec"><div class="h"><h2>Global</h2><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
       <div class="b"><div class="srow" style="padding:0 0 10px;border:0"><div class="l"><b>Auto-updates</b><span>autoUpdates</span></div>
         <div class="v"><label class="switch"><input type="checkbox" id="g-auto" ${d.global.autoUpdates ? "checked" : ""} aria-label="Auto-updates"><span></span></label></div><div></div></div>
         <dl class="kv">${Object.entries(d.global.info).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
@@ -1545,7 +1679,8 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div></div>`;
+      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div></div>
+    <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
 }
 async function checkUpdate(dr) {
@@ -1599,15 +1734,20 @@ async function exportProfile(id) {
   if (!res) return;
   const projects = $("#ex-proj", res.el).checked ? 1 : 0;
   try {
-    const r = await fetch(`/api/profiles/export?id=${encodeURIComponent(id)}&projects=${projects}`, { headers: { "X-Token": TOKEN } });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
-    const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || `cc-profiles-${id}.zip`;
-    const url = URL.createObjectURL(await r.blob());
-    const a = Object.assign(document.createElement("a"), { href: url, download: name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const name = await download(`/api/profiles/export?id=${encodeURIComponent(id)}&projects=${projects}`, `cc-profiles-${id}.zip`);
     toast(`Exported ${p.label}`, name);
   } catch (e) { toast(e.message, "", true); }
+}
+// A download needs the token header, so it is fetched and saved from a Blob, not linked.
+async function download(path, fallback) {
+  const r = await fetch(path, { headers: { "X-Token": TOKEN } });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || fallback;
+  const url = URL.createObjectURL(await r.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return name;
 }
 async function importProfile() {
   const resP = modal({ title: "Import profile",
@@ -1656,14 +1796,14 @@ function renderPlugins() {
   if (x.error) $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`;
   else if (!d) $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading plugins…</div>`;
   else $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Plugins</h3><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
+    <div class="ext-head" style="margin-top:0"><h2>Plugins</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
     <div class="table">${d.plugins.map((g, i) => `<div class="prow plug-row"><div class="txt">
         <div class="t">${esc(g.plugin)} <span class="badge b-none">${esc(g.marketplace || "no marketplace")}</span>${g.version ? ` <span class="badge b-none">${esc(g.version)}</span>` : ""}${g.is_installed ? "" : ` <span class="badge b-warn">not installed</span>`}</div>
         <div class="m">${g.installed ? `installed ${esc(g.installed)}` : ""}${g.scopes.length ? ` · ${esc(g.scopes.join(", "))}` : ""}${g.projects.length ? ` · ${g.projects.map(esc).join(", ")}` : ""}${g.path ? ` · <code>${esc(g.path)}</code>` : ""}</div>
         <div class="m">${g.enabled == null ? "not set in the settings: Claude Code's default" : `${g.enabled ? "enabled" : "disabled"} in ${g.source === "local" ? "settings.local.json" : "settings.json"}`}</div></div>
       <label class="switch" title="${g.enabled ? "Enabled" : "Disabled"}"><input type="checkbox" data-plugsw="${i}" ${g.enabled ? "checked" : ""} aria-label="Enable ${esc(g.name)}"><span></span></label></div>`).join("")
       || `<div class="empty">No plugins in this profile. Install them with <code>/plugin</code> in Claude Code.</div>`}</div>
-    <div class="ext-head"><h3>Marketplaces</h3><span class="hint">where Claude Code finds plugins to install</span></div>
+    <div class="ext-head"><h2>Marketplaces</h2><span class="hint">where Claude Code finds plugins to install</span></div>
     <div class="mlist">${d.marketplaces.map(m => `<div><b>${esc(m.name)}</b> · <code>${esc(m.source)}</code>${m.updated ? ` · updated ${esc(m.updated)}` : ""}</div>`).join("") || `<div>None.</div>`}</div>`;
   document.querySelectorAll("[data-plugprof]").forEach(b => b.onclick = () => loadPlugins(b.dataset.plugprof));
   document.querySelectorAll("[data-plugsw]").forEach(cb => cb.onchange = async () => {
@@ -1769,7 +1909,7 @@ function renderSearch() {
   const others = r => (r.profiles || [r.profile]).map(badge).join(" ");
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(total, "result", "results")} for “${esc(d.q)}” in every profile${d.truncated ? " · only the first ones: refine the search to see more" : ""}. Values of MCP environment variables and headers are not searched.</span>
       <button class="btn small" id="s-close" style="margin-left:auto">Close search</button></div>
-    ${total ? SKINDS.filter(([k]) => d.results[k].length).map(([k, l]) => `<div class="ext-head"><h3>${l}</h3><span class="hint">${d.counts[k]}</span></div>
+    ${total ? SKINDS.filter(([k]) => d.results[k].length).map(([k, l]) => `<div class="ext-head"><h2>${l}</h2><span class="hint">${d.counts[k]}</span></div>
       <div class="table sres">${d.results[k].map((r, i) => `<div class="prow" data-sres="${k}:${i}" tabindex="0" role="button"><div class="txt">
           <div class="t">${esc(r.title)} ${others(r)}${r.where ? ` <span class="hint" style="font-weight:400">${esc(r.where)}</span>` : ""}</div>
           <div class="snip">${highlight(r.snippet)}</div></div></div>`).join("")}</div>`).join("")
@@ -1843,27 +1983,27 @@ function renderCompare() {
   const sk = d.skills, mc = d.mcp, md = d.claude_md, pl = d.plugins;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Settings</h3><span class="hint">the value in use and the file it comes from</span></div>
+    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
     ${table(["Setting", A, B], d.settings.map((s, i) => `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
         <td class="v">${val(s.a, s.a_source)}</td><td class="v">${val(s.b, s.b_source)}</td>
         <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`), "")}
-    <div class="ext-head"><h3>Permissions</h3><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
+    <div class="ext-head"><h2>Permissions</h2><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
     ${table(["Rule", "Where"], perms, "Both profiles have the same rules. ✓")}
-    <div class="ext-head"><h3>Skills</h3><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
+    <div class="ext-head"><h2>Skills</h2><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
     ${table(["Skill", "Where"], [...sk.only_a.map(n => listRows("skill", "", "a", n)), ...sk.only_b.map(n => listRows("skill", "", "b", n)),
         ...sk.both.filter(x => !x.same).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${mark(false)} <span class="hint">the SKILL.md files are different: edit them in the Skills tab</span></td><td></td></tr>`)],
       "The same skills, with the same SKILL.md. ✓")}
-    <div class="ext-head"><h3>MCP servers</h3><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
+    <div class="ext-head"><h2>MCP servers</h2><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
     ${table(["Server", "Where"], [...mc.only_a.map(m => listRows("mcp", "", "a", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
         ...mc.only_b.map(m => listRows("mcp", "", "b", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
         ...mc.both.filter(m => !m.same).map(m => `<tr class="diff"><td class="v">${esc(m.name)}</td><td>${mark(false)} <span class="hint">different configuration: edit it in the MCP tab</span></td><td></td></tr>`)],
       "The same servers, with the same configuration. ✓")}
-    <div class="ext-head"><h3>CLAUDE.md</h3><span class="hint">${md.shared ? "shared: the two profiles use the same file" : ""}</span></div>
+    <div class="ext-head"><h2>CLAUDE.md</h2><span class="hint">${md.shared ? "shared: the two profiles use the same file" : ""}</span></div>
     ${table(["", A, B], [`<tr class="${md.same ? "" : "diff"}"><td>${mark(md.same)}</td>
         <td>${md.a.exists ? plural(md.a.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td>${md.b.exists ? plural(md.b.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td class="acts">${md.same || md.shared ? "" : (md.a.exists ? btn(`data-cmp="md" data-side="a"`, `Replace ${B}'s with ${A}'s`) : "") + (md.b.exists ? btn(`data-cmp="md" data-side="b"`, `Replace ${A}'s with ${B}'s`) : "")}</td></tr>`], "")}
-    <div class="ext-head"><h3>Plugins</h3><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
+    <div class="ext-head"><h2>Plugins</h2><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
     ${table(["", ""], [`<tr><td>Installed</td><td>${plug("installed")}</td><td></td></tr>`, `<tr><td>Enabled</td><td>${plug("enabled")}</td><td></td></tr>`], "")}`;
   bindCompare();
 }
@@ -1942,14 +2082,15 @@ function renderUsage() {
       <div class="seg" role="group" aria-label="Profile">${[["all", "All profiles"], ...S.profiles.map(p => [p.id, p.label])].map(([id, l]) =>
         `<button data-uprof="${esc(id)}" class="${u.profile === id ? "on" : ""}" aria-pressed="${u.profile === id}">${esc(l)}</button>`).join("")}</div>
       <div class="seg" role="group" aria-label="Period">${[7, 30, 90, 365].map(n =>
-        `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div></div>`;
-  if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return; }
-  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return; }
+        `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div>
+      <button class="btn" id="u-csv" style="margin-left:auto">Export CSV</button></div>`;
+  if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return bindUsage(); }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return bindUsage(); }
   const T = d.totals, who = d.profile === "all" ? "all profiles" : label(d.profile);
   const note = `<p class="hint">Cost is an estimate at Anthropic's list prices per token (checked ${esc(d.prices_checked)}), from the usage Claude Code records on every reply. Subscription plans (Pro, Max, Team) are not billed per token: for them it shows what the same use would cost through the API.${T.unpriced_tokens ? ` ${tok(T.unpriced_tokens)} tokens come from models without a list price and are not in the cost.` : ""}</p>`;
   if (!T.replies) {
     $("#main").innerHTML = `${head}<div class="empty">No replies from Claude in ${esc(who)} in the last ${d.days} days.</div>${note}`;
-    return;
+    return bindUsage();
   }
   // a row whose tokens all come from models without a price has no cost; a partial one gets a *
   const cost = x => x.tokens && x.unpriced_tokens === x.tokens ? `<span class="hint">no list price</span>` : usd(x.cost) + (x.unpriced_tokens ? "*" : "");
@@ -1960,6 +2101,9 @@ function renderUsage() {
   const models = d.models.map(m => `<tr><td><code>${esc(m.model)}</code>${m.family ? ` <span class="hint">${esc(m.family)} price</span>` : ""}</td>
       <td class="r">${n(m.replies)}</td><td class="r">${tok(m.input)}</td><td class="r">${tok(m.output)}</td>
       <td class="r">${tok(m.cache_write)}</td><td class="r">${tok(m.cache_read)}</td><td class="r">${cost(m)}</td></tr>`).join("");
+  const sessions = d.sessions.map((x, i) => `<tr><td>${x.exists ? `<button class="linkbtn" data-usess="${i}">${esc(x.title) || "No prompt"}</button>` : `<span class="hint">only subagent replies</span>`}</td>
+      <td class="path"><code>${esc(x.pretty)}</code></td>${all ? `<td>${badge(x.profile)}</td>` : ""}<td class="nums">${esc(dayLabel(x.date, true))}</td>
+      <td class="r">${n(x.replies)}</td><td class="r">${tok(x.tokens)}</td><td class="r">${cost(x)}</td></tr>`).join("");
   const profs = (d.profiles || []).map(p => `<tr><td>${badge(p.id)}</td><td class="r">${n(p.replies)}</td>
       <td class="r">${tok(p.tokens)}</td><td class="r">${p.tokens ? cost(p) : "$0"}</td></tr>`).join("");
   $("#main").innerHTML = `${head}
@@ -1971,13 +2115,31 @@ function renderUsage() {
     </div>
     ${usageChart(d.daily)}
     ${note}
-    <div class="ext-head"><h3>Top projects</h3><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
+    <div class="ext-head"><h2>Top projects</h2><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
     <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
-    <div class="ext-head"><h3>Models</h3><span class="hint">cache write and cache read are priced differently from input</span></div>
+    <div class="ext-head"><h2>Most expensive sessions</h2><span class="hint">the ${plural(d.sessions.length, "conversation", "conversations")} with the highest estimated cost, then the most tokens · open one to read it</span></div>
+    <div class="table usess"><table><thead><tr><th>Conversation</th><th>Project</th>${all ? "<th>Profile</th>" : ""}<th>Last reply</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${sessions}</tbody></table></div>
+    <div class="ext-head"><h2>Models</h2><span class="hint">cache write and cache read are priced differently from input</span></div>
     <div class="table"><table><thead><tr><th>Model</th><th class="r">Replies</th><th class="r">Input</th><th class="r">Output</th><th class="r">Cache write</th><th class="r">Cache read</th><th class="r">Estimated cost</th></tr></thead><tbody>${models}</tbody></table></div>
-    ${profs ? `<div class="ext-head"><h3>Profiles</h3><span class="hint">a reply copied into another conversation or profile counts once</span></div>
+    ${profs ? `<div class="ext-head"><h2>Profiles</h2><span class="hint">a reply copied into another conversation or profile counts once</span></div>
     <div class="table"><table><thead><tr><th>Profile</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${profs}</tbody></table></div>` : ""}
     ${T.unpriced_tokens ? `<p class="hint">* without the tokens of models that have no list price.</p>` : ""}`;
+  bindUsage();
+}
+function bindUsage() {
+  const u = S.use;
+  $("#u-csv").onclick = async () => {
+    try { toast("Exported usage as CSV", await download(`/api/usage.csv?profile=${encodeURIComponent(u.profile)}&days=${u.days}`, "cc-profiles-usage.csv")); }
+    catch (e) { toast(e.message, "", true); }
+  };
+  document.querySelectorAll("[data-usess]").forEach(b => b.onclick = () => openUsageSession(u.data.sessions[+b.dataset.usess]));
+}
+// A session of the Usage tab opens in the Conversations tab, like a search result opens its tab.
+async function openUsageSession(x) {
+  goTab("conversations");
+  Object.assign(S.conv, { profile: x.profile, q: "" });
+  try { await loadConvProjects(); await openConvProject(x.project); await openConversation(x.session); }
+  catch (e) { toast(e.message, "", true); }
 }
 
 // ---------- backups ----------
@@ -2000,7 +2162,8 @@ function renderBackups() {
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
         <div class="t">${esc(b.title)} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
-      <div class="acts">${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
+      <div class="acts">${b.steps ? `<button class="btn small" data-bchanges="${esc(b.name)}">Show changes</button>` : ""}
+        ${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
   $("#bk-auto")?.addEventListener("change", autoCleanup);
@@ -2042,6 +2205,49 @@ async function restoreBackup(name) {
   const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
   if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
   await refresh(); loadBackups();
+}
+// Read-only: every step of a backup in plain words, and for each file copied before a
+// change a diff between that copy and the file as it is now.
+const DIFF_STATUS = { same: "same as now", "hidden-only": "only hidden values changed", secret: "contents hidden",
+  "too-big": "too big to compare", binary: "not a text file", dir: "now a folder", unavailable: "copy not available" };
+function diffHtml(lines) {
+  const kind = l => l.startsWith("@@") ? "h" : l.startsWith("+++ ") || l.startsWith("--- ") ? "f" : l[0] === "+" ? "a" : l[0] === "-" ? "d" : "";
+  return `<pre class="diff" tabindex="0" aria-label="Diff: lines starting with - are in the backup, lines starting with + are there now">${lines.map(l => `<span class="${kind(l)}">${esc(l) || " "}</span>`).join("")}</pre>`;
+}
+async function showChanges(name, trigger) {
+  const b = S.backups.find(x => x.name === name);
+  const bg = document.createElement("div"); bg.className = "drawer-bg";
+  const dr = document.createElement("aside"); dr.className = "drawer wide"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true");
+  dr.setAttribute("aria-label", `Changes of ${b.title}`);
+  dr.innerHTML = `<div class="dh"><h2>${esc(b.title)}</h2><button class="btn small" id="ch-close">Close</button></div>
+    <div class="db" id="ch-body"><div class="empty"><span class="spinner"></span> Comparing the backup with the files as they are now…</div></div>`;
+  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); trigger?.focus(); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  bg.onclick = close; document.addEventListener("keydown", onKey);
+  document.body.append(bg, dr);
+  $("#ch-close", dr).onclick = close; $("#ch-close", dr).focus();
+  let c;
+  try { c = await api(`/api/backups/changes?name=${encodeURIComponent(name)}`); }
+  catch (e) { $("#ch-body", dr).innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; return; }
+  const files = c.steps.filter(x => x.op === "copy"), other = c.steps.filter(x => x.op !== "copy");
+  const open = files.length <= 3;
+  const fileBlock = x => {
+    const d = x.diff;
+    const st = d.status === "changed" ? `+${d.added} −${d.removed}` : DIFF_STATUS[d.status] || d.status;
+    return `<details class="chg" ${open && d.lines.length ? "open" : ""}><summary><code>${esc(x.path)}</code><span class="st">${esc(st)}</span></summary>
+      ${d.notes.length ? `<ul class="notes">${d.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+      ${d.lines.length ? diffHtml(d.lines) : d.status === "same" ? `<div class="hint" style="margin-top:6px">The file is the same as the copy in the backup${c.restored ? ": the backup was restored" : ""}.</div>` : ""}</details>`;
+  };
+  const now = x => x.op === "absent" || x.op === "mkdir" || x.op === "created" ? (x.now ? "" : " · no longer there") : "";
+  const stepLine = x => `<li>${esc(x.text)}: <code>${esc(x.path)}</code>${x.to ? ` <span class="k">→</span> <code>${esc(x.to)}</code>${x.now ? "" : ` <span class="k">· no longer there</span>`}` : ""}${now(x) ? `<span class="k">${now(x)}</span>` : ""}</li>`;
+  $("#ch-body", dr).innerHTML = `
+    <div class="card"><h3>What this operation did</h3>
+      <div class="hint">${esc(when(c.created))} · ${plural(c.steps.length, "step", "steps")} · ${plural(files.length, "file", "files")} copied before a change${files.length ? `, ${c.files_changed} different now` : ""}
+        ${c.failed ? ` · <span class="issue">incomplete: ${esc(c.failed)}</span>` : ""}${c.restored ? ` · restored ${esc(when(c.restored))}` : ""}</div>
+      <p class="hint" style="margin-bottom:0">Read-only. Each diff compares the copy kept in the backup (<code>-</code>) with the file as it is now (<code>+</code>), so it also shows changes made later. JSON is shown with sorted keys; login credentials, MCP environment variables and headers, and token-like values are hidden.</p></div>
+    ${files.length ? `<div class="card"><h3>Files copied before a change</h3>${files.map(fileBlock).join("")}</div>` : ""}
+    ${other.length ? `<div class="card"><h3>Other steps</h3><ul class="chsteps">${other.map(stepLine).join("")}</ul></div>` : ""}
+    ${c.log.length ? `<div class="card"><h3>Notes</h3><ul class="chsteps">${c.log.map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}`;
 }
 async function deleteBackup(name) {
   const b = S.backups.find(x => x.name === name);
@@ -2147,6 +2353,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
+  if (t.dataset.bchanges) return showChanges(t.dataset.bchanges, t);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
   if (t.dataset.uprof) { S.use.profile = t.dataset.uprof; return loadUsage(); }
   if (t.dataset.udays) { S.use.days = +t.dataset.udays; return loadUsage(); }

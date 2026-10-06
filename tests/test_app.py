@@ -4,6 +4,7 @@ The key property of cc-profiles is that everything can be undone, so most tests
 end the same way: restore every backup, newest first, and check the fake home is
 byte-for-byte identical to how it started.
 """
+import csv
 import io
 import json
 import os
@@ -441,6 +442,10 @@ def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
     data["rate_limits"]["seven_day"] = {"used_percentage": 60, "resets_at": now + 3 * 86400 + 11 * 3600 + 60}
     data["rate_limits"]["five_hour"]["resets_at"] = now + 45 * 60 + 30
     assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→45m 7d:40%→3d11h"
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 61
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→1m 7d:40%→3d11h"
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 40  # under a minute: not "0m"
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→<1m 7d:40%→3d11h"
     data["transcript_path"] = str(tmp_path / "missing.jsonl")  # no conversation file: no tokens, nothing else breaks
     del data["rate_limits"]["five_hour"]["resets_at"]
     assert run_status_script(home, script, data) == "5h:8% 7d:40%→3d11h"
@@ -458,6 +463,34 @@ def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_status_line_presets_use_existing_pieces(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    got = app.get("/api/statusline?profile=default")
+    presets = got["presets"]
+    assert [p["label"] for p in presets] == ["Essential", "Developer", "Usage", "Like a hand-made one"]
+    pieces = {p["id"]: p["brackets"] for p in got["parts_available"]}
+    brackets = {b["id"] for b in got["brackets"]}
+    for p in presets:
+        assert p["description"] and p["parts"], p["id"]
+        ids = [x.split(":")[0] for x in p["parts"]]
+        assert len(set(ids)) == len(ids) and set(ids) <= set(pieces), p["id"]
+        assert all(x.split(":")[1] in brackets for x in p["parts"]), p["id"]
+        assert p["brackets"] is None or p["brackets"] in brackets
+        if p["brackets"] is None:  # each piece its own brackets
+            assert all(x.split(":")[1] == pieces[x.split(":")[0]] for x in p["parts"]), p["id"]
+        assert p["separator"] in {s["id"] for s in got["separators"]} and p["limits"] in ("used", "left")
+        assert isinstance(p["colors"], bool)
+        # the server takes it as it is
+        prev = app.get(f"/api/statusline/preview?profile=default&parts={','.join(p['parts'])}&separator={p['separator']}"
+                       f"&colors={int(p['colors'])}&limits={p['limits']}")
+        assert f"# parts: {' '.join(p['parts'])}" in prev["script"]
+    byid = {p["id"]: p for p in presets}
+    assert byid["essential"]["parts"] == ["profile:none", "model:none", "context:none"] and byid["essential"]["separator"] == "dot"
+    assert byid["usage"]["limits"] == "left" and byid["usage"]["separator"] == "bar"
+    assert len(byid["handmade"]["parts"]) == 11 and byid["handmade"]["limits"] == "left"
 
 
 def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):
@@ -1442,6 +1475,39 @@ def test_templates_hold_no_credentials_and_create_profiles(home, app_factory):
     assert app.get("/api/templates")["templates"] == []  # restoring the save removes the template too
 
 
+def test_template_items_can_be_shared_at_creation(home, app_factory):
+    """A shared item is linked to the source profile instead of being filled from the template."""
+    export_home(home)
+    home.write(".claude/agents/reviewer.md", "an agent\n")
+    home.write(".claude/CLAUDE.md", "base rules\n")
+    before = home.snapshot()
+    app = app_factory()
+    app.post("/api/templates/save", {"profile": "default", "name": "Base"})
+    [t] = app.get("/api/templates")["templates"]
+    assert t["counts"] == {"skills": 2, "agents": 1, "CLAUDE.md": 1, "settings.json": 1}
+
+    r = app.post("/api/templates/create", {"name": "Base", "label": "Client", "id": "client",
+                                           "share": ["skills", "agents", "CLAUDE.md", "commands", "plugins",
+                                                     "projects", "../x"]})
+    msg = r["message"]
+    assert "skills: shared with Default, the template's 2 skills are not copied" in msg
+    assert "agents: shared with Default, the template's 1 agent is not copied" in msg
+    assert "CLAUDE.md: shared with Default, the template's CLAUDE.md is not copied" in msg
+    assert "commands: shared with Default;" in msg and "plugins: shared with Default" in msg
+    new = home.path(".claude-client")
+    for item in ("skills", "agents", "CLAUDE.md", "commands", "plugins"):
+        assert os.readlink(new / item) == f"../.claude/{item}", item
+    assert not (new / "projects").exists() and not os.path.lexists(home.path(".claude/projects/../x"))
+    assert not os.path.islink(new / "settings.json") and (new / "settings.local.json").exists()
+    assert (home.path(".claude/commands/cc-profiles.md")).exists(), "the command goes into the shared source folder"
+    shared = {i["item"]: i["shared"] for p in app.get("/api/sharing") if p["id"] == "client" for i in p["items"]}
+    assert shared == {"skills": True, "plugins": True, "agents": True, "commands": True, "CLAUDE.md": True,
+                      "settings.json": False}
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 # --- listings and their caches ------------------------------------------------
 def test_listings_follow_changes_on_disk(home, app_factory):
     """Listings reuse what they read while files and folders are unchanged: a change
@@ -1606,3 +1672,358 @@ def test_usage_rejects_bad_parameters(home, app_factory):
     assert status == 400 and "Unknown profile" in data["error"]
     r = app.get("/api/usage?profile=default&days=365")
     assert r["totals"]["replies"] == 0 and len(r["daily"]) == 365 and r["models"] == [] and r["projects"] == []
+
+
+def test_usage_csv_has_one_row_per_day_and_model(home, app_factory):
+    basic_home(home)
+    add_lines(home, "", "code/work/api", "s-csv", [
+        reply_line("c-1", 0.01, inp=M, out=M),                      # sonnet 5.5: $12
+        reply_line("c-2", 0.01, req="r2", inp=10, out=20, cw=30, cr=40),
+        reply_line("c-3", 0.01, model="claude-haiku-4-5", out=M),   # $5
+        reply_line("c-4", 2, out=M),                                # $10, two days ago
+        reply_line("c-5", 0.01, model="=cmd|' /C calc'!A0", inp=7),  # no list price, not a formula
+        reply_line("c-6", 40, out=M),                               # outside 30 days
+    ])
+    app = app_factory()
+    before = home.snapshot()
+    req = urllib.request.Request(app.base + "/api/usage.csv?profile=default&days=30", headers={"X-Token": app.token})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        assert r.headers["Content-Type"] == "text/csv; charset=utf-8"
+        assert r.headers["Content-Disposition"] == 'attachment; filename="cc-profiles-usage-default-30d.csv"'
+        rows = list(csv.reader(io.StringIO(r.read().decode("utf-8"))))
+    assert rows[0] == ["date", "model", "input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens",
+                       "replies", "estimated_cost_usd"]
+    today, two_ago = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m-%d", time.localtime(time.time() - 2 * 86400))
+    body = {(x[0], x[1]): x[2:] for x in rows[1:]}
+    assert len(rows) == 5 and [x[0] for x in rows[1:]] == sorted(x[0] for x in rows[1:])  # oldest first
+    assert body[(two_ago, "claude-sonnet-5-5")] == ["0", str(M), "0", "0", "1", "10.0000"]
+    sonnet = body[(today, "claude-sonnet-5-5")]
+    assert sonnet[:5] == [str(M + 10), str(M + 20), "30", "40", "2"] and float(sonnet[5]) == pytest.approx(12, abs=0.001)
+    assert body[(today, "claude-haiku-4-5")] == ["0", str(M), "0", "0", "1", "5.0000"]
+    assert body[(today, "'=cmd|' /C calc'!A0")] == ["7", "0", "0", "0", "1", ""]  # no price: no cost
+    # the same validation as /api/usage, and the token guard
+    assert app.request("/api/usage.csv?profile=default&days=10")[0] == 400
+    assert app.request("/api/usage.csv?profile=nope&days=7")[0] == 400
+    assert app.request("/api/usage.csv?profile=all&days=7", token=False)[0] == 403
+    req = urllib.request.Request(app.base + "/api/usage.csv?days=7", headers={"X-Token": app.token})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        assert 'filename="cc-profiles-usage-all-7d.csv"' in r.headers["Content-Disposition"]
+    assert home.snapshot() == before
+
+
+def test_usage_lists_the_most_expensive_sessions(home, app_factory):
+    basic_home(home)
+    p = home.profile("") / "projects" / san(home.path("code/work/api"))
+    add_lines(home, "", "code/work/api", "s-cheap", [reply_line("e-1", 0.01, model="claude-haiku-4-5", out=1000)])
+    (p / "s-cheap.jsonl").write_text(json.dumps({"type": "user", "message": {"content": "a cheap question"},
+                                                 "timestamp": "2026-01-01T00:00:00Z"}) + "\n"
+                                     + (p / "s-cheap.jsonl").read_text())
+    add_lines(home, "", "code/work/api", "s-dear", [reply_line("e-2", 1, model="claude-opus-4-1", out=M)])  # $75
+    sub = p / "s-dear" / "subagents"
+    sub.mkdir(parents=True)
+    (sub / "agent-1.jsonl").write_text(reply_line("e-3", 1, model="claude-opus-4-1", inp=M) + "\n")  # +$15, same session
+    add_lines(home, "work", "code/work/api", "s-mid", [reply_line("e-4", 0.5, out=M)])  # sonnet 5.5: $10
+    add_lines(home, "", "code/personal/blog", "s-free", [reply_line("e-5", 0.01, model="<synthetic>", out=M)])
+    add_lines(home, "", "code/personal/blog", "s-old", [reply_line("e-6", 50, model="claude-opus-4-1", out=M)])
+    for i in range(12):  # more than 10 sessions: only the top 10 are listed
+        add_lines(home, "", "code/personal/blog", f"s-many-{i}",
+                  [reply_line(f"m-{i}", 0.01, model="claude-haiku-4-5", out=10 + i)])
+    app = app_factory()
+    r = app.get("/api/usage?profile=all&days=30")
+    s = r["sessions"]
+    assert len(s) == 10
+    assert [x["session"] for x in s[:3]] == ["s-dear", "s-mid", "s-cheap"]
+    dear = s[0]
+    assert dear["cost"] == pytest.approx(90) and dear["replies"] == 2 and dear["tokens"] == 2 * M
+    assert dear["profile"] == "default" and dear["project"] == san(home.path("code/work/api"))
+    assert dear["pretty"] == "~/code/work/api" and dear["exists"] is True
+    assert dear["date"] == time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))
+    assert s[2]["title"] == "a cheap question"  # the first prompt, like the Conversations tab
+    assert s[1]["profile"] == "work"
+    assert "s-old" not in [x["session"] for x in s]  # outside the period
+    # a cheap session costs more than none: s-free (no list price, many tokens) comes after the priced ones
+    assert [x["session"] for x in s[3:]] == [f"s-many-{i}" for i in range(11, 4, -1)]
+    assert [x["session"] for x in app.get("/api/usage?profile=work&days=7")["sessions"]] == ["s-mid"]
+
+
+# --- what a backup changed ----------------------------------------------------
+def test_backup_changes_explain_every_step(home, app_factory):
+    basic_home(home)
+    home.json(".claude/settings.json", {"model": "opus", "permissions": {"defaultMode": "default"}})
+    app = app_factory()
+    api, blog = san(home.path("code/work/api")), san(home.path("code/personal/blog"))
+
+    app.post("/api/projects/move", {"project": api, "from": "default", "to": "work"})
+    app.post("/api/settings/field", {"profile": "default", "key": "permissions.defaultMode", "value": "plan"})
+    app.post("/api/memory/save", {"profile": "work", "project": api, "file": "new-note.md", "content": "hello"})
+    app.post("/api/memory/move", {"profile": "work", "project": api, "file": "new-note.md",
+                                  "to_profile": "default", "to_project": blog})
+    app.post("/api/projects/delete", {"project": blog, "profile": "default"})
+    app.post("/api/mcp/save", {"profile": "default", "scope": "user", "name": "files", "config": {
+        "type": "stdio", "command": "npx", "args": ["sk-ant-abc123"], "env": {"API_KEY": "secret-123"},
+        "headers": {"X-Custom": "plain-value"}}})
+    app.post("/api/mcp/save", {"profile": "default", "scope": "user", "name": "files", "old_name": "files", "config": {
+        "type": "stdio", "command": "npx", "env": {"API_KEY": "secret-456"}}})
+    listed = app.get("/api/backups")
+    snap = home.snapshot()
+    backups_before = sorted((str(p), p.stat().st_mtime_ns) for p in home.path(".cc-profiles/backups").rglob("*"))
+
+    def changes(title_start, op=""):
+        name = next(b["name"] for b in listed if b["title"].startswith(title_start) and b["name"].endswith(op))
+        return app.get("/api/backups/changes?name=" + urllib.parse.quote(name))
+
+    # a setting: the file copied before the change, with a diff of the JSON
+    c = changes("", "_setting")
+    step = next(s for s in c["steps"] if s["op"] == "copy")
+    assert step["text"] == "Copied before a change" and step["path"] == "~/.claude/settings.json"
+    d = step["diff"]
+    assert d["status"] == "changed" and (d["added"], d["removed"]) == (1, 1)
+    assert '-    "defaultMode": "default"' in d["lines"] and '+    "defaultMode": "plan"' in d["lines"]
+    assert d["lines"][0].startswith("--- in the backup") and c["files_changed"] >= 1
+
+    # a move: from → to, with the folder it moved
+    c = changes("Move ~/code/work/api")
+    moves = [s for s in c["steps"] if s["op"] == "move"]
+    assert {"op": "move", "text": "Moved", "path": "~/.claude/file-history/s-api",
+            "to": "~/.claude-work/file-history/s-api", "now": "folder"} in moves
+    assert any(s["path"] == f"~/.claude/projects/{api}/s-api.jsonl" and s["now"] == "file" for s in moves)
+    hist = next(s for s in c["steps"] if s["op"] == "copy" and s["path"] == "~/.claude/history.jsonl")
+    assert hist["diff"]["status"] == "changed" and hist["diff"]["removed"] == 1
+
+    # a new file (moved away since), then the move of it
+    c = changes("Edit memory new-note.md")
+    assert [(s["op"], s["text"], s["now"]) for s in c["steps"]] == [
+        ("absent", "Did not exist before: the operation created it", None)]
+    c = changes("Move memory new-note.md")
+    assert any(s["op"] == "move" and s["to"].endswith("/memory/new-note.md") for s in c["steps"])
+    assert ("mkdir", "Folder created") in [(s["op"], s["text"]) for s in c["steps"]]
+
+    # a delete is a stash
+    c = changes("Delete")
+    stash = [s for s in c["steps"] if s["op"] == "stash"]
+    assert {"op": "stash", "path": f"~/.claude/projects/{blog}", "now": None,
+            "text": "Folder moved to the backup instead of being deleted"} in stash
+    assert any(s["path"] == "~/.claude/file-history/s-blog" for s in stash)
+
+    # secrets: env and header values and token-like strings are masked on both sides
+    c = changes("Edit MCP server files")
+    d = next(s for s in c["steps"] if s["op"] == "copy")["diff"]
+    text = "\n".join(d["lines"])
+    assert "secret-123" not in text and "secret-456" not in text and "sk-ant-abc123" not in text
+    assert '"API_KEY": "•••• hidden"' in text and "X-Custom" in text and "plain-value" not in text
+    assert d["status"] == "changed" and '-      "args": [' in d["lines"]
+    assert "me@example.com" in json.dumps(changes("Add MCP server files"))  # not a secret: the rest stays readable
+
+    # read-only: nothing on disk changed, not even the backups
+    assert home.snapshot() == snap
+    assert sorted((str(p), p.stat().st_mtime_ns) for p in home.path(".cc-profiles/backups").rglob("*")) == backups_before
+
+
+def test_backup_changes_notes_and_guards(home, app_factory):
+    basic_home(home)
+    home.json(".claude/.credentials.json", {"claudeAiOauth": {"accessToken": "tok-1"}})
+    home.write(".claude/big.txt", "x\n" * 300_000)
+    home.write(".claude/data.bin", "a\0b")
+    home.write(".claude/notes.txt", "\n".join(f"line {i}" for i in range(3000)) + "\n")
+    bk = home.path(".cc-profiles/backups/2026-01-01_00-00-00_manual")
+    (bk / "file").mkdir(parents=True)
+    (bk / "file/001-cred").write_text(json.dumps({"claudeAiOauth": {"accessToken": "tok-0"}}))
+    (bk / "file/002-big").write_text("y\n")
+    (bk / "file/003-bin").write_text("a\0c")
+    (bk / "file/004-notes").write_text("\n".join(f"old {i}" for i in range(3000)) + "\n")
+    (bk / "file/005-gone").write_text("was here\n")
+    journal = [{"op": "copy", "path": str(home.path(".claude/.credentials.json")), "file": "file/001-cred"},
+               {"op": "copy", "path": str(home.path(".claude/big.txt")), "file": "file/002-big"},
+               {"op": "copy", "path": str(home.path(".claude/data.bin")), "file": "file/003-bin"},
+               {"op": "copy", "path": str(home.path(".claude/notes.txt")), "file": "file/004-notes"},
+               {"op": "copy", "path": str(home.path(".claude/gone.txt")), "file": "file/005-gone"},
+               {"op": "copy", "path": str(home.path(".claude/settings.json")), "file": "../../../.claude/settings.json"},
+               {"op": "mkdir", "path": str(home.path(".claude/new-folder"))},
+               {"op": "created", "path": str(home.path(".claude/projects"))}]
+    (bk / "manifest.json").write_text(json.dumps({"title": "Manual", "created": time.time() - 3600, "journal": journal}))
+    app = app_factory()
+    st = {s["path"].split("/")[-1]: s for s in app.get("/api/backups/changes?name=2026-01-01_00-00-00_manual")["steps"]}
+    assert st[".credentials.json"]["diff"]["status"] == "secret" and st[".credentials.json"]["diff"]["lines"] == []
+    assert st["big.txt"]["diff"]["status"] == "too-big" and "512 KB" in st["big.txt"]["diff"]["notes"][0]
+    assert st["data.bin"]["diff"]["status"] == "binary"
+    notes = st["notes.txt"]["diff"]
+    assert notes["truncated"] and len(notes["lines"]) == 2000 and any("first 2,000 lines" in n for n in notes["notes"])
+    assert any("Changed again after this operation" in n for n in notes["notes"])
+    gone = st["gone.txt"]["diff"]
+    assert gone["status"] == "changed" and gone["lines"][-1] == "-was here" and "no longer exists" in gone["notes"][0]
+    assert st["settings.json"]["diff"]["status"] == "unavailable"  # a manifest cannot point outside the backup
+    assert st["new-folder"]["text"] == "Folder created" and st["projects"]["text"] == "Folder created"
+    assert "tok-0" not in json.dumps(st) and "tok-1" not in json.dumps(st)
+    for bad in ("..", "../x", ".hidden", "", "a/b"):
+        status, data = app.request("/api/backups/changes?name=" + urllib.parse.quote(bad))
+        assert status in (400, 404) and "error" in data, bad
+    assert app.request("/api/backups/changes?name=nope")[0] == 404
+    assert app.request("/api/backups/changes?name=2026-01-01_00-00-00_manual", token=False)[0] == 403
+
+
+# --- profile by folder (cc-profiles which, shell-init, the rc line) ------------
+SHELL_LINE = 'command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init {})"  # cc-profiles: profile by folder'
+
+
+def folder_home(home, app_factory, **env):
+    """basic_home plus a 'client' profile and rules: nested, shared, a deleted profile."""
+    basic_home(home)
+    home.profile("client")
+    home.path("code/work/client/app").mkdir(parents=True)
+    app = app_factory(**env)  # first run writes the config
+    cfg = json.loads(home.path(".cc-profiles/config.json").read_text())
+    cfg["rules"] = [{"exact": "~", "profile": "shared"},
+                    {"match": "code/work/client", "profile": "client"},
+                    {"match": "code/work", "profile": "work"},
+                    {"match": "code/personal", "profile": "default"},
+                    {"match": "scratch", "profile": "shared"},
+                    {"match": "gone", "profile": "deleted"}]
+    home.json(".cc-profiles/config.json", cfg)
+    return app
+
+
+def run_which(home, *args, cwd=None):
+    e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
+    return subprocess.run([sys.executable, "-m", "cc_profiles", "which", *args], env=e, cwd=cwd,
+                          capture_output=True, text=True, timeout=20)
+
+
+def test_which_follows_the_rules(home, app_factory):
+    app = folder_home(home, app_factory)
+    before = home.snapshot()
+
+    r = run_which(home, "~/code/work/api")
+    assert (r.returncode, r.stdout) == (0, "Work\n")
+    assert run_which(home, "--dir", "~/code/work/api").stdout == str(home.path(".claude-work")) + "\n"
+    assert run_which(home, "--dir", str(home.path("code/work/client/app"))).stdout == str(home.path(".claude-client")) + "\n"
+    assert run_which(home, cwd=home.path("code/work/client/app")).stdout == "Client\n"  # default: the current folder
+    assert run_which(home, "~/code/personal/blog").stdout == "Default\n"
+    assert run_which(home, "--dir", "~/code/personal/blog").stdout == str(home.path(".claude")) + "\n"
+    for path, why in (("~", "every profile"), ("~/scratch/x", "every profile"),
+                      ("~/elsewhere", "no rule matches"), ("~/gone/x", "no rule matches")):
+        r = run_which(home, path)
+        assert (r.returncode, r.stdout) == (1, "") and why in r.stderr, path
+        r = run_which(home, "--dir", path)
+        assert (r.returncode, r.stdout, r.stderr) == (1, "", ""), path
+
+    # the same answers through the API, which only reads
+    w = app.get("/api/shell/which?path=" + urllib.parse.quote("~/code/work/client/app"))
+    assert (w["profile"], w["label"], w["dir"], w["default"]) == ("client", "Client", "~/.claude-client", False)
+    w = app.get("/api/shell/which?path=" + urllib.parse.quote("~/code/personal/x"))
+    assert (w["profile"], w["default"], w["exists"]) == ("default", True, False)
+    w = app.get("/api/shell/which?path=" + urllib.parse.quote("~"))
+    assert (w["rule"], w["profile"]) == ("shared", None)
+    assert "absolute" in app.request("/api/shell/which?path=code/work")[1]["error"]
+    state = app.get("/api/shell")
+    expected = {r["pretty"]: r["expected"] for r in app.get("/api/projects")}
+    assert state["projects"] and all(expected[p["path"]] == p["rule"] for p in state["projects"])  # as the Projects tab
+    assert {p["path"]: p["label"] for p in state["projects"]}["~/code/work/api"] == "Work"
+    assert {"text": "code/work", "exact": False, "profile": "work", "label": "Work"} in state["rules"]
+    assert state["installed"] == []
+    assert home.snapshot() == before
+
+
+def test_which_never_writes_and_skips_the_server(home):
+    r = run_which(home, "--dir")
+    assert (r.returncode, r.stdout) == (1, "")
+    assert not home.path(".cc-profiles").exists()  # no config yet: none is created
+    code = ("import sys; sys.argv = ['cc-profiles', 'which', '/']\nfrom cc_profiles import entry\n"
+            "try:\n    entry.main()\nexcept SystemExit:\n    pass\n"
+            "print(sorted(m for m in sys.modules if m.startswith('cc_profiles')))")
+    e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
+    r = subprocess.run([sys.executable, "-c", code], env=e, capture_output=True, text=True)
+    assert r.stdout.strip() == "['cc_profiles', 'cc_profiles.byfolder', 'cc_profiles.entry']", r.stderr
+
+
+def fake_tools(folder, with_cc_profiles=True):
+    """A bin folder with a fake claude that prints its CLAUDE_CONFIG_DIR, and cc-profiles."""
+    folder.mkdir(parents=True)
+    (folder / "claude").write_text('#!/bin/sh\necho "dir=${CLAUDE_CONFIG_DIR-unset} args=$*"\n')
+    (folder / "claude").chmod(0o755)
+    if with_cc_profiles:
+        (folder / "cc-profiles").write_text(f'#!/bin/sh\nexec "{sys.executable}" -m cc_profiles "$@"\n')
+        (folder / "cc-profiles").chmod(0o755)
+    return folder
+
+
+@pytest.mark.parametrize("shell", ["bash", "zsh"])
+def test_shell_function_picks_the_profile(home, app_factory, tmp_path, shell):
+    exe = shutil.which(shell)
+    if not exe:
+        pytest.skip(f"{shell} is not installed")
+    folder_home(home, app_factory)
+    init = run_cli(home, "shell-init", shell).stdout
+    assert init.startswith("# cc-profiles: profile by folder") and "function claude {" in init
+    (tmp_path / "init.sh").write_text(init)
+    tools, no_cc = fake_tools(tmp_path / "bin"), fake_tools(tmp_path / "bin-no-cc", with_cc_profiles=False)
+
+    def claude(folder, path=tools, **env):
+        e = child_env({"HOME": str(home.root), "PATH": f"{path}:/usr/bin:/bin", "PYTHONPATH": str(SRC), **env})
+        flags = ["-f"] if shell == "zsh" else ["--norc", "--noprofile"]
+        script = f'. "{tmp_path / "init.sh"}"; cd "{home.path(folder)}" && claude --resume "a b"'
+        r = subprocess.run([exe, *flags, "-c", script], env=e, capture_output=True, text=True, timeout=30)
+        assert r.returncode == 0 and r.stderr == "", r.stderr
+        return r.stdout.strip()
+
+    assert claude("code/work/api") == f"dir={home.path('.claude-work')} args=--resume a b"
+    assert claude("code/work/client/app") == f"dir={home.path('.claude-client')} args=--resume a b"
+    assert claude("code/personal/blog") == "dir=unset args=--resume a b"  # default profile: left unset
+    assert claude("") == "dir=unset args=--resume a b"  # ~ is shared
+    assert claude("code/work/api", CLAUDE_CONFIG_DIR="/mine") == "dir=/mine args=--resume a b"  # yours wins
+    assert claude("code/work/api", path=no_cc) == "dir=unset args=--resume a b"  # without cc-profiles
+
+
+def test_shell_line_on_off_is_idempotent_and_undoable(home, app_factory):
+    app = folder_home(home, app_factory, SHELL="/bin/zsh")
+    home.write(".zshrc", "export A=1\nalias claude-old='claude'\n")
+    home.write(".bashrc", "export B=2\n")  # the shell is zsh: bash files are left alone
+    before = home.snapshot()
+
+    st = app.get("/api/shell")
+    assert st["shell"] == "zsh" and st["installed"] == []
+    line = SHELL_LINE.format("zsh")
+    assert st["targets"] == [{"file": "~/.zshrc", "shell": "zsh", "line": line}]
+
+    r = app.post("/api/shell", {"install": True})
+    assert "~/.zshrc" in r["message"] and r["backup"]
+    assert home.path(".zshrc").read_text() == "export A=1\nalias claude-old='claude'\n" + line + "\n"
+    assert home.path(".bashrc").read_text() == "export B=2\n"
+    assert app.get("/api/shell")["installed"] == ["~/.zshrc"]
+    n = len(app.get("/api/backups"))
+    assert "Already on" in app.post("/api/shell", {"install": True})["message"]
+    assert len(app.get("/api/backups")) == n and home.path(".zshrc").read_text().count(line) == 1
+
+    r = app.post("/api/shell", {"install": False})
+    assert "~/.zshrc" in r["message"]
+    assert home.snapshot() == before  # only its line was touched
+    assert "Already off" in app.post("/api/shell", {"install": False})["message"]
+    app.post("/api/shell", {"install": True})
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_shell_line_for_bash_goes_to_the_files_bash_reads(home, app_factory):
+    app = folder_home(home, app_factory, SHELL="/bin/bash")
+    home.write(".bashrc", "export B=2")  # no final newline
+    home.write(".bash_profile", "source ~/.bashrc\n")
+    before = home.snapshot()
+    line = SHELL_LINE.format("bash")
+    assert [t["file"] for t in app.get("/api/shell")["targets"]] == ["~/.bashrc", "~/.bash_profile"]
+    app.post("/api/shell", {"install": True})
+    assert home.path(".bashrc").read_text() == "export B=2\n" + line + "\n"
+    assert home.path(".bash_profile").read_text() == "source ~/.bashrc\n" + line + "\n"
+    assert not home.path(".zshrc").exists()
+    app.post("/api/shell", {"install": False})
+    assert home.path(".bash_profile").read_text() == "source ~/.bashrc\n"
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_shell_line_creates_a_missing_zshrc_and_refuses_other_shells(home, app_factory):
+    app = folder_home(home, app_factory, SHELL="/bin/zsh")
+    before = home.snapshot()
+    app.post("/api/shell", {"install": True})
+    assert home.path(".zshrc").read_text() == SHELL_LINE.format("zsh") + "\n"
+    app.restore_all()
+    assert home.snapshot() == before  # Restore removes the file it created
+    assert "not zsh or bash" in app_factory(SHELL="/usr/bin/fish").post_error("/api/shell", {"install": True})
