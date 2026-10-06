@@ -8,9 +8,11 @@
 - **Id**: lowercase letters, digits and dashes, for example `work`. It defines the folder `~/.claude-work` and the command `claude-work`.
 - **Base**:
   - *Copy of …* copies settings, `CLAUDE.md`, skills, plugins, agents, MCP servers and per-project settings from an existing profile. Optionally it also copies conversations, history and project memories. General memories (your home project) are always copied.
-  - *From template: …* starts from a [template](#templates): its settings, `CLAUDE.md`, permissions, skills, agents, commands, output styles and MCP servers, as the profile's own copies. Nothing is shared and no conversation comes along.
+  - *From template: …* starts from a [template](#templates): its settings, `CLAUDE.md`, permissions, skills, agents, commands, output styles and MCP servers, as the profile's own copies, except the items you share. No conversation comes along.
   - *Empty* starts from scratch, with only the status line setting of the source profile.
-- **Share with the source profile**: which items become [links](../concepts.md#sharing) instead of copies. Skills and plugins are ticked by default. Not offered with a template: share items afterwards, under **Sharing**.
+- **Share with the source profile**: which items become [links](../concepts.md#sharing) instead of copies. Skills and plugins are ticked by default; with a template only plugins are, so the template's own skills are used. You can change the choice later, under **Sharing**.
+
+With a template, an item you share is linked to the source profile **instead of** being filled from the template: the template's copy of it is not used. The dialog lists what each shared item skips, for example *skills: shared with Default, the template's 3 skills are not copied*, and the confirmation after creating says the same. Templates never hold plugins, so sharing `plugins` is how a profile created from a template gets the plugins of the source profile.
 
 What a new profile never gets:
 

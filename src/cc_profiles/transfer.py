@@ -24,7 +24,7 @@ from .core import (
     san,
     write_json,
 )
-from .sharing import SHARE_ITEMS, primary, share_state
+from .sharing import SHARE_ITEMS, link_shared, primary, share_items, share_state
 from .command import command_state, write_command
 from .launchers import launcher_dir_in_path, write_launcher
 from .newprofile import PROJECT_DATA, RUNTIME, add_profile_to_config, check_new_profile
@@ -147,8 +147,32 @@ def check_zip_entry(info):
         raise ApiError(f"Unexpected entry in the archive: {name}. Nothing was imported.")
 
 
-def op_import_profile(zip_path, label, pid, template=None):
-    """Create a profile from an export. template: the name of the template it comes from."""
+# How the confirmation counts what a shared item skips: "the template's 3 skills are not copied".
+SHARE_NOUNS = {"skills": ("skill", "skills"), "agents": ("agent", "agents"), "commands": ("command", "commands"),
+               "plugins": ("plugin file", "plugin files")}
+
+
+def shared_instead(share, skipped, source, origin="the template"):
+    """One sentence per shared item: linked to the source instead of filled from the archive."""
+    out = []
+    for item in share:
+        n = len(skipped.get(item, ()))
+        if not n:
+            out.append(f"{item}: shared with {source}")
+        elif item in SHARE_NOUNS:
+            one, many = SHARE_NOUNS[item]
+            out.append(f"{item}: shared with {source}, {origin}'s {n} {one if n == 1 else many} "
+                       f"{'is' if n == 1 else 'are'} not copied")
+        else:
+            out.append(f"{item}: shared with {source}, {origin}'s {item} is not copied")
+    return out
+
+
+def op_import_profile(zip_path, label, pid, template=None, share=None):
+    """Create a profile from an export. template: the name of the template it comes from.
+    share: items linked to the source profile instead of being unpacked from the archive."""
+    share = share_items(share)
+    skipped = {i: set() for i in share}
     try:
         z = zipfile.ZipFile(zip_path)
     except (zipfile.BadZipFile, OSError):
@@ -180,6 +204,10 @@ def op_import_profile(zip_path, label, pid, template=None):
                     continue
                 top, _, rest = info.filename.partition("/")
                 if top == "profile":
+                    item, _, inner = rest.partition("/")
+                    if item in skipped:  # linked to the source below instead
+                        skipped[item].add(inner.split("/")[0] or item)
+                        continue
                     dst = os.path.join(new, rest)
                 elif top == "home-memory":
                     dst = os.path.join(new, "projects", san(HOME), "memory", rest)
@@ -195,6 +223,7 @@ def op_import_profile(zip_path, label, pid, template=None):
             for k in ("oauthAccount", "userID"):
                 cfg.pop(k, None)
             write_json(os.path.join(new, ".claude.json"), cfg)
+            link_shared(new, share, bk)  # before the command: a shared commands/ gets it in the source
             if command_state(new) in ("missing", "outdated"):
                 write_command(new, bk, pid)
             write_launcher(command, f"~/.claude-{pid}", label, bk)
@@ -202,9 +231,14 @@ def op_import_profile(zip_path, label, pid, template=None):
             shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
             raise
     add_profile_to_config(label, pid, command)
+    notes = shared_instead(share, skipped, primary()["label"], "the template" if template else "the export")
     if template:
-        bk.note(f"from the template {template}, saved from {man.get('label')} ({man.get('created', '?')})")
-        msg = f"Profile {label} created from the template {template}. Run {command} and log in with /login."
+        bk.note(f"from the template {template}, saved from {man.get('label')} ({man.get('created', '?')})"
+                + (f"; {'; '.join(notes)}" if notes else ""))
+        msg = f"Profile {label} created from the template {template}."
+        if notes:
+            msg += " " + "; ".join(notes) + "."
+        msg += f" Run {command} and log in with /login."
     else:
         bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
                 f"conversations: {'yes' if man.get('projects') else 'no'}")

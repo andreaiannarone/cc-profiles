@@ -451,3 +451,4 @@ You can use, study, change and share it freely. If you distribute it, modified o
 ---
 
 <p align="center"><b>Built with Claude Code</b> | <b>Made for Claude Code</b> | <b>Pure Python standard library</b></p>
+<p align="center">© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a></p>

@@ -44,7 +44,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
 | `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
-| `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, size}], dir}` |
+| `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, counts, size}], dir}`; `counts`: entries per shareable item the template holds, e.g. `{skills: 3, "CLAUDE.md": 1}` |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
 | `GET /api/backups/auto` | | `{days, choices, last, message, config}`: the automatic cleanup setting (`days` is `null` when off) and its last run |
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
@@ -94,7 +94,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/profiles/create` | `label`, `id`, `base` (profile id or empty), `include_projects`, `share` (list) |
 | `POST /api/templates/save` | `profile`, `name` (letters, digits, spaces, `.`, `-`, `_`, up to 48) |
 | `POST /api/templates/delete` | `name`: the file goes to the backup |
-| `POST /api/templates/create` | `name`, `label`, `id`: a new profile from the template, through the import code |
+| `POST /api/templates/create` | `name`, `label`, `id`, `share` (as in `/api/profiles/create`: those items are linked to the source profile instead of being filled from the template): a new profile from the template, through the import code |
 | `POST /api/profiles/update` | `id`, `label`, `command` |
 | `POST /api/profiles/delete` | `id`, `merge_into` (optional), `force` (skip the open-session check) |
 | `POST /api/backups/restore` | `name` |
