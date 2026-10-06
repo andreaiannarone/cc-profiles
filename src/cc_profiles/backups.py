@@ -78,7 +78,8 @@ def list_backups():
                     "steps": len(man.get("journal", [])),
                     "restorable": bool(man.get("journal")) and not man.get("restored"),
                     "failed": man.get("failed"),
-                    "restored": man.get("restored")})
+                    "restored": man.get("restored"),
+                    "kept": bool(man.get("kept"))})
     out.sort(key=lambda b: b["created"], reverse=True)  # chronological: names only have seconds
     return out
 
@@ -288,14 +289,35 @@ def op_restore(name):
 
 
 def op_backup_delete(name):
-    shutil.rmtree(backup_path(name))
+    path = backup_path(name)
+    if (read_json(os.path.join(path, "manifest.json")) or {}).get("kept"):
+        raise ApiError("This backup is kept: turn off Keep first, then delete it")
+    shutil.rmtree(path)
     return {"message": "Backup permanently deleted."}
+
+
+def op_backup_keep(name, kept):
+    """Keep a backup (or stop keeping it): a kept backup is never deleted by a cleanup.
+    The mark lives in the backup's own manifest, so it goes away with the backup."""
+    if not isinstance(kept, bool):
+        raise ApiError("Invalid value: expected true or false")
+    mf = os.path.join(backup_path(name), "manifest.json")
+    man = read_json(mf)
+    if not isinstance(man, dict):
+        raise ApiError("This backup has no readable manifest: it cannot be kept")
+    if kept:
+        man["kept"] = time.time()
+    else:
+        man.pop("kept", None)
+    write_json(mf, man)
+    return {"message": "Kept: no cleanup deletes this backup." if kept
+            else "No longer kept: the cleanup deletes it once it is old enough."}
 
 
 def prune(days, keep_incomplete=False):
     """Permanently delete the backups created more than `days` days ago. Returns (count, bytes)."""
     limit = time.time() - days * 86400
-    old = [b for b in list_backups() if b["created"] < limit
+    old = [b for b in list_backups() if b["created"] < limit and not b["kept"]
            and not (keep_incomplete and b["failed"] and not b["restored"])]
     freed = sum(b["size"] for b in old)
     for b in old:
@@ -312,24 +334,23 @@ def op_backup_prune(days):
     return {"message": f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."}
 
 
-# Automatic cleanup, off by default: "backup_keep_days" in config.json. The server prunes
-# when it starts and once a day while it runs. It never deletes a backup from the last
-# 24 hours, nor an incomplete one (a failed operation) that has not been restored yet.
+# Automatic cleanup, always on: "backup_keep_days" in config.json, 90 days when unset.
+# The server prunes when it starts and once a day while it runs. It never deletes a kept
+# backup, nor an incomplete one (a failed operation) that has not been restored yet.
 AUTO_PRUNE_CHOICES = (15, 30, 60, 90)
 AUTO_PRUNE_LEGACY = (180, 365)  # offered by 0.4.0–0.4.1: kept if already set, never offered again
+AUTO_PRUNE_DEFAULT = 90
 AUTO_PRUNE = {"last": None, "message": ""}  # the last automatic cleanup in this process
 
 
 def keep_days():
     days = load_config().get("backup_keep_days")
-    return days if days in AUTO_PRUNE_CHOICES + AUTO_PRUNE_LEGACY else None
+    return days if days in AUTO_PRUNE_CHOICES + AUTO_PRUNE_LEGACY else AUTO_PRUNE_DEFAULT
 
 
 def auto_prune():
-    """Run the automatic cleanup if it is on. Returns the number of backups deleted."""
+    """Run the automatic cleanup. Returns the number of backups deleted."""
     days = keep_days()
-    if not days:
-        return 0
     n, freed = prune(max(days, 1), keep_incomplete=True)
     AUTO_PRUNE["last"] = time.time()
     AUTO_PRUNE["message"] = (f"Deleted {n} backup{'s' if n != 1 else ''} older than {days} days, {freed // 1024} KB freed."
@@ -339,26 +360,21 @@ def auto_prune():
 
 def backup_auto():
     days = keep_days()
-    return {"days": days, "choices": sorted(set(AUTO_PRUNE_CHOICES) | ({days} if days else set())), "last": AUTO_PRUNE["last"],
+    return {"days": days, "default": AUTO_PRUNE_DEFAULT, "choices": sorted(set(AUTO_PRUNE_CHOICES) | {days}), "last": AUTO_PRUNE["last"],
             "message": AUTO_PRUNE["message"], "config": pretty(CONFIG_FILE)}
 
 
 def op_backup_auto(days):
-    if days is not None and days not in AUTO_PRUNE_CHOICES:
-        raise ApiError("Pick 15, 30, 60 or 90 days, or turn the cleanup off")
+    if days not in AUTO_PRUNE_CHOICES:
+        raise ApiError("Pick 15, 30, 60 or 90 days")
     if days == keep_days():
         raise ApiError("Nothing to change")
-    bk = Backup("backup-cleanup", "Automatic backup cleanup: " + (f"older than {days} days" if days else "off"))
+    bk = Backup("backup-cleanup", f"Automatic backup cleanup: older than {days} days")
     bk.copy(CONFIG_FILE, "config.json")
     cfg = load_config()
-    if days:
-        cfg["backup_keep_days"] = days
-    else:
-        cfg.pop("backup_keep_days", None)
+    cfg["backup_keep_days"] = days
     write_json(CONFIG_FILE, cfg)
     backup = bk.close()
-    if not days:
-        return {"message": "Automatic cleanup off: backups are kept until you delete them.", "backup": backup}
     auto_prune()
     return {"message": f"Backups older than {days} days are deleted automatically. {AUTO_PRUNE['message']}",
             "backup": backup}

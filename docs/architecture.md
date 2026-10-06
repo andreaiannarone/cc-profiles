@@ -24,7 +24,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `health.py` | profile summaries, candidate folders, health checks |
-| `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`) |
+| `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`, 90 days by default), kept backups |
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all |
 | `conversations.py` | list, view, move one, delete |

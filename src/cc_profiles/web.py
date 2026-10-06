@@ -47,7 +47,8 @@ from .settings import (
     statusline_preview,
 )
 from .health import candidates, health, list_profiles
-from .backups import backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_prune, op_restore
+from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
+                      op_backup_prune, op_restore)
 from .info import about
 from .extensions import (
     list_mcp,
@@ -328,6 +329,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/backups/restore": lambda: op_restore(b["name"]),
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),
                 "/api/backups/prune": lambda: op_backup_prune(b.get("days")),
+                "/api/backups/keep": lambda: op_backup_keep(b["name"], b.get("kept")),
                 "/api/backups/auto": lambda: op_backup_auto(b.get("days")),
                 "/api/templates/save": lambda: op_template_save(b["profile"], b["name"]),
                 "/api/templates/delete": lambda: op_template_delete(b["name"]),

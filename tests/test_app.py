@@ -1399,7 +1399,8 @@ def age_backup(home, name, days, **extra):
 def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory):
     basic_home(home)
     app = app_factory()
-    assert app.get("/api/backups/auto")["days"] is None  # off by default
+    auto = app.get("/api/backups/auto")
+    assert auto["days"] == 90 and auto["default"] == 90 and auto["choices"] == [15, 30, 60, 90]  # on by default
     for match in ("code/a", "code/b", "code/c", "code/d"):
         app.post("/api/rules", {"match": match, "profile": "default"})
     names = [b["name"] for b in app.get("/api/backups")]  # newest first: d, c, b, a
@@ -1421,8 +1422,7 @@ def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory
     left = [b["name"] for b in app.get("/api/backups")]
     assert names[0] not in left and names[2] in left and len(left) == 2  # the incomplete one and the setting's
     assert app.get("/api/backups/auto")["days"] == 30
-    app.post("/api/backups/auto", {"days": None})
-    assert "backup_keep_days" not in json.loads(home.path(".cc-profiles/config.json").read_text())
+    assert app.request("/api/backups/auto", {"days": None})[0] == 400  # it cannot be turned off
 
     # a value only older versions offered keeps working, and stays selectable; it cannot be picked anew
     assert app.request("/api/backups/auto", {"days": 365})[0] == 400
@@ -1430,6 +1430,31 @@ def test_automatic_cleanup_keeps_recent_and_incomplete_backups(home, app_factory
     home.json(".cc-profiles/config.json", dict(cfg, backup_keep_days=365))
     auto = app.get("/api/backups/auto")
     assert auto["days"] == 365 and auto["choices"] == [15, 30, 60, 90, 365]
+
+
+def test_kept_backups_survive_every_cleanup(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    for match in ("code/a", "code/b", "code/c"):
+        app.post("/api/rules", {"match": match, "profile": "default"})
+    names = [b["name"] for b in app.get("/api/backups")]  # newest first: c, b, a
+    for n in names:
+        age_backup(home, n, 200)
+    assert "Kept" in app.post("/api/backups/keep", {"name": names[0], "kept": True})["message"]
+    assert app.request("/api/backups/keep", {"name": names[0], "kept": "yes"})[0] == 400
+    assert app.request("/api/backups/keep", {"name": "../x", "kept": True})[0] == 400
+    assert {b["name"]: b["kept"] for b in app.get("/api/backups")}[names[0]] is True
+    assert "turn off Keep first" in app.post_error("/api/backups/delete", {"name": names[0]})
+
+    # the default 90-day cleanup at start and the manual "delete old backups" both skip it
+    app.stop()
+    app = app_factory()
+    assert [b["name"] for b in app.get("/api/backups")] == [names[0]]
+    assert "No backups older" in app.post("/api/backups/prune", {"days": 1})["message"]
+    app.post("/api/backups/keep", {"name": names[0], "kept": False})
+    assert app.get("/api/backups")[0]["kept"] is False
+    app.post("/api/backups/prune", {"days": 1})
+    assert app.get("/api/backups") == []
 
 
 # --- profile templates ------------------------------------------------------------

@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Backups: **Keep** marks a backup that no cleanup deletes, automatic or by hand; it cannot be deleted until Keep is turned off.
+
+### Changed
+- Backups: the automatic cleanup is always on, 90 days by default (or 15, 30, 60); *never* is gone. On the first start after updating, backups older than 90 days are deleted unless you keep them.
+
 ## [0.4.7] - 2026-10-06
 
 ### Changed
