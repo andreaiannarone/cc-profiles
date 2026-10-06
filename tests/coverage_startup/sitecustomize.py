@@ -5,6 +5,12 @@ import os
 
 import coverage
 
+# Every process writes its data next to the config (the repository), not in its own
+# working folder: the servers and CLI runs work inside fake homes, which tests compare
+# before and after, and whose files coverage combine would never find.
+if os.environ.get("COVERAGE_PROCESS_START"):
+    os.environ.setdefault("COVERAGE_FILE", os.path.join(os.path.dirname(os.path.abspath(os.environ["COVERAGE_PROCESS_START"])), ".coverage"))
+
 _cov = coverage.process_startup()
 
 if _cov is not None:
