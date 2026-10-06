@@ -220,6 +220,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .form .radio { display: grid; gap: 6px; }
 .form .radio label, .form .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13.5px; }
 .form .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.np-list { margin: 6px 0 0; padding-left: 18px; }
 .prow { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .prow:last-child { border-bottom: 0; }
 .prow .txt { flex: 1; min-width: 0; }
@@ -847,6 +848,7 @@ function renderSharing() {
     loadSharing();
   });
 }
+const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
 async function newProfile() {
   let tpl = [];
   try { tpl = (await api("/api/templates")).templates; } catch {}
@@ -860,18 +862,42 @@ async function newProfile() {
       <div class="radio">${opts}<label><input type="radio" name="base" value=""> Empty</label></div>
       <label class="check" id="np-projwrap"><input type="checkbox" id="np-proj"> also copy project conversations, history and memories</label>
       <div id="np-share"><div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
-      <div class="checks">${["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"].map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
-      <div class="hint" id="np-tpl" hidden>The profile gets the template's own copies: settings, CLAUDE.md, permissions, skills, agents, commands, output styles and MCP servers. Nothing is shared; you can share items later.</div>
+      <div class="checks">${SHARE_NEW.map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
+      <div class="hint" id="np-tpl" hidden></div>
     </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
   const L = $("#np-label"), I = $("#np-id"); let touched = false;
   const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
   const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
   L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
   I.oninput = () => { touched = true; upd(); };
+  // A template fills the items it holds; an item shared with the source is linked instead,
+  // and the hint says which of the template's copies that skips. Plugins are never in a template.
+  const src = esc(S.profiles[0].label);
+  let shareTouched = false;
+  const shareBoxes = () => [...document.querySelectorAll('input[name="share"]')];
+  const tplHint = () => {
+    const base = document.querySelector('input[name="base"]:checked')?.value || "";
+    const t = base.startsWith("template:") && tpl.find(x => x.name === base.slice(9));
+    $("#np-tpl").hidden = !t;
+    if (!t) return;
+    const nouns = { skills: ["skill", "skills"], agents: ["agent", "agents"], commands: ["command", "commands"] };
+    const lines = shareBoxes().filter(c => c.checked).map(c => {
+      const i = c.value, n = (t.counts || {})[i] || 0;
+      if (i === "plugins") return `<code>plugins</code>: shared with ${src}`;
+      if (!n) return `<code>${esc(i)}</code>: shared with ${src} (the template has none)`;
+      return `<code>${esc(i)}</code>: shared with ${src}, the template's ${nouns[i] ? `${plural(n, ...nouns[i])} ${n === 1 ? "is" : "are"}` : `<code>${esc(i)}</code> is`} not copied`;
+    });
+    $("#np-tpl").innerHTML = `The profile gets the template's own copies of what is not shared: settings, <code>CLAUDE.md</code>, permissions, skills, agents, commands, output styles and MCP servers.
+      Plugins are never in a template: share <code>plugins</code> to give the new profile the plugins of ${src}.`
+      + (lines.length ? `<ul class="np-list">${lines.map(l => `<li>${l}</li>`).join("")}</ul>` : "");
+  };
+  shareBoxes().forEach(c => c.addEventListener("change", () => { shareTouched = true; tplHint(); }));
   document.querySelectorAll('input[name="base"]').forEach(r => r.onchange = () => {
     const isTpl = r.value.startsWith("template:");
     $("#np-projwrap").style.display = r.value && !isTpl ? "" : "none";
-    $("#np-share").hidden = isTpl; $("#np-tpl").hidden = !isTpl;
+    // until the choices are changed by hand: a template keeps its own skills, plugins come from the source
+    if (!shareTouched) shareBoxes().forEach(c => { c.checked = c.value === "plugins" || (!isTpl && c.value === "skills"); });
+    tplHint();
   });
   const res = await resP;
   if (!res) return;
@@ -881,7 +907,7 @@ async function newProfile() {
     base, include_projects: v("#np-proj").checked,
     share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value) };
   const req = base.startsWith("template:")
-    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id })
+    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id, share: body.share })
     : () => api("/api/profiles/create", body);
   try { await run(req); } catch { return; }
   await refresh(); if (S.tab === "profiles") loadSharing();
@@ -1545,7 +1571,8 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div></div>`;
+      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div></div>
+    <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
 }
 async function checkUpdate(dr) {

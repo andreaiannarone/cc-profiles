@@ -9,6 +9,7 @@ import shutil
 import zipfile
 
 from .core import ApiError, Backup, DATA_DIR, pretty, profile
+from .sharing import SHARE_ITEMS
 from .transfer import EXPORT_MANIFEST, export_profile, op_import_profile
 
 # ---------------------------------------------------------------------------
@@ -49,8 +50,17 @@ def list_templates():
             continue  # not a template: listed nowhere, deleted by nobody
         items = sorted({n.split("/")[1] for n in names if n.startswith("profile/") and n.count("/") >= 1})
         skills = len({n.split("/")[2] for n in names if n.startswith("profile/skills/") and n.count("/") >= 3})
+        # what each shareable item holds, so New profile can say what sharing it skips
+        counts = {}
+        for item, kind, _ in SHARE_ITEMS:
+            if kind == "dir":
+                n = len({x.split("/")[2] for x in names if x.startswith(f"profile/{item}/") and x.count("/") >= 2})
+            else:
+                n = int(f"profile/{item}" in names)
+            if n:
+                counts[item] = n
         out.append({"name": f[:-4], "from": man.get("label", ""), "created": man.get("created", ""),
-                    "items": items, "skills": skills, "mcp": mcp, "size": os.path.getsize(p)})
+                    "items": items, "skills": skills, "mcp": mcp, "counts": counts, "size": os.path.getsize(p)})
     return {"templates": out, "dir": pretty(TEMPLATE_DIR)}
 
 
@@ -81,5 +91,6 @@ def op_template_delete(name):
     return {"message": f"Template {name} deleted.", "backup": bk.close()}
 
 
-def op_create_from_template(name, label, pid):
-    return op_import_profile(template_path(name), label, pid, template=name)
+def op_create_from_template(name, label, pid, share=None):
+    """share: items linked to the source profile instead of being filled from the template."""
+    return op_import_profile(template_path(name), label, pid, template=name, share=share)

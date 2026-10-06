@@ -24,6 +24,28 @@ def primary():
     return profiles()[0]
 
 
+def share_items(share):
+    """The valid items of a list of item names sent by the client, in SHARE_ITEMS order."""
+    share = set(share or []) if isinstance(share, list) else set()
+    return [i for i, _, _ in SHARE_ITEMS if i in share]
+
+
+def link_shared(new, share, bk):
+    """Link the items of a profile being created (folder new, already journaled with
+    bk.created) to the source profile. Items the source does not have yet are created
+    there, empty, as op_share does, so every link works."""
+    kinds = {i: k for i, k, _ in SHARE_ITEMS}
+    for item in share:
+        s = os.path.join(primary()["dir_abs"], item)
+        if not os.path.lexists(s):
+            if kinds[item] == "dir":
+                bk.mkdir(s)
+            else:
+                bk.copy(s)
+                write_text(s, "{}\n" if item.endswith(".json") else "")
+        os.symlink(os.path.relpath(s, new), os.path.join(new, item))
+
+
 def share_state(prof, item, kind):
     t = os.path.join(prof["dir_abs"], item)
     s = os.path.join(primary()["dir_abs"], item)

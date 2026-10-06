@@ -1,0 +1,23 @@
+---
+layout: null
+---
+{%- comment -%}
+The search index of the documentation site, read by the search box in _layouts/default.html:
+one entry per page of the sidebar (_data/nav.yml), with its text stripped of Markdown and HTML.
+Only filters of Jekyll 3.10 / Liquid 4, as GitHub Pages builds it (tests/test_tooling.py checks).
+{%- endcomment -%}
+[
+{%- assign sep = "" -%}
+{%- for group in site.data.nav -%}
+{%- for item in group.pages -%}
+{%- assign found = site.pages | where: "path", item.url -%}
+{%- for p in found limit: 1 -%}
+{%- if item.url == "README.md" -%}{%- assign href = "/" | relative_url -%}{%- else -%}{%- assign href = item.url | replace: ".md", ".html" | relative_url -%}{%- endif -%}
+{%- assign text = p.content | markdownify | strip_html | truncate: 8000, "" -%}
+{{ sep }}
+{"title": {{ item.title | jsonify }}, "section": {{ group.title | jsonify }}, "url": {{ href | jsonify }}, "text": {{ text | jsonify }}}
+{%- assign sep = "," -%}
+{%- endfor -%}
+{%- endfor -%}
+{%- endfor %}
+]

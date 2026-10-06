@@ -1442,6 +1442,39 @@ def test_templates_hold_no_credentials_and_create_profiles(home, app_factory):
     assert app.get("/api/templates")["templates"] == []  # restoring the save removes the template too
 
 
+def test_template_items_can_be_shared_at_creation(home, app_factory):
+    """A shared item is linked to the source profile instead of being filled from the template."""
+    export_home(home)
+    home.write(".claude/agents/reviewer.md", "an agent\n")
+    home.write(".claude/CLAUDE.md", "base rules\n")
+    before = home.snapshot()
+    app = app_factory()
+    app.post("/api/templates/save", {"profile": "default", "name": "Base"})
+    [t] = app.get("/api/templates")["templates"]
+    assert t["counts"] == {"skills": 2, "agents": 1, "CLAUDE.md": 1, "settings.json": 1}
+
+    r = app.post("/api/templates/create", {"name": "Base", "label": "Client", "id": "client",
+                                           "share": ["skills", "agents", "CLAUDE.md", "commands", "plugins",
+                                                     "projects", "../x"]})
+    msg = r["message"]
+    assert "skills: shared with Default, the template's 2 skills are not copied" in msg
+    assert "agents: shared with Default, the template's 1 agent is not copied" in msg
+    assert "CLAUDE.md: shared with Default, the template's CLAUDE.md is not copied" in msg
+    assert "commands: shared with Default;" in msg and "plugins: shared with Default" in msg
+    new = home.path(".claude-client")
+    for item in ("skills", "agents", "CLAUDE.md", "commands", "plugins"):
+        assert os.readlink(new / item) == f"../.claude/{item}", item
+    assert not (new / "projects").exists() and not os.path.lexists(home.path(".claude/projects/../x"))
+    assert not os.path.islink(new / "settings.json") and (new / "settings.local.json").exists()
+    assert (home.path(".claude/commands/cc-profiles.md")).exists(), "the command goes into the shared source folder"
+    shared = {i["item"]: i["shared"] for p in app.get("/api/sharing") if p["id"] == "client" for i in p["items"]}
+    assert shared == {"skills": True, "plugins": True, "agents": True, "commands": True, "CLAUDE.md": True,
+                      "settings.json": False}
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 # --- listings and their caches ------------------------------------------------
 def test_listings_follow_changes_on_disk(home, app_factory):
     """Listings reuse what they read while files and folders are unchanged: a change

@@ -61,6 +61,29 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
     assert "cc-profiles" in page.inner_text(".drawer")
+    link = page.locator('.drawer a[href="https://andreaiannarone.com"]')
+    assert link.inner_text() == "Andrea Iannarone" and link.get_attribute("rel") == "noopener"
+    assert link.get_attribute("target") == "_blank" and "© 2026" in page.inner_text(".drawer")
+    assert errors == []
+
+
+def test_new_profile_from_a_template_offers_sharing(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate('api("/api/templates/save", { profile: "default", name: "Base" })')
+    page.click("[data-newprofile]")
+    page.wait_for_selector("#np-label")
+    shared = 'input[name="share"]'
+    assert page.eval_on_selector_all(shared + ":checked", "cs => cs.map(c => c.value)") == ["skills", "plugins"]
+    page.check('input[name="base"][value="template:Base"]')
+    assert page.is_visible("#np-share") and page.is_visible("#np-tpl")
+    assert page.eval_on_selector_all(shared + ":checked", "cs => cs.map(c => c.value)") == ["plugins"]
+    assert "Plugins are never in a template" in page.inner_text("#np-tpl")
+    page.check(shared + '[value="skills"]')
+    assert "skills: shared with Default, the template's" in page.inner_text("#np-tpl")
+    assert "skills are not copied" in page.inner_text("#np-tpl")
+    page.check('input[name="base"][value=""]')
+    assert page.is_hidden("#np-tpl") and page.is_checked(shared + '[value="skills"]'), "a choice made by hand stays"
+    cancel(page)
     assert errors == []
 
 

@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- New profile from a template: the same "Share with Default" choices as the other bases. A shared item is linked to the source profile instead of being filled from the template, and the dialog and the confirmation say what that skips (*skills: shared with Default, the template's 3 skills are not copied*). Templates never hold plugins: sharing `plugins` is how such a profile gets the source's plugins. With a template only `plugins` is ticked by default.
+- Search in the documentation site: a box in the header (`/` focuses it, arrow keys and Enter pick a result, Esc closes) over `search.json`, built by GitHub Pages from the sidebar's pages. Every word must match; titles rank first; up to 8 results with the words highlighted.
+- © 2026 Andrea Iannarone, linking https://andreaiannarone.com, in the README footer, the documentation site's footer and the About panel.
+
+### Changed
+- `/api/templates` lists what each shareable item of a template holds (`counts`), and `/api/templates/create` takes `share` like `/api/profiles/create`.
+
 ## [0.4.5] - 2026-10-06
 
 ### Added
