@@ -2157,35 +2157,38 @@ function renderBackups() {
   const where = S.backups[0]?.path.replace(/\/[^/]+$/, "") || "~/.cc-profiles/backups";
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span>
       ${S.bkAuto ? `<label class="hint" style="margin-left:auto;display:flex;gap:6px;align-items:center">Delete backups older than
-        <select id="bk-auto" aria-label="Automatic cleanup">${[["", "never (off)"], ...S.bkAuto.choices.map(d => [d, d + " days"])].map(([v, l]) => `<option value="${v}" ${String(S.bkAuto.days ?? "") === String(v) ? "selected" : ""}>${l}</option>`).join("")}</select> automatically</label>` : ""}
+        <select id="bk-auto" aria-label="Automatic cleanup">${S.bkAuto.choices.map(d => `<option value="${d}" ${S.bkAuto.days === d ? "selected" : ""}>${d} days${d === S.bkAuto.default ? " (default)" : ""}</option>`).join("")}</select> automatically, except the ones you keep</label>` : ""}
       ${S.backups.length ? `<button class="btn" id="bk-prune" ${S.bkAuto ? "" : `style="margin-left:auto"`}>Delete old backups…</button>` : ""}</div>
     <div class="table">${S.backups.map(b => `<div class="bk"><div class="txt">
-        <div class="t">${esc(b.title)} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
+        <div class="t">${esc(b.title)} ${b.kept ? `<span class="badge b-shared" title="Never deleted by a cleanup">kept</span>` : ""} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.steps ? `<button class="btn small" data-bchanges="${esc(b.name)}">Show changes</button>` : ""}
         ${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
-        <button class="btn small danger" data-bdel="${esc(b.name)}">Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
+        <button class="btn small" data-bkeep="${esc(b.name)}" aria-pressed="${b.kept}" title="${b.kept ? "Let the cleanup delete it once it is old enough" : "Never delete it in a cleanup"}">${b.kept ? "Kept ✓" : "Keep"}</button>
+        <button class="btn small danger" data-bdel="${esc(b.name)}" ${b.kept ? `disabled title="Kept: turn off Keep to delete it"` : ""}>Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
   $("#bk-auto")?.addEventListener("change", autoCleanup);
 }
 async function autoCleanup(e) {
-  const days = e.target.value ? +e.target.value : null;
-  // what goes at once: the same rules as the server (never incomplete backups not restored yet)
-  const now = days ? S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400 && !(b.failed && !b.restored)) : [];
-  const sub = days
-    ? `When cc-profiles starts and once a day while it runs, the backups older than ${days} days are deleted permanently. Backups of the last 24 hours and incomplete ones not restored yet are always kept. `
-      + (now.length ? `<b>Deleted now: ${plural(now.length, "backup", "backups")}, ${size(now.reduce((a, b) => a + b.size, 0))}.</b>` : "Nothing to delete now.")
-    : "Backups are kept until you delete them.";
-  if (!(await confirmBox(days ? `Delete backups older than ${days} days automatically?` : "Turn off the automatic cleanup?", sub,
-      days ? (S.bkAuto.days ? "Save" : "Turn on") : "Turn off", days && now.length ? "danger" : "primary"))) { e.target.value = S.bkAuto.days ?? ""; return; }
+  const days = +e.target.value;
+  // what goes at once: the same rules as the server (never kept ones, nor incomplete ones not restored yet)
+  const now = S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400 && !b.kept && !(b.failed && !b.restored));
+  const sub = `When cc-profiles starts and once a day while it runs, the backups older than ${days} days are deleted permanently, except the ones you keep and incomplete ones not restored yet. `
+    + (now.length ? `<b>Deleted now: ${plural(now.length, "backup", "backups")}, ${size(now.reduce((a, b) => a + b.size, 0))}.</b> Press Keep on any you want to keep first.` : "Nothing to delete now.");
+  if (!(await confirmBox(`Delete backups older than ${days} days automatically?`, sub, "Save", now.length ? "danger" : "primary"))) { e.target.value = S.bkAuto.days; return; }
   await run(() => api("/api/backups/auto", { days })).catch(() => {});
   loadBackups();
 }
+async function keepBackup(name) {
+  const b = S.backups.find(x => x.name === name);
+  await run(() => api("/api/backups/keep", { name, kept: !b.kept })).catch(() => {});
+  loadBackups();
+}
 async function pruneBackups() {
-  const old = days => S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400);
+  const old = days => S.backups.filter(b => b.created < Date.now() / 1000 - days * 86400 && !b.kept);
   const line = days => { const o = old(days); return o.length ? `${plural(o.length, "backup", "backups")}, ${size(o.reduce((a, b) => a + b.size, 0))}` : "none"; };
   const resP = modal({ title: "Delete old backups",
-    sub: "Deleted backups cannot be restored afterwards: keep the ones of operations you might still want to undo.",
+    sub: "Deleted backups cannot be restored afterwards. Kept backups are never deleted: press Keep on the ones of operations you might still want to undo.",
     body: `<div class="form"><label class="f">Delete the backups older than
         <select id="pr-days">${[7, 30, 90, 365].map(d => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} days</option>`).join("")}</select></label>
       <div class="hint" id="pr-what"></div></div>`,
@@ -2355,6 +2358,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
   if (t.dataset.bchanges) return showChanges(t.dataset.bchanges, t);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
+  if (t.dataset.bkeep) return keepBackup(t.dataset.bkeep);
   if (t.dataset.uprof) { S.use.profile = t.dataset.uprof; return loadUsage(); }
   if (t.dataset.udays) { S.use.days = +t.dataset.udays; return loadUsage(); }
   if (t.dataset.filter) { S.filter = t.dataset.filter; return renderProjects(); }

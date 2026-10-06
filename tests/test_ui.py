@@ -370,3 +370,18 @@ def test_usage_export_and_sessions(page_on_sandbox):
     page.wait_for_selector(".convview")
     assert title in page.inner_text(".ccard.on") or title == "No prompt"
     assert errors == []
+
+
+def test_keep_a_backup(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate("async () => { await api('/api/settings/fields', {profile: 'default', values: {language: 'Italiano'}}); }")
+    open_tab(page, "backups")
+    assert "never" not in page.inner_text("#bk-auto") and page.input_value("#bk-auto") == "90"
+    page.click("[data-bkeep]")
+    page.wait_for_selector('[data-bkeep][aria-pressed="true"]')
+    assert page.is_disabled("[data-bdel]") and "kept" in page.inner_text(".bk .t")
+    page.click("[data-bkeep]")
+    page.wait_for_selector('[data-bkeep][aria-pressed="false"]')
+    assert page.is_enabled("[data-bdel]")
+    assert errors == []
+

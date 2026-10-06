@@ -47,16 +47,19 @@ A backup can be restored once; afterwards it shows *restored* with the time.
 
 ## Delete
 
+**Keep** marks a backup that no cleanup may delete, automatic or by hand; press it again (**Kept ✓**) to let it go. A kept backup shows a *kept* label and cannot be deleted until you turn Keep off. The mark is stored in the backup's own `manifest.json`.
+
 **Delete** erases a backup folder for good. It is the only action in cc-profiles that really deletes data. Backups take space, especially after deleting or merging whole profiles; the tab shows the total size.
 
-**Delete old backups…** removes in one go every backup older than 7, 30, 90 or 365 days, and shows how many and how much space before you confirm. Keep the backups of operations you might still want to undo.
+**Delete old backups…** removes in one go every backup older than 7, 30, 90 or 365 days, except kept ones, and shows how many and how much space before you confirm.
 
 ## Automatic cleanup
 
-**Delete backups older than … automatically**, in the toolbar of the Backups tab, is off by default (*never*). Pick 15, 30, 60 or 90 days to turn it on. From then on cc-profiles deletes the backups older than that when it starts and once a day while it runs. The confirmation shows what goes right away.
+**Delete backups older than … automatically**, in the toolbar of the Backups tab, is always on: 90 days by default, or 15, 30 or 60. cc-profiles deletes the backups older than that when it starts and once a day while it runs. Changing it asks first and shows what goes right away.
 
 The automatic cleanup never deletes:
 
+- a backup you marked **Keep**;
 - a backup of an operation done in the last 24 hours;
 - an [incomplete backup](#incomplete-backups) that has not been restored yet, because it may hold the only way to undo a failed operation.
 

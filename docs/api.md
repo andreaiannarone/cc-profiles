@@ -48,7 +48,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, counts, size}], dir}`; `counts`: entries per shareable item the template holds, e.g. `{skills: 3, "CLAUDE.md": 1}` |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
 | `GET /api/backups/changes` | `name` | `{name, title, created, log, failed, restored, steps, files_changed, max_lines, max_bytes}`: each journal step with `op`, `text` (in plain words), `path`, `to` (moves), `now` (`file`, `folder`, `link` or `null`); `copy` steps add `diff` with `status` (`changed`, `same`, `hidden-only`, `secret`, `too-big`, `binary`, `dir`, `unavailable`), `lines` (unified diff, the backup copy against the file now, at most 2,000 lines), `added`, `removed`, `truncated`, `notes`. JSON is compared with sorted keys and secrets masked; `.credentials.json` is never read. Read-only |
-| `GET /api/backups/auto` | | `{days, choices, last, message, config}`: the automatic cleanup setting (`days` is `null` when off) and its last run |
+| `GET /api/backups/auto` | | `{days, default, choices, last, message, config}`: the automatic cleanup setting (90 days when unset; it cannot be off) and its last run |
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
@@ -104,7 +104,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |
 | `POST /api/backups/prune` | `days` (integer, 1 or more): permanently deletes the backups older than that |
-| `POST /api/backups/auto` | `days` (`15`, `30`, `60`, `90`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
+| `POST /api/backups/auto` | `days` (`15`, `30`, `60` or `90`): the automatic cleanup; it also prunes at once |
+| `POST /api/backups/keep` | `name`, `kept` (bool): keep a backup so no cleanup deletes it (and it cannot be deleted until `kept` is false), or let it go |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 | `POST /api/shell` | `install` (`true` or `false`): adds the profile by folder line to the shell rc files, or removes it. Without anything to change it returns a `message` and no `backup` |

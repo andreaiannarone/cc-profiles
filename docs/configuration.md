@@ -95,7 +95,7 @@ Folders searched (5 levels deep) for candidate folders when relinking an [orphan
 
 ### `backup_keep_days`
 
-Optional. When set to `15`, `30`, `60` or `90` (`180` and `365`, offered by 0.4.0 and 0.4.1, still work), the backups older than that many days are deleted automatically when cc-profiles starts and once a day while it runs. Backups of the last 24 hours and incomplete backups not restored yet are always kept. Absent (the default) means backups are kept until you delete them. Set it from the [Backups tab](guides/backups.md#automatic-cleanup).
+Optional, `15`, `30`, `60` or `90` (`180` and `365`, offered by 0.4.0 and 0.4.1, still work); absent means `90`. The backups older than that many days are deleted automatically when cc-profiles starts and once a day while it runs, except kept backups and incomplete backups not restored yet. The cleanup cannot be turned off: mark the backups you want to keep with **Keep**. Set it from the [Backups tab](guides/backups.md#automatic-cleanup).
 
 ## Templates
 
