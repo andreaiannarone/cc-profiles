@@ -24,6 +24,7 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
    - [Conversations](guides/conversations.md): read, move one to another profile, delete
    - [Usage](guides/usage.md): tokens and estimated cost per day, project, model and profile
    - [Profiles and sharing](guides/profiles.md): create, edit, delete, share
+   - [Profile by folder](guides/profile-by-folder.md): `claude` starts in the profile of the folder you are in
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
    - [Search and compare](guides/search-and-compare.md): search every profile at once, compare two profiles side by side
    - [Plugins](guides/plugins.md): see the installed plugins and turn them on or off

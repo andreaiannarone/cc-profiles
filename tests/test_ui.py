@@ -202,6 +202,29 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     assert errors == []
 
 
+def test_profile_by_folder_section(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.wait_for_selector("#bf-switch", state="attached")
+    assert "Rules: folder → profile" in page.inner_text("#main")
+    page.fill("#bf-path", "~/code/work/api")
+    page.click("#bf-go")
+    page.wait_for_function("() => document.querySelector('#bf-result').textContent.includes('~/code/work/api')")
+    page.fill("#bf-path", "relative/path")
+    page.press("#bf-path", "Enter")
+    page.wait_for_function("() => document.querySelector('#bf-result').textContent.includes('absolute')")
+    page.click("label.switch:has(#bf-switch)")
+    page.wait_for_selector(".modal pre.log")
+    assert "cc-profiles shell-init" in page.inner_text(".modal pre.log")
+    cancel(page)
+    assert not page.is_checked("#bf-switch")  # cancelled: the switch flips back
+    page.click("label.switch:has(#bf-switch)")
+    page.click('.modal button:has-text("Turn on")')
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => document.querySelector('#bf-switch')?.checked")
+    assert errors == []
+
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")

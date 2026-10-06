@@ -43,6 +43,8 @@ A project "lives" in a profile when that profile has its conversations or memori
 
 When a project belongs to one profile but has content in another, the Projects tab offers **Move to …**.
 
+The same rules can also pick the profile when you type `claude` in a terminal: see [Profile by folder](guides/profile-by-folder.md).
+
 ## Sharing
 
 A profile can **share** an item with the source profile: `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json`. Sharing replaces the item with a relative symlink (for example `~/.claude-work/skills → ../.claude/skills`), so you install or edit once and every sharing profile sees it.

@@ -53,6 +53,8 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |
+| `GET /api/shell` | | profile by folder: `{installed, targets: [{file, shell, line}], shell, lines, on_path, rules: [{text, exact, profile, label}], projects: [{path, rule, profile, label}]}`: the rc files that have the line, the ones turning it on would write, the rules, and what `cc-profiles which` gives each known project |
+| `GET /api/shell/which` | `path` (absolute or starting with `~`) | `{path, exists, rule, profile, label, dir, default}`: the profile `claude` would start in there. `rule` is what the rules say (`shared` included), `profile` is `null` when claude keeps the default profile; `default` is true for `~/.claude`, where `CLAUDE_CONFIG_DIR` stays unset |
 
 Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a profile it does not belong to; includes `from` and `to`), `unclassified` (no rule matches).
 
@@ -103,6 +105,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/auto` | `days` (`15`, `30`, `60`, `90`, or `null` to turn it off): the automatic cleanup; turning it on also prunes at once |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
+| `POST /api/shell` | `install` (`true` or `false`): adds the profile by folder line to the shell rc files, or removes it. Without anything to change it returns a `message` and no `backup` |
 
 ## Example
 

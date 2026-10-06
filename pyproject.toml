@@ -31,7 +31,7 @@ test = ["pytest>=7", "coverage[toml]>=7.4"]
 ui = ["pytest>=7", "playwright>=1.40", "axe-playwright-python>=0.1.4"]
 
 [project.scripts]
-cc-profiles = "cc_profiles.server:main"
+cc-profiles = "cc_profiles.entry:main"
 
 [project.urls]
 Homepage = "https://github.com/andreaiannarone/cc-profiles"

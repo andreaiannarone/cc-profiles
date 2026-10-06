@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Profile by folder**: `claude` can start in the profile of the folder you are in. `cc-profiles which [PATH]` prints the profile the rules give a folder (`--dir` prints its config folder), with the same matching as the Projects tab, and runs in about 50 ms without loading the server. `cc-profiles shell-init zsh|bash` prints a `claude` shell function that sets `CLAUDE_CONFIG_DIR` from it, leaves it unset for the default profile and for folders without a rule, never overrides a value you set, and falls back to plain `claude` when cc-profiles is missing. The Profiles tab has a **Profile by folder** section: the rules as folder → profile, a switch that adds or removes one marked line in `~/.zshrc` (or the bash files, for bash users) with a backup, and a field to try a folder. New endpoints `GET /api/shell`, `GET /api/shell/which` and `POST /api/shell`.
+
 ## [0.4.5] - 2026-10-06
 
 ### Added

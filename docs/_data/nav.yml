@@ -11,6 +11,7 @@
     - { title: Conversations, url: guides/conversations.md }
     - { title: Usage, url: guides/usage.md }
     - { title: Profiles and sharing, url: guides/profiles.md }
+    - { title: Profile by folder, url: guides/profile-by-folder.md }
     - { title: Skills and MCP servers, url: guides/skills-and-mcp.md }
     - { title: Search and compare, url: guides/search-and-compare.md }
     - { title: Plugins, url: guides/plugins.md }
