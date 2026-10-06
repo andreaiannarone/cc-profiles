@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- README: the status line editor has its own line in Key Features.
+
 ## [0.4.9] - 2026-10-06
 
 ### Added
