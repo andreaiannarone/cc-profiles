@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.9] - 2026-10-06
+
 ### Added
 - Documentation site, search engines and AI assistants: a meta description per page, canonical URLs, link previews (Open Graph, Twitter), structured data (the app, each page, breadcrumbs, the FAQ), `sitemap.xml`, `robots.txt` that welcomes AI crawlers, `llms.txt` and `llms-full.txt`, a 404 page, and a new **FAQ** page.
 - Documentation site: a copy icon on every code block copies the command with one click (a check mark confirms it); an **On this page** column on the right lists the page's sections and highlights the one you are reading, and scrolls smoothly to the one you click (unless the system asks for reduced motion); an **Install** button in the header opens the install instructions.
@@ -203,7 +205,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...HEAD
+[0.4.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.5...v0.4.6
