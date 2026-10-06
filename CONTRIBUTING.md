@@ -37,7 +37,9 @@ COVERAGE_PROCESS_START=pyproject.toml .venv/bin/python -m coverage run -m pytest
 .venv/bin/python -m coverage html         # optional: htmlcov/index.html, line by line
 ```
 
-CI does the same on Python 3.12 and shows the table in the run's summary.
+The server stops on SIGTERM with `os._exit()`, which skips coverage's own save: `sitecustomize.py` saves the data just before it, so keep that hook if you change how the server exits.
+
+CI does the same on Python 3.12, shows the table in the run's summary and **fails when the total is below 92%** (`coverage report --fail-under=92` in `.github/workflows/ci.yml`; the suite reached 93.7% without the browser smoke test, which that job does not run). New code comes with tests that keep the total above it. When the total rises well above the threshold, raise the threshold to a point or two below the new total. Do not lower it to make a change pass. `tests/test_coverage_extra.py` covers helpers and error paths that the end-to-end tests in `test_app.py` do not reach.
 
 ### How fast it is on a big home
 

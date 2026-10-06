@@ -46,6 +46,11 @@ jobs:
             echo
             python -m coverage report --sort=cover --format=markdown
           } >> "$GITHUB_STEP_SUMMARY"
+          # the floor: a little below the total reached (93.7%), so coverage cannot drop unnoticed
+          python -m coverage report --fail-under=92 > /dev/null || {
+            echo "::error::Test coverage fell below 92%: add tests for the new code (see CONTRIBUTING.md, Coverage)"
+            exit 1
+          }
 
   ui:
     name: UI smoke test

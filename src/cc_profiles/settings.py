@@ -779,7 +779,7 @@ def status_script_info(path):
         return None
     if len(head) < 3 or head[1] != STATUS_MARK or not head[2].startswith("# parts:"):
         return None
-    old = ":" not in head[2]
+    old = ":" not in head[2][len("# parts:"):]
     try:
         parts = status_parts(head[2][len("# parts:"):].split())
     except ApiError:

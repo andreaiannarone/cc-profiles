@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Tests: coverage of the servers the tests start is measured again (their SIGTERM handler skipped saving it), new tests bring it from 90% to 94%, and CI fails when the total drops below 92%.
+
 ## [0.4.5] - 2026-10-06
 
 ### Added
