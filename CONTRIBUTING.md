@@ -153,3 +153,8 @@ It needs `git`, and `gh` logged in to GitHub, and takes 5 to 15 minutes. Step by
 If it stops halfway, it says why: carry on by hand from that step. Nothing it writes carries an attribution line.
 
 PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.
+
+### Homebrew and the documentation site
+
+- **Homebrew**: after a release is on PyPI, `python3 scripts/homebrew_formula.py <version> > Formula/cc-profiles.rb` in the tap repository `andreaiannarone/homebrew-tap`, then commit and push there. Users install with `brew install andreaiannarone/tap/cc-profiles`.
+- **Documentation site**: GitHub Pages publishes `docs/` from `main` with Jekyll (`docs/_config.yml`): `README.md` is the home page and links between `.md` files become pages. Link files outside `docs/` with their full GitHub URL, or they break on the site.

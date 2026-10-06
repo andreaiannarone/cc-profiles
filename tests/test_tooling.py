@@ -83,3 +83,15 @@ def test_plugin_marketplace_manifests():
     # /cc-profiles:open restart|stop: the arguments reach cc-profiles open, which the rule allows
     assert "!`cc-profiles open $ARGUMENTS`" in command
     assert 'argument-hint: "[restart|stop]"' in command and "allowed-tools: Bash(cc-profiles open:*)" in command
+
+
+def test_docs_build_on_github_pages():
+    """GitHub Pages renders docs/ with Jekyll: Liquid tags in a page break the build,
+    and every page in the sidebar must exist."""
+    for md in (ROOT / "docs").rglob("*.md"):
+        text = md.read_text()
+        assert "{{" not in text and "{%" not in text, f"{md.relative_to(ROOT)}: Liquid syntax breaks the docs site"
+    nav = (ROOT / "docs" / "_data" / "nav.yml").read_text()
+    for url in __import__("re").findall(r"url: ([\w/.-]+\.md)", nav):
+        assert (ROOT / "docs" / url).is_file(), f"docs/_data/nav.yml links {url}, which does not exist"
+    assert (ROOT / "docs" / "CNAME").read_text().strip() == "cc-profiles.andreaia.com"

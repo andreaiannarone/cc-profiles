@@ -56,7 +56,7 @@ Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, whic
 
 From a terminal, `cc-profiles restart` and `cc-profiles stop` do the same. A command added by an older version of cc-profiles does not take `restart` or `stop` yet: run `cc-profiles install-command` (or the install script) again to update it.
 
-The [install script](../install.sh) adds the command for you. Otherwise run:
+The [install script](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) adds the command for you. Otherwise run:
 
 ```sh
 cc-profiles install-command
