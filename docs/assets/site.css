@@ -55,6 +55,9 @@ a:hover { text-decoration: underline; }
 .grow { flex: 1; }
 .toplink { color: var(--muted); font-weight: 550; font-size: 14px; }
 .toplink:hover { color: var(--text); text-decoration: none; }
+.install { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px 6px 14px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.install:hover { text-decoration: none; filter: brightness(1.08); }
+.install svg { width: 15px; height: 15px; }
 .iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line);
   background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); }
 .iconbtn:hover { color: var(--text); }
@@ -84,7 +87,7 @@ a:hover { text-decoration: underline; }
 .sresults .snone { padding: 10px; color: var(--muted); font-size: 13.5px; }
 
 /* sidebar like the app's tab groups */
-.layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 36px; max-width: 1180px; margin: 0 auto; padding: 24px 28px 80px; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 1fr) 210px; gap: 36px; max-width: 1360px; margin: 0 auto; padding: 24px 28px 80px; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 .side summary { display: none; }
 .ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
@@ -95,6 +98,17 @@ a:hover { text-decoration: underline; }
 
 /* the page */
 .doc { min-width: 0; max-width: 820px; }
+/* On this page, on the right */
+.toc { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; font-size: 13.5px; }
+.toc[hidden] { display: none; }
+.toc-title { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); margin: 6px 0 10px; }
+.toc-title svg { width: 15px; height: 15px; color: var(--muted); }
+.toc nav { display: grid; gap: 2px; border-left: 1px solid var(--line); }
+.toc a { display: block; padding: 4px 0 4px 12px; margin-left: -1px; border-left: 2px solid transparent; color: var(--muted); line-height: 1.35; }
+.toc a.sub { padding-left: 24px; font-size: 13px; }
+.toc a:hover { color: var(--text); text-decoration: none; }
+.toc a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
+@media (max-width: 1199px) { .layout { grid-template-columns: 230px minmax(0, 1fr); max-width: 1180px; } .toc { display: none; } }
 .doc h1 { font-size: 30px; letter-spacing: -0.02em; line-height: 1.2; margin: 6px 0 18px; }
 .doc h2 { font-size: 21px; letter-spacing: -0.01em; margin: 38px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .doc h3 { font-size: 17px; margin: 28px 0 8px; }
@@ -113,13 +127,13 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc pre { padding: 12px 14px; overflow-x: auto; line-height: 1.5; margin: 0 0 16px; }
 /* the Copy button of code blocks: on hover or focus, always on touch screens */
 .doc .has-copy { position: relative; }
-.doc .has-copy > pre { padding-right: 70px; }
-.doc .copy { position: absolute; top: 7px; right: 7px; padding: 3px 9px; font: 600 12px/1.4 inherit; font-family: inherit;
-  color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; opacity: 0; transition: opacity .12s; }
-.doc .has-copy:hover .copy, .doc .copy:focus-visible, .doc .copy.done { opacity: 1; }
+.doc .has-copy > pre { padding-right: 48px; }
+.doc .copy { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  color: var(--muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+.doc .copy svg { width: 16px; height: 16px; }
+.doc .copy:hover { background: var(--panel-2); }
 .doc .copy:hover { color: var(--text); }
-.doc .copy.done { color: var(--ok); border-color: var(--ok); }
-@media (hover: none) { .doc .copy { opacity: 1; } }
+.doc .copy.done { color: var(--ok); }
 .doc .highlight pre { border: 0; margin: 0; background: none; }
 .doc .highlight { margin: 0 0 16px; }
 .doc table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0 0 18px; background: var(--panel);
@@ -140,6 +154,10 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 @media (max-width: 860px) {
   .top { padding: 12px 16px; }
   .top .sub, .toplink, .grow, .skey { display: none; }
+  .install { padding: 6px 10px; }
+}
+@media (max-width: 560px) {
+  .install { display: none; }  /* phones: the search needs the room; Getting started is in the menu */
   .search { flex: 1 1 auto; }
   .sresults { position: fixed; left: 16px; right: 16px; top: 62px; width: auto; }
   .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 60px; }

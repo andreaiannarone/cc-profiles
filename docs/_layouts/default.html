@@ -32,6 +32,7 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   </div>
   <a class="toplink" href="https://pypi.org/project/cc-profiles/">PyPI</a>
   <a class="toplink" href="https://github.com/andreaiannarone/cc-profiles">GitHub</a>
+  <a class="install" href="{{ '/getting-started.html#install' | relative_url }}">Install <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
   <button class="iconbtn" id="theme-btn" type="button" title="Theme: system" aria-label="Theme: system">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
   </button>
@@ -58,6 +59,10 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
       <span>·</span><span>Built with Claude Code · Made for Claude Code</span>
     </footer>
   </main>
+  <aside class="toc" id="toc" aria-label="On this page" hidden>
+    <div class="toc-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h7"/></svg>On this page</div>
+    <nav id="toc-list"></nav>
+  </aside>
 </div>
 <script>
 (() => {
@@ -171,18 +176,39 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     if (!box.classList.contains("highlight")) { box = document.createElement("div"); pre.before(box); box.appendChild(pre); }
     box.classList.add("has-copy");
     const btn = document.createElement("button");
-    btn.type = "button"; btn.className = "copy"; btn.textContent = "Copy";
+    const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>', DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+    btn.type = "button"; btn.className = "copy"; btn.innerHTML = ICON; btn.title = "Copy";
     btn.setAttribute("aria-label", "Copy the code");
     btn.addEventListener("click", async () => {
       const ok = await copy(pre.innerText.replace(/\n$/, ""));
-      btn.textContent = ok ? "Copied" : "Press ⌘C";
+      btn.innerHTML = ok ? DONE : ICON; btn.title = ok ? "Copied" : "Press ⌘C to copy";
+      btn.setAttribute("aria-label", ok ? "Copied" : "Selected: press ⌘C to copy");
       btn.classList.toggle("done", ok);
       if (!ok) { const r = document.createRange(); r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
       clearTimeout(btn.timer);
-      btn.timer = setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("done"); }, 1600);
+      btn.timer = setTimeout(() => { btn.innerHTML = ICON; btn.title = "Copy"; btn.setAttribute("aria-label", "Copy the code"); btn.classList.remove("done"); }, 1600);
     });
     box.appendChild(btn);
   });
+})();
+(() => {
+  // On this page: the page's h2 and h3, the one being read highlighted while scrolling.
+  const heads = [...document.querySelectorAll(".doc h2[id], .doc h3[id]")];
+  if (heads.length < 2) return;
+  const list = document.getElementById("toc-list");
+  heads.forEach(h => {
+    const a = document.createElement("a");
+    a.href = "#" + h.id; a.textContent = h.textContent; a.className = h.tagName === "H3" ? "sub" : "";
+    list.appendChild(a);
+  });
+  document.getElementById("toc").hidden = false;
+  const links = [...list.children];
+  const mark = () => {
+    let cur = heads[0];
+    for (const h of heads) { if (h.getBoundingClientRect().top < 120) cur = h; else break; }
+    links.forEach((a, i) => { const on = heads[i] === cur; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
+  };
+  addEventListener("scroll", mark, { passive: true }); mark();
 })();
 </script>
 </body>

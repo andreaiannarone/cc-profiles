@@ -127,5 +127,7 @@ def test_docs_code_blocks_have_a_copy_button():
     layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
     css = (ROOT / "docs" / "assets" / "site.css").read_text()
     assert 'querySelectorAll(".doc pre")' in layout and "navigator.clipboard.writeText" in layout
-    assert ".doc .copy" in css and "@media (hover: none)" in css  # always visible on touch screens
+    assert ".doc .copy" in css and 'aria-label", "Copy the code"' in layout  # an icon, always visible
+    assert 'id="toc"' in layout and ".toc a.on" in css  # On this page
+    assert "/getting-started.html#install" in layout and "## Install" in (ROOT / "docs" / "getting-started.md").read_text()
 
