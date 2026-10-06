@@ -111,6 +111,15 @@ code, kbd, pre { font-family: var(--mono); font-size: 13px; }
 kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--panel-2); }
 .doc pre, .doc .highlight { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .doc pre { padding: 12px 14px; overflow-x: auto; line-height: 1.5; margin: 0 0 16px; }
+/* the Copy button of code blocks: on hover or focus, always on touch screens */
+.doc .has-copy { position: relative; }
+.doc .has-copy > pre { padding-right: 70px; }
+.doc .copy { position: absolute; top: 7px; right: 7px; padding: 3px 9px; font: 600 12px/1.4 inherit; font-family: inherit;
+  color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.doc .has-copy:hover .copy, .doc .copy:focus-visible, .doc .copy.done { opacity: 1; }
+.doc .copy:hover { color: var(--text); }
+.doc .copy.done { color: var(--ok); border-color: var(--ok); }
+@media (hover: none) { .doc .copy { opacity: 1; } }
 .doc .highlight pre { border: 0; margin: 0; background: none; }
 .doc .highlight { margin: 0 0 16px; }
 .doc table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0 0 18px; background: var(--panel);

@@ -121,3 +121,11 @@ def test_docs_search_index_uses_only_github_pages_filters():
     layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
     assert "'/search.json' | relative_url" in layout, "the search box reads the index through relative_url"
     assert "<script src" not in layout, "the docs site loads no external script"
+
+
+def test_docs_code_blocks_have_a_copy_button():
+    layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
+    css = (ROOT / "docs" / "assets" / "site.css").read_text()
+    assert 'querySelectorAll(".doc pre")' in layout and "navigator.clipboard.writeText" in layout
+    assert ".doc .copy" in css and "@media (hover: none)" in css  # always visible on touch screens
+

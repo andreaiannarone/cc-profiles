@@ -153,6 +153,37 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     e.preventDefault(); q.focus(); q.select();
   });
 })();
+(() => {
+  // A Copy button on every code block: copies the text as shown, without the button.
+  const copy = async text => {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const t = document.createElement("textarea");  // older browsers, or a page not served over HTTPS
+    t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    t.remove();
+    return ok;
+  };
+  document.querySelectorAll(".doc pre").forEach(pre => {
+    // Rouge wraps a block in div.highlight; a bare pre gets a wrapper, so the button is never inside the code
+    let box = pre.parentElement;
+    if (!box.classList.contains("highlight")) { box = document.createElement("div"); pre.before(box); box.appendChild(pre); }
+    box.classList.add("has-copy");
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "copy"; btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy the code");
+    btn.addEventListener("click", async () => {
+      const ok = await copy(pre.innerText.replace(/\n$/, ""));
+      btn.textContent = ok ? "Copied" : "Press ⌘C";
+      btn.classList.toggle("done", ok);
+      if (!ok) { const r = document.createRange(); r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      clearTimeout(btn.timer);
+      btn.timer = setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("done"); }, 1600);
+    });
+    box.appendChild(btn);
+  });
+})();
 </script>
 </body>
 </html>

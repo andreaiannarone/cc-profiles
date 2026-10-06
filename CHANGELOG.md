@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Documentation site: a **Copy** button on every code block copies the command with one click (shown on hover or focus, always on touch screens).
+
 ## [0.4.8] - 2026-10-06
 
 ### Added
