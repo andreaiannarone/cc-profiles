@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-06
+
 ### Changed
 - README: the status line editor has its own line in Key Features.
 
@@ -208,7 +210,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.6...v0.4.7
