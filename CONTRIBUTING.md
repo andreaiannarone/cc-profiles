@@ -50,6 +50,10 @@ CI does the same on Python 3.12 and shows the table in the run's summary.
 
 Run it before and after a change that reads many files.
 
+### The UI's JavaScript
+
+`python3 scripts/check_js.py` type-checks the inline scripts of `index.html` with TypeScript's `--checkJs` (it needs Node.js; `npx` fetches TypeScript the first time). It catches misspelled names and wrong calls, and runs in CI. `scripts/check_js.d.ts` tells it what `querySelector` returns; where the code needs a precise type, a JSDoc cast like `/** @type {HTMLElement} */ (e.target)` does it.
+
 ### The browser smoke test
 
 `tests/test_ui.py` opens every tab of the real page in Chromium and fails on JavaScript errors, Content-Security-Policy violations or a tab stuck loading. It is skipped unless Playwright is installed:

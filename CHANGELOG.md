@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `/cc-profiles restart` and `/cc-profiles stop` inside Claude Code restart or stop the app, like `cc-profiles restart` and `cc-profiles stop` in a terminal. They run `cc-profiles open restart` and `cc-profiles open stop`. A command added by an older version gets them when you run `cc-profiles install-command` (or the install script) again.
 - `scripts/release.py <version>` makes a release from start to finish: checks, version bump, dated CHANGELOG section, pull request, merge, tag, then waits for the wheel on PyPI. `--dry-run` prints every step.
 - A weekly workflow installs the latest Claude Code, checks the Settings tab's options against its settings schema and `/config` panel with `scripts/check_settings_schema.py`, and opens an issue when they differ. The `/check-settings-schema` skill runs the same script first.
+- `scripts/check_js.py` type-checks the UI's JavaScript with TypeScript (`--checkJs`, no build step), in CI too.
 
 ### Changed
 - Updating from the About panel right after a release: when PyPI's download index does not have the new version yet (pip's *No matching distribution found*, pipx's *already at latest version*, or an update that changed nothing), the app says the version was just published and to try again in a few minutes, with a **Try again** button. pip's output is under *Details*.

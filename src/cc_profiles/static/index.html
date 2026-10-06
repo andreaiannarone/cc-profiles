@@ -422,6 +422,7 @@ const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: ""
             health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
+/** @type {(s: string, el?: ParentNode) => any} */
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
@@ -469,7 +470,7 @@ function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
     const onKey = e => { if (e.key === "Escape") close(null); };
     document.addEventListener("keydown", onKey);
     bg.addEventListener("click", e => {
-      if (e.target === bg || e.target.hasAttribute("data-close")) return close(null);
+      if (e.target === bg || /** @type {Element} */ (e.target).hasAttribute("data-close")) return close(null);
       const i = e.target.closest("[data-i]")?.dataset.i;
       if (i !== undefined) close({ action: actions[i].value, el: bg });
       const pick = e.target.closest("[data-pick]");
@@ -2102,7 +2103,7 @@ function showKeys() {
 let goPending = 0;
 document.addEventListener("keydown", e => {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-  const el = e.target;
+  const el = /** @type {HTMLElement} */ (e.target);
   if (el.isContentEditable || el.closest?.("input, textarea, select")) return;
   if (document.querySelector(".modal-bg, .drawer, .popover, .moremenu:not([hidden])")) return;
   if (goPending && Date.now() - goPending < 1500) {
