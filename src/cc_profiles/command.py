@@ -14,16 +14,21 @@ from .sharing import primary, share_state
 # (plugin commands always get a "plugin:" prefix). The mark is a YAML comment in
 # the frontmatter: Claude Code does not show it to the model, and only files with
 # it may be rewritten. plugin/commands/open.md is the same text without the mark.
+# Claude Code puts the arguments (/cc-profiles restart) in place of $ARGUMENTS before
+# it runs the ! line; with no arguments the line is just `cc-profiles open`.
 COMMAND_MARK = "# managed by cc-profiles"
 COMMAND_NAME = "cc-profiles.md"
 COMMAND_TEXT = f"""---
 {COMMAND_MARK}
 description: Open the cc-profiles web UI to manage your Claude Code profiles
+argument-hint: "[restart|stop]"
 allowed-tools: Bash(cc-profiles open:*)
 ---
-!`cc-profiles open`
+!`cc-profiles open $ARGUMENTS`
 
-Tell the user, in one short line, what the output above says: the URL where cc-profiles is open, or why it did not start.
+Tell the user, in one short line, what the output above says: the URL where cc-profiles is open; that it was restarted, and that they should reload the page; that it was stopped or was not running; or why it did not start or stop.
+
+If the output says the action is unknown, say that this command accepts nothing, `restart` or `stop`.
 
 If the `cc-profiles` command was not found, say that this command only opens the app and does not install it, and give this install command:
 

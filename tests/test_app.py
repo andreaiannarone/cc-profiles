@@ -399,6 +399,67 @@ def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
     assert home.snapshot() == before
 
 
+def run_status_script(home, path, data):
+    r = subprocess.run(["/bin/sh", str(path)], input=json.dumps(data), capture_output=True, text=True,
+                       env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
+    return r.stdout
+
+
+@pytest.mark.skipif(not shutil.which("jq"), reason="the status line script needs jq")
+def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory()
+    S = "/api/statusline"
+    assert "used or left" in app.request(S + "/preview?profile=default&parts=limit&limits=x")[1]["error"]
+    # the preview reads a sample conversation of its own and counts down from now
+    used = app.get(S + "/preview?profile=default&parts=tokens,limit,week&colors=0")
+    left = app.get(S + "/preview?profile=default&parts=tokens,limit,week&colors=0&limits=left")
+    assert used["text"] == "question:12k session:340k 5h:78% 7d:41%"
+    assert left["text"] == "question:12k session:340k 5h:22%→1h20m 7d:59%"
+    assert "# style: separator=space colors=0 limits=left" in left["script"]
+
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["tokens", "limit", "week"], "colors": False, "limits": "left"})
+    script = home.path(".claude/statusline.sh")
+    got = app.get(S + "?profile=default")
+    assert got["limits"] == "left"
+    assert {p["id"]: p.get("sample_left") for p in got["parts_available"]}["limit"] == "5h:22%→1h20m"
+
+    lines = [{"type": "user", "message": {"content": "first"}},
+             {"type": "assistant", "message": {"usage": {"input_tokens": 1000000, "cache_read_input_tokens": 200000,
+                                                         "output_tokens": 5000}}},
+             {"type": "user", "message": {"content": "second"}},
+             {"type": "assistant", "message": {"usage": {"input_tokens": 500, "cache_creation_input_tokens": 1500}}},
+             {"type": "user", "message": {"content": [{"type": "tool_result", "content": "done"}]}},  # not a prompt
+             {"type": "assistant", "message": {"usage": {"output_tokens": 600}}}]
+    (tmp_path / "t.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines) + '{"type": "assist')  # a line being written
+    now = int(time.time())
+    data = {"transcript_path": str(tmp_path / "t.jsonl"),
+            "rate_limits": {"five_hour": {"used_percentage": 92.4, "resets_at": now + 2 * 3600 + 13 * 60 + 30},
+                            "seven_day": {"used_percentage": 41, "resets_at": now + 4 * 86400}}}
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→2h13m 7d:59%"
+    data["rate_limits"]["seven_day"] = {"used_percentage": 60, "resets_at": now + 3 * 86400 + 11 * 3600 + 60}
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 45 * 60 + 30
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→45m 7d:40%→3d11h"
+    data["transcript_path"] = str(tmp_path / "missing.jsonl")  # no conversation file: no tokens, nothing else breaks
+    del data["rate_limits"]["five_hour"]["resets_at"]
+    assert run_status_script(home, script, data) == "5h:8% 7d:40%→3d11h"
+
+    # used, as before: the same data shows the share used, without countdown
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["limit", "week"], "colors": False, "limits": "used"})
+    assert run_status_script(home, script, data) == "5h:92% 7d:60%"
+    # a script from before limits=: still recognized, and shows the limits used
+    text = script.read_text()
+    script.write_text(text.replace(" limits=used", ""))
+    assert app.get(S + "?profile=default")["limits"] == "used"
+    script.write_text(text.replace(" limits=used", " limits=sideways"))
+    assert app.get(S + "?profile=default")["limits"] == "used"
+    script.write_text(text)
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):
     basic_home(home)
     home.profile("solo")
@@ -643,7 +704,7 @@ def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
 
     app.post("/api/profiles/create", {"label": "Empty", "id": "empty", "base": "", "share": []})
     text = home.path(".claude-empty/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
 
     # sharing commands with the source: the command goes into the source, through the link
     app.post("/api/profiles/create", {"label": "Shared", "id": "shared-cmd", "base": "", "share": ["commands"]})
@@ -775,6 +836,48 @@ def test_update_check_compares_with_pypi(home, app_factory, tmp_path):
     offline = app_factory(CC_PROFILES_PYPI_URL=(tmp_path / "missing.json").as_uri())
     status, body = offline.request("/api/update")
     assert status == 502 and "Could not reach PyPI" in body["error"]
+
+
+def fake_tool(tmp_path, name, output, code):
+    """A fake `pipx` or `uv` on PATH, first, so a real one is never run."""
+    bin_dir = tmp_path / f"bin-{code}-{abs(hash(output))}"
+    bin_dir.mkdir()
+    tool = bin_dir / name
+    tool.write_text(f"#!/bin/sh\ncat <<'EOF'\n{output}\nEOF\nexit {code}\n")
+    tool.chmod(0o755)
+    return f"{bin_dir}:/usr/bin:/bin"
+
+
+@pytest.mark.parametrize("kind,output,code", [
+    ("pipx", "cc-profiles is already at latest version 0.0.1 (location: /x)", 0),  # pipx, right after a release
+    ("pipx", "ERROR: Could not find a version that satisfies the requirement cc-profiles==99.0.0\n"
+             "ERROR: No matching distribution found for cc-profiles==99.0.0", 1),
+    ("uv", "Nothing to upgrade", 0),
+    ("uv", "Updated cc-profiles", 0),  # it ran, but the installed version did not change
+])
+def test_update_right_after_a_release_says_to_try_again(home, app_factory, tmp_path, kind, output, code):
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"), CC_PROFILES_INSTALL_KIND=kind,
+                      PATH=fake_tool(tmp_path, kind, output, code))
+    info = app.get("/api/update")
+    assert info["can_update"] is True and info["kind"] == kind
+    r = app.post("/api/update", {})
+    assert r["retry"] is True and r["restarting"] is False
+    assert "99.0.0 was published only minutes ago" in r["message"] and "try again in a few minutes" in r["message"]
+    assert "ERROR" not in r["message"] and output.splitlines()[-1] in r["details"]
+    assert r["details"].startswith("$ " + " ".join(server_update_command(kind)))
+
+
+def server_update_command(kind):
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    return server.UPDATE_COMMANDS[kind]
+
+
+def test_update_that_fails_for_another_reason(home, app_factory, tmp_path):
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"), CC_PROFILES_INSTALL_KIND="pipx",
+                      PATH=fake_tool(tmp_path, "pipx", "Fatal: disk full", 3))
+    error = app.post_error("/api/update", {})
+    assert "The update failed (pipx upgrade cc-profiles ended with code 3)" in error and "disk full" in error
 
 
 def test_version_order():
@@ -988,6 +1091,40 @@ def test_stop_and_restart_commands(home):
                 pass
 
 
+def test_open_with_an_action_restarts_or_stops(home):
+    """/cc-profiles restart and /cc-profiles stop: Claude Code puts the arguments in
+    place of $ARGUMENTS in the command's ! line, which then runs cc-profiles open <action>."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    line = re.search(r"^!`(.*)`$", server.COMMAND_TEXT, re.M).group(1)
+    assert line == "cc-profiles open $ARGUMENTS"
+
+    def slash(arguments):
+        args = line.replace("$ARGUMENTS", arguments).split()[1:]
+        return run_cli(home, *args, "--no-browser", "--port", str(port))
+
+    port = free_port()
+    first = slash("")
+    assert first.returncode == 0, first.stdout + first.stderr
+    pids = [int(re.search(r"pid (\d+)", first.stdout).group(1))]
+    try:
+        r = slash("restart")
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"(pid {pids[0]})" in r.stdout and "Reload the page" in r.stdout
+        pids.append(int(re.search(r"started in the background .* \(pid (\d+)\)", r.stdout).group(1)))
+        r = slash("stop")
+        assert r.returncode == 0 and f"Stopped cc-profiles on http://127.0.0.1:{port} (pid {pids[1]})" in r.stdout
+        r = slash("bogus")
+        assert r.returncode == 2 and "unknown action: bogus" in r.stderr
+        assert "is not running" in slash("stop").stdout
+    finally:
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+
 def test_stop_leaves_other_programs_alone(home):
     with socket.socket() as other:  # not cc-profiles: nothing to stop
         other.bind(("127.0.0.1", 0))
@@ -1019,7 +1156,7 @@ def test_install_command(home, app_factory):
     assert "Work: added ~/.claude-work/commands/cc-profiles.md" in out
     assert "Client: skipped" in out and "Shared: shares commands with Default" in out
     text = home.path(".claude/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
     assert home.path(".claude-client/commands/cc-profiles.md").read_text() == "my own command\n"
     assert home.path(".claude-shared/commands/cc-profiles.md").read_text() == text  # through the link
 
@@ -1030,6 +1167,19 @@ def test_install_command(home, app_factory):
     assert newest["title"] == "Add the /cc-profiles command"
     app.post("/api/backups/restore", {"name": newest["name"]})
     assert home.snapshot() == before
+
+
+def test_install_command_updates_an_older_command(home):
+    """A command written by an older version (before /cc-profiles restart|stop) is rewritten."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    basic_home(home)
+    old = server.COMMAND_TEXT.replace("!`cc-profiles open $ARGUMENTS`", "!`cc-profiles open`")
+    old = old.replace('argument-hint: "[restart|stop]"\n', "")
+    home.write(".claude/commands/cc-profiles.md", old)
+    out = run_cli(home, "install-command").stdout
+    assert "Default: added ~/.claude/commands/cc-profiles.md" in out
+    assert home.path(".claude/commands/cc-profiles.md").read_text() == server.COMMAND_TEXT
 
 
 def test_plugin_command_matches_installed_command():
@@ -1359,3 +1509,100 @@ def test_about_counts_each_profile(home, app_factory):
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0
     assert about["app"]["Backups"].startswith("0 ·")
+
+
+# --- usage ----------------------------------------------------------------------
+def reply_line(mid, days_ago, model="claude-sonnet-5-5", inp=0, out=0, cw=0, cr=0, req="req-1", **extra):
+    """An assistant line with the usage Claude Code records on every reply."""
+    t = time.time() - days_ago * 86400
+    usage = {"input_tokens": inp, "output_tokens": out, "cache_creation_input_tokens": cw,
+             "cache_read_input_tokens": cr, **extra}
+    return json.dumps({"type": "assistant", "requestId": req,
+                       "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.123Z", time.gmtime(t)),
+                       "message": {"id": mid, "model": model, "role": "assistant",
+                                   "content": [{"type": "text", "text": "ok"}], "usage": usage}},
+                      separators=(",", ":"))
+
+
+def add_lines(home, profile, project, session, lines):
+    d = home.conversation(profile, project, session) if not (home.profile(profile) / "projects" / san(home.path(project)) / f"{session}.jsonl").exists() \
+        else home.profile(profile) / "projects" / san(home.path(project))
+    with open(d / f"{session}.jsonl", "a") as f:
+        f.write("\n".join(lines) + "\n")
+    return d
+
+
+M = 1_000_000
+
+
+def test_usage_is_counted_once_per_reply_and_priced(home, app_factory):
+    basic_home(home)
+    big = reply_line("msg-a", 0.01, inp=M, out=M, cw=M, cr=M)  # sonnet 5.5: 2 + 10 + 2.50 + 0.20 = $14.70
+    add_lines(home, "", "code/work/api", "s-use", [
+        big, big,  # Claude Code writes one line per content block of the same reply
+        reply_line("msg-a", 0.01, inp=M, out=10, cw=M, cr=M),  # a mid-stream line: the one with more output wins
+        "{not json", '{"type":"assistant","message":"odd"}',  # broken lines are skipped
+        reply_line("msg-b", 0.01, model="<synthetic>", inp=100, out=50),  # no list price: tokens, no cost
+        reply_line("msg-c", 3, model="claude-haiku-4-5", out=M),  # $5
+        reply_line("msg-d", 40, model="claude-opus-5-5", out=M),  # $20, outside 30 days
+        reply_line("msg-e", 0.01, model="claude-sonnet-5-5", cw=M,  # written for 1 hour: 2 × input
+                   cache_creation={"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": M}),
+        reply_line("msg-f", 0.02, req="req-2", model="claude-opus-4-1", inp=M),  # $15; same id as below, other request
+    ])
+    add_lines(home, "", "code/personal/blog", "s-use2", [reply_line("msg-f", 0.02, req="req-3", model="claude-opus-4-1", inp=M)])
+    # a resumed conversation copies earlier replies into its own file; a moved one can sit in two profiles
+    add_lines(home, "work", "code/work/api", "s-use-work", [big, reply_line("msg-w", 1, model="claude-opus-4-8", out=M)])
+    app = app_factory()
+    before = home.snapshot()
+
+    r = app.get("/api/usage?profile=all&days=30")
+    t = r["totals"]
+    assert t["replies"] == 7  # a, b, c, e, f twice (two requests), w
+    assert (t["input"], t["output"], t["cache_write"], t["cache_read"]) == (3 * M + 100, 3 * M + 50, 2 * M, M)
+    assert t["cost"] == pytest.approx(14.70 + 5 + 4 + 15 + 15 + 25)
+    assert t["unpriced_tokens"] == 150 and t["cache_read_share"] == pytest.approx(M / (6 * M + 100), abs=1e-4)
+    assert len(r["daily"]) == 30 and r["daily"][-1]["date"] == time.strftime("%Y-%m-%d")
+    assert r["start"] == r["daily"][0]["date"] and r["end"] == r["daily"][-1]["date"]
+    assert sum(d["replies"] for d in r["daily"]) == 7 and sum(1 for d in r["daily"] if d["tokens"]) <= 4
+    assert all(d["tokens"] == 0 and d["cost"] == 0 for d in r["daily"][:-5])  # every day is there, zeros included
+    models = {m["model"]: m for m in r["models"]}
+    assert models["<synthetic>"]["family"] is None and models["<synthetic>"]["unpriced_tokens"] == 150
+    assert models["claude-haiku-4-5"]["cost"] == 5 and models["claude-opus-4-8"]["family"] == "Opus 4.5–5"
+    assert {p["id"]: p["replies"] for p in r["profiles"]} == {"default": 6, "work": 1}
+    projects = {(p["profile"], p["pretty"]): p["replies"] for p in r["projects"]}
+    assert projects == {("default", "~/code/work/api"): 5, ("default", "~/code/personal/blog"): 1, ("work", "~/code/work/api"): 1}
+    assert r["projects_count"] == 3 and r["prices_checked"] and r["currency"] == "USD"
+
+    work = app.get("/api/usage?profile=work&days=7")  # alone, work counts its copy of msg-a
+    assert work["totals"]["replies"] == 2 and "profiles" not in work and len(work["daily"]) == 7
+    assert work["totals"]["cost"] == pytest.approx(14.70 + 25)
+    assert app.get("/api/usage?profile=default&days=90")["totals"]["replies"] == 7  # msg-d is 40 days old
+    assert app.get("/api/usage")["days"] == 30  # all profiles, 30 days by default
+    assert home.snapshot() == before  # read-only
+    assert not home.path(".cc-profiles/backups").exists() or not any(home.path(".cc-profiles/backups").iterdir())
+
+    # a new reply is read on the next request: the cache follows the file
+    add_lines(home, "work", "code/work/api", "s-use-work", [reply_line("msg-new", 0, model="claude-haiku-4-5", inp=10)])
+    assert app.get("/api/usage?profile=work&days=7")["totals"]["replies"] == 3
+
+
+def test_usage_counts_subagent_conversations(home, app_factory):
+    basic_home(home)
+    d = add_lines(home, "", "code/work/api", "s-main", [reply_line("m-main", 0.01, out=10)])
+    sub = d / "s-main" / "subagents"
+    sub.mkdir(parents=True)
+    (sub / "agent-1.jsonl").write_text(reply_line("m-sub", 0.01, out=20) + "\n")
+    app = app_factory()
+    assert app.get("/api/usage?profile=default&days=7")["totals"]["output"] == 30
+
+
+def test_usage_rejects_bad_parameters(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    for q in ("days=10", "days=abc", "days=030", "days=-7", "days=7.0"):
+        status, data = app.request("/api/usage?profile=all&" + q)
+        assert status == 400 and "Pick 7, 30, 90 or 365 days" in data["error"], q
+    status, data = app.request("/api/usage?profile=nope&days=7")
+    assert status == 400 and "Unknown profile" in data["error"]
+    r = app.get("/api/usage?profile=default&days=365")
+    assert r["totals"]["replies"] == 0 and len(r["daily"]) == 365 and r["models"] == [] and r["projects"] == []

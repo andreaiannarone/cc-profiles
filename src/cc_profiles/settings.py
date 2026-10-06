@@ -6,8 +6,10 @@ import glob
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
+import time
 
 from .core import (
     ApiError,
@@ -608,6 +610,17 @@ def op_global(pid, key, value):
 # ~/.cc-profiles/config.json), so a script reached through a shared settings.json still
 # names the right profile. Only a script with STATUS_MARK on its first line is rewritten.
 STATUS_MARK = "# managed by cc-profiles: status line"
+# Tokens since the last prompt typed by the user (a user line whose content is a string, not
+# a tool result) and in the whole session, from the usage of every assistant line of the
+# conversation file. Lines that do not parse (one being written) are skipped.
+STATUS_TOKENS_JQ = (
+    'def h: if . >= 1000000 then ((. * 10 / 1000000 | floor) / 10 | tostring) + "M" '
+    'elif . >= 1000 then (. / 1000 | floor | tostring) + "k" else tostring end; '
+    'reduce (inputs | fromjson? | objects) as $l ({s: 0, t: 0}; '
+    'if $l.type == "user" and ($l.message.content | type) == "string" then .t = 0 '
+    'elif $l.type == "assistant" then ($l.message.usage // {}) as $u '
+    '| (($u.input_tokens // 0) + ($u.cache_creation_input_tokens // 0) + ($u.cache_read_input_tokens // 0) + ($u.output_tokens // 0)) as $x '
+    '| .s += $x | .t += $x else . end) | "question:\\(.t | h) session:\\(.s | h)"')
 # (id, label, sample, brackets by default, sh code). The code reads the JSON with j and
 # adds one piece with add TEXT [SGR color]; $cwd is the session's folder, $cfg the
 # profile's .claude.json. Colors are the terminal's own 16 (90 is its grey).
@@ -621,7 +634,7 @@ STATUS_PARTS = [
      'if [ -n "$b" ]; then git -C "$cwd" --no-optional-locks diff --quiet --ignore-submodules HEAD 2>/dev/null || b="$b*"; '
      'add "$b" "2;36"; fi; fi'),
     ("profile", "Profile", "Default", "round",
-     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
+     'label=$(jq -r --arg d "$dir" --arg h "$(cd "$HOME" 2>/dev/null && pwd -P)" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
      '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" 1'),
     ("email", "Account email", "me@example.com", "none", 'add "$(jq -r \'.oauthAccount.emailAddress // empty\' "$cfg" 2>/dev/null)" 90'),
     ("model", "Model", "Opus", "square", 'add "$(j .model.display_name)" 35'),
@@ -639,12 +652,11 @@ STATUS_PARTS = [
     ("duration", "Session time", "12m", "none",
      'v=$(j \'.cost.total_duration_ms | floor\'); if [ -n "$v" ]; then m=$((v / 60000)); '
      'if [ "$m" -ge 60 ]; then add "$((m / 60))h $(printf %02d $((m % 60)))m" 2; else add "${m}m" 2; fi; fi'),
-    ("limit", "5-hour limit used", "5h:18%", "none",
-     'v=$(j \'.rate_limits.five_hour.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
-     '[ "$v" -ge 90 ] && c=31; add "5h:$v%" $c; fi'),
-    ("week", "Weekly limit used", "7d:41%", "none",
-     'v=$(j \'.rate_limits.seven_day.used_percentage | floor\'); if [ -n "$v" ]; then c=90; [ "$v" -ge 70 ] && c=33; '
-     '[ "$v" -ge 90 ] && c=31; add "7d:$v%" $c; fi'),
+    ("tokens", "Tokens (reads the whole conversation file at each refresh)", "question:12k session:340k", "none",
+     't=$(j .transcript_path); if [ -n "$t" ] && [ -f "$t" ]; then v=$(jq -n -R -r \'' + STATUS_TOKENS_JQ + '\' "$t" 2>/dev/null)\n'
+     'add "$v" 90; fi'),
+    ("limit", "5-hour limit", "5h:78%", "none", 'lim five_hour 5h'),
+    ("week", "Weekly limit", "7d:41%", "none", 'lim seven_day 7d'),
     ("terminal", "Terminal", "iTerm", "round",
      'case $TERM_PROGRAM in Apple_Terminal) t=Terminal ;; iTerm.app) t=iTerm ;; WarpTerminal) t=Warp ;; vscode) t="VS Code" ;; '
      'ghostty) t=Ghostty ;; "") t=$TERM ;; *) t=$TERM_PROGRAM ;; esac; add "$t" 32'),
@@ -655,6 +667,12 @@ STATUS_DEFAULT_BRACKETS = {x[0]: x[3] for x in STATUS_PARTS}
 STATUS_DEFAULT_PARTS = ["path", "branch", "profile", "model", "context"]
 STATUS_SEPARATORS = {"space": " ", "dot": " · ", "bar": " | ", "arrow": " › "}
 STATUS_BRACKETS = {"none": ("", ""), "round": ("(", ")"), "square": ("[", "]"), "curly": ("{", "}"), "angle": ("⟨", "⟩")}
+# How the 5-hour and weekly limits read: the share used, or the share left with the time
+# until the reset when half or less is left. Scripts without it in their header show "used".
+STATUS_LIMITS = ("used", "left")
+STATUS_SAMPLE_LEFT = {"limit": "5h:22%→1h20m", "week": "7d:59%"}
+# The preview's data. No transcript_path: the preview adds one to a sample conversation of its
+# own, so it never reads a file it did not write. resets_at is added relative to now.
 STATUS_SAMPLE = {
     "model": {"id": "claude-opus-5-5", "display_name": "Opus"},
     "effort": {"level": "high"},
@@ -662,8 +680,18 @@ STATUS_SAMPLE = {
     "pr": {"number": 42},
     "context_window": {"used_percentage": 42.4},
     "cost": {"total_cost_usd": 1.27, "total_lines_added": 120, "total_lines_removed": 34, "total_duration_ms": 754000},
-    "rate_limits": {"five_hour": {"used_percentage": 18}, "seven_day": {"used_percentage": 41}},
+    "rate_limits": {"five_hour": {"used_percentage": 78}, "seven_day": {"used_percentage": 41}},
 }
+# The preview's conversation: 12k tokens since the last prompt, 340k in all (a tool result
+# is not a prompt).
+STATUS_SAMPLE_TRANSCRIPT = [
+    {"type": "user", "message": {"role": "user", "content": "add a login page"}},
+    {"type": "assistant", "message": {"usage": {"input_tokens": 3000, "cache_creation_input_tokens": 20000,
+                                                "cache_read_input_tokens": 290000, "output_tokens": 15000}}},
+    {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}},
+    {"type": "user", "message": {"role": "user", "content": "now the tests"}},
+    {"type": "assistant", "message": {"usage": {"input_tokens": 1000, "cache_read_input_tokens": 9000, "output_tokens": 2000}}},
+]
 
 
 def status_parts(items):
@@ -680,23 +708,26 @@ def status_parts(items):
     return out
 
 
-def status_style(separator, colors):
+def status_style(separator, colors, limits="used"):
     if separator not in STATUS_SEPARATORS:
         raise ApiError("Unknown separator")
-    return separator, bool(colors)
+    if limits not in STATUS_LIMITS:
+        raise ApiError("Unknown way to show the rate limits: expected used or left")
+    return separator, bool(colors), limits
 
 
-def status_script(parts, separator="space", colors=True):
+def status_script(parts, separator="space", colors=True, limits="used"):
     """The status line script: parts are (id, brackets) in the order to show them."""
     body = "\n".join(f"L='{STATUS_BRACKETS[br][0]}' R='{STATUS_BRACKETS[br][1]}'\n{STATUS_CODE[pid]}" for pid, br in parts)
     return f"""#!/bin/sh
 {STATUS_MARK}
 # parts: {" ".join(f"{pid}:{br}" for pid, br in parts)}
-# style: separator={separator} colors={1 if colors else 0}
+# style: separator={separator} colors={1 if colors else 0} limits={limits}
 # Made in the Settings tab of cc-profiles, which rewrites it. To edit it by hand, delete the second line.
 # Bytes stay bytes (LC_ALL=C): the shell cannot mangle ⟨ ⟩ or · whatever the terminal's locale.
 export LC_ALL=C
 C={1 if colors else 0}
+LIM={limits}
 SEP='{STATUS_SEPARATORS[separator]}'
 [ "$C" = 1 ] && SEP=$(printf '\\033[2m%s\\033[0m' "$SEP")
 input=$(cat)
@@ -712,6 +743,21 @@ add() {{
   [ "$C" = 1 ] && [ -n "$2" ] && s=$(printf '\\033[%sm%s\\033[0m' "$2" "$s")
   out="${{out:+$out$SEP}}$s"
 }}
+# lim KEY LABEL: a rate limit, used or left (LIM), yellow from 70% used, red from 90%
+lim() {{
+  v=$(j ".rate_limits.$1.used_percentage | floor"); [ -n "$v" ] || return 0
+  c=90; [ "$v" -ge 70 ] && c=33; [ "$v" -ge 90 ] && c=31
+  if [ "$LIM" != left ]; then add "$2:$v%" $c; return 0; fi
+  s="$2:$((100 - v))%"
+  r=$(j ".rate_limits.$1.resets_at | floor")
+  if [ "$v" -ge 50 ] && [ -n "$r" ]; then  # half or less left: the time until the reset
+    d=$((r - $(date +%s)))
+    if [ "$d" -ge 86400 ]; then s=$(printf '%s→%sd%sh' "$s" $((d / 86400)) $((d % 86400 / 3600)))
+    elif [ "$d" -ge 3600 ]; then s=$(printf '%s→%sh%sm' "$s" $((d / 3600)) $((d % 3600 / 60)))
+    elif [ "$d" -gt 0 ]; then s=$(printf '%s→%sm' "$s" $((d / 60))); fi
+  fi
+  add "$s" $c
+}}
 cwd=$(j .workspace.current_dir)
 {body}
 printf '%s' "$out"
@@ -723,8 +769,9 @@ def status_script_path(prof):
 
 
 def status_script_info(path):
-    """{parts: [(id, brackets)], separator, colors} of a script cc-profiles wrote, or None
-    for any other file. Scripts from before per-piece brackets list bare ids."""
+    """{parts: [(id, brackets)], separator, colors, limits} of a script cc-profiles wrote, or
+    None for any other file. Scripts from before per-piece brackets list bare ids, and those
+    from before limits=left show the limits used."""
     try:
         with open(path) as f:
             head = f.read(800).split("\n")
@@ -739,11 +786,12 @@ def status_script_info(path):
         return None
     if old:
         parts = [(pid, "none") for pid, _ in parts]
-    info = {"parts": parts, "separator": "dot", "colors": False}
+    info = {"parts": parts, "separator": "dot", "colors": False, "limits": "used"}
     if len(head) > 3 and head[3].startswith("# style:"):
         style = dict(x.split("=", 1) for x in head[3][len("# style:"):].split() if "=" in x)
         info["separator"] = style.get("separator") if style.get("separator") in STATUS_SEPARATORS else "dot"
         info["colors"] = style.get("colors") == "1"
+        info["limits"] = style.get("limits") if style.get("limits") in STATUS_LIMITS else "used"
     return info
 
 
@@ -760,34 +808,59 @@ def get_statusline(pid):
     mode = "off"
     if value:
         mode = "builtin" if value.get("command") == status_command(prof) and info is not None else "custom"
-    info = info or {"parts": status_parts(STATUS_DEFAULT_PARTS), "separator": "space", "colors": True}
+    info = info or {"parts": status_parts(STATUS_DEFAULT_PARTS), "separator": "space", "colors": True, "limits": "used"}
     return {"value": value, "source": src, "mode": mode, "parts": [f"{pid}:{br}" for pid, br in info["parts"]],
-            "separator": info["separator"], "colors": info["colors"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
+            "separator": info["separator"], "colors": info["colors"], "limits": info["limits"], "script": pretty(path), "script_is_other": os.path.exists(path) and not status_script_info(path),
             "jq": bool(find_tool("jq")), "separators": [{"id": k, "text": v} for k, v in STATUS_SEPARATORS.items()],
             "brackets": [{"id": k, "left": v[0], "right": v[1]} for k, v in STATUS_BRACKETS.items()],
-            "parts_available": [{"id": x[0], "label": x[1], "sample": x[2], "brackets": x[3]} for x in STATUS_PARTS]}
+            "parts_available": [dict({"id": x[0], "label": x[1], "sample": x[2], "brackets": x[3]},
+                                     **({"sample_left": STATUS_SAMPLE_LEFT[x[0]]} if x[0] in STATUS_SAMPLE_LEFT else {}))
+                                for x in STATUS_PARTS]}
 
 
-def statusline_preview(pid, parts, separator="space", colors="1"):
+def statusline_sample(tmp):
+    """STATUS_SAMPLE with its conversation written in tmp and the limits resetting from now."""
+    transcript = os.path.join(tmp, "sample.jsonl")
+    with open(transcript, "w") as f:
+        f.write("".join(json.dumps(x) + "\n" for x in STATUS_SAMPLE_TRANSCRIPT))
+    now = int(time.time())
+    limits = {k: dict(v, resets_at=now + secs) for (k, v), secs in
+              zip(STATUS_SAMPLE["rate_limits"].items(), (80 * 60 + 30, (3 * 24 + 11) * 3600 + 30))}
+    # a sample project: a fresh git repository on main, so the branch shows as "main*"
+    project = os.path.join(tmp, "code", "api")
+    os.makedirs(project)
+    git = find_tool("git")
+    if git:
+        subprocess.run([git, "init", "-q", "-b", "main", project], capture_output=True, timeout=5)
+    return dict(STATUS_SAMPLE, workspace={"current_dir": project}, transcript_path=transcript, rate_limits=limits)
+
+
+def statusline_preview(pid, parts, separator="space", colors="1", limits="used"):
     """What the script prints on sample data, and the script itself. It runs from a
-    temporary file, never the profile's: read-only."""
+    temporary folder, never the profile's, on a sample conversation of its own: read-only."""
     prof = profile(pid)
     parts = status_parts(x for x in parts.split(",") if x)
-    separator, colors = status_style(separator, colors == "1")
-    script = status_script(parts, separator, colors)
+    separator, colors, limits = status_style(separator, colors == "1", limits)
+    script = status_script(parts, separator, colors, limits)
     if not parts:
         return {"text": "", "script": script}
-    sample = dict(STATUS_SAMPLE, workspace={"current_dir": os.getcwd()})
-    with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
-        f.write(script)
-    env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
+    tmp = tempfile.mkdtemp(prefix="cc-profiles-statusline-")
     try:
-        r = subprocess.run(["sh", f.name], input=json.dumps(sample), capture_output=True, text=True, timeout=5, env=env)
-        return {"text": r.stdout.strip("\n"), "script": script}
+        path = os.path.join(tmp, "statusline.sh")
+        with open(path, "w") as f:
+            f.write(script)
+        env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
+        r = subprocess.run(["sh", path], input=json.dumps(statusline_sample(tmp)), capture_output=True, text=True,
+                           timeout=5, env=env)
+        # the sample project lives in a temporary folder: show it where a real one would be
+        text = r.stdout.strip("\n")
+        for prefix in {os.path.realpath(tmp), tmp}:
+            text = text.replace(prefix, "~")
+        return {"text": text, "script": script}
     except (OSError, subprocess.SubprocessError) as e:
         return {"text": "", "script": script, "error": str(e)}
     finally:
-        os.unlink(f.name)
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def statusline_value(prof, body):
@@ -800,8 +873,9 @@ def statusline_value(prof, body):
         parts = status_parts(body.get("parts") or [])
         if not parts:
             raise ApiError("Pick at least one thing to show")
-        separator, colors = status_style(body.get("separator") or "space", body.get("colors", True))
-        info = {"parts": parts, "separator": separator, "colors": colors}
+        separator, colors, limits = status_style(body.get("separator") or "space", body.get("colors", True),
+                                                 body.get("limits") or "used")
+        info = {"parts": parts, "separator": separator, "colors": colors, "limits": limits}
         command = status_command(prof)
     elif mode == "custom":
         command, info = str(body.get("command") or "").strip(), None
@@ -829,7 +903,7 @@ def write_statusline(prof, value, info, bk):
         if os.path.exists(path) and status_script_info(path) is None:
             raise ApiError(f"{pretty(path)} exists and was not made by cc-profiles: rename it, or use it as your own command")
         bk.copy(path, "statusline.sh")
-        write_text(path, status_script(info["parts"], info["separator"], info["colors"]))
+        write_text(path, status_script(info["parts"], info["separator"], info["colors"], info["limits"]))
     elif status_script_info(path) is not None:
         bk.stash(path, "statusline.sh")  # the old built-in script is no longer used
     targets = setting_targets(prof, "statusLine", value) if value is None else [effective(prof, "statusLine")[1] or "settings"]
@@ -852,7 +926,7 @@ def status_signature(sl):
     if sl["mode"] == "off":
         return ("off",)
     rest = {k: v for k, v in sl["value"].items() if k != "command" or sl["mode"] == "custom"}
-    script = (sl["parts"], sl["separator"], sl["colors"]) if sl["mode"] == "builtin" else None
+    script = (sl["parts"], sl["separator"], sl["colors"], sl["limits"]) if sl["mode"] == "builtin" else None
     return (sl["mode"], json.dumps(rest, sort_keys=True), script)
 
 
@@ -888,7 +962,7 @@ def op_statusline_all(pid):
     if not plan["apply"]:
         raise no_targets(plan)
     cur = get_statusline(pid)
-    info = ({"parts": status_parts(cur["parts"]), "separator": cur["separator"], "colors": cur["colors"]}
+    info = ({"parts": status_parts(cur["parts"]), "separator": cur["separator"], "colors": cur["colors"], "limits": cur["limits"]}
             if cur["mode"] == "builtin" else None)
     bk = Backup("statusline-all", f"Status line of {plan['from']} in every profile")
     for t in plan["apply"]:

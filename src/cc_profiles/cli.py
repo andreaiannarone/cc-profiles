@@ -19,6 +19,7 @@ from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import install_command
 from .projects import list_projects
 from .search import warm_search
+from .usage import warm_usage
 from .web import Handler, Server
 
 # ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ def warm_caches():
         for p in profiles():
             recent_dir_size(p["dir_abs"])
         warm_search()
+        warm_usage()
     except Exception:  # a cold cache is only slower, never wrong
         pass
 
@@ -184,6 +186,9 @@ def main(argv=None):
     sub.add_parser("label", help="print the label of the active profile (for status lines)")
     sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
+    # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
+    op.add_argument("action", nargs="?", default="", metavar="restart|stop",
+                    help="restart or stop the server instead (what /cc-profiles restart and /cc-profiles stop run)")
     op.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port to listen on")
     op.add_argument("--no-browser", action="store_true", default=argparse.SUPPRESS, help="do not open the browser")
     for name, text in (("stop", "stop the server running in the background"),
@@ -204,13 +209,18 @@ def main(argv=None):
             print(f"Backup: {backup} (undo it from the Backups tab)")
         print("Restart Claude Code sessions that are already open to see /cc-profiles.")
         return
+    action = args.cmd
     if args.cmd == "open":
+        action = args.action.strip() or "open"
+        if action not in ("open", "restart", "stop"):
+            op.error(f"unknown action: {action}. Use cc-profiles open, cc-profiles open restart or cc-profiles open stop")
+    if action == "open":
         open_app(args.port, not args.no_browser)
         return
-    if args.cmd == "stop":
+    if action == "stop":
         stop_app(args.port)
         return
-    if args.cmd == "restart":
+    if action == "restart":
         stop_app(args.port)
         open_app(args.port, False)
         print("Reload the page in your browser.")

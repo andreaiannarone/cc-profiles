@@ -17,6 +17,7 @@ from .backups import *  # noqa: F401,F403
 from .info import *  # noqa: F401,F403
 from .extensions import *  # noqa: F401,F403
 from .conversations import *  # noqa: F401,F403
+from .usage import *  # noqa: F401,F403
 from .search import *  # noqa: F401,F403
 from .command import *  # noqa: F401,F403
 from .launchers import *  # noqa: F401,F403

@@ -79,6 +79,7 @@ cc-profiles          # starts on http://127.0.0.1:4777 and opens your browser
 
 ```
 /cc-profiles         # inside any Claude Code session: opens the app and the session goes on
+/cc-profiles restart # restarts it, e.g. after an update (/cc-profiles stop stops it)
 ```
 
 On the first run, cc-profiles finds `~/.claude` and every `~/.claude-<name>` folder that looks like a profile. Rename them from the **Profiles** tab.
@@ -124,6 +125,7 @@ cc-profiles
 - 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
 - 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
+- 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile, or copy one to every profile at once.
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
@@ -167,6 +169,24 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/usage-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/usage-light.jpg">
+        <img src="docs/assets/screenshots/usage-light.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
+      </picture>
+      <p align="center"><b>Usage</b>: tokens and estimated cost per day, project and model</p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/statusline-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/statusline-light.jpg">
+        <img src="docs/assets/screenshots/statusline-light.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
+      </picture>
+      <p align="center"><b>Status line</b>: build it by ticking boxes, with a live preview</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/skills-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/skills-light.jpg">
         <img src="docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
@@ -195,9 +215,9 @@ cc-profiles
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/settings-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/settings-light.jpg">
-        <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: model, effort level, output style and theme, the file each value comes from, and the values of the other profiles">
+        <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
       </picture>
-      <p align="center"><b>Settings</b>: safe dropdowns, applied to one profile or all</p>
+      <p align="center"><b>Settings</b>: everything in /config, applied to one profile or all</p>
     </td>
   </tr>
 </table>
@@ -255,7 +275,7 @@ cc-profiles label             # prints the name of the active profile, for statu
 
 ### Open it from Claude Code
 
-Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. The command is a small file, `commands/cc-profiles.md`, that `cc-profiles install-command` writes in every profile; profiles you create from the app get it automatically. Profiles that share `commands` with the source profile get it through the link.
+Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. `/cc-profiles restart` and `/cc-profiles stop` restart or stop the app. The command is a small file, `commands/cc-profiles.md`, that `cc-profiles install-command` writes in every profile; profiles you create from the app get it automatically. Profiles that share `commands` with the source profile get it through the link.
 
 ### Commands for each profile
 
@@ -302,6 +322,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 - **[Projects](docs/guides/projects.md)**: move, relink, assign
 - **[Memories](docs/guides/memories.md)**: browse, edit, move
+- **[Usage](docs/guides/usage.md)**: tokens and estimated cost per day, project, model and profile
 - **[Profiles and sharing](docs/guides/profiles.md)**: create, edit, delete, share
 - **[Skills and MCP servers](docs/guides/skills-and-mcp.md)**: create, edit, copy, delete
 - **[Settings](docs/guides/settings.md)**: general settings, `CLAUDE.md`, permissions, raw JSON

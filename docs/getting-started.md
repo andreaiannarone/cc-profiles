@@ -46,9 +46,17 @@ Rename profiles from the **Profiles** tab. The first profile in the list is the 
 
 ## Open it from Claude Code
 
-Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on. Stop the server with `cc-profiles stop`, or restart it after an update with `cc-profiles restart`.
+Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on.
 
-The [install script](../install.sh) adds the command for you. Otherwise run:
+| In Claude Code | Runs | Does |
+|---|---|---|
+| `/cc-profiles` | `cc-profiles open` | starts the server if needed and opens the browser |
+| `/cc-profiles restart` | `cc-profiles open restart` | stops the server and starts it again, e.g. after an update; then reload the page |
+| `/cc-profiles stop` | `cc-profiles open stop` | stops the server |
+
+From a terminal, `cc-profiles restart` and `cc-profiles stop` do the same. A command added by an older version of cc-profiles does not take `restart` or `stop` yet: run `cc-profiles install-command` (or the install script) again to update it.
+
+The [install script](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) adds the command for you. Otherwise run:
 
 ```sh
 cc-profiles install-command
@@ -65,7 +73,7 @@ The repository is also a Claude Code plugin marketplace. Install the plugin once
 /plugin install cc-profiles@cc-profiles
 ```
 
-The plugin's command is `/cc-profiles:open`, because Claude Code always prefixes plugin commands with the plugin's name; it does the same as `/cc-profiles`. The plugin only opens the app: install `cc-profiles` first. To get it in every profile, install it in the source profile and share `plugins` from the **Profiles** tab.
+The plugin's command is `/cc-profiles:open`, because Claude Code always prefixes plugin commands with the plugin's name; it does the same as `/cc-profiles`, `restart` and `stop` included (`/cc-profiles:open restart`). The plugin only opens the app: install `cc-profiles` first. To get it in every profile, install it in the source profile and share `plugins` from the **Profiles** tab.
 
 ## Starting Claude Code in a profile
 
@@ -99,7 +107,7 @@ The tabs sit in one row under the profile cards. On a narrow window the ones tha
 | Keys | What they do |
 |---|---|
 | `/` | Search everything |
-| `g` then `p`, `m`, `c` | Projects, Memories, Conversations |
+| `g` then `p`, `m`, `c`, `u` | Projects, Memories, Conversations, Usage |
 | `g` then `s`, `x`, `l` | Skills, MCP, Plugins |
 | `g` then `r`, `o` | Profiles, Compare |
 | `g` then `b`, `h`, `t` | Backups, Health, Settings |

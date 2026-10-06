@@ -50,6 +50,10 @@ CI does the same on Python 3.12 and shows the table in the run's summary.
 
 Run it before and after a change that reads many files.
 
+### The UI's JavaScript
+
+`python3 scripts/check_js.py` type-checks the inline scripts of `index.html` with TypeScript's `--checkJs` (it needs Node.js; `npx` fetches TypeScript the first time). It catches misspelled names and wrong calls, and runs in CI. `scripts/check_js.d.ts` tells it what `querySelector` returns; where the code needs a precise type, a JSDoc cast like `/** @type {HTMLElement} */ (e.target)` does it.
+
 ### The browser smoke test
 
 `tests/test_ui.py` opens every tab of the real page in Chromium and fails on JavaScript errors, Content-Security-Policy violations or a tab stuck loading. It is skipped unless Playwright is installed:
@@ -105,7 +109,7 @@ The repository ships a `.claude/` folder for contributors who use Claude Code:
 - `settings.json` pre-approves the test suite, `claude plugin validate` and read-only git commands.
 - `hooks/sandbox_guard.py` blocks any command that would start cc-profiles on your real home folder: only `label`, `--version` and `--help` may run there. Use a sandbox `HOME` instead.
 - `/sandbox` builds a fake home with sample data and starts the app on it.
-- `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release.
+- `/check-settings-schema` compares the Settings dropdowns with the schema in your installed Claude Code and updates them after a release. It starts from `scripts/check_settings_schema.py`, which the *Claude Code settings schema* workflow (`.github/workflows/claude-code-schema.yml`) also runs every week against the latest Claude Code, opening an issue when something differs.
 
 Claude Code runs the hook only after you trust the folder. It is about 80 lines of standard-library Python: read it first if you like.
 
@@ -134,8 +138,29 @@ Use short, imperative subject lines, for example "Add Windows path handling" or 
 
 ## Releasing (maintainers)
 
-1. Update `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`, then move the **Unreleased** entries in `CHANGELOG.md` under a new `## [x.y.z] - date` section (and fix the compare links at the bottom).
-2. Merge that into `main`, then tag it: `git tag v0.2.0 && git push origin v0.2.0`.
-3. The **Release** workflow (`.github/workflows/release.yml`) does the rest: it checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes.
+With the changes listed under **Unreleased** in `CHANGELOG.md`, on an up-to-date `main`:
+
+```sh
+.venv/bin/python scripts/release.py next --dry-run   # prints every step and command, changes nothing
+.venv/bin/python scripts/release.py next             # or the version itself, e.g. 0.4.4
+```
+
+**Version numbers move one step at a time**: only the last number goes up, to 9, then the one before it (0.4.8 → 0.4.9 → 0.5.0; 0.9.9 → 1.0.0). `next` picks that version; any other number is refused unless you add `--force-version`.
+
+It needs `git`, and `gh` logged in to GitHub, and takes 5 to 15 minutes. Step by step:
+
+1. **Checks**: on `main`, a clean tree, the same commit as `origin/main`, the next version after `__version__`, something under `## [Unreleased]`.
+2. **Bump**: `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`; in `CHANGELOG.md` a `## [x.y.z] - date` heading goes under `## [Unreleased]` (which stays, empty), and the compare links at the bottom are updated. Older entries are not touched.
+3. **Pull request**: branch `release-x.y.z`, commit `Release x.y.z`, `gh pr create`. If GitHub reports no checks after a minute (it happens), it pushes an empty `Trigger CI` commit. It waits for every check and stops if one fails.
+4. **Merge and tag**: squash merge as `Release x.y.z (#n)`, pull `main`, tag `vx.y.z` and push the tag.
+5. **Publish**: it waits for the **Release** workflow (`.github/workflows/release.yml`), which checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes. Then it waits, up to 15 minutes, until the wheel is in PyPI's download index (`/simple/`), which lags a few minutes behind the JSON API the app's update check reads.
+6. **Clean up**: deletes the release branch, locally and on GitHub, and prints how to upgrade.
+
+If it stops halfway, it says why: carry on by hand from that step. Nothing it writes carries an attribution line.
 
 PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.
+
+### Homebrew and the documentation site
+
+- **Homebrew**: after a release is on PyPI, `python3 scripts/homebrew_formula.py <version> > Formula/cc-profiles.rb` in the tap repository `andreaiannarone/homebrew-tap`, then commit and push there. Users install with `brew install andreaiannarone/tap/cc-profiles`.
+- **Documentation site**: GitHub Pages publishes `docs/` from `main` with Jekyll (`docs/_config.yml`): `README.md` is the home page and links between `.md` files become pages. Link files outside `docs/` with their full GitHub URL, or they break on the site.

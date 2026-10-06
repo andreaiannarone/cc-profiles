@@ -196,7 +196,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .orphan .p { font-family: var(--mono); font-size: 12px; word-break: break-all; }
 .orphan .c { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 10; overflow-y: auto; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 17; overflow-y: auto; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(560px, 100%); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .modal h2 { margin: 0 0 4px; font-size: 16px; }
 .modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
@@ -340,6 +340,29 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
 .toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
 .toast.err { background: var(--err); color: #fff; }
 .toast small { display: block; opacity: .75; margin-top: 2px; font-family: var(--mono); font-size: 11px; }
+/* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
+.useg { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
+.useg .seg { min-width: 0; }
+.useg .seg button { padding: 6px 12px; white-space: nowrap; }
+.ucards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.ucard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.ucard b { display: block; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ucard span { color: var(--muted); font-size: 12.5px; }
+.uchart { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px 10px; }
+.uchart .top { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 8px; font-size: 12.5px; color: var(--muted); }
+.uchart .top .grow { flex: 1; }
+.uchart svg { display: block; width: 100%; height: 190px; }
+.uchart .ax { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.uchart .grid { stroke: var(--line); stroke-width: 1; }
+.uchart g.day:hover .bar { opacity: .75; }
+.uchart .hit { fill: transparent; }
+.legend { display: inline-flex; gap: 5px; align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.u-out { fill: var(--p1); background: var(--p1); }
+.u-in { fill: var(--p3); background: var(--p3); }
+.u-read { fill: var(--faint); background: var(--faint); }
+.uproj td.path { min-width: 170px; }
+th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 820px) {
@@ -372,6 +395,7 @@ pre.log { background: #141311; color: #e8e6e1; border-radius: 8px; padding: 12px
       <button data-tab="projects" class="on" aria-current="page"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="tl">Projects</span><span class="count" id="cnt-projects" hidden></span></button>
       <button data-tab="memories"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg><span class="tl">Memories</span></button>
       <button data-tab="conversations"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="tl">Conversations</span></button>
+      <button data-tab="usage"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M6 17v-5M11 17V6M16 17v-8M21 17v-3"/></svg><span class="tl">Usage</span></button>
       <button data-tab="skills"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span class="tl">Skills</span></button>
       <button data-tab="mcp"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg><span class="tl">MCP</span></button>
       <button data-tab="plugins"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span class="tl">Plugins</span></button>
@@ -398,6 +422,7 @@ const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: ""
             health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
+/** @type {(s: string, el?: ParentNode) => any} */
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
@@ -445,7 +470,7 @@ function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
     const onKey = e => { if (e.key === "Escape") close(null); };
     document.addEventListener("keydown", onKey);
     bg.addEventListener("click", e => {
-      if (e.target === bg || e.target.hasAttribute("data-close")) return close(null);
+      if (e.target === bg || /** @type {Element} */ (e.target).hasAttribute("data-close")) return close(null);
       const i = e.target.closest("[data-i]")?.dataset.i;
       if (i !== undefined) close({ action: actions[i].value, el: bg });
       const pick = e.target.closest("[data-pick]");
@@ -1150,7 +1175,7 @@ function slDraft() {
   const brackets = Object.fromEntries(sl.parts_available.map(p => [p.id, p.brackets]));
   saved.forEach(([id, br]) => { if (br) brackets[id] = br; });
   S.set.slDraft = { mode: sl.mode, parts, order: [...parts, ...ids.filter(i => !parts.includes(i))], brackets,
-                    separator: sl.separator, colors: sl.colors, command: sl.mode === "custom" ? v.command || "" : "",
+                    separator: sl.separator, colors: sl.colors, limits: sl.limits || "used", command: sl.mode === "custom" ? v.command || "" : "",
                     padding: v.padding ?? "", refreshInterval: v.refreshInterval ?? "", hide: v.hideVimModeIndicator === true };
   S.set.slSaved = slKey(S.set.slDraft);
 }
@@ -1158,6 +1183,7 @@ function slDraft() {
 const slKey = dr => JSON.stringify(dr.mode === "off" ? { mode: "off" } : {
   mode: dr.mode, parts: dr.mode === "builtin" ? slParts(dr) : null,
   separator: dr.mode === "builtin" ? dr.separator : null, colors: dr.mode === "builtin" ? dr.colors : null,
+  limits: dr.mode === "builtin" ? dr.limits : null,
   command: dr.mode === "custom" ? dr.command.trim() : null, padding: String(dr.padding ?? ""), refresh: String(dr.refreshInterval ?? ""), hide: dr.hide });
 // The ticked parts in line order, each with its brackets: "model:square".
 const slParts = dr => dr.order.filter(i => dr.parts.includes(i)).map(i => `${i}:${dr.brackets[i]}`);
@@ -1192,13 +1218,14 @@ function statusLineSection() {
               <span class="grip" aria-hidden="true">⋮⋮</span>
               <label><input type="checkbox" data-slpart="${id}" ${on ? "checked" : ""}> ${esc(p.label)}</label>
               <select class="slbr" data-slbr="${id}" aria-label="Brackets around ${esc(p.label)}">${sl.brackets.map(b => `<option value="${b.id}" ${dr.brackets[id] === b.id ? "selected" : ""}>${b.id === "none" ? "no brackets" : esc(b.left + "…" + b.right)}</option>`).join("")}</select>
-              <span class="smp">${esc(slBr(sl, dr.brackets[id], p.sample))}</span>
+              <span class="smp">${esc(slBr(sl, dr.brackets[id], dr.limits === "left" && p.sample_left || p.sample))}</span>
               <span class="mv"><button class="btn small" data-slmove="${id}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move ${esc(p.label)} up">↑</button><button class="btn small" data-slmove="${id}" data-dir="1" ${i === dr.order.length - 1 ? "disabled" : ""} aria-label="Move ${esc(p.label)} down">↓</button></span>
             </li>`; }).join("")}</ul>
           <div class="slside">
             <div class="f">Separator<div class="seg slsep" role="group" aria-label="Separator">${sl.separators.map(x => `<button data-slsep="${x.id}" class="${dr.separator === x.id ? "on" : ""}" aria-pressed="${dr.separator === x.id}" aria-label="${x.id === "space" ? "two spaces" : x.id}" title="${x.id === "space" ? "Two spaces" : esc(x.text.trim())}">${esc(x.text.trim() || "␣")}</button>`).join("")}</div></div>
             <div class="f">Brackets: each piece has its own, in its row; or all the same<div class="seg slsep" role="group" aria-label="Brackets for every piece">${sl.brackets.map(b => `<button data-slbrall="${b.id}" aria-label="${b.id === "none" ? "no brackets anywhere" : b.id + " brackets everywhere"}" title="${b.id === "none" ? "No brackets anywhere" : "Use " + esc(b.left + " " + b.right) + " everywhere"}">${b.id === "none" ? "–" : esc(b.left + b.right)}</button>`).join("")}<button data-slbrall="default" title="Back to each piece's own brackets" aria-label="each piece's own brackets">mix</button></div></div>
-            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context turns yellow at 50%, red at 80%)</span></label>
+            <div class="f">Rate limits: used, or left with the time to the reset when half or less is left<div class="seg" style="max-width:240px" role="group" aria-label="Rate limits">${[["used", "Used"], ["left", "Left"]].map(([v, l]) => `<button data-sllim="${v}" class="${dr.limits === v ? "on" : ""}" aria-pressed="${dr.limits === v}">${l}</button>`).join("")}</div></div>
+            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context and limits turn yellow at 70% used, red at 90%)</span></label>
           </div>
         </div>
         <div class="slpreview" id="sl-preview" aria-live="polite" aria-label="Preview with sample data"></div>
@@ -1231,7 +1258,7 @@ async function slPreview() {
   const box = $("#sl-preview"); if (!box) return;
   const dr = S.set.slDraft, parts = slParts(dr), seq = ++slSeq;
   try {
-    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}`);
+    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}&limits=${dr.limits}`);
     if (seq !== slSeq || !$("#sl-preview")) return;  // a newer preview is on its way
     $("#sl-preview").innerHTML = parts.length ? ansiHtml(r.text) : `<span class="d">Tick something to show</span>`;
     $("#sl-script").textContent = r.script;
@@ -1261,6 +1288,7 @@ function bindStatusLine() {
     renderStatusLine(`[data-slbrall="${v}"]`);
   });
   document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
+  document.querySelectorAll("[data-sllim]").forEach(b => b.onclick = () => { slRead(); dr.limits = b.dataset.sllim; renderStatusLine(`[data-sllim="${dr.limits}"]`); });
   document.querySelectorAll("[data-slmove]").forEach(b => b.onclick = () => {
     slRead(); const id = b.dataset.slmove, d = +b.dataset.dir;
     move(id, dr.order.indexOf(id) + d);
@@ -1285,7 +1313,7 @@ function bindStatusLine() {
   $("#sl-save").onclick = async () => {
     slRead();
     const opt = v => v === "" || Number.isNaN(v) ? null : v;
-    const body = { profile: pid, mode: dr.mode, parts: slParts(dr), separator: dr.separator, colors: dr.colors,
+    const body = { profile: pid, mode: dr.mode, parts: slParts(dr), separator: dr.separator, colors: dr.colors, limits: dr.limits,
                    command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
     try { await run(() => api("/api/statusline", body)); } catch { return; }
     st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine();
@@ -1531,13 +1559,24 @@ async function checkUpdate(dr) {
     ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
       : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://github.com/andreaiannarone/cc-profiles/releases" target="_blank" rel="noopener">What's new</a>`;
-  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u);
+  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u, dr);
 }
-async function runUpdate(u) {
+async function runUpdate(u, dr) {
   if (!(await confirmBox(`Update to ${u.latest}?`,
       `Runs <code>${esc(u.command)}</code>, then restarts cc-profiles: this page reloads by itself. Your profiles, backups and settings are not touched.`, "Update"))) return;
-  const r = await run(() => api("/api/update", {})).catch(() => null);
-  if (!r?.restarting) return;
+  const st = $("#upd-status", dr);
+  if (st) st.innerHTML = `<span class="spinner"></span> Updating to ${esc(u.latest)}…`;
+  let r;
+  try { r = await api("/api/update", {}); } catch (e) { toast(e.message, "", true); if (st) st.textContent = e.message; return; }
+  if (r.retry && st) {  // just released: PyPI's download index is not there yet
+    st.innerHTML = `${esc(r.message)} <button class="btn small" id="upd-run">Try again</button>
+      ${r.details ? `<details style="margin-top:6px"><summary>Details</summary><pre class="log">${esc(r.details)}</pre></details>` : ""}`;
+    $("#upd-run", dr).onclick = () => runUpdate(u, dr);
+    return;
+  }
+  if (r.message) toast(r.message);
+  if (st && !r.restarting) st.textContent = r.message || "";
+  if (!r.restarting) return;
   const bg = document.createElement("div"); bg.className = "modal-bg";
   bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2><span class="spinner"></span> Restarting cc-profiles…</h2><div class="hint">The page reloads as soon as the new version answers.</div></div>`;
   document.body.append(bg);
@@ -1856,6 +1895,91 @@ function bindCompare() {
   });
 }
 
+// ---------- usage ----------
+// Read-only: tokens and an estimated cost from the usage Claude Code records on every reply.
+S.use = { profile: "all", days: 30, data: null, error: null, seq: 0 };
+async function loadUsage() {
+  const u = S.use, seq = ++u.seq;
+  if (u.profile !== "all" && !S.profiles.some(p => p.id === u.profile)) u.profile = "all";
+  u.data = null; u.error = null; renderUsage();
+  try { const d = await api(`/api/usage?profile=${encodeURIComponent(u.profile)}&days=${u.days}`); if (seq === u.seq) u.data = d; }
+  catch (e) { if (seq === u.seq) u.error = e.message; }
+  if (seq === u.seq) renderUsage();
+}
+const tok = n => n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : n.toLocaleString("en-US");
+const usd = n => n === 0 ? "$0" : n < 0.01 ? "<$0.01" : "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dayLabel = (d, year) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", ...(year ? { year: "numeric" } : {}) });
+function usageChart(daily) {
+  const W = 1000, H = 190, n = daily.length, gap = n > 120 ? 0 : n > 40 ? 1.5 : 4, bw = W / n;
+  const max = Math.max(...daily.map(d => d.tokens));
+  const y = v => (v / (max || 1)) * (H - 6);
+  const bars = daily.map((d, i) => {
+    const x = i * bw + gap / 2, w = Math.max(bw - gap, 0.6);
+    let top = H, rects = "";
+    for (const [cls, v] of [["u-read", d.cache_read], ["u-in", d.input + d.cache_write], ["u-out", d.output]]) {
+      if (!v) continue;
+      const h = y(v); top -= h;
+      rects += `<rect class="bar ${cls}" x="${x.toFixed(2)}" y="${top.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}"/>`;
+    }
+    const tip = `${dayLabel(d.date, true)}: ` + (d.tokens ? `${tok(d.tokens)} tokens (${tok(d.output)} output, ${tok(d.input + d.cache_write)} input and cache write, ${tok(d.cache_read)} cache read), ${plural(d.replies, "reply", "replies")}, ${usd(d.cost)} estimated` : "no replies");
+    return `<g class="day"><title>${esc(tip)}</title><rect class="hit" x="${(i * bw).toFixed(2)}" y="0" width="${bw.toFixed(2)}" height="${H}"/>${rects}</g>`;
+  }).join("");
+  const busiest = daily.reduce((a, d) => d.tokens > a.tokens ? d : a, daily[0]);
+  const label = `Tokens per day from ${dayLabel(daily[0].date, true)} to ${dayLabel(daily[n - 1].date, true)}` + (busiest.tokens ? `; the busiest day is ${dayLabel(busiest.date, true)} with ${tok(busiest.tokens)} tokens` : "; no replies");
+  const half = ((H - 6) / 2 + 6).toFixed(1);
+  return `<div class="uchart">
+      <div class="top"><span class="grow">Tokens per day · highest ${tok(max)}, dashed line at half</span>
+        <span class="legend"><i class="u-out"></i>Output</span><span class="legend"><i class="u-in"></i>Input and cache write</span><span class="legend"><i class="u-read"></i>Cache read</span></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
+        <line class="grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" vector-effect="non-scaling-stroke"/>
+        <line class="grid" x1="0" y1="${half}" x2="${W}" y2="${half}" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>${bars}</svg>
+      <div class="ax" aria-hidden="true"><span>${esc(dayLabel(daily[0].date))}</span><span>${esc(dayLabel(daily[Math.floor((n - 1) / 2)].date))}</span><span>${esc(dayLabel(daily[n - 1].date))}</span></div></div>`;
+}
+function renderUsage() {
+  if (S.tab !== "usage") return;
+  const u = S.use, d = u.data;
+  const head = `<div class="useg">
+      <div class="seg" role="group" aria-label="Profile">${[["all", "All profiles"], ...S.profiles.map(p => [p.id, p.label])].map(([id, l]) =>
+        `<button data-uprof="${esc(id)}" class="${u.profile === id ? "on" : ""}" aria-pressed="${u.profile === id}">${esc(l)}</button>`).join("")}</div>
+      <div class="seg" role="group" aria-label="Period">${[7, 30, 90, 365].map(n =>
+        `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div></div>`;
+  if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return; }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return; }
+  const T = d.totals, who = d.profile === "all" ? "all profiles" : label(d.profile);
+  const note = `<p class="hint">Cost is an estimate at Anthropic's list prices per token (checked ${esc(d.prices_checked)}), from the usage Claude Code records on every reply. Subscription plans (Pro, Max, Team) are not billed per token: for them it shows what the same use would cost through the API.${T.unpriced_tokens ? ` ${tok(T.unpriced_tokens)} tokens come from models without a list price and are not in the cost.` : ""}</p>`;
+  if (!T.replies) {
+    $("#main").innerHTML = `${head}<div class="empty">No replies from Claude in ${esc(who)} in the last ${d.days} days.</div>${note}`;
+    return;
+  }
+  // a row whose tokens all come from models without a price has no cost; a partial one gets a *
+  const cost = x => x.tokens && x.unpriced_tokens === x.tokens ? `<span class="hint">no list price</span>` : usd(x.cost) + (x.unpriced_tokens ? "*" : "");
+  const n = x => x.toLocaleString("en-US");
+  const all = d.profile === "all";
+  const projects = d.projects.map(p => `<tr><td class="path"><code>${esc(p.pretty)}</code></td>${all ? `<td>${badge(p.profile)}</td>` : ""}
+      <td class="r">${n(p.replies)}</td><td class="r">${tok(p.tokens)}</td><td class="r">${cost(p)}</td></tr>`).join("");
+  const models = d.models.map(m => `<tr><td><code>${esc(m.model)}</code>${m.family ? ` <span class="hint">${esc(m.family)} price</span>` : ""}</td>
+      <td class="r">${n(m.replies)}</td><td class="r">${tok(m.input)}</td><td class="r">${tok(m.output)}</td>
+      <td class="r">${tok(m.cache_write)}</td><td class="r">${tok(m.cache_read)}</td><td class="r">${cost(m)}</td></tr>`).join("");
+  const profs = (d.profiles || []).map(p => `<tr><td>${badge(p.id)}</td><td class="r">${n(p.replies)}</td>
+      <td class="r">${tok(p.tokens)}</td><td class="r">${p.tokens ? cost(p) : "$0"}</td></tr>`).join("");
+  $("#main").innerHTML = `${head}
+    <div class="ucards">
+      <div class="ucard"><b>${tok(T.tokens)}</b><span>tokens: ${tok(T.input + T.cache_write + T.cache_read)} in, ${tok(T.output)} out</span></div>
+      <div class="ucard"><b>${usd(T.cost)}${T.unpriced_tokens ? "*" : ""}</b><span>estimated cost at list price</span></div>
+      <div class="ucard"><b>${n(T.replies)}</b><span>${T.replies === 1 ? "reply" : "replies"} in ${plural(d.projects_count, "project", "projects")}</span></div>
+      <div class="ucard"><b>${Math.round(T.cache_read_share * 100)}%</b><span>of input tokens read from the cache</span></div>
+    </div>
+    ${usageChart(d.daily)}
+    ${note}
+    <div class="ext-head"><h3>Top projects</h3><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
+    <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
+    <div class="ext-head"><h3>Models</h3><span class="hint">cache write and cache read are priced differently from input</span></div>
+    <div class="table"><table><thead><tr><th>Model</th><th class="r">Replies</th><th class="r">Input</th><th class="r">Output</th><th class="r">Cache write</th><th class="r">Cache read</th><th class="r">Estimated cost</th></tr></thead><tbody>${models}</tbody></table></div>
+    ${profs ? `<div class="ext-head"><h3>Profiles</h3><span class="hint">a reply copied into another conversation or profile counts once</span></div>
+    <div class="table"><table><thead><tr><th>Profile</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${profs}</tbody></table></div>` : ""}
+    ${T.unpriced_tokens ? `<p class="hint">* without the tokens of models that have no list price.</p>` : ""}`;
+}
+
 // ---------- backups ----------
 async function loadBackups() {
   S.backups = null; renderBackups();
@@ -1966,7 +2090,7 @@ document.addEventListener("click", e => { if (!e.target.closest(".more")) showMo
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#moremenu").hidden) { showMore(false); $("#tabs-more").focus(); } });
 new ResizeObserver(() => layoutTabs()).observe($("#tabs"));
 // g then a letter: the tab's initial, or a distinctive letter when the initial is taken
-const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["s", "skills"], ["x", "mcp"], ["l", "plugins"],
+const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["u", "usage"], ["s", "skills"], ["x", "mcp"], ["l", "plugins"],
                  ["r", "profiles"], ["o", "compare"], ["b", "backups"], ["h", "health"], ["t", "settings"]];
 function showKeys() {
   const name = tab => $(`#tabs button[data-tab="${tab}"] .tl`).textContent;
@@ -1979,7 +2103,7 @@ function showKeys() {
 let goPending = 0;
 document.addEventListener("keydown", e => {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-  const el = e.target;
+  const el = /** @type {HTMLElement} */ (e.target);
   if (el.isContentEditable || el.closest?.("input, textarea, select")) return;
   if (document.querySelector(".modal-bg, .drawer, .popover, .moremenu:not([hidden])")) return;
   if (goPending && Date.now() - goPending < 1500) {
@@ -2005,6 +2129,7 @@ document.addEventListener("click", async e => {
     if (S.tab === "health" && !S.health) return loadHealth();
     if (S.tab === "profiles") return loadSharing();
     if (S.tab === "compare") return loadCompare();
+    if (S.tab === "usage") return loadUsage();
     if (EXT_TABS.includes(S.tab)) return loadExt();
     if (S.tab === "plugins") return loadPlugins();
     if (S.tab === "settings") return loadSettings(S.set?.profile || S.profiles[0]?.id);
@@ -2023,6 +2148,8 @@ document.addEventListener("click", async e => {
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);
+  if (t.dataset.uprof) { S.use.profile = t.dataset.uprof; return loadUsage(); }
+  if (t.dataset.udays) { S.use.days = +t.dataset.udays; return loadUsage(); }
   if (t.dataset.filter) { S.filter = t.dataset.filter; return renderProjects(); }
   if (t.dataset.act) {
     const r = byName(t.dataset.name);
@@ -2052,6 +2179,7 @@ function render() {
   else if (S.tab === "settings") renderSettings();
   else if (S.tab === "profiles") renderSharing();
   else if (S.tab === "compare") renderCompare();
+  else if (S.tab === "usage") renderUsage();
   else if (S.tab === "search") renderSearch();
   else if (EXT_TABS.includes(S.tab)) renderExt();
   else if (S.tab === "plugins") renderPlugins();

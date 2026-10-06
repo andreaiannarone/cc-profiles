@@ -76,6 +76,7 @@ Rules:
 | Drawer | `.drawer` | right side panel for the About information; sticky header with Refresh and Close |
 | Setting row | `.srow` | three columns: name and help · input with a badge for the file it comes from (`settings.local.json` in amber, because it wins) and × · the other profiles' values with *copy*. *Save* appears only when the value changed |
 | Section | `.sec` | header with title, explanation and `.shared-note` if the file is shared |
+| Usage chart | `.uchart`, `usageChart(daily)` | inline SVG bars, one `g.day` per day with a `<title>` tooltip and an `aria-label` summary on the `svg`; segments use `--p1` (output), `--p3` (input and cache write) and `--faint` (cache read), with a legend, never the accent. Summary numbers are `.ucard`s |
 | Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors); `sub` in monospace for the backup path; `role="status"` or `alert` |
 | Loading | `.spinner` | always with a sentence about what we are waiting for when the wait is long |
 
