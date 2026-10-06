@@ -217,6 +217,16 @@ def test_status_line_section(page_on_sandbox):
     page.click('[data-slpart="time"]')  # ticked: it joins the end of the line
     order = page.eval_on_selector_all("[data-slitem]", "ls => ls.map(l => l.dataset.slitem)")
     assert order.index("time") == 5
+    page.click('[data-slpart="limit"]')
+    page.click('[data-slpart="tokens"]')
+    page.wait_for_function("() => /5h:78%.*question:12k session:340k/.test(document.querySelector('#sl-preview').textContent)")
+    page.click('[data-sllim="left"]')  # the quota left, with the time to the reset
+    assert page.get_attribute('[data-sllim="left"]', "aria-pressed") == "true"
+    page.wait_for_function("() => /5h:22%→1h20m/.test(document.querySelector('#sl-preview').textContent)")
+    assert "limits=left" in page.text_content("#sl-script")
+    assert page.inner_text('[data-slitem="limit"] .smp') == "[5h:22%→1h20m]"  # square brackets for all, above
+    page.click('[data-sllim="used"]')
+    page.wait_for_function("() => /5h:78%/.test(document.querySelector('#sl-preview').textContent)")
     page.click('[data-slmode="custom"]')
     page.wait_for_selector("#sl-cmd")
     page.click('[data-slmode="off"]')

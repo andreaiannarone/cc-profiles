@@ -399,6 +399,67 @@ def test_status_line_built_in_custom_off_and_to_all(home, app_factory):
     assert home.snapshot() == before
 
 
+def run_status_script(home, path, data):
+    r = subprocess.run(["/bin/sh", str(path)], input=json.dumps(data), capture_output=True, text=True,
+                       env=dict(os.environ, HOME=str(home.root), CLAUDE_CONFIG_DIR=str(home.path(".claude"))))
+    return r.stdout
+
+
+@pytest.mark.skipif(not shutil.which("jq"), reason="the status line script needs jq")
+def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
+    basic_home(home)
+    before = home.snapshot()
+    app = app_factory()
+    S = "/api/statusline"
+    assert "used or left" in app.request(S + "/preview?profile=default&parts=limit&limits=x")[1]["error"]
+    # the preview reads a sample conversation of its own and counts down from now
+    used = app.get(S + "/preview?profile=default&parts=tokens,limit,week&colors=0")
+    left = app.get(S + "/preview?profile=default&parts=tokens,limit,week&colors=0&limits=left")
+    assert used["text"] == "question:12k session:340k 5h:78% 7d:41%"
+    assert left["text"] == "question:12k session:340k 5h:22%→1h20m 7d:59%"
+    assert "# style: separator=space colors=0 limits=left" in left["script"]
+
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["tokens", "limit", "week"], "colors": False, "limits": "left"})
+    script = home.path(".claude/statusline.sh")
+    got = app.get(S + "?profile=default")
+    assert got["limits"] == "left"
+    assert {p["id"]: p.get("sample_left") for p in got["parts_available"]}["limit"] == "5h:22%→1h20m"
+
+    lines = [{"type": "user", "message": {"content": "first"}},
+             {"type": "assistant", "message": {"usage": {"input_tokens": 1000000, "cache_read_input_tokens": 200000,
+                                                         "output_tokens": 5000}}},
+             {"type": "user", "message": {"content": "second"}},
+             {"type": "assistant", "message": {"usage": {"input_tokens": 500, "cache_creation_input_tokens": 1500}}},
+             {"type": "user", "message": {"content": [{"type": "tool_result", "content": "done"}]}},  # not a prompt
+             {"type": "assistant", "message": {"usage": {"output_tokens": 600}}}]
+    (tmp_path / "t.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines) + '{"type": "assist')  # a line being written
+    now = int(time.time())
+    data = {"transcript_path": str(tmp_path / "t.jsonl"),
+            "rate_limits": {"five_hour": {"used_percentage": 92.4, "resets_at": now + 2 * 3600 + 13 * 60 + 30},
+                            "seven_day": {"used_percentage": 41, "resets_at": now + 4 * 86400}}}
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→2h13m 7d:59%"
+    data["rate_limits"]["seven_day"] = {"used_percentage": 60, "resets_at": now + 3 * 86400 + 11 * 3600 + 60}
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 45 * 60 + 30
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→45m 7d:40%→3d11h"
+    data["transcript_path"] = str(tmp_path / "missing.jsonl")  # no conversation file: no tokens, nothing else breaks
+    del data["rate_limits"]["five_hour"]["resets_at"]
+    assert run_status_script(home, script, data) == "5h:8% 7d:40%→3d11h"
+
+    # used, as before: the same data shows the share used, without countdown
+    app.post(S, {"profile": "default", "mode": "builtin", "parts": ["limit", "week"], "colors": False, "limits": "used"})
+    assert run_status_script(home, script, data) == "5h:92% 7d:60%"
+    # a script from before limits=: still recognized, and shows the limits used
+    text = script.read_text()
+    script.write_text(text.replace(" limits=used", ""))
+    assert app.get(S + "?profile=default")["limits"] == "used"
+    script.write_text(text.replace(" limits=used", " limits=sideways"))
+    assert app.get(S + "?profile=default")["limits"] == "used"
+    script.write_text(text)
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):
     basic_home(home)
     home.profile("solo")

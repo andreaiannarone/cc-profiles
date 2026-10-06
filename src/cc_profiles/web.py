@@ -261,7 +261,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
                 "/api/statusline": lambda: get_statusline(q["profile"]),
                 "/api/statusline/preview": lambda: statusline_preview(q["profile"], q.get("parts", ""), q.get("separator", "space"),
-                                                                     q.get("colors", "1")),
+                                                                     q.get("colors", "1"), q.get("limits", "used")),
                 "/api/statusline/all/preview": lambda: statusline_all_plan(q["profile"]),
                 "/api/settings/permissions/all/preview": lambda: permission_all_plan(q["list"], q["rule"]),
                 "/api/skills/copy-all/preview": lambda: skill_all_plan(q["profile"], q["name"]),

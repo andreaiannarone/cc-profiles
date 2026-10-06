@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 - **Usage** tab (`g u`): tokens and an estimated cost for all profiles or one, over the last 7, 30, 90 or 365 days: totals, cache read share, a bar chart per day, the top projects, every model and, for all profiles, each profile. It reads the usage Claude Code records on every reply, counting each reply once even when it is split over several lines, copied into a resumed conversation or present in two profiles, and includes subagent conversations. The cost uses Anthropic's list prices per model family and says so: subscription plans are not billed per token. Read-only, and each conversation file is parsed once until it changes.
+- Settings → Status line: a **Tokens** piece shows `question:12k session:1.2M`, the tokens since your last prompt and in the whole session, read from the conversation file at each refresh. **Rate limits: Used / Left** shows the 5-hour and weekly limits as the share left, with the time until the reset once half or less is left (`5h:22%→1h20m 7d:59%`). Status lines saved before keep showing the share used.
 
 ## [0.4.3] - 2026-10-06
 

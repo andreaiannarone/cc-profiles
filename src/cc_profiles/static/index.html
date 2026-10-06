@@ -1174,7 +1174,7 @@ function slDraft() {
   const brackets = Object.fromEntries(sl.parts_available.map(p => [p.id, p.brackets]));
   saved.forEach(([id, br]) => { if (br) brackets[id] = br; });
   S.set.slDraft = { mode: sl.mode, parts, order: [...parts, ...ids.filter(i => !parts.includes(i))], brackets,
-                    separator: sl.separator, colors: sl.colors, command: sl.mode === "custom" ? v.command || "" : "",
+                    separator: sl.separator, colors: sl.colors, limits: sl.limits || "used", command: sl.mode === "custom" ? v.command || "" : "",
                     padding: v.padding ?? "", refreshInterval: v.refreshInterval ?? "", hide: v.hideVimModeIndicator === true };
   S.set.slSaved = slKey(S.set.slDraft);
 }
@@ -1182,6 +1182,7 @@ function slDraft() {
 const slKey = dr => JSON.stringify(dr.mode === "off" ? { mode: "off" } : {
   mode: dr.mode, parts: dr.mode === "builtin" ? slParts(dr) : null,
   separator: dr.mode === "builtin" ? dr.separator : null, colors: dr.mode === "builtin" ? dr.colors : null,
+  limits: dr.mode === "builtin" ? dr.limits : null,
   command: dr.mode === "custom" ? dr.command.trim() : null, padding: String(dr.padding ?? ""), refresh: String(dr.refreshInterval ?? ""), hide: dr.hide });
 // The ticked parts in line order, each with its brackets: "model:square".
 const slParts = dr => dr.order.filter(i => dr.parts.includes(i)).map(i => `${i}:${dr.brackets[i]}`);
@@ -1216,13 +1217,14 @@ function statusLineSection() {
               <span class="grip" aria-hidden="true">⋮⋮</span>
               <label><input type="checkbox" data-slpart="${id}" ${on ? "checked" : ""}> ${esc(p.label)}</label>
               <select class="slbr" data-slbr="${id}" aria-label="Brackets around ${esc(p.label)}">${sl.brackets.map(b => `<option value="${b.id}" ${dr.brackets[id] === b.id ? "selected" : ""}>${b.id === "none" ? "no brackets" : esc(b.left + "…" + b.right)}</option>`).join("")}</select>
-              <span class="smp">${esc(slBr(sl, dr.brackets[id], p.sample))}</span>
+              <span class="smp">${esc(slBr(sl, dr.brackets[id], dr.limits === "left" && p.sample_left || p.sample))}</span>
               <span class="mv"><button class="btn small" data-slmove="${id}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move ${esc(p.label)} up">↑</button><button class="btn small" data-slmove="${id}" data-dir="1" ${i === dr.order.length - 1 ? "disabled" : ""} aria-label="Move ${esc(p.label)} down">↓</button></span>
             </li>`; }).join("")}</ul>
           <div class="slside">
             <div class="f">Separator<div class="seg slsep" role="group" aria-label="Separator">${sl.separators.map(x => `<button data-slsep="${x.id}" class="${dr.separator === x.id ? "on" : ""}" aria-pressed="${dr.separator === x.id}" aria-label="${x.id === "space" ? "two spaces" : x.id}" title="${x.id === "space" ? "Two spaces" : esc(x.text.trim())}">${esc(x.text.trim() || "␣")}</button>`).join("")}</div></div>
             <div class="f">Brackets: each piece has its own, in its row; or all the same<div class="seg slsep" role="group" aria-label="Brackets for every piece">${sl.brackets.map(b => `<button data-slbrall="${b.id}" aria-label="${b.id === "none" ? "no brackets anywhere" : b.id + " brackets everywhere"}" title="${b.id === "none" ? "No brackets anywhere" : "Use " + esc(b.left + " " + b.right) + " everywhere"}">${b.id === "none" ? "–" : esc(b.left + b.right)}</button>`).join("")}<button data-slbrall="default" title="Back to each piece's own brackets" aria-label="each piece's own brackets">mix</button></div></div>
-            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context turns yellow at 50%, red at 80%)</span></label>
+            <div class="f">Rate limits: used, or left with the time to the reset when half or less is left<div class="seg" style="max-width:240px" role="group" aria-label="Rate limits">${[["used", "Used"], ["left", "Left"]].map(([v, l]) => `<button data-sllim="${v}" class="${dr.limits === v ? "on" : ""}" aria-pressed="${dr.limits === v}">${l}</button>`).join("")}</div></div>
+            <label class="c"><input type="checkbox" id="sl-colors" ${dr.colors ? "checked" : ""}> Colors <span class="hint">(your terminal's own; context and limits turn yellow at 70% used, red at 90%)</span></label>
           </div>
         </div>
         <div class="slpreview" id="sl-preview" aria-live="polite" aria-label="Preview with sample data"></div>
@@ -1255,7 +1257,7 @@ async function slPreview() {
   const box = $("#sl-preview"); if (!box) return;
   const dr = S.set.slDraft, parts = slParts(dr), seq = ++slSeq;
   try {
-    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}`);
+    const r = await api(`/api/statusline/preview?profile=${S.set.profile}&parts=${encodeURIComponent(parts.join(","))}&separator=${dr.separator}&colors=${dr.colors ? 1 : 0}&limits=${dr.limits}`);
     if (seq !== slSeq || !$("#sl-preview")) return;  // a newer preview is on its way
     $("#sl-preview").innerHTML = parts.length ? ansiHtml(r.text) : `<span class="d">Tick something to show</span>`;
     $("#sl-script").textContent = r.script;
@@ -1285,6 +1287,7 @@ function bindStatusLine() {
     renderStatusLine(`[data-slbrall="${v}"]`);
   });
   document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
+  document.querySelectorAll("[data-sllim]").forEach(b => b.onclick = () => { slRead(); dr.limits = b.dataset.sllim; renderStatusLine(`[data-sllim="${dr.limits}"]`); });
   document.querySelectorAll("[data-slmove]").forEach(b => b.onclick = () => {
     slRead(); const id = b.dataset.slmove, d = +b.dataset.dir;
     move(id, dr.order.indexOf(id) + d);
@@ -1309,7 +1312,7 @@ function bindStatusLine() {
   $("#sl-save").onclick = async () => {
     slRead();
     const opt = v => v === "" || Number.isNaN(v) ? null : v;
-    const body = { profile: pid, mode: dr.mode, parts: slParts(dr), separator: dr.separator, colors: dr.colors,
+    const body = { profile: pid, mode: dr.mode, parts: slParts(dr), separator: dr.separator, colors: dr.colors, limits: dr.limits,
                    command: dr.command, padding: opt(dr.padding), refreshInterval: opt(dr.refreshInterval), hideVimModeIndicator: dr.hide };
     try { await run(() => api("/api/statusline", body)); } catch { return; }
     st.sl = await api("/api/statusline?profile=" + pid); slDraft(); renderStatusLine();
