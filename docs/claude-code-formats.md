@@ -35,7 +35,7 @@ The mapping is not reversible; see [Architecture](architecture.md#path-resolutio
 
 ## Conversations
 
-`projects/<name>/<sessionId>.jsonl`, one JSON object per line. cc-profiles only reads the `cwd` field of the first lines, to learn the project path. File snapshots of the session are in `file-history/<sessionId>/`, and they must move together with the conversation.
+`projects/<name>/<sessionId>.jsonl`, one JSON object per line. cc-profiles reads the `cwd` field to learn the project path, the messages for the Conversations viewer and the token usage for the [Usage](guides/usage.md) tab; it never changes a line. File snapshots of the session are in `file-history/<sessionId>/`, and they must move together with the conversation.
 
 Lines with `"type": "assistant"` carry the token usage of the reply, which the [Usage](guides/usage.md) tab adds up:
 

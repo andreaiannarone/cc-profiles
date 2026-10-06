@@ -36,6 +36,9 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
+| `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv` or `source`), for the update tests |
+| `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
+| `CC_PROFILES_SOURCE` | for `install.sh`: install from this folder instead of PyPI |
 | `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile |
 
 ## `~/.cc-profiles/config.json`

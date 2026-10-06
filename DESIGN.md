@@ -11,7 +11,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/index.html`). R
 
 ## Color
 
-All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme button next to (i) (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts.
+All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme button in the header (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
 
 | Property | Light | Dark | Use |
 |---|---|---|---|
@@ -74,7 +74,9 @@ Rules:
 | Danger box | `.danger-box` | red border and background, for a risk to read before confirming (e.g. an open session) |
 | Notice | `.notice` | a bar above the profiles for a system-level state (Claude Code missing, installing, not in `PATH`) |
 | Drawer | `.drawer` | right side panel for the About information; sticky header with Refresh and Close |
-| Setting row | `.srow` | three columns: name and help · input with a badge for the file it comes from (`settings.local.json` in amber, because it wins) and × · the other profiles' values with *copy*. *Save* appears only when the value changed |
+| Setting row | `.srow` | three columns: name and help · input with a badge for the file it comes from (`settings.local.json` in amber, because it wins) and × · the other profiles' values with *copy*. A changed row gets `.changed` (an orange bar on the left); nothing is saved until the bar below |
+| Save bar | `.savebar#gen-bar` | sticky at the bottom of Settings → General while there are unsaved changes: "N unsaved changes" with **Cancel** and **Save changes**, which saves them all in one backup |
+| Status line editor | `.slgrid`, `.slparts`, `.slpreview`, `.slopts`, `.slsep` | a list of pieces (grip, checkbox, brackets select, sample, ↑↓) in line order, ticked ones first; side controls as `.seg` (separator, brackets for all, rate limits); a terminal-like preview rendering the script's ANSI colors; *Save status line* enabled only with changes |
 | Section | `.sec` | header with title, explanation and `.shared-note` if the file is shared |
 | Usage chart | `.uchart`, `usageChart(daily)` | inline SVG bars, one `g.day` per day with a `<title>` tooltip and an `aria-label` summary on the `svg`; segments use `--p1` (output), `--p3` (input and cache write) and `--faint` (cache read), with a legend, never the accent. Summary numbers are `.ucard`s |
 | Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors); `sub` in monospace for the backup path; `role="status"` or `alert` |

@@ -3,8 +3,7 @@
     python3 scripts/homebrew_formula.py 0.4.3 > Formula/cc-profiles.rb
 
 It reads the sdist's URL and SHA-256 from PyPI, so run it after the release is
-published. The formula goes into the tap repository andreaiannarone/homebrew-tap,
-and users install with: brew install andreaiannarone/tap/cc-profiles
+published. No tap is published yet: the formula is ready for one.
 """
 import json
 import sys

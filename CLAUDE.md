@@ -15,13 +15,16 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | `src/cc_profiles/` | the server, one module per area (`core`, `projects`, `memories`, `extensions`, `backups`, …, `web` for HTTP, `cli`); see the table in `docs/architecture.md`. `server.py` only re-exports them; the version is in `__init__.py` |
 | `src/cc_profiles/static/index.html` | the whole UI: one file, inline CSS and vanilla JS, no build step |
 | `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
-| `tests/test_app.py` | end-to-end tests |
+| `tests/test_app.py` | end-to-end tests of the API on a fake home; `test_ui.py` drives the page in Chromium (with axe); `test_tooling.py`, `test_docs.py`, `test_release.py`, `test_check_schema.py` cover the hook, plugin, docs site, links and scripts |
 | `DESIGN.md` | the UI's visual system: read it before touching `index.html` |
 | `.claude-plugin/marketplace.json` | makes the repo a Claude Code plugin marketplace |
 | `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `command.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
 | `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |
 | `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command`. POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
-| `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon) |
+| `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon); the README screenshots and demo GIFs (made by `scripts/make_screenshots.py`, never by hand), the social preview, and `site.css` for the docs site |
+| `docs/` site | published by GitHub Pages at https://cc-profiles.andreaia.com (`CNAME`) with Jekyll: `_config.yml`, `_layouts/default.html` (the app's header, colors and theme switch), `_includes/logo.svg`, `_data/nav.yml` (the sidebar; every page must be in it). Pages must not contain `{{` or `{%`, and must link files outside `docs/` by their full GitHub URL |
+| `scripts/` | `release.py next` (the whole release; versions move one step, only the last number up to 9), `make_screenshots.py`, `check_js.py` (tsc --checkJs on the UI), `check_settings_schema.py` (used by the skill and the weekly workflow), `homebrew_formula.py` (no tap published yet) |
+| `.github/workflows/` | `ci.yml` (tests, UI, install.sh, package, JS check), `release.yml` (tag → PyPI), `codeql.yml`, `claude-code-schema.yml` (weekly check against the latest Claude Code, opens an issue) |
 
 User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
 

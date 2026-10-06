@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- The documentation has its own site, https://cc-profiles.andreaia.com, with the app's logo, colors and theme switch; PyPI links to it.
+
+### Changed
+- README: links and images are absolute, so the PyPI page shows the screenshots and opens the guides; the documentation list has every guide, and the status line page is described as the Settings editor it now is.
+- Documentation brought up to date with the code: the architecture (a package, not one file), what is read from conversations, the Save changes bar and status line editor in DESIGN.md, the test-only environment variables, and `cc-profiles restart` wherever a restart is needed.
+
 ## [0.4.4] - 2026-10-06
 
 ### Added

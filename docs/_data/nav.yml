@@ -16,9 +16,9 @@
     - { title: Plugins, url: guides/plugins.md }
     - { title: Export and import, url: guides/export-import.md }
     - { title: Settings, url: guides/settings.md }
+    - { title: Status line, url: status-line.md }
     - { title: Backups, url: guides/backups.md }
     - { title: Health and About, url: guides/health.md }
-    - { title: Status line, url: status-line.md }
 - title: Reference
   pages:
     - { title: Configuration, url: configuration.md }
