@@ -103,6 +103,17 @@ def gallery(s, theme):
     s.tab("settings")
     s.js("await loadSettings('default');")
     s.shot(SHOTS / f"settings-{theme}.jpg")
+    s.tab("usage")
+    s.shot(SHOTS / f"usage-{theme}.jpg")
+    # the status line editor: made by cc-profiles, a few pieces with their brackets
+    s.tab("settings")
+    s.js("await loadSettings('default'); S.set.slDraft.mode = 'builtin';"
+         " S.set.slDraft.parts = ['path', 'branch', 'profile', 'model', 'context', 'limit', 'week'];"
+         " S.set.slDraft.order = [...S.set.slDraft.parts, ...S.set.slDraft.order.filter(i => !S.set.slDraft.parts.includes(i))];"
+         " S.set.slDraft.colors = true; renderStatusLine();"
+         " await new Promise(r => setTimeout(r, 900));"
+         " document.querySelector('#sl-sec').scrollIntoView({block: 'start'}); window.scrollBy(0, -16);")
+    s.shot(SHOTS / f"statusline-{theme}.jpg")
 
 
 def demo_frames(s, theme, out):

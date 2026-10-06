@@ -169,6 +169,24 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/usage-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/usage-light.jpg">
+        <img src="docs/assets/screenshots/usage-light.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
+      </picture>
+      <p align="center"><b>Usage</b>: tokens and estimated cost per day, project and model</p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/statusline-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/statusline-light.jpg">
+        <img src="docs/assets/screenshots/statusline-light.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
+      </picture>
+      <p align="center"><b>Status line</b>: build it by ticking boxes, with a live preview</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/skills-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/skills-light.jpg">
         <img src="docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
@@ -197,9 +215,9 @@ cc-profiles
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/settings-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="docs/assets/screenshots/settings-light.jpg">
-        <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: model, effort level, output style and theme, the file each value comes from, and the values of the other profiles">
+        <img src="docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
       </picture>
-      <p align="center"><b>Settings</b>: safe dropdowns, applied to one profile or all</p>
+      <p align="center"><b>Settings</b>: everything in /config, applied to one profile or all</p>
     </td>
   </tr>
 </table>

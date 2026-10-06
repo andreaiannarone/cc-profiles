@@ -634,7 +634,7 @@ STATUS_PARTS = [
      'if [ -n "$b" ]; then git -C "$cwd" --no-optional-locks diff --quiet --ignore-submodules HEAD 2>/dev/null || b="$b*"; '
      'add "$b" "2;36"; fi; fi'),
     ("profile", "Profile", "Default", "round",
-     'label=$(jq -r --arg d "$dir" --arg h "$HOME" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
+     'label=$(jq -r --arg d "$dir" --arg h "$(cd "$HOME" 2>/dev/null && pwd -P)" \'.profiles[]? | select((.dir | sub("^~"; $h) | rtrimstr("/")) == $d) | .label\' '
      '"$HOME/.cc-profiles/config.json" 2>/dev/null | head -n 1)\nadd "${label:-$name}" 1'),
     ("email", "Account email", "me@example.com", "none", 'add "$(jq -r \'.oauthAccount.emailAddress // empty\' "$cfg" 2>/dev/null)" 90'),
     ("model", "Model", "Opus", "square", 'add "$(j .model.display_name)" 35'),
@@ -826,7 +826,13 @@ def statusline_sample(tmp):
     now = int(time.time())
     limits = {k: dict(v, resets_at=now + secs) for (k, v), secs in
               zip(STATUS_SAMPLE["rate_limits"].items(), (80 * 60 + 30, (3 * 24 + 11) * 3600 + 30))}
-    return dict(STATUS_SAMPLE, workspace={"current_dir": os.getcwd()}, transcript_path=transcript, rate_limits=limits)
+    # a sample project: a fresh git repository on main, so the branch shows as "main*"
+    project = os.path.join(tmp, "code", "api")
+    os.makedirs(project)
+    git = find_tool("git")
+    if git:
+        subprocess.run([git, "init", "-q", "-b", "main", project], capture_output=True, timeout=5)
+    return dict(STATUS_SAMPLE, workspace={"current_dir": project}, transcript_path=transcript, rate_limits=limits)
 
 
 def statusline_preview(pid, parts, separator="space", colors="1", limits="used"):
@@ -846,7 +852,11 @@ def statusline_preview(pid, parts, separator="space", colors="1", limits="used")
         env = dict(tool_env(), CLAUDE_CONFIG_DIR=prof["dir_abs"])
         r = subprocess.run(["sh", path], input=json.dumps(statusline_sample(tmp)), capture_output=True, text=True,
                            timeout=5, env=env)
-        return {"text": r.stdout.strip("\n"), "script": script}
+        # the sample project lives in a temporary folder: show it where a real one would be
+        text = r.stdout.strip("\n")
+        for prefix in {os.path.realpath(tmp), tmp}:
+            text = text.replace(prefix, "~")
+        return {"text": text, "script": script}
     except (OSError, subprocess.SubprocessError) as e:
         return {"text": "", "script": script, "error": str(e)}
     finally:

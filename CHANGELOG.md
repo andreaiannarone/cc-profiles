@@ -17,6 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Updating from the About panel right after a release: when PyPI's download index does not have the new version yet (pip's *No matching distribution found*, pipx's *already at latest version*, or an update that changed nothing), the app says the version was just published and to try again in a few minutes, with a **Try again** button. pip's output is under *Details*.
 
 ### Fixed
+- The status line preview runs in a sample project (`~/code/api`, branch `main`) instead of the app's own folder, and the profile's name is found even when the home folder is reached through a symlink.
+- The README shows the Usage tab and the status line editor.
 - Confirmations opened from the About panel (such as **Update to …**) now show above it: on windows narrower than about 1600px, their buttons were hidden under the panel.
 
 ## [0.4.3] - 2026-10-06
