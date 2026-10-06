@@ -39,6 +39,8 @@
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 76px; }
+/* links to a section (On this page, anchors) glide there, unless the system asks for less motion */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
 a { color: var(--accent); text-decoration: none; }
