@@ -28,6 +28,9 @@ def child_env(env):
     env = dict(env)
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
+        # data next to the config, never in the process's working folder (often a fake home):
+        # newer coverage starts measuring before tests/coverage_startup can set this itself
+        env["COVERAGE_FILE"] = os.path.join(os.path.dirname(os.path.abspath(os.environ["COVERAGE_PROCESS_START"])), ".coverage")
         env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "tests" / "coverage_startup"), env.get("PYTHONPATH", "")])
     return env
 
