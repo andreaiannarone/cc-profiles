@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-10-06
+
 ### Added
 - The documentation has its own site, https://cc-profiles.andreaia.com, with the app's logo, colors and theme switch; PyPI links to it.
 
@@ -162,7 +164,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.5...HEAD
+[0.4.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.1...v0.4.2
