@@ -441,6 +441,10 @@ def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
     data["rate_limits"]["seven_day"] = {"used_percentage": 60, "resets_at": now + 3 * 86400 + 11 * 3600 + 60}
     data["rate_limits"]["five_hour"]["resets_at"] = now + 45 * 60 + 30
     assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→45m 7d:40%→3d11h"
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 61
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→1m 7d:40%→3d11h"
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 40  # under a minute: not "0m"
+    assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→<1m 7d:40%→3d11h"
     data["transcript_path"] = str(tmp_path / "missing.jsonl")  # no conversation file: no tokens, nothing else breaks
     del data["rate_limits"]["five_hour"]["resets_at"]
     assert run_status_script(home, script, data) == "5h:8% 7d:40%→3d11h"
@@ -458,6 +462,34 @@ def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_status_line_presets_use_existing_pieces(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    got = app.get("/api/statusline?profile=default")
+    presets = got["presets"]
+    assert [p["label"] for p in presets] == ["Essential", "Developer", "Usage", "Like a hand-made one"]
+    pieces = {p["id"]: p["brackets"] for p in got["parts_available"]}
+    brackets = {b["id"] for b in got["brackets"]}
+    for p in presets:
+        assert p["description"] and p["parts"], p["id"]
+        ids = [x.split(":")[0] for x in p["parts"]]
+        assert len(set(ids)) == len(ids) and set(ids) <= set(pieces), p["id"]
+        assert all(x.split(":")[1] in brackets for x in p["parts"]), p["id"]
+        assert p["brackets"] is None or p["brackets"] in brackets
+        if p["brackets"] is None:  # each piece its own brackets
+            assert all(x.split(":")[1] == pieces[x.split(":")[0]] for x in p["parts"]), p["id"]
+        assert p["separator"] in {s["id"] for s in got["separators"]} and p["limits"] in ("used", "left")
+        assert isinstance(p["colors"], bool)
+        # the server takes it as it is
+        prev = app.get(f"/api/statusline/preview?profile=default&parts={','.join(p['parts'])}&separator={p['separator']}"
+                       f"&colors={int(p['colors'])}&limits={p['limits']}")
+        assert f"# parts: {' '.join(p['parts'])}" in prev["script"]
+    byid = {p["id"]: p for p in presets}
+    assert byid["essential"]["parts"] == ["profile:none", "model:none", "context:none"] and byid["essential"]["separator"] == "dot"
+    assert byid["usage"]["limits"] == "left" and byid["usage"]["separator"] == "bar"
+    assert len(byid["handmade"]["parts"]) == 11 and byid["handmade"]["limits"] == "left"
 
 
 def test_status_line_to_every_profile_is_undone_by_one_restore(home, app_factory):

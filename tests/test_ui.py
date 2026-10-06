@@ -135,12 +135,17 @@ def test_usage_tab(page_on_sandbox):
     assert errors == []
 
 
+# Rules that fail the test at any impact: headings that skip a level (h1 then h3) are only
+# "moderate" for axe, but they break navigating the page by headings.
+AXE_ALWAYS = {"heading-order"}
+
+
 def axe_violations(page):
-    """Serious and critical axe-core violations on the page as it is now."""
+    """Serious and critical axe-core violations on the page as it is now, plus AXE_ALWAYS."""
     from axe_playwright_python.sync_playwright import Axe
     res = Axe().run(page, options={"resultTypes": ["violations"]}).response
     return [f"{v['id']} ({v['impact']}): {v['help']} at " + ", ".join(str(n["target"]) for n in v["nodes"][:4])
-            for v in res["violations"] if v["impact"] in ("serious", "critical")]
+            for v in res["violations"] if v["impact"] in ("serious", "critical") or v["id"] in AXE_ALWAYS]
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
@@ -231,6 +236,31 @@ def test_status_line_section(page_on_sandbox):
     page.wait_for_selector("#sl-cmd")
     page.click('[data-slmode="off"]')
     assert page.query_selector("#sl-cmd") is None and page.query_selector("#sl-preview") is None
+    assert errors == []
+
+
+def test_status_line_presets_fill_the_draft(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    page.click('[data-slmode="builtin"]')
+    pressed = lambda: page.eval_on_selector_all("[data-slpreset][aria-pressed=true]", "bs => bs.map(b => b.dataset.slpreset)")
+    assert pressed() == ["developer"]  # the editor starts from the same pieces
+    page.click("#sl-save")
+    page.wait_for_function("() => document.querySelector('#sl-save')?.disabled")
+    page.click('[data-slpreset="usage"]')
+    assert pressed() == ["usage"] and page.is_enabled("#sl-save")  # filled, not saved
+    assert page.get_attribute('[data-slpreset="usage"]', "title").startswith("Model, tokens")
+    page.wait_for_function("() => /^Opus \\| question:12k session:340k \\| \\$1\\.27 \\| 5h:22%→1h20m \\| 7d:59%$/"
+                           ".test(document.querySelector('#sl-preview').textContent)")
+    order = page.eval_on_selector_all("[data-slitem] input:checked", "cs => cs.map(c => c.dataset.slpart)")
+    assert order == ["model", "tokens", "cost", "limit", "week"]
+    assert page.get_attribute('[data-sllim="left"]', "aria-pressed") == "true"
+    page.click("#sl-colors")  # any change of its own: no preset matches any more
+    assert pressed() == []
+    page.click('[data-slpreset="essential"]')
+    page.wait_for_function("() => document.querySelector('#sl-preview').textContent === 'Default · Opus · ctx:42%'")
+    page.click('[data-slpreset="developer"]')  # back to what is saved
+    assert page.is_disabled("#sl-save") and pressed() == ["developer"]
     assert errors == []
 
 

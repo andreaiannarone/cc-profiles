@@ -74,7 +74,7 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .cmp tr.diff td { background: var(--warn-soft); }
 .cmp .src { font-family: inherit; font-size: 11px; color: var(--muted); margin-left: 6px; }
 .ext-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 8px; }
-.ext-head h3 { margin: 0; font-size: 15px; }
+.ext-head h2 { margin: 0; font-size: 15px; }
 .ext-head .hint { flex: 1; min-width: 200px; }
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .plug-row .m code { font-size: 11.5px; }
@@ -187,8 +187,8 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 
 .health { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
 .hcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
-.hcard h3 { margin: 0 0 10px; font-size: 15px; }
-.hcard h4 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.hcard h2 { margin: 0 0 10px; font-size: 15px; }
+.hcard h3 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .check { display: flex; gap: 8px; padding: 3px 0; font-size: 13px; }
 .check .i { width: 16px; flex: none; text-align: center; }
 .check.ok .i { color: var(--ok); } .check.warn .i { color: var(--warn); } .check.error .i { color: var(--err); }
@@ -237,7 +237,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .setgrid { display: grid; gap: 16px; }
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .sec > .h { display: flex; gap: 10px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.sec > .h h3 { margin: 0; font-size: 15px; }
+.sec > .h h2 { margin: 0; font-size: 15px; }
 .sec > .h .hint { flex: 1; }
 .sec > .b { padding: 12px 16px; }
 .srow { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
@@ -287,6 +287,8 @@ textarea.code { width: 100%; min-height: 260px; font-family: var(--mono); font-s
 .slopts input.text { width: 110px; }
 details.slscript { margin-top: 10px; } details.slscript summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
 details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 12px; }
+.slpresets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; }
+.slpresets .hint { margin-right: 4px; }
 .slsep { max-width: 240px; } .slsep button { font-family: var(--mono); font-size: 15px; font-weight: 700; padding: 3px 0; }
 .perm label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .perm textarea { min-height: 150px; font-family: var(--mono); font-size: 12px; }
@@ -792,9 +794,9 @@ function renderHealth() {
   if (!S.health) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Checking login, files, links, skills, plugins, memories and folders…</div>`; return; }
   const icon = { ok: "✓", warn: "!", error: "✕" };
   $("#main").innerHTML = `<div class="toolbar"><button class="btn" id="rehealth">Run the checks again</button></div>
-    <div class="health">${S.health.map(h => `<div class="hcard"><h3>${esc(h.label)}</h3>
+    <div class="health">${S.health.map(h => `<div class="hcard"><h2>${esc(h.label)}</h2>
       ${h.checks.map(c => `<div class="check ${c.level}"><span class="i" aria-hidden="true">${icon[c.level]}</span><span>${esc(c.text)}</span></div>`).join("")}
-      <h4>Projects whose folder is gone (${h.orphans.length})</h4>
+      <h3>Projects whose folder is gone (${h.orphans.length})</h3>
       ${h.orphans.map(o => `<div class="orphan"><div class="p">${esc(o.pretty)}</div>
         <div class="hint">${plural(o.conv, "conversation", "conversations")} · ${plural(o.mem, "memory", "memories")}</div>
         <div class="c">${o.candidates.map(c => `<button class="btn small primary" data-hlink="${esc(o.name)}" data-prof="${h.id}" data-path="${esc(c)}">Relink to ${esc(c)}</button>`).join("")}
@@ -827,7 +829,7 @@ function renderSharing() {
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
-    <div class="health">${S.sharing.map(p => `<div class="hcard"><h3>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h3>
+    <div class="health">${S.sharing.map(p => `<div class="hcard"><h2>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h2>
       ${p.items.map(it => `<div class="share">
         <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
@@ -1014,7 +1016,7 @@ function renderSkills(head) {
   const skills = x.skills.skills.filter(k => !q || (k.name + " " + k.description).toLowerCase().includes(q));
   const cur = x.skills.skills.find(k => k.name === x.skill);
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Skills</h3><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
+    <div class="ext-head" style="margin-top:0"><h2>Skills</h2><span class="hint"><code>${esc(x.skills.dir)}</code> · ${plural(x.skills.skills.length, "skill", "skills")}${x.skills.shared ? ` · <span class="shared-note">${esc(x.skills.shared)}: a change here applies there too</span>` : ""}</span>
       <input class="search" style="margin:0" placeholder="Filter skills…" value="${esc(x.q)}" id="extq" aria-label="Filter skills">
       <button class="btn primary" id="sknew">New skill…</button></div>
     <div class="cards skgrid">${skills.map(k => `<div class="mcard ${k.name === x.skill ? "on" : ""}" data-skill="${esc(k.name)}" tabindex="0" role="button">
@@ -1049,7 +1051,7 @@ function renderSkills(head) {
 function renderMcp(head) {
   const x = S.ext;
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>MCP servers</h3><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
+    <div class="ext-head" style="margin-top:0"><h2>MCP servers</h2><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
       <button class="btn primary" id="mcpnew">Add server…</button></div>
     <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
         <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
@@ -1200,6 +1202,16 @@ function ansiHtml(text) {
   }
   return out + "</span>".repeat(open);
 }
+// A preset fills the draft (nothing is saved): it is "on" while the draft is exactly that preset.
+const slPresetOn = (dr, p) => slParts(dr).join(",") === p.parts.join(",") && dr.separator === p.separator && dr.colors === p.colors && dr.limits === p.limits;
+function slApplyPreset(p) {
+  const dr = S.set.slDraft, ids = p.parts.map(x => x.split(":")[0]);
+  dr.parts = ids;
+  dr.order = [...ids, ...dr.order.filter(i => !ids.includes(i))];
+  S.set.sl.parts_available.forEach(x => { dr.brackets[x.id] = p.brackets || x.brackets; });
+  p.parts.forEach(x => { const [id, br] = x.split(":"); dr.brackets[id] = br; });
+  Object.assign(dr, { separator: p.separator, colors: p.colors, limits: p.limits });
+}
 const slBr = (sl, br, text) => { const b = sl.brackets.find(x => x.id === br); return b ? b.left + text + b.right : text; };
 function statusLineSection() {
   const st = S.set, sl = st.sl, dr = st.slDraft;
@@ -1207,11 +1219,12 @@ function statusLineSection() {
   const where = sl.value ? `Now: ${sl.mode === "builtin" ? "made by cc-profiles" : "your command"}, in ${srcBadge(sl.source)}` : "Now: off";
   const byId = Object.fromEntries(sl.parts_available.map(p => [p.id, p]));
   const dirty = slKey(dr) !== st.slSaved;
-  return `<section class="sec" id="sl-sec"><div class="h"><h3>Status line</h3><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
+  return `<section class="sec" id="sl-sec"><div class="h"><h2>Status line</h2><span class="hint">The line Claude Code shows under the prompt. ${where}</span></div>
     <div class="b">
       <div class="seg" style="max-width:460px" role="group" aria-label="Status line">${[["off", "Off"], ["builtin", "Made by cc-profiles"], ["custom", "Your command"]].map(([m, l]) =>
         `<button data-slmode="${m}" class="${dr.mode === m ? "on" : ""}" aria-pressed="${dr.mode === m}">${l}</button>`).join("")}</div>
       ${dr.mode === "builtin" ? `
+        ${sl.presets?.length ? `<div class="slpresets" role="group" aria-label="Presets"><span class="hint">Presets</span>${sl.presets.map(p => { const on = slPresetOn(dr, p); return `<button class="chip ${on ? "on" : ""}" data-slpreset="${p.id}" aria-pressed="${on}" title="${esc(p.description)}">${esc(p.label)}</button>`; }).join("")}</div>` : ""}
         <div class="slgrid">
           <ul class="slparts" aria-label="What to show, in order: drag or use the arrows">${dr.order.map((id, i) => { const p = byId[id], on = dr.parts.includes(id); return `
             <li class="${on ? "" : "off"}" draggable="true" data-slitem="${id}">
@@ -1252,6 +1265,10 @@ function slDirty() {
   const dirty = slKey(S.set.slDraft) !== S.set.slSaved;
   $("#sl-dirty").textContent = dirty ? "Unsaved changes" : "";
   $("#sl-save").disabled = !dirty;
+  document.querySelectorAll("[data-slpreset]").forEach(b => {  // the colors switch changes the draft without a re-render
+    const on = slPresetOn(S.set.slDraft, S.set.sl.presets.find(p => p.id === b.dataset.slpreset));
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
 }
 let slSeq = 0;
 async function slPreview() {
@@ -1286,6 +1303,9 @@ function bindStatusLine() {
     slRead(); const v = b.dataset.slbrall;
     st.sl.parts_available.forEach(p => { dr.brackets[p.id] = v === "default" ? p.brackets : v; });
     renderStatusLine(`[data-slbrall="${v}"]`);
+  });
+  document.querySelectorAll("[data-slpreset]").forEach(b => b.onclick = () => {
+    slRead(); slApplyPreset(st.sl.presets.find(p => p.id === b.dataset.slpreset)); renderStatusLine(`[data-slpreset="${b.dataset.slpreset}"]`);
   });
   document.querySelectorAll("[data-slsep]").forEach(b => b.onclick = () => { slRead(); dr.separator = b.dataset.slsep; renderStatusLine(`[data-slsep="${dr.separator}"]`); });
   document.querySelectorAll("[data-sllim]").forEach(b => b.onclick = () => { slRead(); dr.limits = b.dataset.sllim; renderStatusLine(`[data-sllim="${dr.limits}"]`); });
@@ -1358,8 +1378,8 @@ function renderSettings() {
   const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
   <div class="setgrid">${errs}
-    <section class="sec"><div class="h"><h3>General</h3><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
-      ${d.fields.map((f, i) => { const shownF = f.key in st.draft ? { ...f, value: storedOf(f, st.draft[f.key]) } : f; return `${f.group && f.group !== d.fields[i - 1]?.group ? `<h4 class="sgroup">${esc(f.group)}</h4>` : ""}<div class="srow" data-srow="${f.key}">
+    <section class="sec"><div class="h"><h2>General</h2><span class="hint">The settings of <code>/config</code> in Claude Code: the value in use and the file it comes from; the other profiles on the right. Options checked against Claude Code ${esc(d.schema_version)}.</span>${sh(d.files.settings)}</div>
+      ${d.fields.map((f, i) => { const shownF = f.key in st.draft ? { ...f, value: storedOf(f, st.draft[f.key]) } : f; return `${f.group && f.group !== d.fields[i - 1]?.group ? `<h3 class="sgroup">${esc(f.group)}</h3>` : ""}<div class="srow" data-srow="${f.key}">
         <div class="l"><b>${esc(f.label)}${f.deprecated ? ` <span class="badge b-warn">deprecated</span>` : ""}</b><span>${esc(f.help)}</span></div>
         <div class="v">${fieldInput(shownF)} ${srcBadge(f.source)}
           ${f.source ? `<button class="btn small" data-sreset="${f.key}" title="Remove the setting and go back to the default" aria-label="Reset ${esc(f.label)}">×</button>` : ""}
@@ -1373,25 +1393,25 @@ function renderSettings() {
 
     ${statusLineSection()}
 
-    <section class="sec"><div class="h"><h3>Global instructions · CLAUDE.md</h3><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
+    <section class="sec"><div class="h"><h2>Global instructions · CLAUDE.md</h2><span class="hint"><code>${esc(d.claude_md.path)}</code> · loaded at the start of every session in this profile${d.claude_md.exists ? "" : " · does not exist yet: saving creates it"}</span>${sh(d.claude_md)}</div>
       <div class="b"><textarea class="code" id="cmd-text" spellcheck="false" aria-label="CLAUDE.md" placeholder="# Context&#10;&#10;In this profile you work on …">${esc(d.claude_md.content)}</textarea>
         <div class="row-end"><span class="grow">${plural(d.claude_md.content ? d.claude_md.content.split("\n").length : 0, "line", "lines")}</span><button class="btn primary" id="cmd-save">Save CLAUDE.md</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Permissions</h3><span class="hint">One rule per line, in <code>settings.json</code>. E.g. <code>Bash(npm run test:*)</code>, <code>Read(~/Documents/**)</code>, <code>mcp__claude_ai_Gmail</code></span></div>
+    <section class="sec"><div class="h"><h2>Permissions</h2><span class="hint">One rule per line, in <code>settings.json</code>. E.g. <code>Bash(npm run test:*)</code>, <code>Read(~/Documents/**)</code>, <code>mcp__claude_ai_Gmail</code></span></div>
       <div class="b"><div class="perm">${[["allow", "Allow without asking"], ["ask", "Always ask"], ["deny", "Block"]].map(([k, l]) => `<label class="f">${l} <code>${k}</code>
           <textarea class="text" id="perm-${k}" spellcheck="false">${esc((d.permissions[k] || []).join("\n"))}</textarea>
           ${(d.permissions_local[k] || []).length ? `<span class="hint">+ ${d.permissions_local[k].length} in settings.local.json (edit them in the advanced editor)</span>` : ""}</label>`).join("")}</div>
         <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn" id="perm-all">Add a rule to every profile…</button><button class="btn primary" id="perm-save">Save permissions</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Advanced editor</h3><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
+    <section class="sec"><div class="h"><h2>Advanced editor</h2><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
       <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
         <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
         <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save</button></div></div>
     </section>
 
-    <section class="sec"><div class="h"><h3>Global</h3><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
+    <section class="sec"><div class="h"><h2>Global</h2><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
       <div class="b"><div class="srow" style="padding:0 0 10px;border:0"><div class="l"><b>Auto-updates</b><span>autoUpdates</span></div>
         <div class="v"><label class="switch"><input type="checkbox" id="g-auto" ${d.global.autoUpdates ? "checked" : ""} aria-label="Auto-updates"><span></span></label></div><div></div></div>
         <dl class="kv">${Object.entries(d.global.info).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
@@ -1656,14 +1676,14 @@ function renderPlugins() {
   if (x.error) $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`;
   else if (!d) $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading plugins…</div>`;
   else $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Plugins</h3><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
+    <div class="ext-head" style="margin-top:0"><h2>Plugins</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
     <div class="table">${d.plugins.map((g, i) => `<div class="prow plug-row"><div class="txt">
         <div class="t">${esc(g.plugin)} <span class="badge b-none">${esc(g.marketplace || "no marketplace")}</span>${g.version ? ` <span class="badge b-none">${esc(g.version)}</span>` : ""}${g.is_installed ? "" : ` <span class="badge b-warn">not installed</span>`}</div>
         <div class="m">${g.installed ? `installed ${esc(g.installed)}` : ""}${g.scopes.length ? ` · ${esc(g.scopes.join(", "))}` : ""}${g.projects.length ? ` · ${g.projects.map(esc).join(", ")}` : ""}${g.path ? ` · <code>${esc(g.path)}</code>` : ""}</div>
         <div class="m">${g.enabled == null ? "not set in the settings: Claude Code's default" : `${g.enabled ? "enabled" : "disabled"} in ${g.source === "local" ? "settings.local.json" : "settings.json"}`}</div></div>
       <label class="switch" title="${g.enabled ? "Enabled" : "Disabled"}"><input type="checkbox" data-plugsw="${i}" ${g.enabled ? "checked" : ""} aria-label="Enable ${esc(g.name)}"><span></span></label></div>`).join("")
       || `<div class="empty">No plugins in this profile. Install them with <code>/plugin</code> in Claude Code.</div>`}</div>
-    <div class="ext-head"><h3>Marketplaces</h3><span class="hint">where Claude Code finds plugins to install</span></div>
+    <div class="ext-head"><h2>Marketplaces</h2><span class="hint">where Claude Code finds plugins to install</span></div>
     <div class="mlist">${d.marketplaces.map(m => `<div><b>${esc(m.name)}</b> · <code>${esc(m.source)}</code>${m.updated ? ` · updated ${esc(m.updated)}` : ""}</div>`).join("") || `<div>None.</div>`}</div>`;
   document.querySelectorAll("[data-plugprof]").forEach(b => b.onclick = () => loadPlugins(b.dataset.plugprof));
   document.querySelectorAll("[data-plugsw]").forEach(cb => cb.onchange = async () => {
@@ -1769,7 +1789,7 @@ function renderSearch() {
   const others = r => (r.profiles || [r.profile]).map(badge).join(" ");
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(total, "result", "results")} for “${esc(d.q)}” in every profile${d.truncated ? " · only the first ones: refine the search to see more" : ""}. Values of MCP environment variables and headers are not searched.</span>
       <button class="btn small" id="s-close" style="margin-left:auto">Close search</button></div>
-    ${total ? SKINDS.filter(([k]) => d.results[k].length).map(([k, l]) => `<div class="ext-head"><h3>${l}</h3><span class="hint">${d.counts[k]}</span></div>
+    ${total ? SKINDS.filter(([k]) => d.results[k].length).map(([k, l]) => `<div class="ext-head"><h2>${l}</h2><span class="hint">${d.counts[k]}</span></div>
       <div class="table sres">${d.results[k].map((r, i) => `<div class="prow" data-sres="${k}:${i}" tabindex="0" role="button"><div class="txt">
           <div class="t">${esc(r.title)} ${others(r)}${r.where ? ` <span class="hint" style="font-weight:400">${esc(r.where)}</span>` : ""}</div>
           <div class="snip">${highlight(r.snippet)}</div></div></div>`).join("")}</div>`).join("")
@@ -1843,27 +1863,27 @@ function renderCompare() {
   const sk = d.skills, mc = d.mcp, md = d.claude_md, pl = d.plugins;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h3>Settings</h3><span class="hint">the value in use and the file it comes from</span></div>
+    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
     ${table(["Setting", A, B], d.settings.map((s, i) => `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
         <td class="v">${val(s.a, s.a_source)}</td><td class="v">${val(s.b, s.b_source)}</td>
         <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`), "")}
-    <div class="ext-head"><h3>Permissions</h3><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
+    <div class="ext-head"><h2>Permissions</h2><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
     ${table(["Rule", "Where"], perms, "Both profiles have the same rules. ✓")}
-    <div class="ext-head"><h3>Skills</h3><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
+    <div class="ext-head"><h2>Skills</h2><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
     ${table(["Skill", "Where"], [...sk.only_a.map(n => listRows("skill", "", "a", n)), ...sk.only_b.map(n => listRows("skill", "", "b", n)),
         ...sk.both.filter(x => !x.same).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${mark(false)} <span class="hint">the SKILL.md files are different: edit them in the Skills tab</span></td><td></td></tr>`)],
       "The same skills, with the same SKILL.md. ✓")}
-    <div class="ext-head"><h3>MCP servers</h3><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
+    <div class="ext-head"><h2>MCP servers</h2><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
     ${table(["Server", "Where"], [...mc.only_a.map(m => listRows("mcp", "", "a", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
         ...mc.only_b.map(m => listRows("mcp", "", "b", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
         ...mc.both.filter(m => !m.same).map(m => `<tr class="diff"><td class="v">${esc(m.name)}</td><td>${mark(false)} <span class="hint">different configuration: edit it in the MCP tab</span></td><td></td></tr>`)],
       "The same servers, with the same configuration. ✓")}
-    <div class="ext-head"><h3>CLAUDE.md</h3><span class="hint">${md.shared ? "shared: the two profiles use the same file" : ""}</span></div>
+    <div class="ext-head"><h2>CLAUDE.md</h2><span class="hint">${md.shared ? "shared: the two profiles use the same file" : ""}</span></div>
     ${table(["", A, B], [`<tr class="${md.same ? "" : "diff"}"><td>${mark(md.same)}</td>
         <td>${md.a.exists ? plural(md.a.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td>${md.b.exists ? plural(md.b.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td class="acts">${md.same || md.shared ? "" : (md.a.exists ? btn(`data-cmp="md" data-side="a"`, `Replace ${B}'s with ${A}'s`) : "") + (md.b.exists ? btn(`data-cmp="md" data-side="b"`, `Replace ${A}'s with ${B}'s`) : "")}</td></tr>`], "")}
-    <div class="ext-head"><h3>Plugins</h3><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
+    <div class="ext-head"><h2>Plugins</h2><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
     ${table(["", ""], [`<tr><td>Installed</td><td>${plug("installed")}</td><td></td></tr>`, `<tr><td>Enabled</td><td>${plug("enabled")}</td><td></td></tr>`], "")}`;
   bindCompare();
 }
@@ -1971,11 +1991,11 @@ function renderUsage() {
     </div>
     ${usageChart(d.daily)}
     ${note}
-    <div class="ext-head"><h3>Top projects</h3><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
+    <div class="ext-head"><h2>Top projects</h2><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
     <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
-    <div class="ext-head"><h3>Models</h3><span class="hint">cache write and cache read are priced differently from input</span></div>
+    <div class="ext-head"><h2>Models</h2><span class="hint">cache write and cache read are priced differently from input</span></div>
     <div class="table"><table><thead><tr><th>Model</th><th class="r">Replies</th><th class="r">Input</th><th class="r">Output</th><th class="r">Cache write</th><th class="r">Cache read</th><th class="r">Estimated cost</th></tr></thead><tbody>${models}</tbody></table></div>
-    ${profs ? `<div class="ext-head"><h3>Profiles</h3><span class="hint">a reply copied into another conversation or profile counts once</span></div>
+    ${profs ? `<div class="ext-head"><h2>Profiles</h2><span class="hint">a reply copied into another conversation or profile counts once</span></div>
     <div class="table"><table><thead><tr><th>Profile</th><th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${profs}</tbody></table></div>` : ""}
     ${T.unpriced_tokens ? `<p class="hint">* without the tokens of models that have no list price.</p>` : ""}`;
 }

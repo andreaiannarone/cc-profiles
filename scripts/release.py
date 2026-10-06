@@ -259,12 +259,26 @@ class Releaser:
 
         self.step("Delete the release branch")
         self.run(["git", "branch", "-D", branch])
-        self.run(["git", "push", "origin", "--delete", branch], check=False)
+        self.delete_remote_branch(branch)
 
         self.say(f"\ncc-profiles {new} is on PyPI. To upgrade:")
         self.say("  pipx upgrade cc-profiles      # or: uv tool upgrade cc-profiles")
         self.say("  cc-profiles restart           # or /cc-profiles restart in Claude Code")
         self.say("or click Check for updates in the app's About panel.")
+
+    def delete_remote_branch(self, branch):
+        """Delete the branch on origin, unless GitHub already did when it merged the pull request."""
+        try:
+            listed = self.run(["git", "ls-remote", "--heads", "origin", branch], capture=True)
+        except ReleaseError as e:  # origin not reachable: try the delete anyway, it only warns
+            self.say(f"  ({e})")
+            listed = None
+        if self.dry:
+            self.say("  (then deleted only if listed: GitHub usually deletes a merged branch by itself)")
+        elif listed == "":
+            self.say(f"{branch} is already gone from origin (deleted when the pull request was merged): nothing to delete")
+            return
+        self.run(["git", "push", "origin", "--delete", branch], check=False)
 
     def checks_appear(self, number):
         """Whether GitHub reports any check on the pull request within the timeout."""
