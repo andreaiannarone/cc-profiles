@@ -12,6 +12,8 @@ if os.environ.get("COVERAGE_PROCESS_START"):
     os.environ.setdefault("COVERAGE_FILE", os.path.join(os.path.dirname(os.path.abspath(os.environ["COVERAGE_PROCESS_START"])), ".coverage"))
 
 _cov = coverage.process_startup()
+if _cov is None:  # newer coverage may have started measuring already (its own startup hook)
+    _cov = coverage.Coverage.current()
 
 if _cov is not None:
     # The server replaces coverage's SIGTERM handler with its own, which ends with
