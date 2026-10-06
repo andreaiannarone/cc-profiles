@@ -93,7 +93,7 @@ a:hover { text-decoration: underline; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 .side summary { display: none; }
 .ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
-.nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 10px 4px; }
+.nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 10px 4px; }
 .side a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--muted); font-weight: 550; font-size: 14px; }
 .side a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
 .side a.on { color: var(--text); background: var(--panel); box-shadow: inset 2px 0 0 var(--accent), 0 0 0 1px var(--line); }
