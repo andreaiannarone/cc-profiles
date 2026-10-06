@@ -196,7 +196,7 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .orphan .p { font-family: var(--mono); font-size: 12px; word-break: break-all; }
 .orphan .c { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 10; overflow-y: auto; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 17; overflow-y: auto; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(560px, 100%); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .modal h2 { margin: 0 0 4px; font-size: 16px; }
 .modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
@@ -1531,13 +1531,24 @@ async function checkUpdate(dr) {
     ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
       : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://github.com/andreaiannarone/cc-profiles/releases" target="_blank" rel="noopener">What's new</a>`;
-  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u);
+  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u, dr);
 }
-async function runUpdate(u) {
+async function runUpdate(u, dr) {
   if (!(await confirmBox(`Update to ${u.latest}?`,
       `Runs <code>${esc(u.command)}</code>, then restarts cc-profiles: this page reloads by itself. Your profiles, backups and settings are not touched.`, "Update"))) return;
-  const r = await run(() => api("/api/update", {})).catch(() => null);
-  if (!r?.restarting) return;
+  const st = $("#upd-status", dr);
+  if (st) st.innerHTML = `<span class="spinner"></span> Updating to ${esc(u.latest)}…`;
+  let r;
+  try { r = await api("/api/update", {}); } catch (e) { toast(e.message, "", true); if (st) st.textContent = e.message; return; }
+  if (r.retry && st) {  // just released: PyPI's download index is not there yet
+    st.innerHTML = `${esc(r.message)} <button class="btn small" id="upd-run">Try again</button>
+      ${r.details ? `<details style="margin-top:6px"><summary>Details</summary><pre class="log">${esc(r.details)}</pre></details>` : ""}`;
+    $("#upd-run", dr).onclick = () => runUpdate(u, dr);
+    return;
+  }
+  if (r.message) toast(r.message);
+  if (st && !r.restarting) st.textContent = r.message || "";
+  if (!r.restarting) return;
   const bg = document.createElement("div"); bg.className = "modal-bg";
   bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2><span class="spinner"></span> Restarting cc-profiles…</h2><div class="hint">The page reloads as soon as the new version answers.</div></div>`;
   document.body.append(bg);

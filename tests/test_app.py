@@ -643,7 +643,7 @@ def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
 
     app.post("/api/profiles/create", {"label": "Empty", "id": "empty", "base": "", "share": []})
     text = home.path(".claude-empty/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
 
     # sharing commands with the source: the command goes into the source, through the link
     app.post("/api/profiles/create", {"label": "Shared", "id": "shared-cmd", "base": "", "share": ["commands"]})
@@ -775,6 +775,48 @@ def test_update_check_compares_with_pypi(home, app_factory, tmp_path):
     offline = app_factory(CC_PROFILES_PYPI_URL=(tmp_path / "missing.json").as_uri())
     status, body = offline.request("/api/update")
     assert status == 502 and "Could not reach PyPI" in body["error"]
+
+
+def fake_tool(tmp_path, name, output, code):
+    """A fake `pipx` or `uv` on PATH, first, so a real one is never run."""
+    bin_dir = tmp_path / f"bin-{code}-{abs(hash(output))}"
+    bin_dir.mkdir()
+    tool = bin_dir / name
+    tool.write_text(f"#!/bin/sh\ncat <<'EOF'\n{output}\nEOF\nexit {code}\n")
+    tool.chmod(0o755)
+    return f"{bin_dir}:/usr/bin:/bin"
+
+
+@pytest.mark.parametrize("kind,output,code", [
+    ("pipx", "cc-profiles is already at latest version 0.0.1 (location: /x)", 0),  # pipx, right after a release
+    ("pipx", "ERROR: Could not find a version that satisfies the requirement cc-profiles==99.0.0\n"
+             "ERROR: No matching distribution found for cc-profiles==99.0.0", 1),
+    ("uv", "Nothing to upgrade", 0),
+    ("uv", "Updated cc-profiles", 0),  # it ran, but the installed version did not change
+])
+def test_update_right_after_a_release_says_to_try_again(home, app_factory, tmp_path, kind, output, code):
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"), CC_PROFILES_INSTALL_KIND=kind,
+                      PATH=fake_tool(tmp_path, kind, output, code))
+    info = app.get("/api/update")
+    assert info["can_update"] is True and info["kind"] == kind
+    r = app.post("/api/update", {})
+    assert r["retry"] is True and r["restarting"] is False
+    assert "99.0.0 was published only minutes ago" in r["message"] and "try again in a few minutes" in r["message"]
+    assert "ERROR" not in r["message"] and output.splitlines()[-1] in r["details"]
+    assert r["details"].startswith("$ " + " ".join(server_update_command(kind)))
+
+
+def server_update_command(kind):
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    return server.UPDATE_COMMANDS[kind]
+
+
+def test_update_that_fails_for_another_reason(home, app_factory, tmp_path):
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"), CC_PROFILES_INSTALL_KIND="pipx",
+                      PATH=fake_tool(tmp_path, "pipx", "Fatal: disk full", 3))
+    error = app.post_error("/api/update", {})
+    assert "The update failed (pipx upgrade cc-profiles ended with code 3)" in error and "disk full" in error
 
 
 def test_version_order():
@@ -988,6 +1030,40 @@ def test_stop_and_restart_commands(home):
                 pass
 
 
+def test_open_with_an_action_restarts_or_stops(home):
+    """/cc-profiles restart and /cc-profiles stop: Claude Code puts the arguments in
+    place of $ARGUMENTS in the command's ! line, which then runs cc-profiles open <action>."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    line = re.search(r"^!`(.*)`$", server.COMMAND_TEXT, re.M).group(1)
+    assert line == "cc-profiles open $ARGUMENTS"
+
+    def slash(arguments):
+        args = line.replace("$ARGUMENTS", arguments).split()[1:]
+        return run_cli(home, *args, "--no-browser", "--port", str(port))
+
+    port = free_port()
+    first = slash("")
+    assert first.returncode == 0, first.stdout + first.stderr
+    pids = [int(re.search(r"pid (\d+)", first.stdout).group(1))]
+    try:
+        r = slash("restart")
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"(pid {pids[0]})" in r.stdout and "Reload the page" in r.stdout
+        pids.append(int(re.search(r"started in the background .* \(pid (\d+)\)", r.stdout).group(1)))
+        r = slash("stop")
+        assert r.returncode == 0 and f"Stopped cc-profiles on http://127.0.0.1:{port} (pid {pids[1]})" in r.stdout
+        r = slash("bogus")
+        assert r.returncode == 2 and "unknown action: bogus" in r.stderr
+        assert "is not running" in slash("stop").stdout
+    finally:
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+
 def test_stop_leaves_other_programs_alone(home):
     with socket.socket() as other:  # not cc-profiles: nothing to stop
         other.bind(("127.0.0.1", 0))
@@ -1019,7 +1095,7 @@ def test_install_command(home, app_factory):
     assert "Work: added ~/.claude-work/commands/cc-profiles.md" in out
     assert "Client: skipped" in out and "Shared: shares commands with Default" in out
     text = home.path(".claude/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open`" in text
+    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
     assert home.path(".claude-client/commands/cc-profiles.md").read_text() == "my own command\n"
     assert home.path(".claude-shared/commands/cc-profiles.md").read_text() == text  # through the link
 
@@ -1030,6 +1106,19 @@ def test_install_command(home, app_factory):
     assert newest["title"] == "Add the /cc-profiles command"
     app.post("/api/backups/restore", {"name": newest["name"]})
     assert home.snapshot() == before
+
+
+def test_install_command_updates_an_older_command(home):
+    """A command written by an older version (before /cc-profiles restart|stop) is rewritten."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    basic_home(home)
+    old = server.COMMAND_TEXT.replace("!`cc-profiles open $ARGUMENTS`", "!`cc-profiles open`")
+    old = old.replace('argument-hint: "[restart|stop]"\n', "")
+    home.write(".claude/commands/cc-profiles.md", old)
+    out = run_cli(home, "install-command").stdout
+    assert "Default: added ~/.claude/commands/cc-profiles.md" in out
+    assert home.path(".claude/commands/cc-profiles.md").read_text() == server.COMMAND_TEXT
 
 
 def test_plugin_command_matches_installed_command():

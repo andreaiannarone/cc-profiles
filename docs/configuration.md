@@ -4,7 +4,7 @@
 
 ```
 cc-profiles [--port PORT] [--no-browser]
-cc-profiles open [--port PORT] [--no-browser]
+cc-profiles open [restart|stop] [--port PORT] [--no-browser]
 cc-profiles stop [--port PORT]
 cc-profiles restart [--port PORT]
 cc-profiles install-command
@@ -16,7 +16,7 @@ cc-profiles --version
 |---|---|---|
 | `--port PORT` | `4777`, or `CC_PROFILES_PORT` | port to listen on (always on `127.0.0.1`) |
 | `--no-browser` | off | do not open the browser |
-| `open` | | start the server in the background unless it is already running, open the browser and return at once. Prints the server's pid; its output goes to `~/.cc-profiles/server.log`. Used by the Claude Code plugin (see [Getting started](getting-started.md#open-it-from-claude-code)) |
+| `open` | | start the server in the background unless it is already running, open the browser and return at once. Prints the server's pid; its output goes to `~/.cc-profiles/server.log`. Used by the `/cc-profiles` command (see [Getting started](getting-started.md#open-it-from-claude-code)). `open restart` and `open stop` do the same as `restart` and `stop`: they are what `/cc-profiles restart` and `/cc-profiles stop` run. Any other word is an error |
 | `stop` | | stop the server running on the port. A write in progress finishes first; another program on the port is left alone |
 | `restart` | | `stop`, then `open` without the browser: use it after an update, then reload the page |
 | `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date |

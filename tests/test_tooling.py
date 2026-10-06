@@ -79,4 +79,7 @@ def test_plugin_marketplace_manifests():
     plugin_dir = ROOT / entry["source"]
     manifest = json.loads((plugin_dir / ".claude-plugin" / "plugin.json").read_text())
     assert manifest["name"] == entry["name"] == "cc-profiles"
-    assert (plugin_dir / "commands" / "open.md").is_file()
+    command = (plugin_dir / "commands" / "open.md").read_text()
+    # /cc-profiles:open restart|stop: the arguments reach cc-profiles open, which the rule allows
+    assert "!`cc-profiles open $ARGUMENTS`" in command
+    assert 'argument-hint: "[restart|stop]"' in command and "allowed-tools: Bash(cc-profiles open:*)" in command

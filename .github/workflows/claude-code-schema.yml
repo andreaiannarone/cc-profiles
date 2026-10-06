@@ -1,0 +1,59 @@
+name: Claude Code settings schema
+
+# Every week, install the latest Claude Code and check the Settings tab's fields
+# (SETTING_FIELDS) against the settings schema and the /config panel inside it.
+# When something differs, open an issue with the report, or update the open one.
+on:
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Check against the latest Claude Code
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_TITLE: Claude Code settings schema changed
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # The official installer (code.claude.com/docs/en/setup), as in INSTALL_METHODS
+      - name: Install Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          "$HOME/.local/bin/claude" --version
+      - name: Compare the settings
+        id: check
+        run: |
+          set +e
+          python scripts/check_settings_schema.py "$(readlink -f "$HOME/.local/bin/claude")" --output report.md
+          code=$?
+          set -e
+          cat report.md >> "$GITHUB_STEP_SUMMARY" || true
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 2: the binary could not be read the way the script expects; fail the run
+          test "$code" -ne 2
+      - name: Open or update the issue
+        if: steps.check.outputs.code == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            cat report.md
+            echo
+            echo "_From the weekly [Claude Code settings schema]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) run._"
+          } > body.md
+          number=$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title \
+            --jq "map(select(.title == env.ISSUE_TITLE)) | .[0].number // empty")
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file body.md
+            echo "Updated issue #$number"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body-file body.md
+          fi
