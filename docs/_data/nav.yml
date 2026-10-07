@@ -1,13 +1,24 @@
 # The sidebar of the documentation site, in order. url is the page's .md path.
+# icon names a group's icon in _includes/nav-icon.html.
 # description is the page's meta description (search results, link previews, llms.txt):
 # one sentence, under 160 characters, saying what the reader gets from the page.
 - title: Start
+  icon: rocket
   pages:
     - { title: Overview, url: README.md, description: "cc-profiles is a free local web UI to manage multiple Claude Code profiles and accounts: move projects, memories and settings, with a backup for every change." }
+    - { title: Why cc-profiles, url: why.md, description: "What cc-profiles adds to CLAUDE_CONFIG_DIR and shell aliases: moving and relinking projects, sharing, one view of every profile, and undo." }
     - { title: Getting started, url: getting-started.md, description: "Install cc-profiles with one command (pipx or uv), open it, and start Claude Code in the right profile with claude-<profile> launchers or /cc-profiles." }
     - { title: Concepts, url: concepts.md, description: "How Claude Code profiles work with CLAUDE_CONFIG_DIR, and what cc-profiles means by source profile, projects, rules, sharing and backups." }
     - { title: FAQ, url: faq.md, description: "Answers to common questions: using several Claude Code accounts, switching profile per project, credentials, safety, and how to undo a change." }
+- title: How-to
+  icon: compass
+  pages:
+    - { title: Separate work and personal, url: how-to/work-and-personal.md, description: "Give work its own Claude Code profile in five minutes: create it, log in, move the work projects, and let claude pick the profile from the folder." }
+    - { title: Move a project, url: how-to/move-a-project.md, description: "Move a Claude Code project to another profile with its conversations, memories, prompt history and settings, so /resume keeps working." }
+    - { title: Relink a moved folder, url: how-to/relink-a-moved-folder.md, description: "Renamed or moved a project folder and Claude Code lost its history? Relink it: conversations, memories and arrow-up prompts come back." }
+    - { title: Share skills between profiles, url: how-to/share-skills.md, description: "Use the same Claude Code skills in every profile: share the skills folder, or copy one skill to all profiles; MCP servers and plugins too." }
 - title: Guides
+  icon: book
   pages:
     - { title: Projects, url: guides/projects.md, description: "See which Claude Code profile each project belongs to, move a project between profiles with its conversations and memories, and relink moved folders." }
     - { title: Memories, url: guides/memories.md, description: "Browse, edit, move and delete Claude Code memories of every project, keeping the MEMORY.md index of each project in sync." }
@@ -24,10 +35,15 @@
     - { title: Backups, url: guides/backups.md, description: "Every cc-profiles change is backed up and can be undone: restore, see what a backup changed, keep backups, automatic cleanup." }
     - { title: Health and About, url: guides/health.md, description: "Check Claude Code profiles for login, broken links and missing project folders, install Claude Code, and update cc-profiles." }
 - title: Reference
+  icon: list
   pages:
     - { title: Configuration, url: configuration.md, description: "cc-profiles command line, config.json, folder rules and environment variables, with every option explained." }
     - { title: Troubleshooting, url: troubleshooting.md, description: "Fixes for common cc-profiles and Claude Code profile problems: busy port, missing command, moved folders, settings with no effect." }
+    - { title: Glossary, url: glossary.md, description: "The words cc-profiles uses, defined in one line each: profile, source profile, project, rule, shared, orphan project, launcher, template, backup." }
+    - { title: Uninstall, url: uninstall.md, description: "Remove cc-profiles cleanly: the shell line, the /cc-profiles command, the app and its data. Your Claude Code profiles stay as they are." }
+    - { title: What's new, url: changelog.md, description: "Every cc-profiles release, newest first: what was added, changed and fixed in each version." }
 - title: Working on cc-profiles
+  icon: code
   pages:
     - { title: Architecture, url: architecture.md, description: "How cc-profiles is built: a standard-library Python server, one HTML file, journaled backups, atomic writes and caches." }
     - { title: Claude Code's formats, url: claude-code-formats.md, description: "Claude Code's on-disk formats: projects, conversations, memories, settings, .claude.json and prompt history, as cc-profiles reads them." }

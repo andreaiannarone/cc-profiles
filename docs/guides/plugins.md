@@ -18,3 +18,17 @@ The tab reads `plugins/installed_plugins.json` in the profile folder. If the pro
 ## Enable or disable
 
 Use the switch on a plugin. After a confirmation, cc-profiles writes `enabledPlugins` in the file where that plugin's value already is (`settings.local.json` or `settings.json`), or in `settings.json` if neither has it. The file goes to the backup first. The change applies from the next Claude Code session in the profile.
+
+## Example: the same plugins in two profiles
+
+You use the plugins of your Default profile and want them in Work too.
+
+1. In the **Profiles** tab, under **Sharing**, turn on **plugins** for *Work*. Work now sees the plugin files installed in Default.
+2. Open the **Plugins** tab and pick *Work*. The header says the profile shares `plugins` with Default. Each plugin shows whether it is enabled in Work.
+3. Turn on the plugins you want in Work. They load from the next Claude Code session there.
+
+To keep the same plugins *enabled* everywhere without switching them one by one, share `settings.json` too. That also shares every other setting, so do it only if the two profiles should behave the same way.
+
+## Example: turn a plugin off in one profile only
+
+A plugin is useful at work but noisy in personal projects. Pick the personal profile in the **Plugins** tab and turn the plugin off: only that profile's settings change, and the plugin stays installed and enabled in the others. If the two profiles share `settings.json`, the switch changes both.

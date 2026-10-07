@@ -2,6 +2,11 @@
 
 Claude Code's auto-memory saves notes in `projects/<name>/memory/`, one Markdown file per memory, plus a `MEMORY.md` index that Claude reads at the start of every session in that project. The memories of your home folder's project act as general memories: they load whenever you start Claude Code from your home.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/memories-dark.jpg">
+  <img src="../assets/screenshots/memories-light.jpg" alt="The Memories tab: the memories of the work/api project in the Default profile, with deploy.md open in the editor" width="1440" height="900" loading="lazy">
+</picture>
+
 ## Browse
 
 Pick a profile and a project on the left. By default only projects with memories are listed; tick *also show projects without memories* to see every project, for example to pick a destination.
@@ -28,6 +33,16 @@ Typical uses:
 ## Delete
 
 **Delete** removes the line from `MEMORY.md` and moves the file to the backup.
+
+## Example: a preference saved in one project
+
+While working on `~/code/blog` you told Claude "answer in Italian", and it saved a `feedback` memory there. You want it in every project.
+
+1. In the **Memories** tab, pick the profile and `~/code/blog`. The memory is listed with its type and description.
+2. Click it to check the text, and fix it in the editor if needed. **Save**.
+3. Click **Move…** and choose your home project (`~`) in the same profile.
+
+From the next session it is one of your general memories, like the others of your home project. The `MEMORY.md` of both projects is updated, and the move is in the **Backups** tab.
 
 ## Good practice
 

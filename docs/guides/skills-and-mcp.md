@@ -2,6 +2,11 @@
 
 Two tabs manage, for one profile at a time, the skills in its `skills/` folder (**Skills**) and the MCP servers in its `.claude.json` (**MCP**). Pick the profile at the top of either tab: the choice carries over when you switch between the two. You can also click **Skills** or **MCP** on a profile in the **Profiles** tab. The line next to the selector shows the account the profile is signed in with.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/skills-dark.jpg">
+  <img src="../assets/screenshots/skills-light.jpg" alt="The Skills tab: the skills of the Default profile, with release-notes open in the editor" width="1440" height="900" loading="lazy">
+</picture>
+
 Every change goes to a backup first, like any other operation, and applies from the next Claude Code session in that profile.
 
 ## Skills
@@ -20,6 +25,11 @@ If the profile shares `skills` with others, the header says so: editing, adding 
 Skills that come from plugins are not listed here: manage them with `/plugin` in Claude Code.
 
 ## MCP servers
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/mcp-dark.jpg">
+  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL" width="1440" height="718" loading="lazy">
+</picture>
 
 The tab lists the servers configured in the profile's `.claude.json` (for the default profile, `~/.claude.json`):
 

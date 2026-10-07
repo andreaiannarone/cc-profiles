@@ -23,7 +23,7 @@
     --shared: #c4a5ff; --shared-soft: #2a2140;
     --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
     --logo-back: #8a4a33;
-    color-scheme: dark;
+    color-scheme: dark; --edge: rgba(0, 0, 0, .75);
   }
 }
 :root[data-theme="dark"] {
@@ -35,7 +35,7 @@
   --shared: #c4a5ff; --shared-soft: #2a2140;
   --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
   --logo-back: #8a4a33;
-  color-scheme: dark;
+  color-scheme: dark; --edge: rgba(0, 0, 0, .75);
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 76px; }
@@ -90,16 +90,33 @@ a:hover { text-decoration: underline; }
 
 /* sidebar like the app's tab groups */
 /* full width, aligned with the header: sidebar, page, On this page */
-.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 80px; }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 24px; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 /* thin scrollbars, in the theme's colors */
 .side, .toc, .doc pre, .doc table { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-.side summary { display: none; }
-.ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
-.nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 10px 4px; }
-.side a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--muted); font-weight: 550; font-size: 14px; }
-.side a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
-.side a.on { color: var(--text); background: var(--panel); box-shadow: inset 2px 0 0 var(--accent), 0 0 0 1px var(--line); }
+/* the sidebar and On this page show theirs only while the pointer is over them, fading in and out.
+   Chrome and Firefox animate scrollbar-color through a registered property; Safari, which only has
+   ::-webkit-scrollbar, gets the thumb from the element's border-color, which can be transitioned. */
+@property --sb-thumb { syntax: "<color>"; inherits: true; initial-value: transparent; }
+.side, .toc { --sb-thumb: transparent; scrollbar-color: var(--sb-thumb) transparent; border-color: transparent;
+  transition: --sb-thumb .3s ease, border-color .3s ease; }
+.side:hover, .toc:hover, .side:focus-within, .toc:focus-within { --sb-thumb: var(--line); border-color: var(--line); }
+.side::-webkit-scrollbar, .toc::-webkit-scrollbar { width: 8px; }
+.side::-webkit-scrollbar-thumb, .toc::-webkit-scrollbar-thumb { border-right: 8px solid; border-color: inherit; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .side, .toc { transition: none !important; } }
+.crumbs, .side-head, .scrim { display: none; }
+/* the group of the page, above its title */
+.eyebrow { margin: 4px 0 6px; color: var(--accent); font-size: 13.5px; font-weight: 600; }
+.doc .eyebrow + h1 { margin-top: 0; }
+.ngroup { display: grid; gap: 0; margin-bottom: 18px; }
+.ngroup:last-child { margin-bottom: 0; }
+.nlabel svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
+.nlabel { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); padding: 0 0 8px; }
+/* links like On this page: a thin line on the left, the current page in orange with its own bar */
+.side a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.4;
+  background: linear-gradient(var(--line), var(--line)) 0 0 / 1px 100% no-repeat border-box; }
+.side a:hover { color: var(--text); text-decoration: none; }
+.side a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
 
 /* the page */
 .doc { min-width: 0; }
@@ -122,6 +139,13 @@ a:hover { text-decoration: underline; }
 .doc li { margin: 3px 0; }
 .doc li > ul, .doc li > ol { margin: 4px 0; }
 .doc img { max-width: 100%; height: auto; border-radius: var(--radius); }
+.doc picture { display: block; margin: 4px 0 18px; }
+.doc picture img { display: block; border: 1px solid var(--line); }
+/* the # link of a section title: shown on hover or focus, always a little on touch screens */
+.doc .anchor { margin-left: 8px; color: var(--faint); font-weight: 500; text-decoration: none; opacity: 0; transition: opacity .15s; }
+.doc h2:hover .anchor, .doc h3:hover .anchor, .doc .anchor:focus-visible { opacity: 1; }
+.doc .anchor:hover { color: var(--accent); }
+@media (hover: none) { .doc .anchor { opacity: .6; } }
 .doc hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
 .doc blockquote { margin: 0 0 14px; padding: 10px 14px; background: var(--panel-2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; color: var(--text); }
 .doc blockquote p:last-child { margin-bottom: 0; }
@@ -133,13 +157,12 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 /* the Copy button of code blocks: on hover or focus, always on touch screens */
 .doc .has-copy { position: relative; }
 .doc .has-copy > pre { padding-right: 14px; }
-/* the copy icon never covers a line: the code reserves its width, also when it scrolls sideways */
+/* the copy icon never covers a line: the code reserves its width, and its own background hides the text that scrolls under it */
 .doc .has-copy > pre > code { display: inline-block; min-width: 100%; padding-right: 40px; box-sizing: border-box; }
 .doc .copy { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
-  color: var(--muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+  color: var(--muted); background: var(--panel); box-shadow: -8px 0 8px var(--panel), 7px 0 0 var(--panel); border: 0; border-radius: 6px; cursor: pointer; }
 .doc .copy svg { width: 16px; height: 16px; }
-.doc .copy:hover { background: var(--panel-2); }
-.doc .copy:hover { color: var(--text); }
+.doc .copy:hover { color: var(--text); background: var(--panel-2); }
 .doc .copy.done { color: var(--ok); }
 .doc .highlight pre { border: 0; margin: 0; background: none; }
 .doc .highlight { margin: 0 0 16px; }
@@ -148,7 +171,27 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 600; background: var(--panel-2); }
 .doc th, .doc td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .doc tr:last-child td { border-bottom: 0; }
-.foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+/* screenshots open full size on click */
+.doc .zoom-btn { display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--radius); }
+.doc .zoom-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+dialog.zoom { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 96vh; overflow: visible; cursor: zoom-out; }
+dialog.zoom::backdrop { background: rgba(0, 0, 0, .78); }
+dialog.zoom img { display: block; max-width: 96vw; max-height: 92vh; border-radius: 8px; }
+.zoom-close { position: fixed; top: 14px; right: 16px; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 16px; cursor: pointer; }
+.feedback { margin: 32px 0 0; color: var(--muted); font-size: 13.5px; }
+.feedback + .foot { margin-top: 16px; }
+/* Previous and next page, at the end of every page */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 40px; }
+.pager + .feedback { margin-top: 20px; }
+.pager a { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); font-weight: 600; }
+.pager a:hover { border-color: var(--accent); text-decoration: none; }
+.pager a span { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.pager .prev span::before { content: "‹ "; }
+.pager .next { grid-column: 2; text-align: right; }
+.pager .next span::after { content: " ›"; }
+.pager + .foot { margin-top: 24px; }
+.foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 
 /* code colors (Rouge), muted to match the app */
 .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp { color: var(--faint); font-style: italic; }
@@ -158,18 +201,55 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .highlight .nb, .highlight .nf, .highlight .na, .highlight .nv { color: var(--p4); }
 .highlight .o, .highlight .p { color: var(--muted); }
 
+/* tablets and narrow windows: one column, the sidebar becomes a Menu to open */
 @media (max-width: 860px) {
   .top { padding: 12px 16px; }
   .top .sub, .toplink, .grow, .skey { display: none; }
   .install { padding: 6px 10px; }
-}
-@media (max-width: 560px) {
-  .install { display: none; }  /* phones: the search needs the room; Getting started is in the menu */
   .search { flex: 1 1 auto; }
   .sresults { position: fixed; left: 16px; right: 16px; top: 62px; width: auto; }
-  .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 60px; }
-  .side { position: static; max-height: none; }
-  .side summary { display: block; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-weight: 600; }
-  .side details[open] summary { margin-bottom: 12px; }
-  .doc h1 { font-size: 25px; }
+  .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 20px; }
+  /* breadcrumb bar under the header: the menu button and where you are */
+  .crumbs { display: flex; align-items: center; gap: 10px; position: sticky; top: 59px; z-index: 9; padding: 8px 16px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .crumbs ol { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+  .crumbs li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .crumbs .crumb-group { color: var(--muted); flex: none; }
+  .crumbs .crumb-group::after { content: "›"; margin-left: 6px; color: var(--faint); }
+  .crumbs li[aria-current] { color: var(--text); font-weight: 600; }
+  .menu-btn, .menu-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;
+    color: var(--text); background: none; border: 0; border-radius: 8px; cursor: pointer; }
+  .menu-btn:hover, .menu-close:hover { background: var(--panel-2); }
+  .menu-btn svg, .menu-close svg { width: 20px; height: 20px; }
+  /* the sidebar becomes a drawer from the left; stretch, or the desktop align-self: start sizes it to its links and it cannot scroll */
+  .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(320px, 86vw); max-height: none; align-self: stretch; padding: 0 20px 24px;
+    background: var(--bg); border-right: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+    transform: translateX(-102%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
+  .menu-open .side { transform: none; visibility: visible; transition: transform .25s ease, visibility 0s; }  /* visible at once, so focus can move in */
+  .side-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;
+    margin: 0 -20px 14px; padding: 12px 12px 12px 20px; background: var(--bg); border-bottom: 1px solid var(--line); font-weight: 700; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, .45); }
+  .scrim[hidden] { display: none; }
+  .menu-open, .menu-open body { overflow: hidden; }
+  .doc h1 { font-size: 26px; }
+  .doc h2 { font-size: 20px; margin-top: 30px; }
+  /* tables: smaller text and tighter cells; a table still wider than the screen scrolls on its own */
+  .doc table { font-size: 13.5px; }
+  .doc th, .doc td { padding: 7px 10px; }
+  .doc td code, .doc th code { overflow-wrap: break-word; }
+  /* a shadow on the side that has more to scroll to: covered by the table's own background once you reach the end */
+  .doc table { background:
+      linear-gradient(to right, var(--panel) 30%, transparent) left / 40px 100% no-repeat local,
+      linear-gradient(to left, var(--panel) 30%, transparent) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, var(--edge, rgba(0, 0, 0, .28)), transparent) left / 22px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, var(--edge, rgba(0, 0, 0, .28)), transparent) right / 22px 100% no-repeat scroll,
+      var(--panel); }
+}
+/* phones */
+@media (max-width: 560px) {
+  .install { display: none; }  /* the search needs the room; Getting started is in the menu */
+  .layout { padding: 12px 14px 20px; }
+  .doc h1 { font-size: 24px; }
+  .doc pre { font-size: 12.5px; }
+  .doc th, .doc td { padding: 6px 8px; }
 }

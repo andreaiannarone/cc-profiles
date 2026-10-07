@@ -2,6 +2,11 @@
 
 The **Settings** tab edits one profile at a time; pick it at the top. Changes apply from the next Claude Code session in that profile, and every save goes to the backup.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/settings-dark.jpg">
+  <img src="../assets/screenshots/settings-light.jpg" alt="The Settings tab: the /config settings of the Default profile with dropdowns and switches" width="1440" height="900" loading="lazy">
+</picture>
+
 If a file is [shared](../concepts.md#sharing), a *shared with …* label warns that the change applies to every sharing profile.
 
 ## General

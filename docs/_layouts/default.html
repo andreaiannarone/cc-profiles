@@ -99,22 +99,66 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
   </button>
 </header>
+{%- assign crumb_page = nav_item.title | default: page_title %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <button class="menu-btn" id="menu-open" type="button" aria-controls="side" aria-expanded="false" aria-label="Open the documentation menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <ol>
+    {%- if nav_group %}<li class="crumb-group">{{ nav_group }}</li>{% endif %}
+    <li aria-current="page">{{ crumb_page }}</li>
+  </ol>
+</nav>
+<div class="scrim" id="scrim" hidden></div>
 <div class="layout">
-  <nav class="side" aria-label="Documentation">
-    <details open id="side-menu"><summary>Menu</summary>
+  <nav class="side" id="side" aria-label="Documentation">
+    <div class="side-head">
+      <span>Menu</span>
+      <button class="menu-close" id="menu-close" type="button" aria-label="Close the menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
     {%- for group in site.data.nav %}
-      <div class="ngroup"><div class="nlabel">{{ group.title }}</div>
+      <div class="ngroup"><div class="nlabel">{% include nav-icon.html name=group.icon %}{{ group.title }}</div>
       {%- for item in group.pages %}
         {%- if item.url == "README.md" %}{% assign href = '/' | relative_url %}{% else %}{% assign href = item.url | replace: '.md', '.html' | relative_url %}{% endif %}
         <a href="{{ href }}"{% if page.path == item.url %} class="on" aria-current="page"{% endif %}>{{ item.title }}</a>
       {%- endfor %}
       </div>
     {%- endfor %}
-    </details>
   </nav>
   <main class="doc">
+    {%- if nav_group and is_home == false %}
+    <p class="eyebrow">{{ nav_group }}</p>
+    {%- endif %}
     {{ content }}
+    {%- comment -%}Previous and next page, in the order of the sidebar.{%- endcomment -%}
+    {%- assign pg_prev = "" %}{% assign pg_next = "" %}{% assign pg_last = "" %}{% assign pg_found = false %}
+    {%- for group in site.data.nav %}{% for item in group.pages %}
+      {%- if pg_found and pg_next == "" %}{% assign pg_next = item %}{% endif %}
+      {%- if item.url == page.path %}{% assign pg_found = true %}{% assign pg_prev = pg_last %}{% endif %}
+      {%- assign pg_last = item %}
+    {%- endfor %}{% endfor %}
+    {%- if pg_prev != "" or pg_next != "" %}
+    <nav class="pager" aria-label="Previous and next page">
+      {%- if pg_prev != "" %}
+        {%- if pg_prev.url == "README.md" %}{% assign href = '/' | relative_url %}{% else %}{% assign href = pg_prev.url | replace: '.md', '.html' | relative_url %}{% endif %}
+      <a class="prev" href="{{ href }}" rel="prev"><span>Previous</span>{{ pg_prev.title }}</a>
+      {%- endif %}
+      {%- if pg_next != "" %}
+        {%- assign href = pg_next.url | replace: '.md', '.html' | relative_url %}
+      <a class="next" href="{{ href }}" rel="next"><span>Next</span>{{ pg_next.title }}</a>
+      {%- endif %}
+    </nav>
+    {%- endif %}
+    {%- assign issue_title = "Docs: " | append: page_title %}
+    {%- assign issue_page = "Page: " | append: canonical %}
+    {%- if page.path != "404.md" %}
+    <p class="feedback">Something wrong, unclear or missing on this page?
+      <a href="https://github.com/andreaiannarone/cc-profiles/issues/new?labels=documentation&amp;title={{ issue_title | url_encode }}&amp;body={{ issue_page | url_encode }}%0A%0AWhat+is+wrong%2C+unclear+or+missing%3A%0A">Open an issue on GitHub</a></p>
+    {%- endif %}
     <footer class="foot">
+      <a id="updated" href="https://github.com/andreaiannarone/cc-profiles/commits/main/docs/{{ page.path }}" data-path="docs/{{ page.path }}" hidden></a><span id="updated-sep" hidden>·</span>
       <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
       <span>·</span><span>GPL-3.0-or-later</span>
       <span>·</span><span>© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a></span>
@@ -131,7 +175,16 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   // System → light → dark, remembered like in the app.
   const order = ["system", "light", "dark"], btn = document.getElementById("theme-btn");
   const cur = () => document.documentElement.dataset.theme || "system";
-  const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); };
+  // Screenshots are <picture>s with a dark source for prefers-color-scheme (as on GitHub):
+  // a theme picked here overrides the system one for them too.
+  const pictures = () => document.querySelectorAll(".doc picture source").forEach(src => {
+    if (!src.dataset.media) {
+      if (!src.media.includes("prefers-color-scheme")) return;
+      src.dataset.media = src.media;  // the original, for "system"
+    }
+    src.media = cur() === "dark" ? "all" : cur() === "light" ? "not all" : src.dataset.media;
+  });
+  const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); pictures(); };
   btn.addEventListener("click", () => {
     const next = order[(order.indexOf(cur()) + 1) % order.length];
     if (next === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
@@ -139,8 +192,31 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     show();
   });
   show();
-  // the menu starts closed on phones
-  if (matchMedia("(max-width: 860px)").matches) document.getElementById("side-menu").open = false;
+})();
+(() => {
+  // Tablets and phones: the sidebar is a drawer, opened from the breadcrumb bar.
+  const side = document.getElementById("side"), scrim = document.getElementById("scrim");
+  const openBtn = document.getElementById("menu-open"), closeBtn = document.getElementById("menu-close");
+  const small = matchMedia("(max-width: 860px)");
+  const setOpen = open => {
+    document.documentElement.classList.toggle("menu-open", open);
+    scrim.hidden = !open;
+    openBtn.setAttribute("aria-expanded", open);
+    if (small.matches) side.toggleAttribute("inert", !open); else side.removeAttribute("inert");
+    // focus moves in once the drawer is shown (the same frame would still see it hidden)
+    if (open) requestAnimationFrame(() => (side.querySelector("a.on") || side.querySelector("a")).focus({ preventScroll: true }));
+  };
+  openBtn.addEventListener("click", () => setOpen(true));
+  closeBtn.addEventListener("click", () => { setOpen(false); openBtn.focus(); });
+  scrim.addEventListener("click", () => setOpen(false));
+  side.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("menu-open")) { setOpen(false); openBtn.focus(); } });
+  const sync = () => { if (!small.matches) setOpen(false); else side.toggleAttribute("inert", !document.documentElement.classList.contains("menu-open")); };
+  small.addEventListener("change", sync); sync();
+  // the current page in view inside the menu (only the menu scrolls, never the page),
+  // and only when it would otherwise be out of sight
+  const on = side.querySelector("a.on");
+  if (on && on.offsetTop + on.offsetHeight > side.clientHeight) side.scrollTop = on.offsetTop - side.clientHeight / 2;
 })();
 (() => {
   // Search: search.json is fetched once, on first use. Every word must match; pages whose
@@ -153,7 +229,7 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   const decode = document.createElement("textarea");
   const plain = s => { decode.innerHTML = s; return decode.value.replace(/\s+/g, " ").trim(); };
   const load = () => loading || (loading = fetch(q.dataset.index).then(r => r.json()).then(data => {
-    index = data.map(d => ({ ...d, text: plain(d.text || ""), lt: (d.title || "").toLowerCase() }));
+    index = data.map(d => ({ ...d, text: plain(d.text || ""), lt: ((d.title || "") + " " + (d.page || "")).toLowerCase() }));
     index.forEach(d => { d.lx = d.text.toLowerCase(); });
   }).catch(() => { index = []; status.textContent = "Search is not available right now."; }));
   const count = (hay, w) => { let n = 0, i = hay.indexOf(w); while (i >= 0 && n < 50) { n++; i = hay.indexOf(w, i + w.length); } return n; };
@@ -180,17 +256,19 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     q.setAttribute("aria-activedescendant", items[active].id);
     items[active].scrollIntoView({ block: "nearest" });
   };
+  const rank = (words, every) => index.map(d => {
+    const hay = d.lt + " " + d.lx;
+    const found = words.filter(w => hay.includes(w));
+    if (every ? found.length < words.length : !found.length) return null;
+    const inTitle = words.filter(w => d.lt.includes(w)).length;
+    return { d, found: found.length, inTitle, hits: words.reduce((n, w) => n + count(d.lx, w), 0) };
+  }).filter(Boolean).sort((a, b) => b.found - a.found || b.inTitle - a.inTitle || b.hits - a.hits);
   const render = () => {
     const words = [...new Set(q.value.toLowerCase().split(/\s+/).filter(Boolean))];
     if (!words.length || !index) { close(); status.textContent = ""; return; }
-    results = index.map(d => {
-      const hay = d.lt + " " + d.lx;
-      if (!words.every(w => hay.includes(w))) return null;
-      const inTitle = words.filter(w => d.lt.includes(w)).length;
-      return { d, inTitle, hits: words.reduce((n, w) => n + count(d.lx, w), 0) };
-    }).filter(Boolean).sort((a, b) => b.inTitle - a.inTitle || b.hits - a.hits).slice(0, 8);
+    results = rank(words, true).slice(0, 8);
     list.innerHTML = results.length ? results.map((r, i) => `<li role="option" id="search-opt-${i}" aria-selected="false">
-      <a href="${esc(r.d.url)}" tabindex="-1"><span class="st"><span>${mark(r.d.title, words)}</span><span class="ss">${esc(r.d.section || "")}</span></span>
+      <a href="${esc(r.d.url)}" tabindex="-1"><span class="st"><span>${mark(r.d.title, words)}</span><span class="ss">${esc(r.d.page || r.d.section || "")}</span></span>
       <span class="sx">${mark(excerpt(r.d, words), words)}</span></a></li>`).join("")
       : `<li class="snone">No page matches “${esc(q.value.trim())}”.</li>`;
     list.hidden = false; q.setAttribute("aria-expanded", "true"); active = -1; q.removeAttribute("aria-activedescendant");
@@ -219,6 +297,25 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     e.preventDefault(); q.focus(); q.select();
   });
+  // Page not found: suggest the pages closest to the words of the address that was asked for.
+  const suggest = document.getElementById("suggest");
+  if (suggest) {
+    const words = [...new Set(decodeURIComponent(location.pathname).toLowerCase().replace(/\.html?$/, "")
+      .split(/[^a-z0-9]+/).filter(w => w.length > 2))];
+    if (words.length) load().then(() => {
+      const seen = new Set(), pages = [];
+      for (const r of rank(words, false)) {  // one link per page, its best section
+        const page = r.d.page || r.d.title;
+        if (seen.has(page)) continue;
+        seen.add(page); pages.push(r.d);
+        if (pages.length === 5) break;
+      }
+      if (!pages.length) return;
+      suggest.querySelector("ul").innerHTML = pages.map(d =>
+        `<li><a href="${esc(d.url)}">${esc(d.page ? d.page + " › " + d.title : d.title)}</a></li>`).join("");
+      suggest.hidden = false;
+    });
+  }
 })();
 (() => {
   // A Copy button on every code block: copies the text as shown, without the button.
@@ -273,6 +370,57 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     links.forEach((a, i) => { const on = heads[i] === cur; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
   };
   addEventListener("scroll", mark, { passive: true }); mark();
+})();
+(() => {
+  // Screenshots wider than the column open full size on click; Esc, a click or Close shuts them.
+  const box = document.createElement("dialog");
+  box.className = "zoom"; box.setAttribute("aria-label", "Screenshot");
+  box.innerHTML = '<button class="zoom-close" type="button" aria-label="Close">✕</button><img alt="">';
+  const big = box.querySelector("img");
+  box.addEventListener("click", () => box.close());
+  document.body.appendChild(box);
+  document.querySelectorAll(".doc picture").forEach(pic => {
+    const img = pic.querySelector("img");
+    if (!img || +img.getAttribute("width") <= 900) return;  // dialogs are shown at their real size already
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "zoom-btn";
+    btn.setAttribute("aria-label", "Enlarge: " + img.alt);
+    pic.before(btn); btn.appendChild(pic);
+    btn.addEventListener("click", () => { big.src = img.currentSrc || img.src; big.alt = img.alt; box.showModal(); });
+  });
+})();
+(() => {
+  // A # link next to each section title, to share a link to that section.
+  document.querySelectorAll(".doc h2[id], .doc h3[id]").forEach(h => {
+    const a = document.createElement("a");
+    a.className = "anchor"; a.href = "#" + h.id; a.textContent = "#";
+    a.setAttribute("aria-label", "Link to this section: " + h.textContent);
+    h.appendChild(a);
+  });
+})();
+(() => {
+  // Last updated: the date of the page's latest commit, from GitHub's API (kept for the session).
+  // Without an answer (offline, rate limit) the footer simply does not show it.
+  const el = document.getElementById("updated"), sep = document.getElementById("updated-sep");
+  const key = "cc-profiles.updated:" + el.dataset.path;
+  const show = iso => {
+    const d = new Date(iso);
+    if (isNaN(d)) return;
+    el.textContent = "Updated " + d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    el.title = "History of this page on GitHub";
+    el.hidden = sep.hidden = false;
+  };
+  let cached = null;
+  try { cached = sessionStorage.getItem(key); } catch (e) {}
+  if (cached) return show(cached);
+  fetch("https://api.github.com/repos/andreaiannarone/cc-profiles/commits?sha=main&per_page=1&path=" + encodeURIComponent(el.dataset.path))
+    .then(r => r.ok ? r.json() : [])
+    .then(list => {
+      const iso = list[0] && list[0].commit && list[0].commit.committer.date;
+      if (!iso) return;
+      try { sessionStorage.setItem(key, iso); } catch (e) {}
+      show(iso);
+    }).catch(() => {});
 })();
 </script>
 </body>
