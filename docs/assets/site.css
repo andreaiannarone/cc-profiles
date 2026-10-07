@@ -108,12 +108,12 @@ a:hover { text-decoration: underline; }
 /* the group of the page, above its title */
 .eyebrow { margin: 4px 0 6px; color: var(--accent); font-size: 13.5px; font-weight: 600; }
 .doc .eyebrow + h1 { margin-top: 0; }
-.ngroup { display: grid; gap: 0; margin-bottom: 14px; }
+.ngroup { display: grid; gap: 0; margin-bottom: 18px; }
 .ngroup:last-child { margin-bottom: 0; }
 .nlabel svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
 .nlabel { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); padding: 0 0 8px; }
 /* links like On this page: a thin line on the left, the current page in orange with its own bar */
-.side a { display: block; padding: 4px 0 4px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.35;
+.side a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.4;
   background: linear-gradient(var(--line), var(--line)) 0 0 / 1px 100% no-repeat border-box; }
 .side a:hover { color: var(--text); text-decoration: none; }
 .side a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
