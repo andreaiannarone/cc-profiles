@@ -428,7 +428,7 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 
 | Problem | Fix |
 |---|---|
-| "Port 4777 is busy" | cc-profiles is already running: open the URL, or start it with `--port 4778` |
+| "Port 4777 is busy with another program" | start cc-profiles with `--port 4778` (if cc-profiles itself is running, `cc-profiles` just opens it in the browser) |
 | A tab says the page is newer than the server | you updated cc-profiles while it was running: run `cc-profiles restart` (or `/cc-profiles restart` in Claude Code), then reload the page |
 | `cc-profiles: command not found` | run `pipx ensurepath` (or `uv tool update-shell`) and open a new terminal |
 | `/cc-profiles` does not appear in Claude Code | start `cc-profiles` once, then restart the session; if it is still missing, run `cc-profiles install-command` |

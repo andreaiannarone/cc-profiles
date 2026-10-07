@@ -102,13 +102,17 @@ def serve(port, open_browser):
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     signal.signal(signal.SIGTERM, stop_gracefully)
+    url = f"http://127.0.0.1:{port}"
     try:
         srv = Server(("127.0.0.1", port), Handler)
     except OSError:
-        print(f"Port {port} is busy: cc-profiles may already be running.")
-        print(f"Open http://127.0.0.1:{port} or use --port {port + 1}.")
+        if is_running(port):  # started earlier, e.g. by /cc-profiles: just show it
+            print(f"cc-profiles is already running on {url}" + (": opening it in your browser." if open_browser else ""))
+            if open_browser:
+                open_url(url)
+            sys.exit(0)
+        print(f"Port {port} is busy with another program. Use another one: cc-profiles --port {port + 1}")
         sys.exit(1)
-    url = f"http://127.0.0.1:{port}"
     print(f"cc-profiles {__version__} on {url}  (ctrl+C to stop)")
     if open_browser:
         threading.Timer(0.6, lambda: open_url(url)).start()

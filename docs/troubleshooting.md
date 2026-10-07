@@ -1,8 +1,8 @@
 # Troubleshooting
 
-## "Port 4777 is busy"
+## "Port 4777 is busy with another program"
 
-cc-profiles is probably already running in another terminal: open `http://127.0.0.1:4777`, or start another instance with `--port 4778`.
+Another program uses port 4777: start cc-profiles on another one, `cc-profiles --port 4778`. If it is cc-profiles itself, already running (started by `/cc-profiles` or in another terminal), `cc-profiles` does not complain: it opens your browser on it.
 
 ## A tab says the page is newer than the server
 
