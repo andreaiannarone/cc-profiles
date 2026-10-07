@@ -321,7 +321,10 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .popover .seg button { padding: 6px 4px; }
 .iconbtn svg { width: 18px; height: 18px; }
 .iconbtn.has-update { position: relative; }
-.iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+.iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--logo); border: 2px solid var(--bg); }
+/* an update is out: the logo's orange, with the eyes' dark text (5.7:1; white would be 3:1) */
+.btn.update-on { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); font-weight: 600; }
+.btn.update-on:hover { filter: brightness(1.06); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
 .drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
@@ -1715,11 +1718,10 @@ async function checkUpdate(dr) {
 function showUpdate(dr, u) {
   const st = $("#upd-status", dr);
   if (!st) return;  // the panel is still loading
+  // the version is told here; the Update button is the one at the top, next to Refresh
   st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
-    ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
-      : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
+    ${u.can_update ? `Click <b>Update</b> at the top.` : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">What's new</a>`;
-  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u, dr);
 }
 async function runUpdate(u, dr) {
   if (!(await confirmBox(`Update to ${u.latest}?`,
@@ -1729,9 +1731,8 @@ async function runUpdate(u, dr) {
   let r;
   try { r = await api("/api/update", {}); } catch (e) { toast(e.message, "", true); if (st) st.textContent = e.message; return; }
   if (r.retry && st) {  // just released: PyPI's download index is not there yet
-    st.innerHTML = `${esc(r.message)} <button class="btn small" id="upd-run">Try again</button>
+    st.innerHTML = `${esc(r.message)} Then click <b>Update</b> at the top again.
       ${r.details ? `<details style="margin-top:6px"><summary>Details</summary><pre class="log">${esc(r.details)}</pre></details>` : ""}`;
-    $("#upd-run", dr).onclick = () => runUpdate(u, dr);
     return;
   }
   if (r.message) toast(r.message);
@@ -1763,9 +1764,9 @@ function syncUpdateButton(dr) {
   const b = $("#ab-update", dr), u = S.upd, on = !!u?.newer;
   if (!b) return;
   b.disabled = !on;
-  b.classList.toggle("primary", on);
-  b.textContent = on ? `Update to ${u.latest}…` : "Update";
-  b.title = !on ? "cc-profiles is up to date" : u.can_update ? `Runs ${u.command}` : "Shows how to update this copy";
+  b.classList.toggle("update-on", on);
+  b.textContent = "Update";
+  b.title = !on ? "cc-profiles is up to date" : u.can_update ? `Update to ${u.latest}: runs ${u.command}` : "Shows how to update this copy";
   b.onclick = !on ? null : () => {
     if (u.can_update) return runUpdate(u, dr);
     showUpdate(dr, u);
