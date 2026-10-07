@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- The logo moves: its two mascots hop and blink once when the app opens; each time the pointer reaches the title they make another gesture, in turn (blink, look at each other, wiggle the antennas, peek, jump together); and while a panel loads they hop in turn instead of the round spinner. The logo of the documentation site makes the same moves. Each mascot has a thin border of the background's color, so the one behind no longer looks cut off when they overlap. With reduced motion turned on in the system, the logo stays still and the loading mascots only fade in and out.
+- The logo moves: its two mascots hop and blink once when the app opens; each time the pointer reaches the title they make another gesture, in turn (blink, look at each other, wiggle the antennas, peek, jump together); and while a panel loads they hop in turn instead of the round spinner. The logo of the documentation site makes the same moves. The mascot behind is now drawn whole, and the one in front has a border as wide as the gap between them: at rest the logo looks as before, and when they move the one behind is never cut. With reduced motion turned on in the system, the logo stays still and the loading mascots only fade in and out.
 
 ## [0.5.1] - 2026-10-07
 

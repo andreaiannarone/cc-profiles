@@ -53,8 +53,9 @@ a:hover { text-decoration: underline; }
 .brand:hover { text-decoration: none; }
 .logo { width: 42px; height: 28px; flex: none; }
 .lg-front { fill: var(--logo); } .lg-back { fill: var(--logo-back); } .lg-eye { fill: var(--logo-eye); }
-/* a thin border of the background's color around each mascot, so the one in front never seems to cut the other */
-.lg-e rect { fill: none; stroke: var(--logo-edge, var(--bg)); stroke-width: 5; }
+/* each mascot is whole; a border of the background's color as wide as the gap between them (1 pixel, square
+   corners) hides the part of the one behind, so it never looks cut when they move (same as the app) */
+.lg-e rect { fill: none; stroke: var(--logo-edge, var(--bg)); stroke-width: 14; }
 /* The mascots move in whole pixels (7 units of the 126×84 drawing): a hop each and a blink when the
    page opens; each time the pointer reaches the title, the next of five gestures (g-blink, g-look,
    g-antenna, g-peek, g-jump). Same as the app (src/cc_profiles/static/index.html). */
