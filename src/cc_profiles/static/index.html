@@ -58,15 +58,29 @@ h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; display: flex; align-i
 .logo { width: 45px; height: 30px; flex: none; }
 .lg-front { fill: var(--logo); } .lg-back { fill: var(--logo-back); } .lg-eye { fill: var(--logo-eye); }
 /* The mascots move in whole pixels (7 units of the 126×84 drawing): a hop each and a blink when the
-   page opens and when the pointer reaches the title; in loading panels they hop in turn. */
+   page opens; each time the pointer reaches the title, the next of five gestures (g-blink, g-look,
+   g-antenna, g-peek, g-jump); in loading panels they hop in turn. */
 .logo { overflow: visible; }
 @keyframes lg-hop { 30% { transform: translateY(-7px); } 70% { transform: translateY(0); } }
 @keyframes lg-blink { 0% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes lg-pulse { 50% { opacity: .45; } }
+@keyframes lg-blink2 { 0% { opacity: 0; } 15% { opacity: 1; } 35% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes lg-look-r { 0% { transform: translateX(7px); } 75% { transform: none; } }
+@keyframes lg-look-l { 0% { transform: translateX(-7px); } 75% { transform: none; } }
+@keyframes lg-wiggle { 0% { transform: translateX(-7px); } 20% { transform: translateX(7px); } 40% { transform: translateX(-7px); } 60% { transform: translateX(7px); } 80% { transform: none; } }
+@keyframes lg-peek { 0% { transform: translateX(-7px); } 15% { transform: translateX(-14px); } 30% { transform: translate(-14px, 7px); }
+  55% { transform: translate(-14px, -7px); } 75% { transform: translateX(-7px); } 90% { transform: none; } }
+@keyframes lg-jump { 0% { transform: translateY(-7px); } 25% { transform: none; } 45% { transform: translateY(-7px); } 70% { transform: none; } }
 @media (prefers-reduced-motion: no-preference) {
   .logo.play .m-front { animation: lg-hop .5s steps(1); }
   .logo.play .m-back { animation: lg-hop .5s steps(1) .2s; }
   .logo.play .lg-eye { animation: lg-blink .15s steps(1) .8s; }
+  .logo.g-blink .lg-eye { animation: lg-blink2 .9s steps(1); }
+  .logo.g-look .m-front .lg-eye { animation: lg-look-r 1.4s steps(1); }
+  .logo.g-look .m-back .lg-eye { animation: lg-look-l 1.4s steps(1); }
+  .logo.g-antenna .lg-ant { animation: lg-wiggle .9s steps(1); }
+  .logo.g-peek .m-back { animation: lg-peek 1.4s steps(1); }
+  .logo.g-jump .m-front, .logo.g-jump .m-back { animation: lg-jump .8s steps(1); }
   .loader .m-front { animation: lg-hop .8s steps(1) infinite; }
   .loader .m-back { animation: lg-hop .8s steps(1) .4s infinite; }
 }
@@ -435,7 +449,7 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
 </head>
 <body>
 <div class="wrap">
-  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><g class="m-back"><rect class="lg-back" x="84" y="0" width="7" height="7"/><rect class="lg-back" x="77" y="7" width="7" height="7"/><rect class="lg-back" x="56" y="14" width="56" height="7"/><rect class="lg-back" x="77" y="21" width="42" height="7"/><rect class="lg-back" x="84" y="28" width="14" height="7"/><rect class="lg-back" x="105" y="28" width="14" height="7"/><rect class="lg-back" x="84" y="35" width="14" height="7"/><rect class="lg-back" x="105" y="35" width="14" height="7"/><rect class="lg-back" x="84" y="42" width="35" height="7"/><rect class="lg-back" x="84" y="49" width="35" height="7"/><rect class="lg-back" x="84" y="56" width="35" height="7"/><rect class="lg-back" x="98" y="63" width="14" height="7"/><rect class="lg-eye" x="98" y="28" width="7" height="7"/><rect class="lg-eye" x="98" y="35" width="7" height="7"/></g><g class="m-front"><rect class="lg-front" x="42" y="14" width="7" height="7"/><rect class="lg-front" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><g class="m-back"><rect class="lg-back lg-ant" x="84" y="0" width="7" height="7"/><rect class="lg-back lg-ant" x="77" y="7" width="7" height="7"/><rect class="lg-back" x="56" y="14" width="56" height="7"/><rect class="lg-back" x="77" y="21" width="42" height="7"/><rect class="lg-back" x="84" y="28" width="14" height="7"/><rect class="lg-back" x="105" y="28" width="14" height="7"/><rect class="lg-back" x="84" y="35" width="14" height="7"/><rect class="lg-back" x="105" y="35" width="14" height="7"/><rect class="lg-back" x="84" y="42" width="35" height="7"/><rect class="lg-back" x="84" y="49" width="35" height="7"/><rect class="lg-back" x="84" y="56" width="35" height="7"/><rect class="lg-back" x="98" y="63" width="14" height="7"/><rect class="lg-back" x="98" y="28" width="7" height="14"/><rect class="lg-eye" x="98" y="28" width="7" height="7"/><rect class="lg-eye" x="98" y="35" width="7" height="7"/></g><g class="m-front"><rect class="lg-front lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-front lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-front" x="21" y="42" width="7" height="14"/><rect class="lg-front" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
     <input class="search" id="gsearch" type="search" placeholder="Search everything…" aria-label="Search everything: projects, memories, skills, MCP servers, CLAUDE.md" autocomplete="off">
     <button class="iconbtn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
@@ -2468,10 +2482,12 @@ function render() {
 }
 $("#about-btn").onclick = openAbout;
 {
-  const logo = $("header .logo");
-  const play = () => { logo.classList.remove("play"); void logo.getBoundingClientRect(); logo.classList.add("play"); };
-  $("header h1").addEventListener("mouseenter", play);
-  play();
+  // a hop and a blink when the page opens, then a different gesture each time the pointer reaches the title
+  const logo = $("header .logo"), GESTURES = ["g-blink", "g-look", "g-antenna", "g-peek", "g-jump"];
+  let next = 0;
+  const play = cls => { logo.classList.remove("play", ...GESTURES); void logo.getBoundingClientRect(); logo.classList.add(cls); };
+  $("header h1").addEventListener("mouseenter", () => { play(GESTURES[next]); next = (next + 1) % GESTURES.length; });
+  play("play");
 }
 $("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
