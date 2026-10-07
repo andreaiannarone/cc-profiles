@@ -147,16 +147,24 @@ kbd { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px s
 @media (hover: none) { #keys-btn { display: none; } }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+.chip:hover { background: var(--panel-2); }
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 input.search, input.text, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 input.search { min-width: 240px; margin-left: auto; }
+/* selects draw their own arrow, in the theme's colors, with room on both sides (the native one sat on the border) */
+select:not(.slbr) { appearance: none; -webkit-appearance: none; padding: 7px 32px 7px 12px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+select:not(.slbr):hover { border-color: var(--faint); }
+select:disabled { cursor: default; opacity: .6; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--panel-2); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.btn.primary:hover { filter: brightness(1.07); }
+/* the logo's orange in both themes, with the eyes' dark text (5.45:1; white would be 3.1:1) */
+.btn.primary { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); }
+.btn.primary:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }  /* #e19279: 6.96:1 */
 .btn.danger { color: var(--err); }
 .btn.small { padding: 3px 9px; font-size: 12.5px; }
 .btn:disabled { opacity: .5; cursor: default; }
@@ -189,6 +197,7 @@ td.acts .btn + .btn { margin-left: 6px; }
 .side .head { padding: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { flex: 1; border: 0; background: var(--panel); padding: 6px; cursor: pointer; }
+.seg button:hover { background: var(--panel-2); }
 .seg button.on { background: var(--text); color: var(--bg); }
 .plist { max-height: 62vh; overflow: auto; }
 .plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
@@ -901,7 +910,7 @@ function renderSharing() {
     <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
       <button class="btn" id="ptemplates">Templates…</button>
-      <button class="btn primary" data-newprofile>+ New profile</button></div>
+      <button class="btn primary" data-newprofile>New profile</button></div>
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}

@@ -27,7 +27,7 @@ That is enough to *use* two profiles. cc-profiles is for everything that comes a
 | Task | By hand | cc-profiles |
 |---|---|---|
 | start Claude Code in a profile | alias or `CLAUDE_CONFIG_DIR=…` | a launcher per profile, or `claude` picks it from the folder |
-| create a profile with your settings and skills | copy the folder, then remove the login, caches and sessions | **+ New profile**, from a copy or a template; login never copied |
+| create a profile with your settings and skills | copy the folder, then remove the login, caches and sessions | **New profile**, from a copy or a template; login never copied |
 | move a project | four places, two of them inside JSON and JSONL files | one click, with a preview |
 | relink a renamed folder | rename a folder and rewrite two files | **Relink…**, with suggestions |
 | share skills | relative symlinks | a switch |
