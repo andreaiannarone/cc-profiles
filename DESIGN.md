@@ -29,7 +29,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--ok` | `#15803d` | `#4ade80` | passed checks, "✓ all good" |
 | `--warn` / `--warn-soft` | `#a84d08` / `#fdf1dc` | `#fbbf24` / `#3a2c10` | fixable problems, "session open" |
 | `--err` / `--err-soft` | `#b91c1c` / `#fbe3e3` | `#f87171` / `#3d1a1a` | errors, missing folders, destructive actions, tab counters |
-| `--logo` / `--logo-back` / `--logo-eye` | `#d97757` / `#e9a98c` / `#1d1c1a` | `#d97757` / `#8a4a33` / `#1d1c1a` | the two pixel mascots next to the page title, nothing else (same colors as `docs/assets/logo.svg`) |
+| `--logo` / `--logo-back` / `--logo-eye` | `#d97757` / `#e9a98c` / `#1d1c1a` | `#d97757` / `#8a4a33` / `#1d1c1a` | the two pixel mascots next to the page title and in loading panels, nothing else (same colors as `docs/assets/logo.svg`) |
 
 Rules:
 - **Orange `--accent` is reserved for action.** Do not use it for states or badges: if something is orange, it can be clicked or it is the current selection.
@@ -82,7 +82,7 @@ Rules:
 | Changes drawer | `.drawer.wide`, `showChanges(name, trigger)` | Backups → *Show changes*: a wider drawer with the steps in plain words and one `details.chg` per copied file; `pre.diff` lines are `.a` (added, `--ok` mixed into `--panel`), `.d` (removed, `--err-soft`), `.h` (hunk, `--panel-2`), always with the `+`/`-` prefix so color is not the only cue |
 | Download | `download(path, fallback)` | fetches with the token and saves the Blob under the server's file name: profile export, usage CSV |
 | Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors); `sub` in monospace for the backup path; `role="status"` or `alert` |
-| Loading | `.spinner` | always with a sentence about what we are waiting for when the wait is long |
+| Loading | `LOADER` (`.spinner.loader`), `.spinner` | a panel that loads (an `.empty` state, the restart dialog, the Claude Code install notice) shows `LOADER`: the header's logo, its two mascots hopping in turn by whole pixels. Small inline waits (a status next to a button) keep the round `.spinner`. Always with a sentence about what we are waiting for when the wait is long |
 
 ## Writing
 
@@ -101,7 +101,8 @@ Rules:
 - Inputs without a visible label have an `aria-label`.
 - Search fields keep the caret position when the list re-renders.
 - Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons use `--on-accent` (5.2:1 light, 7.2:1 dark). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
-- `prefers-reduced-motion` disables the drawer's slide-in.
+- `prefers-reduced-motion` disables the drawer's slide-in and the mascots' hops and blink (the header logo stays still, `LOADER` only fades in and out).
+- The header logo hops and blinks once when the page opens. Each time the pointer reaches the title it makes the next of five gestures, in turn: blink twice, look at each other, wiggle the antennas, peek (the back mascot slips behind the front one and pops up), jump together. Never in a loop. The SVG groups each mascot (`g.m-back`, `g.m-front`), marks the antennas `.lg-ant`, and has body-colored pixels under the eyes, so an eye that moves or closes never leaves a hole. Both mascots are whole: the one behind is the front one's drawing in `--logo-back`, moved 6 pixels right and 2 up (`translate(42 -14)`). Under each, `g.lg-e` repeats its pixels as a 1-pixel border (a 14-unit stroke, square corners) of `--logo-edge`, the background (`--bg`, `--panel` in a modal, `--warn-soft` in the install notice). That border is the gap between them: at rest the logo is pixel for pixel the original drawing, and when they move the one behind is never cut.
 - Landmarks: one `header`, `nav` labelled *Sections*, `main`; the profile cards are a labelled `section`.
 - Headings never skip a level: the page title is the only `h1`; section titles inside a tab are `h2` and their groups `h3`, sized by class so the level does not change the look; modals and the About panel start at `h2`.
 - `tests/test_ui.py` runs axe-core on every tab, the shortcuts dialog, the About panel and phone width, in both themes, and fails on *serious* or *critical* violations, and on `heading-order` at any impact.
