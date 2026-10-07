@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons, and color on hover like them. Primary buttons (Assign…, Relink…, Move to …, the confirmations) take the logo's orange, with dark text.
+- Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons, and color on hover like them. Primary buttons (Assign…, Relink…, Move to …, the confirmations) take the logo's orange, with dark text, and turn a lighter orange on hover.
 
 ## [0.5.1] - 2026-10-07
 

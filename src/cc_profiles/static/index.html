@@ -122,7 +122,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .btn:hover { background: var(--panel-2); }
 /* the logo's orange in both themes, with the eyes' dark text (5.45:1; white would be 3.1:1) */
 .btn.primary { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); }
-.btn.primary:hover { filter: brightness(1.07); }
+.btn.primary:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }  /* #e19279: 6.96:1 */
 .btn.danger { color: var(--err); }
 .btn.small { padding: 3px 9px; font-size: 12.5px; }
 .btn:disabled { opacity: .5; cursor: default; }

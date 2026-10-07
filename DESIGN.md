@@ -100,7 +100,7 @@ Rules:
 - Modals and the drawer have `role="dialog"`, `aria-modal="true"` and a label; Esc closes them and focus returns to the trigger.
 - Inputs without a visible label have an `aria-label`.
 - Search fields keep the caret position when the list re-renders.
-- Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons are `--logo-eye` on `--logo` (5.45:1 in both themes). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
+- Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons are `--logo-eye` on `--logo` (5.45:1 in both themes), and on hover on `--logo` mixed 80% with white (`#e19279`, 6.96:1). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
 - `prefers-reduced-motion` disables the drawer's slide-in.
 - Landmarks: one `header`, `nav` labelled *Sections*, `main`; the profile cards are a labelled `section`.
 - Headings never skip a level: the page title is the only `h1`; section titles inside a tab are `h2` and their groups `h3`, sized by class so the level does not change the look; modals and the About panel start at `h2`.
