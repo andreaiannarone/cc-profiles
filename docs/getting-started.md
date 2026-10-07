@@ -50,7 +50,7 @@ The app still opens in your Windows browser: cc-profiles uses `wslview` when it 
 cc-profiles
 ```
 
-The server starts on `http://127.0.0.1:4777` and your browser opens on it. Stop it with `ctrl+C`.
+The server starts on `http://127.0.0.1:4777` and your browser opens on it. Stop it with `ctrl+C`. If cc-profiles is already running, for example started by `/cc-profiles`, the command only opens your browser on it.
 
 On the very first run, cc-profiles writes `~/.cc-profiles/config.json` with:
 

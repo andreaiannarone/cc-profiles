@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- `cc-profiles` in a terminal, while cc-profiles is already running (started by `/cc-profiles` or in another terminal), opens your browser on it instead of saying the port is busy. The port message is now only for another program on the port.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added
