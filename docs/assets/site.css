@@ -194,8 +194,8 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
     color: var(--text); background: none; border: 0; border-radius: 8px; cursor: pointer; }
   .menu-btn:hover, .menu-close:hover { background: var(--panel-2); }
   .menu-btn svg, .menu-close svg { width: 20px; height: 20px; }
-  /* the sidebar becomes a drawer from the left */
-  .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(320px, 86vw); max-height: none; padding: 0 20px 24px;
+  /* the sidebar becomes a drawer from the left; stretch, or the desktop align-self: start sizes it to its links and it cannot scroll */
+  .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(320px, 86vw); max-height: none; align-self: stretch; padding: 0 20px 24px;
     background: var(--bg); border-right: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
     transform: translateX(-102%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
   .menu-open .side { transform: none; visibility: visible; transition: transform .25s ease, visibility 0s; }  /* visible at once, so focus can move in */
