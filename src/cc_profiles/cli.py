@@ -17,7 +17,7 @@ from . import core
 from .core import CONFIG_FILE, DATA_DIR, expand, find_tool, load_config, pretty, profiles, read_json
 from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
-from .command import install_command
+from .command import ensure_command, install_command, set_command_off
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
@@ -92,6 +92,13 @@ def serve(port, open_browser):
     core.PORT = port
     core.ALLOWED_HOSTS = {f"127.0.0.1:{port}", f"localhost:{port}"}
     load_config()
+    try:  # /cc-profiles in every profile the first time, kept up to date after an update
+        lines, backup = ensure_command() if os.environ.get("CC_PROFILES_AUTO_COMMAND") != "0" else ([], None)
+        if lines:
+            print("/cc-profiles in Claude Code: " + "; ".join(lines) + f" (backup {pretty(backup)})")
+    except Exception as e:  # never a reason not to start
+        core.abort_open_backups(str(e))
+        print(f"Could not add the /cc-profiles command to Claude Code: {e}. Run: cc-profiles install-command")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     signal.signal(signal.SIGTERM, stop_gracefully)
@@ -201,7 +208,9 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("label", help="print the label of the active profile (for status lines)")
     add_parsers(sub)  # which, shell-init: entry.main runs them without loading the server
-    sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile")
+    ic = sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile "
+                        "(cc-profiles does it by itself the first time it starts)")
+    ic.add_argument("--off", action="store_true", help="stop adding and updating /cc-profiles in your profiles")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
     op.add_argument("action", nargs="?", default="", metavar="restart|stop",
@@ -221,6 +230,13 @@ def main(argv=None):
     if os.name == "nt":
         print("cc-profiles supports macOS and Linux only for now.")
         sys.exit(1)
+    if args.cmd == "install-command" and args.off:
+        backup = set_command_off()
+        print("cc-profiles will no longer add or update /cc-profiles in your profiles. "
+              "Files it already wrote stay: see https://cc-profiles.andreaia.com/uninstall.html to remove them.")
+        if backup:
+            print(f"Backup: {backup} (undo it from the Backups tab)")
+        return
     if args.cmd == "install-command":
         lines, backup = install_command()
         print("\n".join(lines))
