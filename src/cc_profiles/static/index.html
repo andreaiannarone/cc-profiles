@@ -1692,7 +1692,7 @@ function renderAbout(dr, a) {
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
       <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
-      <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> Check for updates automatically, once a day <span class="hint">(PyPI sees your IP address; updating still needs your click)</span></label>
+      <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
@@ -1719,7 +1719,7 @@ function showUpdate(dr, u) {
   const st = $("#upd-status", dr);
   if (!st) return;  // the panel is still loading
   // the version is told here; the Update button is the one at the top, next to Refresh
-  st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
+  st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).<br>
     ${u.can_update ? `Click <b>Update</b> at the top.` : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">What's new</a>`;
 }
