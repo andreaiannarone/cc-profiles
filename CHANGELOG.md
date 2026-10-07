@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.
+- Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). Less empty space at the bottom of the page. The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.
 - Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated.
 
 ## [0.5.0] - 2026-10-06

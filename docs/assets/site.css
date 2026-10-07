@@ -90,7 +90,7 @@ a:hover { text-decoration: underline; }
 
 /* sidebar like the app's tab groups */
 /* full width, aligned with the header: sidebar, page, On this page */
-.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 80px; }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 24px; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 /* thin scrollbars, in the theme's colors */
 .side, .toc, .doc pre, .doc table { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
@@ -106,6 +106,7 @@ a:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { .side, .toc { transition: none; } }
 .side summary { display: none; }
 .ngroup { display: grid; gap: 0; margin-bottom: 18px; }
+.ngroup:last-child { margin-bottom: 0; }
 .nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 0 8px; }
 /* links like On this page: a thin line on the left, the current page in orange with its own bar */
 .side a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.4;
@@ -160,7 +161,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 600; background: var(--panel-2); }
 .doc th, .doc td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .doc tr:last-child td { border-bottom: 0; }
-.foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 
 /* code colors (Rouge), muted to match the app */
 .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp { color: var(--faint); font-style: italic; }
@@ -179,7 +180,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
   .install { display: none; }  /* phones: the search needs the room; Getting started is in the menu */
   .search { flex: 1 1 auto; }
   .sresults { position: fixed; left: 16px; right: 16px; top: 62px; width: auto; }
-  .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 60px; }
+  .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 20px; }
   .side { position: static; max-height: none; }
   .side summary { display: block; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-weight: 600; }
   .side details[open] summary { margin-bottom: 12px; }
