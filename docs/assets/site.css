@@ -90,7 +90,8 @@ a:hover { text-decoration: underline; }
 
 /* sidebar like the app's tab groups */
 /* full width, aligned with the header: sidebar, page, On this page */
-.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 24px; }
+/* the sidebar is as wide as its longest label (about 200px) plus its scrollbar: no empty band before the text */
+.layout { display: grid; grid-template-columns: 210px minmax(0, 1fr) 230px; gap: 36px; padding: 24px 28px 24px; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 /* thin scrollbars, in the theme's colors */
 .side, .toc, .doc pre, .doc table { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
@@ -130,7 +131,7 @@ a:hover { text-decoration: underline; }
 .toc a.sub { padding-left: 24px; font-size: 13px; }
 .toc a:hover { color: var(--text); text-decoration: none; }
 .toc a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
-@media (max-width: 1199px) { .layout { grid-template-columns: 230px minmax(0, 1fr); gap: 36px; } .toc { display: none; } }
+@media (max-width: 1199px) { .layout { grid-template-columns: 210px minmax(0, 1fr); gap: 32px; } .toc { display: none; } }
 .doc h1 { font-size: 30px; letter-spacing: -0.02em; line-height: 1.2; margin: 6px 0 18px; }
 .doc h2 { font-size: 21px; letter-spacing: -0.01em; margin: 38px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .doc h3 { font-size: 17px; margin: 28px 0 8px; }
