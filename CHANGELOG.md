@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-08
+
 ### Added
 - cc-profiles checks for updates by itself, at most once a day: a few seconds after it starts and every day while it runs. A new version shows an orange dot on the ⓘ button, a notice once per version, and the **Update** button at the top of the About panel, next to Refresh, lights up in the logo's orange (grey and not clickable while there is nothing new), with the new version written at the bottom of the panel; nothing is installed until you click. PyPI sees your IP address: untick **Check for updates automatically** in the About panel (`"update_check": false`) to check only when you click.
 
@@ -240,7 +242,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...v0.4.9
