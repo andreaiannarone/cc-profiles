@@ -105,11 +105,13 @@ a:hover { text-decoration: underline; }
 .side::-webkit-scrollbar-thumb, .toc::-webkit-scrollbar-thumb { border-right: 8px solid; border-color: inherit; border-radius: 8px; }
 @media (prefers-reduced-motion: reduce) { .side, .toc { transition: none; } }
 .side summary { display: none; }
-.ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
-.nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 10px 4px; }
-.side a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--muted); font-weight: 550; font-size: 14px; }
-.side a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
-.side a.on { color: var(--text); background: var(--panel-2); }  /* the page you are on looks like a hovered link */
+.ngroup { display: grid; gap: 0; margin-bottom: 18px; }
+.nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 0 8px; }
+/* links like On this page: a thin line on the left, the current page in orange with its own bar */
+.side a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.4;
+  background: linear-gradient(var(--line), var(--line)) 0 0 / 1px 100% no-repeat border-box; }
+.side a:hover { color: var(--text); text-decoration: none; }
+.side a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
 
 /* the page */
 .doc { min-width: 0; }
