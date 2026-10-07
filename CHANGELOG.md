@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons, and color on hover like them; so do the profile switches above Skills, MCP, Memories and the other tabs. Primary buttons (Assign…, Relink…, Move to …, the confirmations) take the logo's orange, with dark text, and turn a lighter orange on hover.
+- Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons, and color on hover like them; so do the profile switches above Skills, MCP, Memories and the other tabs. Dropdowns have even room inside and their own arrow in the theme's colors (the browser's arrow sat on the border). Primary buttons (Assign…, Relink…, Move to …, the confirmations) take the logo's orange, with dark text, and turn a lighter orange on hover.
 
 ## [0.5.1] - 2026-10-07
 

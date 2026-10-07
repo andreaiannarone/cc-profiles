@@ -116,6 +116,12 @@ kbd { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px s
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 input.search, input.text, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 input.search { min-width: 240px; margin-left: auto; }
+/* selects draw their own arrow, in the theme's colors, with room on both sides (the native one sat on the border) */
+select:not(.slbr) { appearance: none; -webkit-appearance: none; padding: 7px 32px 7px 12px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+select:not(.slbr):hover { border-color: var(--faint); }
+select:disabled { cursor: default; opacity: .6; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
