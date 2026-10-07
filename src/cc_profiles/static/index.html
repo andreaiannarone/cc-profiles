@@ -324,7 +324,7 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--logo); border: 2px solid var(--bg); }
 /* an update is out: the logo's orange, with the eyes' dark text (5.45:1; white would be 3:1) */
 .btn.update-on { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); font-weight: 600; }
-.btn.update-on:hover { filter: brightness(1.06); }
+.btn.update-on:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
 .drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
