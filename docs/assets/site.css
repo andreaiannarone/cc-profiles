@@ -23,7 +23,7 @@
     --shared: #c4a5ff; --shared-soft: #2a2140;
     --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
     --logo-back: #8a4a33;
-    color-scheme: dark;
+    color-scheme: dark; --edge: rgba(0, 0, 0, .75);
   }
 }
 :root[data-theme="dark"] {
@@ -35,7 +35,7 @@
   --shared: #c4a5ff; --shared-soft: #2a2140;
   --ok: #4ade80; --warn: #fbbf24; --warn-soft: #3a2c10; --err: #f87171; --err-soft: #3d1a1a;
   --logo-back: #8a4a33;
-  color-scheme: dark;
+  color-scheme: dark; --edge: rgba(0, 0, 0, .75);
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 76px; }
@@ -172,18 +172,36 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .highlight .nb, .highlight .nf, .highlight .na, .highlight .nv { color: var(--p4); }
 .highlight .o, .highlight .p { color: var(--muted); }
 
+/* tablets and narrow windows: one column, the sidebar becomes a Menu to open */
 @media (max-width: 860px) {
   .top { padding: 12px 16px; }
   .top .sub, .toplink, .grow, .skey { display: none; }
   .install { padding: 6px 10px; }
-}
-@media (max-width: 560px) {
-  .install { display: none; }  /* phones: the search needs the room; Getting started is in the menu */
   .search { flex: 1 1 auto; }
   .sresults { position: fixed; left: 16px; right: 16px; top: 62px; width: auto; }
   .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 20px; }
   .side { position: static; max-height: none; }
   .side summary { display: block; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-weight: 600; }
   .side details[open] summary { margin-bottom: 12px; }
-  .doc h1 { font-size: 25px; }
+  .doc h1 { font-size: 26px; }
+  .doc h2 { font-size: 20px; margin-top: 30px; }
+  /* tables: smaller text and tighter cells; a table still wider than the screen scrolls on its own */
+  .doc table { font-size: 13.5px; }
+  .doc th, .doc td { padding: 7px 10px; }
+  .doc td code, .doc th code { overflow-wrap: break-word; }
+  /* a shadow on the side that has more to scroll to: covered by the table's own background once you reach the end */
+  .doc table { background:
+      linear-gradient(to right, var(--panel) 30%, transparent) left / 40px 100% no-repeat local,
+      linear-gradient(to left, var(--panel) 30%, transparent) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, var(--edge, rgba(0, 0, 0, .28)), transparent) left / 22px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, var(--edge, rgba(0, 0, 0, .28)), transparent) right / 22px 100% no-repeat scroll,
+      var(--panel); }
+}
+/* phones */
+@media (max-width: 560px) {
+  .install { display: none; }  /* the search needs the room; Getting started is in the menu */
+  .layout { padding: 12px 14px 20px; }
+  .doc h1 { font-size: 24px; }
+  .doc pre { font-size: 12.5px; }
+  .doc th, .doc td { padding: 6px 8px; }
 }
