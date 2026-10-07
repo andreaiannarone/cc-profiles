@@ -320,6 +320,8 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .popover h2 { margin: 0 0 2px; font-size: 15px; }
 .popover .seg button { padding: 6px 4px; }
 .iconbtn svg { width: 18px; height: 18px; }
+.iconbtn.has-update { position: relative; }
+.iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
 .drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
@@ -1685,10 +1687,17 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div>
+      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
+      <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> Check for updates automatically, once a day <span class="hint">(PyPI sees your IP address; updating still needs your click)</span></label>
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
+  if (S.upd?.newer) showUpdate(dr, S.upd);
+  $("#upd-auto", dr).onchange = async e => {
+    const box = /** @type {HTMLInputElement} */ (e.target);
+    try { await run(() => api("/api/update/auto", { enabled: box.checked })); } catch { box.checked = !box.checked; return; }
+    loadUpdateStatus();
+  };
   $("#ab-news", dr).onclick = () => showWhatsNew();
   $("#ab-report", dr).onclick = () => reportProblem(a);
 }
@@ -1698,7 +1707,12 @@ async function checkUpdate(dr) {
   let u;
   try { u = await api("/api/update"); } catch (e) { st.textContent = e.message; btn.disabled = false; return; }
   btn.disabled = false;
+  S.upd = { ...(S.upd || {}), ...u }; markUpdate();
   if (!u.newer) { st.innerHTML = `<span class="okmark">✓ cc-profiles ${esc(u.current)} is the latest version.</span>`; return; }
+  showUpdate(dr, u);
+}
+function showUpdate(dr, u) {
+  const st = $("#upd-status", dr);
   st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
     ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
       : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
@@ -1730,6 +1744,22 @@ async function runUpdate(u, dr) {
     await new Promise(res => setTimeout(res, 1000));
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
+}
+
+// ---------- automatic update check ----------
+// The server asks PyPI at most once a day (unless turned off in About); the page only reads its last answer.
+async function loadUpdateStatus() {
+  try { S.upd = await api("/api/update/auto"); } catch { return; }
+  markUpdate();
+  if (!S.upd.newer) return;
+  let told = null;
+  try { told = localStorage.getItem("cc-profiles.update-notified"); localStorage.setItem("cc-profiles.update-notified", S.upd.latest); } catch {}
+  if (told !== S.upd.latest) toast(`cc-profiles ${S.upd.latest} is available`, "Open About (ⓘ) to update");
+}
+function markUpdate() {
+  const b = $("#about-btn"), on = !!S.upd?.newer;
+  b.classList.toggle("has-update", on);
+  b.title = b.ariaLabel = on ? `About Claude Code on this computer. cc-profiles ${S.upd.latest} is available` : "About Claude Code on this computer";
 }
 
 // ---------- what's new, report a problem ----------
@@ -2450,6 +2480,8 @@ $("#about-btn").onclick = openAbout;
 $("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
 checkWhatsNew();
+loadUpdateStatus();
+setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
 refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
 </script>
 </body>

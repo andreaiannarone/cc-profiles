@@ -97,6 +97,10 @@ Folders searched (5 levels deep) for candidate folders when relinking an [orphan
 
 Optional, `15`, `30`, `60` or `90` (`180` and `365`, offered by 0.4.0 and 0.4.1, still work); absent means `90`. The backups older than that many days are deleted automatically when cc-profiles starts and once a day while it runs, except kept backups and incomplete backups not restored yet. The cleanup cannot be turned off: mark the backups you want to keep with **Keep**. Set it from the [Backups tab](guides/backups.md#automatic-cleanup).
 
+### `update_check`
+
+Optional, `true` or `false`; absent means `true`. With `true`, cc-profiles asks PyPI for its latest version at most once a day (soon after it starts, then daily while it runs) and shows when a new one is out; it never installs anything on its own. With `false`, it asks only when you click **Check for updates**. Set it from the About panel. The last answer is kept in `~/.cc-profiles/update-check.json`.
+
 ## Templates
 
 Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in the export format without conversations, memories or credentials. See [Templates](guides/profiles.md#templates).

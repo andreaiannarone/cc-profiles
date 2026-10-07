@@ -660,3 +660,50 @@ def test_server_on_a_busy_port_says_so(home):
         r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(port)], env=env,
                            capture_output=True, text=True, timeout=20)
     assert r.returncode == 1 and f"Port {port} is busy" in r.stdout and f"--port {port + 1}" in r.stdout
+
+
+# --- automatic update check ---------------------------------------------------------
+def test_auto_check_asks_pypi_at_most_once_a_day(tmp_path, monkeypatch):
+    monkeypatch.setattr(U, "UPDATE_STATE", str(tmp_path / "update-check.json"))
+    monkeypatch.setattr(U, "load_config", lambda: {})
+    monkeypatch.delenv("CC_PROFILES_UPDATE_CHECK", raising=False)
+    calls = []
+    monkeypatch.setattr(U, "check_update", lambda: calls.append(1) or U.write_json(U.UPDATE_STATE, {"checked": U.time.time(), "latest": "99.0.0"}))
+    U.auto_check()
+    U.auto_check()  # the answer is fresh: PyPI is not asked again
+    assert calls == [1]
+    U.write_json(U.UPDATE_STATE, {"checked": U.time.time() - U.CHECK_EVERY - 1, "latest": "99.0.0"})
+    U.auto_check()
+    assert calls == [1, 1]
+    monkeypatch.setattr(U, "load_config", lambda: {"update_check": False})  # turned off
+    U.write_json(U.UPDATE_STATE, {"checked": 0})
+    U.auto_check()
+    assert calls == [1, 1]
+    monkeypatch.setattr(U, "load_config", lambda: {})
+    monkeypatch.setenv("CC_PROFILES_UPDATE_CHECK", "0")  # the tests' own servers
+    U.auto_check()
+    assert calls == [1, 1]
+
+
+def test_update_status_and_the_switch(home, app_factory, tmp_path):
+    """The page reads the last answer (no request to PyPI); a manual check refreshes it; the switch
+    in About writes "update_check" in config.json, with a backup."""
+    basic_home(home)
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"))
+    st = app.get("/api/update/auto")
+    assert st["latest"] is None and st["newer"] is False and st["enabled"] is False  # off in tests (CC_PROFILES_UPDATE_CHECK=0)
+    app.get("/api/update")  # Check for updates
+    st = app.get("/api/update/auto")
+    assert st["latest"] == "99.0.0" and st["newer"] is True and st["checked"] and "can_update" in st
+    assert json.loads(home.path(".cc-profiles/update-check.json").read_text())["latest"] == "99.0.0"
+
+    app2 = app_factory(CC_PROFILES_UPDATE_CHECK="")
+    assert app2.get("/api/update/auto")["enabled"] is True
+    before = home.snapshot()
+    r = app2.post("/api/update/auto", {"enabled": False})
+    assert "only when you click" in r["message"]
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["update_check"] is False
+    assert app2.get("/api/update/auto")["enabled"] is False
+    assert "Nothing to change" in app2.post_error("/api/update/auto", {"enabled": False})
+    app2.post("/api/backups/restore", {"name": app2.get("/api/backups")[0]["name"]})
+    assert home.snapshot() == before

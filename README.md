@@ -149,7 +149,7 @@ cc-profiles
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
-- 🔄 **Updates from the app**: **Check for updates** in the (i) panel asks PyPI for the latest version and, for a pipx or uv install, updates and restarts cc-profiles with one click (pipx, uv or Homebrew); then it shows what's new. **Report a problem…** opens a bug report with the versions filled in.
+- 🔄 **Updates from the app**: cc-profiles checks PyPI once a day (or when you click **Check for updates** in the (i) panel) and shows a dot when a new version is out; one click updates and restarts it (pipx, uv or Homebrew), then it shows what's new. **Report a problem…** opens a bug report with the versions filled in.
 
 ---
 
@@ -409,7 +409,7 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Writes are atomic (temporary file, then rename), so Claude Code never reads a half-written file, even while it is running.
 - Names of projects, memories, skills and backups are validated against path traversal.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
-- cc-profiles reaches the internet only when you click: **Check for updates** asks pypi.org for the latest version (PyPI sees your IP address), and **Install** runs the official Claude Code installer.
+- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer.
 
 See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 

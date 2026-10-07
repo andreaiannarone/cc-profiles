@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- cc-profiles checks for updates by itself, at most once a day: a few seconds after it starts and every day while it runs. A new version shows an orange dot on the ⓘ button, a notice once per version, and **Update to …** ready in the About panel; nothing is installed until you click. PyPI sees your IP address: untick **Check for updates automatically** in the About panel (`"update_check": false`) to check only when you click.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added
