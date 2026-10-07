@@ -867,7 +867,7 @@ function renderSharing() {
     <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
       <button class="btn" id="ptemplates">Templates…</button>
-      <button class="btn primary" data-newprofile>+ New profile</button></div>
+      <button class="btn primary" data-newprofile>New profile</button></div>
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
