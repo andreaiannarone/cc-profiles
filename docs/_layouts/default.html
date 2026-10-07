@@ -99,9 +99,25 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
   </button>
 </header>
+{%- assign crumb_page = nav_item.title | default: page_title %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <button class="menu-btn" id="menu-open" type="button" aria-controls="side" aria-expanded="false" aria-label="Open the documentation menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <ol>
+    {%- if nav_group %}<li class="crumb-group">{{ nav_group }}</li>{% endif %}
+    <li aria-current="page">{{ crumb_page }}</li>
+  </ol>
+</nav>
+<div class="scrim" id="scrim" hidden></div>
 <div class="layout">
-  <nav class="side" aria-label="Documentation">
-    <details open id="side-menu"><summary>Menu</summary>
+  <nav class="side" id="side" aria-label="Documentation">
+    <div class="side-head">
+      <span>Menu</span>
+      <button class="menu-close" id="menu-close" type="button" aria-label="Close the menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
     {%- for group in site.data.nav %}
       <div class="ngroup"><div class="nlabel">{% include nav-icon.html name=group.icon %}{{ group.title }}</div>
       {%- for item in group.pages %}
@@ -110,9 +126,11 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
       {%- endfor %}
       </div>
     {%- endfor %}
-    </details>
   </nav>
   <main class="doc">
+    {%- if nav_group and is_home == false %}
+    <p class="eyebrow">{{ nav_group }}</p>
+    {%- endif %}
     {{ content }}
     <footer class="foot">
       <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
@@ -139,8 +157,31 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     show();
   });
   show();
-  // the menu starts closed on phones
-  if (matchMedia("(max-width: 860px)").matches) document.getElementById("side-menu").open = false;
+})();
+(() => {
+  // Tablets and phones: the sidebar is a drawer, opened from the breadcrumb bar.
+  const side = document.getElementById("side"), scrim = document.getElementById("scrim");
+  const openBtn = document.getElementById("menu-open"), closeBtn = document.getElementById("menu-close");
+  const small = matchMedia("(max-width: 860px)");
+  const setOpen = open => {
+    document.documentElement.classList.toggle("menu-open", open);
+    scrim.hidden = !open;
+    openBtn.setAttribute("aria-expanded", open);
+    if (small.matches) side.toggleAttribute("inert", !open); else side.removeAttribute("inert");
+    // focus moves in once the drawer is shown (the same frame would still see it hidden)
+    if (open) requestAnimationFrame(() => (side.querySelector("a.on") || side.querySelector("a")).focus({ preventScroll: true }));
+  };
+  openBtn.addEventListener("click", () => setOpen(true));
+  closeBtn.addEventListener("click", () => { setOpen(false); openBtn.focus(); });
+  scrim.addEventListener("click", () => setOpen(false));
+  side.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("menu-open")) { setOpen(false); openBtn.focus(); } });
+  const sync = () => { if (!small.matches) setOpen(false); else side.toggleAttribute("inert", !document.documentElement.classList.contains("menu-open")); };
+  small.addEventListener("change", sync); sync();
+  // the current page in view inside the menu (only the menu scrolls, never the page),
+  // and only when it would otherwise be out of sight
+  const on = side.querySelector("a.on");
+  if (on && on.offsetTop + on.offsetHeight > side.clientHeight) side.scrollTop = on.offsetTop - side.clientHeight / 2;
 })();
 (() => {
   // Search: search.json is fetched once, on first use. Every word must match; pages whose

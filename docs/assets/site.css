@@ -103,8 +103,11 @@ a:hover { text-decoration: underline; }
 .side:hover, .toc:hover, .side:focus-within, .toc:focus-within { --sb-thumb: var(--line); border-color: var(--line); }
 .side::-webkit-scrollbar, .toc::-webkit-scrollbar { width: 8px; }
 .side::-webkit-scrollbar-thumb, .toc::-webkit-scrollbar-thumb { border-right: 8px solid; border-color: inherit; border-radius: 8px; }
-@media (prefers-reduced-motion: reduce) { .side, .toc { transition: none; } }
-.side summary { display: none; }
+@media (prefers-reduced-motion: reduce) { .side, .toc { transition: none !important; } }
+.crumbs, .side-head, .scrim { display: none; }
+/* the group of the page, above its title */
+.eyebrow { margin: 4px 0 6px; color: var(--accent); font-size: 13.5px; font-weight: 600; }
+.doc .eyebrow + h1 { margin-top: 0; }
 .ngroup { display: grid; gap: 0; margin-bottom: 18px; }
 .ngroup:last-child { margin-bottom: 0; }
 .nlabel svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
@@ -180,9 +183,28 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
   .search { flex: 1 1 auto; }
   .sresults { position: fixed; left: 16px; right: 16px; top: 62px; width: auto; }
   .layout { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px 20px; }
-  .side { position: static; max-height: none; }
-  .side summary { display: block; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-weight: 600; }
-  .side details[open] summary { margin-bottom: 12px; }
+  /* breadcrumb bar under the header: the menu button and where you are */
+  .crumbs { display: flex; align-items: center; gap: 10px; position: sticky; top: 59px; z-index: 9; padding: 8px 16px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .crumbs ol { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+  .crumbs li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .crumbs .crumb-group { color: var(--muted); flex: none; }
+  .crumbs .crumb-group::after { content: "›"; margin-left: 6px; color: var(--faint); }
+  .crumbs li[aria-current] { color: var(--text); font-weight: 600; }
+  .menu-btn, .menu-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;
+    color: var(--text); background: none; border: 0; border-radius: 8px; cursor: pointer; }
+  .menu-btn:hover, .menu-close:hover { background: var(--panel-2); }
+  .menu-btn svg, .menu-close svg { width: 20px; height: 20px; }
+  /* the sidebar becomes a drawer from the left */
+  .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(320px, 86vw); max-height: none; padding: 0 20px 24px;
+    background: var(--bg); border-right: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+    transform: translateX(-102%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
+  .menu-open .side { transform: none; visibility: visible; transition: transform .25s ease, visibility 0s; }  /* visible at once, so focus can move in */
+  .side-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;
+    margin: 0 -20px 14px; padding: 12px 12px 12px 20px; background: var(--bg); border-bottom: 1px solid var(--line); font-weight: 700; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, .45); }
+  .scrim[hidden] { display: none; }
+  .menu-open, .menu-open body { overflow: hidden; }
   .doc h1 { font-size: 26px; }
   .doc h2 { font-size: 20px; margin-top: 30px; }
   /* tables: smaller text and tighter cells; a table still wider than the screen scrolls on its own */
