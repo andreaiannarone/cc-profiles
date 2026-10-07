@@ -103,7 +103,7 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   <nav class="side" aria-label="Documentation">
     <details open id="side-menu"><summary>Menu</summary>
     {%- for group in site.data.nav %}
-      <div class="ngroup"><div class="nlabel">{{ group.title }}</div>
+      <div class="ngroup"><div class="nlabel">{% include nav-icon.html name=group.icon %}{{ group.title }}</div>
       {%- for item in group.pages %}
         {%- if item.url == "README.md" %}{% assign href = '/' | relative_url %}{% else %}{% assign href = item.url | replace: '.md', '.html' | relative_url %}{% endif %}
         <a href="{{ href }}"{% if page.path == item.url %} class="on" aria-current="page"{% endif %}>{{ item.title }}</a>

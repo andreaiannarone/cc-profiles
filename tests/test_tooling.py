@@ -86,7 +86,7 @@ def test_plugin_marketplace_manifests():
 
 
 # The only files of the docs site that are Liquid by design: everything else is rendered as written.
-DOCS_LIQUID = {"_layouts/default.html", "search.json", "llms.txt", "llms-full.txt"}
+DOCS_LIQUID = {"_layouts/default.html", "_includes/nav-icon.html", "search.json", "llms.txt", "llms-full.txt"}
 # What GitHub Pages' Jekyll 3.10 (Liquid 4) offers and search.json may use: no plugin adds filters there.
 JEKYLL_FILTERS = {"strip_html", "markdownify", "jsonify", "truncate", "relative_url", "where", "replace"}
 
