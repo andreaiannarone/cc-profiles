@@ -77,6 +77,9 @@ if [ "$ADD_COMMAND" = 1 ]; then
     say ""
     say "Adding the /cc-profiles command to Claude Code…"
     "$BIN" install-command
+else
+    # remembered in ~/.cc-profiles/config.json, or the app would add it the first time it starts
+    "$BIN" install-command --off >/dev/null || say "Note: could not record --no-command; the app may add /cc-profiles when it starts."
 fi
 
 say ""

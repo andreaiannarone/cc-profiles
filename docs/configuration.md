@@ -7,7 +7,7 @@ cc-profiles [--port PORT] [--no-browser]
 cc-profiles open [restart|stop] [--port PORT] [--no-browser]
 cc-profiles stop [--port PORT]
 cc-profiles restart [--port PORT]
-cc-profiles install-command
+cc-profiles install-command [--off]
 cc-profiles label
 cc-profiles which [PATH] [--dir]
 cc-profiles shell-init [zsh|bash]
@@ -21,7 +21,7 @@ cc-profiles --version
 | `open` | | start the server in the background unless it is already running, open the browser and return at once. Prints the server's pid; its output goes to `~/.cc-profiles/server.log`. Used by the `/cc-profiles` command (see [Getting started](getting-started.md#open-it-from-claude-code)). `open restart` and `open stop` do the same as `restart` and `stop`: they are what `/cc-profiles restart` and `/cc-profiles stop` run. Any other word is an error |
 | `stop` | | stop the server running on the port. A write in progress finishes first; another program on the port is left alone |
 | `restart` | | `stop`, then `open` without the browser: use it after an update, then reload the page |
-| `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date |
+| `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date. The server does the same the first time it starts, and later only rewrites outdated copies; you need this command only to add it back where you deleted it. With `--off`, cc-profiles stops adding and updating it (`"slash_command": false` in `config.json`) |
 | `label` | | print the active profile's name and exit (see [Status line](status-line.md)) |
 | `which [PATH]` | the current folder | print the name of the profile the [rules](concepts.md#rules) give `PATH`; with `--dir`, its config folder as an absolute path. Prints nothing and exits with status 1 when no rule matches, the rule says `shared`, or it names a profile that no longer exists. Read-only and fast (it does not load the server): it runs every time the [profile by folder](guides/profile-by-folder.md) function starts `claude` |
 | `shell-init [zsh\|bash]` | from `$SHELL` | print the `claude` shell function of [profile by folder](guides/profile-by-folder.md), for `eval "$(cc-profiles shell-init zsh)"` in your shell's startup file |
