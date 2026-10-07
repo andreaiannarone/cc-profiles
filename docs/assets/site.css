@@ -3,7 +3,7 @@
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --line: #e2dfd8;
   --text: #1d1c1a; --muted: #6e6a62; --faint: #9b968c;
-  --accent: #c2410c; --accent-soft: #fbe9df; --on-accent: #ffffff;
+  --accent: #d97757; --accent-soft: #fbe9df; --on-accent: #1d1c1a;  /* the logo's orange, as the app's buttons */
   /* profile palette, assigned in config order; "shared" has its own color */
   --p0: #047857; --p0-soft: #ddf3ea; --p1: #1d4ed8; --p1-soft: #e3ebfd; --p2: #be185d; --p2-soft: #fbe2ee;
   --p3: #0f766e; --p3-soft: #d5f2ee; --p4: #4338ca; --p4-soft: #e5e6fb; --p5: #854d0e; --p5-soft: #fbf0d4;
@@ -17,7 +17,7 @@
   :root:not([data-theme="light"]) {
     --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
     --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
-    --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
+    --accent: #d97757; --accent-soft: #3a2418; --on-accent: #1d1c1a;
     --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
     --p3: #5eead4; --p3-soft: #123430; --p4: #a5b4fc; --p4-soft: #1f2147; --p5: #fcd34d; --p5-soft: #362a0c;
     --shared: #c4a5ff; --shared-soft: #2a2140;
@@ -29,7 +29,7 @@
 :root[data-theme="dark"] {
   --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
   --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
-  --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
+  --accent: #d97757; --accent-soft: #3a2418; --on-accent: #1d1c1a;
   --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
   --p3: #5eead4; --p3-soft: #123430; --p4: #a5b4fc; --p4-soft: #1f2147; --p5: #fcd34d; --p5-soft: #362a0c;
   --shared: #c4a5ff; --shared-soft: #2a2140;
@@ -58,7 +58,7 @@ a:hover { text-decoration: underline; }
 .toplink { color: var(--muted); font-weight: 550; font-size: 14px; }
 .toplink:hover { color: var(--text); text-decoration: none; }
 .install { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px 6px 14px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; white-space: nowrap; }
-.install:hover { text-decoration: none; filter: brightness(1.08); }
+.install:hover { text-decoration: none; background: color-mix(in srgb, var(--accent) 80%, white); }  /* #e19279, as the app */
 .install svg { width: 15px; height: 15px; }
 .iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line);
   background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); }

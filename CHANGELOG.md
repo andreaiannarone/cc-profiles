@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Documentation site: links, the current page in the sidebar and On this page, and the Install button take the logo's orange (`#d97757`), like the app's buttons; Install has dark text and turns a lighter orange on hover.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added
