@@ -36,7 +36,7 @@ The Usage tab adds up the token usage Claude Code records on every reply, per da
 
 ## Does cc-profiles send my data anywhere?
 
-No. It runs on your computer and listens on `127.0.0.1` only, with a token on every request. It contacts the internet only when you click to check for updates or to install Claude Code. See [Security](https://github.com/andreaiannarone/cc-profiles#security) in the README.
+No. It runs on your computer and listens on `127.0.0.1` only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click. See [Security](https://github.com/andreaiannarone/cc-profiles#security) in the README.
 
 ## Which systems does cc-profiles run on, and what does it cost?
 

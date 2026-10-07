@@ -21,6 +21,7 @@ from .command import ensure_command, install_command, set_command_off
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
+from .updater import auto_check
 from .web import Handler, Server
 
 # ---------------------------------------------------------------------------
@@ -68,6 +69,17 @@ def cleanup_daily():
         cleanup_backups()
 
 
+def update_daily():
+    """Ask PyPI for a new version soon after the start, then once a day (see updater.auto_check)."""
+    time.sleep(5)
+    while True:
+        try:
+            auto_check()
+        except Exception:  # never a reason to stop the server
+            pass
+        time.sleep(3600)
+
+
 def warm_caches():
     """Read in the background what the first tabs need, so that they open fast on a
     large home. Read-only: it only fills the caches described in docs/architecture.md."""
@@ -101,6 +113,7 @@ def serve(port, open_browser):
         print(f"Could not add the /cc-profiles command to Claude Code: {e}. Run: cc-profiles install-command")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
+    threading.Thread(target=update_daily, daemon=True).start()
     signal.signal(signal.SIGTERM, stop_gracefully)
     url = f"http://127.0.0.1:{port}"
     try:

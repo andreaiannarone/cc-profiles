@@ -13,14 +13,16 @@ import urllib.request
 
 from . import __version__
 from . import core
-from .core import APP_DIR, STATIC_DIR, ApiError, find_tool, tool_env
+from .core import (APP_DIR, CONFIG_FILE, DATA_DIR, STATIC_DIR, ApiError, Backup, find_tool, load_config, read_json,
+                   tool_env, write_json)
 
 # ---------------------------------------------------------------------------
 # Updating cc-profiles
 # ---------------------------------------------------------------------------
-# Only when the user asks: the check is the one request cc-profiles makes on its own
-# to the internet (PyPI sees the IP address). The commands are fixed here, like
-# INSTALL_METHODS: the client picks an action, never a command.
+# The check asks PyPI for the latest version (PyPI sees the IP address): when the user
+# clicks, and automatically at most once a day unless "update_check" is false in
+# config.json. Updating itself happens only on click. The commands are fixed here,
+# like INSTALL_METHODS: the client picks an action, never a command.
 PYPI_URL = os.environ.get("CC_PROFILES_PYPI_URL", "https://pypi.org/pypi/cc-profiles/json")  # tests: a file:// URL
 UPDATE_COMMANDS = {"pipx": ["pipx", "upgrade", "cc-profiles"], "uv": ["uv", "tool", "upgrade", "cc-profiles"],
                    "brew": ["brew", "upgrade", "cc-profiles"]}
@@ -54,15 +56,30 @@ def version_key(v):
     return tuple(int(x) for x in nums.group(1).split(".")) if nums else ()
 
 
+# The answer of the last check, kept between starts so the app asks PyPI at most once a day. A cache
+# like server.log, not the user's data: written without a backup.
+UPDATE_STATE = os.path.join(DATA_DIR, "update-check.json")
+CHECK_EVERY = 86400
+
+
 def check_update():
     try:
         with urllib.request.urlopen(PYPI_URL, timeout=10) as r:
             latest = json.loads(r.read())["info"]["version"]
     except (OSError, ValueError, KeyError) as e:
         raise ApiError(f"Could not reach PyPI: {e}. Check your connection and try again.", 502)
+    try:
+        write_json(UPDATE_STATE, {"checked": time.time(), "latest": latest})
+    except OSError:
+        pass
+    return update_info(latest)
+
+
+def update_info(latest):
+    """What the page needs to offer an update to `latest`: how this copy updates itself, or the command to run."""
     kind = install_kind()
     cmd = UPDATE_COMMANDS.get(kind)
-    return {"current": __version__, "latest": latest, "newer": version_key(latest) > version_key(__version__),
+    return {"current": __version__, "latest": latest, "newer": bool(latest) and version_key(latest) > version_key(__version__),
             "kind": kind, "command": " ".join(cmd) if cmd else None,
             "can_update": bool(cmd and find_tool(cmd[0])),
             "manual": {"source": "git pull", "pip": "python3 -m pip install --upgrade cc-profiles"}.get(kind)}
@@ -132,3 +149,40 @@ def whats_new():
     except (OSError, ValueError):
         releases = []
     return {"version": __version__, "releases": releases}
+
+
+def update_check_enabled():
+    if os.environ.get("CC_PROFILES_UPDATE_CHECK") == "0":  # tests: never reach PyPI on their own
+        return False
+    return load_config().get("update_check") is not False
+
+
+def auto_check():
+    """The automatic check, from a background thread: asks PyPI only when the last answer is
+    more than a day old. A failure (offline) is retried at the next round."""
+    state = read_json(UPDATE_STATE, {}) or {}
+    if update_check_enabled() and time.time() - (state.get("checked") or 0) >= CHECK_EVERY:
+        try:
+            check_update()
+        except ApiError:
+            pass
+
+
+def update_status():
+    """What the page shows without asking PyPI: the last known version, and whether it is newer."""
+    state = read_json(UPDATE_STATE, {}) or {}
+    return dict(update_info(state.get("latest")), enabled=update_check_enabled(), checked=state.get("checked"))
+
+
+def op_update_check(enabled):
+    """Turn the automatic check on or off ("update_check" in config.json)."""
+    enabled = bool(enabled)
+    if (load_config().get("update_check") is not False) == enabled:
+        raise ApiError("Nothing to change")
+    bk = Backup("update-check", f"Automatic update check: {'on' if enabled else 'off'}")
+    bk.copy(CONFIG_FILE, "config.json")
+    cfg = load_config()
+    cfg["update_check"] = enabled
+    write_json(CONFIG_FILE, cfg)
+    return {"message": "cc-profiles checks for updates once a day." if enabled
+            else "cc-profiles checks for updates only when you click.", "backup": bk.close()}

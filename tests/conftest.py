@@ -53,6 +53,7 @@ def child_env(env):
     """Environment for a cc-profiles process started by a test. Under coverage
     (COVERAGE_PROCESS_START is set) the process is measured too."""
     env = dict(env)
+    env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
         # data next to the config, never in the process's working folder (often a fake home):
