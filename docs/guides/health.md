@@ -32,13 +32,19 @@ The ⓘ button at the top right opens a panel with:
   - account, login method, plan, organization, API provider;
   - usage: startups, first start, conversations, projects, memories, prompts, disk usage;
   - contents: skills, plugins, subagents, slash commands, output styles, MCP servers, hooks, `CLAUDE.md`, shared items.
-- **cc-profiles**: version, code and data locations, number and size of backups, address, Python version.
+- **cc-profiles**: version, code and data locations, number and size of backups, address, Python version and system.
+
+Below them, **What's new** shows the release notes of the last versions, and **Report a problem…** opens a bug report on GitHub with the versions of cc-profiles, Claude Code, Python and your system already filled in. Nothing is sent until you submit the form, and you can read and change every field first.
+
+## What's new after an update
+
+The release notes come with the app: after cc-profiles updates, from the app or from a terminal, the next time you open it a window shows what changed since the version you used before, once. It reads nothing from the internet. On a new installation it shows nothing; open it any time from **What's new** in the About panel, or see [every release](../changelog.md).
 
 ## Updating cc-profiles
 
 At the bottom of the About panel, **Check for updates** asks PyPI for the latest version of cc-profiles. It runs only when you click: this and the Claude Code installer are the only times cc-profiles reaches the internet, and PyPI sees your IP address.
 
-When a newer version exists, **Update to …** runs the update for the way you installed cc-profiles, `pipx upgrade cc-profiles` or `uv tool upgrade cc-profiles`, then restarts the app on the same port; the page reloads by itself. Your profiles, backups and settings are not touched. A copy run from the source folder, or installed with plain pip, shows the command to run by hand instead. In the first minutes after a release, PyPI announces the new version before pip can download it: the update then changes nothing, says so, and offers **Try again** (pip's output is under *Details*). After updating from a terminal, run `cc-profiles restart` so the running app picks up the new version.
+When a newer version exists, **Update to …** runs the update for the way you installed cc-profiles, `pipx upgrade cc-profiles`, `uv tool upgrade cc-profiles` or `brew upgrade cc-profiles`, then restarts the app on the same port; the page reloads by itself. Your profiles, backups and settings are not touched. A copy run from the source folder, or installed with plain pip, shows the command to run by hand instead. In the first minutes after a release, PyPI announces the new version before pip can download it: the update then changes nothing, says so, and offers **Try again** (pip's output is under *Details*). After updating from a terminal, run `cc-profiles restart` so the running app picks up the new version.
 
 ## Installing Claude Code
 

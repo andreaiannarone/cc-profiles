@@ -208,9 +208,39 @@ def test_install_kind(monkeypatch):
     monkeypatch.setattr(U, "APP_DIR", "/x/lib/python3.12/site-packages/cc_profiles")
     for prefix, kind in (("/home/me/.local/pipx/venvs/cc-profiles", "pipx"),
                          ("/home/me/.local/share/uv/tools/cc-profiles", "uv"),
+                         ("/opt/homebrew/Cellar/cc-profiles/0.5.1/libexec", "brew"),
                          ("/usr/local", "pip")):
         monkeypatch.setattr(sys, "prefix", prefix)
         assert U.install_kind() == kind
+
+
+def test_wsl_and_system_name(monkeypatch, tmp_path):
+    import cc_profiles.core as C
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(C.platform, "system", lambda: "Linux")
+    version = tmp_path / "version"
+    real_open = open
+    for text, wsl in (("Linux version 5.15.153.1-microsoft-standard-WSL2", True), ("Linux version 6.8.0-45-generic", False)):
+        version.write_text(text)
+        monkeypatch.setattr("builtins.open", lambda f, *a, **k: real_open(version if f == "/proc/version" else f, *a, **k))
+        assert C.is_wsl() is wsl
+        assert C.system_name().endswith(" · WSL") is wsl and C.system_name().startswith("Linux ")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert not C.is_wsl() and C.system_name().startswith("macOS ")
+
+
+def test_open_url_uses_windows_under_wsl(monkeypatch):
+    import cc_profiles.cli as CLI
+    calls = []
+    monkeypatch.setattr(CLI.core, "is_wsl", lambda: True)
+    monkeypatch.setattr(CLI, "find_tool", lambda name: None if name == "wslview" else "/mnt/c/Windows/System32/cmd.exe")
+    monkeypatch.setattr(CLI.subprocess, "Popen", lambda args, **k: calls.append(args))
+    monkeypatch.setattr(CLI.webbrowser, "open", lambda url: calls.append(["webbrowser", url]))
+    CLI.open_url("http://127.0.0.1:4777")
+    assert calls == [["/mnt/c/Windows/System32/cmd.exe", "/c", "start", "", "http://127.0.0.1:4777"]]
+    monkeypatch.setattr(CLI.core, "is_wsl", lambda: False)
+    CLI.open_url("http://127.0.0.1:4777")
+    assert calls[-1] == ["webbrowser", "http://127.0.0.1:4777"]
 
 
 def test_version_key_of_odd_versions():
@@ -285,7 +315,7 @@ def test_restart_soon_reexecutes_on_the_same_port(monkeypatch):
 
 
 # --- updating, through the server -----------------------------------------------------
-@pytest.mark.parametrize("kind", ["pipx", "uv"])
+@pytest.mark.parametrize("kind", ["pipx", "uv", "brew"])
 def test_update_dry_run_names_the_command(home, app_factory, tmp_path, kind):
     app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"), CC_PROFILES_INSTALL_KIND=kind,
                       CC_PROFILES_UPDATE_DRYRUN="1", PATH=fake_tool(tmp_path, kind, "never run", 9))

@@ -18,6 +18,7 @@ import copy
 import glob
 import json
 import os
+import platform
 import re
 import secrets
 import shutil
@@ -372,6 +373,25 @@ def parse_claude_processes(entries):
 
 
 _running = {"at": 0.0, "dirs": None}
+
+
+def is_wsl():
+    """Running inside the Windows Subsystem for Linux: the browser is a Windows program."""
+    if sys.platform != "linux":
+        return False
+    try:
+        with open("/proc/version") as f:
+            return "microsoft" in f.read().lower()
+    except OSError:
+        return False
+
+
+def system_name():
+    """The operating system in a few words, for the About panel and bug reports: macOS 15.2 (arm64)."""
+    if sys.platform == "darwin":
+        return f"macOS {platform.mac_ver()[0] or platform.release()} ({platform.machine()})"
+    name = f"{platform.system()} {platform.release()} ({platform.machine()})"
+    return name + " · WSL" if is_wsl() else name
 
 
 def running_claude_dirs():

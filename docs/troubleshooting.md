@@ -54,6 +54,10 @@ Some files the backup needs were changed again by a later operation. Restore the
 
 Dropdown options come from a specific Claude Code version, shown in the Settings tab. A newer Claude Code may accept more values. Set it from the advanced editor, and [open an issue](https://github.com/andreaiannarone/cc-profiles/issues) so the list can be updated.
 
+## The browser does not open (WSL)
+
+Under WSL, cc-profiles opens the Windows browser with `wslview` or Windows' `start`. If neither works, open the address it prints, `http://127.0.0.1:4777`, in your Windows browser yourself. Installing `wslu` (`sudo apt install wslu`) adds `wslview`.
+
 ## Reporting a bug
 
-Open an issue with the steps to reproduce and the output of `cc-profiles --version` and `claude --version`. If an operation went wrong, the `operation.txt` of its backup folder helps, but check it first for private paths or names. Never paste conversations, memories or credentials.
+The quickest way: **Report a problem…** in the About panel (ⓘ) opens the bug report with the versions filled in. Otherwise open an issue with the steps to reproduce and the output of `cc-profiles --version` and `claude --version`. If an operation went wrong, the `operation.txt` of its backup folder helps, but check it first for private paths or names. Never paste conversations, memories or credentials.
