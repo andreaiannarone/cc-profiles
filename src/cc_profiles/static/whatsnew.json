@@ -1,6 +1,32 @@
 {
  "releases": [
   {
+   "version": "0.5.1",
+   "date": "2026-10-07",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**What's new** after an update: the next time you open cc-profiles, a window shows what changed since the version you used before (once; nothing is fetched from the internet, the notes come with the app). Open it any time from the About panel.",
+      "**Report a problem…** in the About panel opens a GitHub bug report with the versions of cc-profiles, Claude Code, Python and your system filled in. The About panel also shows the system.",
+      "**Homebrew**: `brew install andreaiannarone/cc-profiles/cc-profiles`, and **Update to …** in the app runs `brew upgrade cc-profiles` for a Homebrew install. The release script updates the tap at every release.",
+      "**Windows through WSL 2**: under WSL the app opens in the Windows browser (`wslview`, or Windows' `start`), and the About panel and bug reports say WSL. The documentation explains how to install it there.",
+      "Documentation: new pages Why cc-profiles, Uninstall, Glossary and What's new (the changelog, rebuilt by the release script). Search finds sections, not only pages, and opens the page at that section. Screenshots open full size on click, are cropped to the content, and the How-to guides show the dialogs they talk about (move, relink, new profile, copy to all). The page-not-found page suggests the pages closest to the address you typed. Each page ends with a link to open an issue about it.",
+      "Documentation: four How-to guides (separate work and personal, move a project, relink a moved folder, share skills between profiles), worked examples in Memories, Conversations and Plugins, and a screenshot of the tab in each guide, in light or dark like the site. Each page ends with links to the previous and next page and shows the date it was last updated; section titles have a # link to share them.",
+      "A test checks the images and HTML links of the documentation, and anchors with an underscore (`#search_roots`) are now checked like the site builds them."
+     ]
+    },
+    {
+     "title": "Changed",
+     "items": [
+      "Screenshots and demo GIFs regenerated: the light ones showed a \"Claude Code is not installed\" notice that came from the screenshot sandbox. `make_screenshots.py` also captures Projects, Profiles, Backups and Health.",
+      "Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). Each sidebar group has an icon, like On this page. Each page shows its group above the title. On tablets and phones, a bar under the header shows where you are (Guides › Settings) and opens the menu as a drawer from the left (closes with Esc, a tap outside or a link). Responsive: from 561 to 860 px wide the page now switches to one column with the Menu (the sidebar was hidden there); on phones, tables are more compact and show a shadow where they continue sideways. Less empty space at the bottom of the page. The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.",
+      "Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.5.0",
    "date": "2026-10-06",
    "sections": [
@@ -168,32 +194,6 @@
      "items": [
       "Automatic backup cleanup: pick 15, 30, 60 or 90 days. A 180 or 365 already set keeps working until you change it.",
       "Settings: the **General** section now has the same settings as Claude Code's `/config` panel, in groups (Model and replies, Interface, Editor and files, Notifications and updates, Commits and pull requests), plus the commit and pull request attribution as on/off switches. The keys `/config` keeps in `.claude.json` (Auto-compact, Verbose output, Diff tool, Editor mode and more) are written there, so Editor mode now goes where Claude Code reads it. Dropdowns name their default value. Effort level, Renderer, Days to keep conversations and Session link are no longer listed: they are not in `/config` (edit them in the advanced editor)."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.4.1",
-   "date": "2026-10-05",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "`cc-profiles restart` stops the server running in the background and starts it again, for example after an update; `cc-profiles stop` only stops it. A write in progress finishes first, and only cc-profiles is ever stopped: every response now carries the server's pid."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "Settings: **Commit attribution**, **Pull request attribution** and **Session link in commits** edit Claude Code's `attribution` object, which replaces the deprecated `includeCoAuthoredBy`. An empty text is kept, since it means no attribution. *Co-authored-by in commits* now shows only while a profile still has it, without copy or apply-to-all, so it can be removed.",
-      "The tabs are a single row again, under the profile cards, styled like GitHub's: an icon before each name, an orange underline on the active one. The sidebar and the group switcher of 0.4.0 are gone: on a narrow window the tabs that do not fit go into a **More** menu, and the active tab always stays in view."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "The favicon now shows in Safari, which ignores the inline SVG one: the server also sends it as PNG, `/favicon.ico` and `apple-touch-icon.png`, drawn from the same pixel mascot.",
-      "The *cc-profiles* title no longer wraps at its hyphen on medium-width windows."
      ]
     }
    ]

@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-07
+
 ### Added
 - **What's new** after an update: the next time you open cc-profiles, a window shows what changed since the version you used before (once; nothing is fetched from the internet, the notes come with the app). Open it any time from the About panel.
 - **Report a problem…** in the About panel opens a GitHub bug report with the versions of cc-profiles, Claude Code, Python and your system filled in. The About panel also shows the system.
@@ -224,7 +226,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.7...v0.4.8
