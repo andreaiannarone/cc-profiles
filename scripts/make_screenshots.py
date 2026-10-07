@@ -69,14 +69,26 @@ class Shooter:
         self.page.wait_for_timeout(350)
         self.js("document.querySelectorAll('.toast').forEach(t => t.remove());")
 
-    def shot(self, path, keep_toasts=False):
+    def shot(self, path, keep_toasts=False, crop=False):
+        """The window; with crop, only down to the end of the tab's content (no empty band below)."""
         self.page.mouse.move(VIEW["width"] - 1, VIEW["height"] - 1)  # no hover left on what was clicked
         if not keep_toasts:
             self.settle()
         else:
             self.page.wait_for_timeout(350)
-        self.page.screenshot(path=str(path), type="jpeg", quality=82) if str(path).endswith(".jpg") \
-            else self.page.screenshot(path=str(path))
+        clip = None
+        if crop:
+            bottom = self.js("return Math.ceil(document.querySelector('#main').getBoundingClientRect().bottom);")
+            clip = {"x": 0, "y": 0, "width": VIEW["width"], "height": max(480, min(VIEW["height"], bottom + 28))}
+        self.page.screenshot(path=str(path), type="jpeg", quality=82, clip=clip) if str(path).endswith(".jpg") \
+            else self.page.screenshot(path=str(path), clip=clip)
+
+    def dialog(self, path):
+        """Only the open dialog, then close it."""
+        self.settle()
+        self.page.locator(".modal").screenshot(path=str(path), type="jpeg", quality=88)
+        self.page.keyboard.press("Escape")
+        self.page.wait_for_selector(".modal", state="detached")
 
 
 def open_conversation(s, profile):
@@ -91,34 +103,51 @@ def gallery(s, theme):
     s.go(theme)
     s.tab("projects")
     s.page.click('[data-filter="all"]')
-    s.shot(SHOTS / f"projects-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"projects-{theme}.jpg")
+    # the dialogs the How-to guides show: a move with its file list, a relink, a new profile
+    s.page.click('button[data-act="fixmove"]')
+    s.page.wait_for_selector(".modal")
+    s.page.click(".modal details summary")
+    s.dialog(SHOTS / f"move-{theme}.jpg")
+    s.page.click('button[data-act="relink"]')
+    s.page.wait_for_selector(".modal input.text")
+    s.page.fill(".modal input.text", "~/code/new-name")
+    s.dialog(SHOTS / f"relink-{theme}.jpg")
     s.tab("profiles")
-    s.shot(SHOTS / f"profiles-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"profiles-{theme}.jpg")
+    s.page.click("[data-newprofile] >> nth=0")
+    s.page.wait_for_selector(".modal")
+    s.page.fill(".modal input >> nth=0", "Work 2")
+    s.dialog(SHOTS / f"newprofile-{theme}.jpg")
     s.tab("backups")
-    s.shot(SHOTS / f"backups-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"backups-{theme}.jpg")
     s.tab("health")
-    s.shot(SHOTS / f"health-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"health-{theme}.jpg")
     s.tab("memories")
     s.js("S.mem.profile = 'default'; await loadMemProjects();"
          " await openMemProject(S.mem.projects.find(p => p.pretty.endsWith('work/api')).name);"
          " await openMemFile('deploy.md');")
-    s.shot(SHOTS / f"memories-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"memories-{theme}.jpg")
     s.tab("conversations")
     open_conversation(s, "default")
-    s.shot(SHOTS / f"conversations-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"conversations-{theme}.jpg")
     s.tab("skills")
     s.js("await loadExt('default'); await openSkill('release-notes');")
-    s.shot(SHOTS / f"skills-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"skills-{theme}.jpg")
+    s.page.click("#skall")
+    s.page.wait_for_selector(".modal")
+    s.page.wait_for_timeout(300)  # the preview of who gets it
+    s.dialog(SHOTS / f"copyall-{theme}.jpg")
     s.tab("mcp")
     s.js("await loadExt('default');")
-    s.shot(SHOTS / f"mcp-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"mcp-{theme}.jpg")
     s.tab("compare")
-    s.shot(SHOTS / f"compare-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"compare-{theme}.jpg")
     s.tab("settings")
     s.js("await loadSettings('default');")
-    s.shot(SHOTS / f"settings-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"settings-{theme}.jpg")
     s.tab("usage")
-    s.shot(SHOTS / f"usage-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"usage-{theme}.jpg")
     # the status line editor: made by cc-profiles, a few pieces with their brackets
     s.tab("settings")
     s.js("await loadSettings('default'); S.set.slDraft.mode = 'builtin';"
@@ -127,7 +156,7 @@ def gallery(s, theme):
          " S.set.slDraft.colors = true; renderStatusLine();"
          " await new Promise(r => setTimeout(r, 900));"
          " document.querySelector('#sl-sec').scrollIntoView({block: 'start'}); window.scrollBy(0, -16);")
-    s.shot(SHOTS / f"statusline-{theme}.jpg")
+    s.shot(crop=True, path=SHOTS / f"statusline-{theme}.jpg")
 
 
 def demo_frames(s, theme, out):

@@ -10,7 +10,7 @@ The tab opens on **Needs attention**. Use the chips to see all projects, the pro
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/projects-dark.jpg">
-  <img src="../assets/screenshots/projects-light.jpg" alt="The Projects tab: five projects with their profile, conversations and memories per profile, one folder not found on disk and one project to move to Work" width="1440" height="900" loading="lazy">
+  <img src="../assets/screenshots/projects-light.jpg" alt="The Projects tab: five projects with their profile, conversations and memories per profile, one folder not found on disk and one project to move to Work" width="1440" height="661" loading="lazy">
 </picture>
 
 ## Move a project to another profile

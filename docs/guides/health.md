@@ -4,7 +4,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/health-dark.jpg">
-  <img src="../assets/screenshots/health-light.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink and Delete" width="1440" height="900" loading="lazy">
+  <img src="../assets/screenshots/health-light.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink and Delete" width="1440" height="766" loading="lazy">
 </picture>
 
 The **Health** tab checks every profile:

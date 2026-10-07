@@ -171,8 +171,19 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 600; background: var(--panel-2); }
 .doc th, .doc td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .doc tr:last-child td { border-bottom: 0; }
+/* screenshots open full size on click */
+.doc .zoom-btn { display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--radius); }
+.doc .zoom-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+dialog.zoom { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 96vh; overflow: visible; cursor: zoom-out; }
+dialog.zoom::backdrop { background: rgba(0, 0, 0, .78); }
+dialog.zoom img { display: block; max-width: 96vw; max-height: 92vh; border-radius: 8px; }
+.zoom-close { position: fixed; top: 14px; right: 16px; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 16px; cursor: pointer; }
+.feedback { margin: 32px 0 0; color: var(--muted); font-size: 13.5px; }
+.feedback + .foot { margin-top: 16px; }
 /* Previous and next page, at the end of every page */
 .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 40px; }
+.pager + .feedback { margin-top: 20px; }
 .pager a { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); font-weight: 600; }
 .pager a:hover { border-color: var(--accent); text-decoration: none; }
 .pager a span { color: var(--muted); font-size: 12.5px; font-weight: 500; }

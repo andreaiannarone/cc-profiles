@@ -13,6 +13,11 @@ Close the Claude Code sessions open in that project, in both profiles. Claude Co
 3. Click *Show the files and folders it touches* to see what happens to each item. The preview changes nothing.
 4. Confirm.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/move-dark.jpg">
+  <img src="../assets/screenshots/move-light.jpg" alt="The Move to Work dialog: what moves, a warning about open sessions, and the list of the 7 files and folders it touches" width="560" height="488" loading="lazy">
+</picture>
+
 What moves:
 
 | What | Where it lives |

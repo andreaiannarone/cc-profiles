@@ -14,6 +14,11 @@ In the **Profiles** tab, click **+ New profile**:
 
 See [Profiles and sharing](../guides/profiles.md#create-a-profile) for every option.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/newprofile-dark.jpg">
+  <img src="../assets/screenshots/newprofile-light.jpg" alt="The New profile dialog: name, id, a copy of Default as the base, and skills and plugins shared with Default" width="560" height="561" loading="lazy">
+</picture>
+
 ## 2. Log in
 
 Login credentials are never copied, so the new profile signs in once:

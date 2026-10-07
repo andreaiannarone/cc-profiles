@@ -21,6 +21,11 @@ From then on, a skill created or edited in either profile is there for both. Tur
 1. Open the **Skills** tab and pick the profile that has the skill.
 2. Click the skill, then **Copy to…** for one profile, or **Copy to all…** for every profile that does not have it yet.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/copyall-dark.jpg">
+  <img src="../assets/screenshots/copyall-light.jpg" alt="The Copy to all dialog for a skill: the two profiles that get it and the folder each one gets" width="560" height="269" loading="lazy">
+</picture>
+
 **Copy to all…** lists which profiles get the skill and which are skipped, with the reason: they already have a skill with that name, or they share their skills with a profile that gets it. One backup covers every profile. See [Skills and MCP servers](../guides/skills-and-mcp.md#skills).
 
 ## MCP servers and plugins too

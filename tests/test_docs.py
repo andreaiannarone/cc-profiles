@@ -44,6 +44,35 @@ def test_relative_links_and_anchors_exist():
     assert not broken, "broken links:\n" + "\n".join(broken)
 
 
+def image_size(path):
+    """(width, height) of a JPEG, PNG or GIF, read from its header."""
+    data = path.read_bytes()
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    if data[:3] == b"GIF":
+        return int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")
+    i = 2
+    while i < len(data):  # JPEG: walk the segments up to the frame header (SOF0-SOF15, not DHT/JPG/DAC)
+        marker, length = data[i + 1], int.from_bytes(data[i + 2:i + 4], "big")
+        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+            return int.from_bytes(data[i + 7:i + 9], "big"), int.from_bytes(data[i + 5:i + 7], "big")
+        i += 2 + length
+    raise ValueError(f"not an image: {path}")
+
+
+def test_screenshots_have_their_real_size():
+    """width and height on each <img> match the file (no jump while it loads), and the dark
+    version of a screenshot has the same size as the light one."""
+    wrong = []
+    for doc in ROOT.glob("docs/**/*.md"):
+        for src, w, h in re.findall(r'<img src="([^"]+)"[^>]*?width="(\d+)" height="(\d+)"', doc.read_text()):
+            light = (doc.parent / src).resolve()
+            for f in (light, light.with_name(light.name.replace("-light.", "-dark."))):
+                if f.exists() and image_size(f) != (int(w), int(h)):
+                    wrong.append(f"{doc.relative_to(ROOT)}: {f.name} is {image_size(f)}, the page says {w}x{h}")
+    assert not wrong, "\n".join(wrong)
+
+
 def test_html_images_and_links_in_docs_exist():
     """Screenshots are <picture>s written in HTML: their src, srcset and href must exist too,
     and every screenshot comes in both themes."""

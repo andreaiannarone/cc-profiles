@@ -1,5 +1,7 @@
 # Concepts
 
+This page explains how the pieces fit together; the [Glossary](glossary.md) has a one-line definition of each word.
+
 ## Profiles
 
 A **profile** is a folder Claude Code uses for its configuration: `~/.claude` by default, or whatever `CLAUDE_CONFIG_DIR` points to. Each profile has its own:

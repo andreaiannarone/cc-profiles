@@ -85,6 +85,22 @@ def test_version_bumps():
     assert not release.wheel_listed('<a href="https://x/cc_profiles-0.5.01-py3-none-any.whl">', "0.5.0")
 
 
+def test_docs_changelog_shows_the_released_versions():
+    out = release.docs_changelog(release.rewrite_changelog(CHANGELOG, "0.4.4", "0.4.3", "2026-10-07"))
+    assert out.startswith("<!-- Built by scripts/release.py") and "\n# What's new\n" in out
+    assert "## [0.4.4] - 2026-10-07" in out and "## [Unreleased]" not in out
+    assert "\n### " not in out and "**Added**" in out
+    assert f"[0.4.4]: {URL}/compare/v0.4.3...v0.4.4" in out
+
+
+def test_docs_changelog_page_is_up_to_date():
+    """docs/changelog.md is rebuilt by the release from CHANGELOG.md: they never drift apart."""
+    page = (ROOT / "docs" / "changelog.md").read_text()
+    assert page == release.docs_changelog((ROOT / "CHANGELOG.md").read_text()), \
+        "docs/changelog.md is stale: python -c 'import sys; sys.path.insert(0, \"scripts\"); import release; " \
+        "open(\"docs/changelog.md\", \"w\").write(release.docs_changelog(open(\"CHANGELOG.md\").read()))'"
+
+
 def release_files(tmp_path, changelog=CHANGELOG):
     (tmp_path / "src" / "cc_profiles").mkdir(parents=True)
     (tmp_path / "src" / "cc_profiles" / "__init__.py").write_text('__version__ = "0.4.3"\n')
@@ -112,11 +128,12 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "would edit plugin/.claude-plugin/plugin.json",
         "+## [0.4.4] - 2026-10-07",
         f"+[0.4.4]: {URL}/compare/v0.4.3...v0.4.4",
+        "would edit docs/changelog.md",
         "$ git switch -c release-0.4.4",
         "$ git commit -m 'Release 0.4.4'",
         "$ git push -u origin release-0.4.4",
         "$ gh pr create --base main --head release-0.4.4 --title 'Release 0.4.4' "
-        "--body 'Bump the version to 0.4.4 and date the CHANGELOG section.'",
+        "--body 'Bump the version to 0.4.4, date the CHANGELOG section and rebuild docs/changelog.md.'",
         "$ gh pr checks '<n>' --json name",
         "$ git commit --allow-empty -m 'Trigger CI'",
         "$ gh pr checks '<n>' --watch --interval 10",

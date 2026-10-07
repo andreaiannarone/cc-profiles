@@ -8,7 +8,8 @@
 
 Checks that main is clean and up to date and that CHANGELOG.md has something under
 ## [Unreleased]; bumps the version in src/cc_profiles/__init__.py and
-plugin/.claude-plugin/plugin.json and dates the CHANGELOG section; opens the
+plugin/.claude-plugin/plugin.json, dates the CHANGELOG section and rebuilds the docs
+site's What's new page from it (docs/changelog.md); opens the
 "Release <v>" pull request, waits for its checks and squash-merges it; tags v<v>,
 waits for the Release workflow and for the wheel on PyPI; deletes the release branch.
 Needs git and an authenticated gh. Standard library only.
@@ -30,8 +31,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INIT = os.path.join("src", "cc_profiles", "__init__.py")
 PLUGIN = os.path.join("plugin", ".claude-plugin", "plugin.json")
 CHANGELOG = "CHANGELOG.md"
+DOCS_CHANGELOG = os.path.join("docs", "changelog.md")
 PYPI_SIMPLE = "https://pypi.org/simple/cc-profiles/"
-PR_BODY = "Bump the version to {v} and date the CHANGELOG section."
+PR_BODY = "Bump the version to {v}, date the CHANGELOG section and rebuild docs/changelog.md."
 CHECKS_APPEAR_TIMEOUT = 60      # seconds before pushing an empty "Trigger CI" commit
 RUN_APPEAR_TIMEOUT = 180        # seconds for the Release workflow run to show up
 PYPI_TIMEOUT = 15 * 60
@@ -112,6 +114,21 @@ def rewrite_changelog(changelog, new, prev, date):
         raise ReleaseError(f"The [Unreleased] link compares from v{linked}, but the current version is {prev}.")
     new_links = f"[Unreleased]: {base}/compare/v{new}...HEAD\n[{new}]: {base}/compare/v{prev}...v{new}"
     return text[:link.start()] + new_links + text[link.end():]
+
+
+def docs_changelog(changelog):
+    """The docs site's What's new page: the released sections of CHANGELOG.md (Unreleased
+    is left out, the site shows what you can install), with Added/Changed/Fixed as bold lines
+    so On this page lists one entry per version. Rebuilt at every release."""
+    start = re.search(r"^## \[(?!Unreleased\])", changelog, re.M)
+    body = changelog[start.start():] if start else ""
+    body = re.sub(r"^\[Unreleased\]: \S+\n", "", body, flags=re.M)
+    body = re.sub(r"^### (.+)$", r"**\1**", body, flags=re.M)
+    return ("<!-- Built by scripts/release.py from CHANGELOG.md: do not edit, edit CHANGELOG.md. -->\n"
+            "# What's new\n\n"
+            "Every release of cc-profiles, newest first. To update, use **Update to …** in the app "
+            "(see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.\n\n"
+            + body.rstrip() + "\n")
 
 
 def pr_number(url):
@@ -218,10 +235,12 @@ class Releaser:
         self.write(INIT, init, bump_init(init, new))
         self.write(PLUGIN, plugin, bump_plugin(plugin, new))
         self.write(CHANGELOG, changelog, new_changelog)
+        old_docs = self.read(DOCS_CHANGELOG) if os.path.exists(os.path.join(self.root, DOCS_CHANGELOG)) else ""
+        self.write(DOCS_CHANGELOG, old_docs, docs_changelog(new_changelog))
 
         self.step("Open the release pull request")
         self.run(["git", "switch", "-c", branch])
-        self.run(["git", "add", INIT, PLUGIN, CHANGELOG])
+        self.run(["git", "add", INIT, PLUGIN, CHANGELOG, DOCS_CHANGELOG])
         self.run(["git", "commit", "-m", f"Release {new}"])
         self.run(["git", "push", "-u", "origin", branch])
         url = self.run(["gh", "pr", "create", "--base", "main", "--head", branch, "--title", f"Release {new}",

@@ -28,7 +28,7 @@ Skills that come from plugins are not listed here: manage them with `/plugin` in
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/mcp-dark.jpg">
-  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL" width="1440" height="900" loading="lazy">
+  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL" width="1440" height="718" loading="lazy">
 </picture>
 
 The tab lists the servers configured in the profile's `.claude.json` (for the default profile, `~/.claude.json`):

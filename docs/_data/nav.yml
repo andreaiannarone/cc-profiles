@@ -6,6 +6,7 @@
   icon: rocket
   pages:
     - { title: Overview, url: README.md, description: "cc-profiles is a free local web UI to manage multiple Claude Code profiles and accounts: move projects, memories and settings, with a backup for every change." }
+    - { title: Why cc-profiles, url: why.md, description: "What cc-profiles adds to CLAUDE_CONFIG_DIR and shell aliases: moving and relinking projects, sharing, one view of every profile, and undo." }
     - { title: Getting started, url: getting-started.md, description: "Install cc-profiles with one command (pipx or uv), open it, and start Claude Code in the right profile with claude-<profile> launchers or /cc-profiles." }
     - { title: Concepts, url: concepts.md, description: "How Claude Code profiles work with CLAUDE_CONFIG_DIR, and what cc-profiles means by source profile, projects, rules, sharing and backups." }
     - { title: FAQ, url: faq.md, description: "Answers to common questions: using several Claude Code accounts, switching profile per project, credentials, safety, and how to undo a change." }
@@ -38,6 +39,9 @@
   pages:
     - { title: Configuration, url: configuration.md, description: "cc-profiles command line, config.json, folder rules and environment variables, with every option explained." }
     - { title: Troubleshooting, url: troubleshooting.md, description: "Fixes for common cc-profiles and Claude Code profile problems: busy port, missing command, moved folders, settings with no effect." }
+    - { title: Glossary, url: glossary.md, description: "The words cc-profiles uses, defined in one line each: profile, source profile, project, rule, shared, orphan project, launcher, template, backup." }
+    - { title: Uninstall, url: uninstall.md, description: "Remove cc-profiles cleanly: the shell line, the /cc-profiles command, the app and its data. Your Claude Code profiles stay as they are." }
+    - { title: What's new, url: changelog.md, description: "Every cc-profiles release, newest first: what was added, changed and fixed in each version." }
 - title: Working on cc-profiles
   icon: code
   pages:

@@ -151,6 +151,12 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
       {%- endif %}
     </nav>
     {%- endif %}
+    {%- assign issue_title = "Docs: " | append: page_title %}
+    {%- assign issue_page = "Page: " | append: canonical %}
+    {%- if page.path != "404.md" %}
+    <p class="feedback">Something wrong, unclear or missing on this page?
+      <a href="https://github.com/andreaiannarone/cc-profiles/issues/new?labels=documentation&amp;title={{ issue_title | url_encode }}&amp;body={{ issue_page | url_encode }}%0A%0AWhat+is+wrong%2C+unclear+or+missing%3A%0A">Open an issue on GitHub</a></p>
+    {%- endif %}
     <footer class="foot">
       <a id="updated" href="https://github.com/andreaiannarone/cc-profiles/commits/main/docs/{{ page.path }}" data-path="docs/{{ page.path }}" hidden></a><span id="updated-sep" hidden>·</span>
       <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
@@ -223,7 +229,7 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   const decode = document.createElement("textarea");
   const plain = s => { decode.innerHTML = s; return decode.value.replace(/\s+/g, " ").trim(); };
   const load = () => loading || (loading = fetch(q.dataset.index).then(r => r.json()).then(data => {
-    index = data.map(d => ({ ...d, text: plain(d.text || ""), lt: (d.title || "").toLowerCase() }));
+    index = data.map(d => ({ ...d, text: plain(d.text || ""), lt: ((d.title || "") + " " + (d.page || "")).toLowerCase() }));
     index.forEach(d => { d.lx = d.text.toLowerCase(); });
   }).catch(() => { index = []; status.textContent = "Search is not available right now."; }));
   const count = (hay, w) => { let n = 0, i = hay.indexOf(w); while (i >= 0 && n < 50) { n++; i = hay.indexOf(w, i + w.length); } return n; };
@@ -250,17 +256,19 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     q.setAttribute("aria-activedescendant", items[active].id);
     items[active].scrollIntoView({ block: "nearest" });
   };
+  const rank = (words, every) => index.map(d => {
+    const hay = d.lt + " " + d.lx;
+    const found = words.filter(w => hay.includes(w));
+    if (every ? found.length < words.length : !found.length) return null;
+    const inTitle = words.filter(w => d.lt.includes(w)).length;
+    return { d, found: found.length, inTitle, hits: words.reduce((n, w) => n + count(d.lx, w), 0) };
+  }).filter(Boolean).sort((a, b) => b.found - a.found || b.inTitle - a.inTitle || b.hits - a.hits);
   const render = () => {
     const words = [...new Set(q.value.toLowerCase().split(/\s+/).filter(Boolean))];
     if (!words.length || !index) { close(); status.textContent = ""; return; }
-    results = index.map(d => {
-      const hay = d.lt + " " + d.lx;
-      if (!words.every(w => hay.includes(w))) return null;
-      const inTitle = words.filter(w => d.lt.includes(w)).length;
-      return { d, inTitle, hits: words.reduce((n, w) => n + count(d.lx, w), 0) };
-    }).filter(Boolean).sort((a, b) => b.inTitle - a.inTitle || b.hits - a.hits).slice(0, 8);
+    results = rank(words, true).slice(0, 8);
     list.innerHTML = results.length ? results.map((r, i) => `<li role="option" id="search-opt-${i}" aria-selected="false">
-      <a href="${esc(r.d.url)}" tabindex="-1"><span class="st"><span>${mark(r.d.title, words)}</span><span class="ss">${esc(r.d.section || "")}</span></span>
+      <a href="${esc(r.d.url)}" tabindex="-1"><span class="st"><span>${mark(r.d.title, words)}</span><span class="ss">${esc(r.d.page || r.d.section || "")}</span></span>
       <span class="sx">${mark(excerpt(r.d, words), words)}</span></a></li>`).join("")
       : `<li class="snone">No page matches “${esc(q.value.trim())}”.</li>`;
     list.hidden = false; q.setAttribute("aria-expanded", "true"); active = -1; q.removeAttribute("aria-activedescendant");
@@ -289,6 +297,25 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     e.preventDefault(); q.focus(); q.select();
   });
+  // Page not found: suggest the pages closest to the words of the address that was asked for.
+  const suggest = document.getElementById("suggest");
+  if (suggest) {
+    const words = [...new Set(decodeURIComponent(location.pathname).toLowerCase().replace(/\.html?$/, "")
+      .split(/[^a-z0-9]+/).filter(w => w.length > 2))];
+    if (words.length) load().then(() => {
+      const seen = new Set(), pages = [];
+      for (const r of rank(words, false)) {  // one link per page, its best section
+        const page = r.d.page || r.d.title;
+        if (seen.has(page)) continue;
+        seen.add(page); pages.push(r.d);
+        if (pages.length === 5) break;
+      }
+      if (!pages.length) return;
+      suggest.querySelector("ul").innerHTML = pages.map(d =>
+        `<li><a href="${esc(d.url)}">${esc(d.page ? d.page + " › " + d.title : d.title)}</a></li>`).join("");
+      suggest.hidden = false;
+    });
+  }
 })();
 (() => {
   // A Copy button on every code block: copies the text as shown, without the button.
@@ -343,6 +370,24 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     links.forEach((a, i) => { const on = heads[i] === cur; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
   };
   addEventListener("scroll", mark, { passive: true }); mark();
+})();
+(() => {
+  // Screenshots wider than the column open full size on click; Esc, a click or Close shuts them.
+  const box = document.createElement("dialog");
+  box.className = "zoom"; box.setAttribute("aria-label", "Screenshot");
+  box.innerHTML = '<button class="zoom-close" type="button" aria-label="Close">✕</button><img alt="">';
+  const big = box.querySelector("img");
+  box.addEventListener("click", () => box.close());
+  document.body.appendChild(box);
+  document.querySelectorAll(".doc picture").forEach(pic => {
+    const img = pic.querySelector("img");
+    if (!img || +img.getAttribute("width") <= 900) return;  // dialogs are shown at their real size already
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "zoom-btn";
+    btn.setAttribute("aria-label", "Enlarge: " + img.alt);
+    pic.before(btn); btn.appendChild(pic);
+    btn.addEventListener("click", () => { big.src = img.currentSrc || img.src; big.alt = img.alt; box.showModal(); });
+  });
 })();
 (() => {
   // A # link next to each section title, to share a link to that section.

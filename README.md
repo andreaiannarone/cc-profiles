@@ -317,9 +317,17 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 ### Getting Started
 
+- **[Why cc-profiles](https://cc-profiles.andreaia.com/why.html)**: what it adds to `CLAUDE_CONFIG_DIR` and shell aliases
 - **[Getting started](https://cc-profiles.andreaia.com/getting-started.html)**: install, first run, launcher commands, `/cc-profiles`
 - **[Concepts](https://cc-profiles.andreaia.com/concepts.html)**: profiles, the source profile, projects, rules, sharing, backups
 - **[FAQ](https://cc-profiles.andreaia.com/faq.html)**: several accounts, a profile per project, credentials, safety, undo
+
+### How-to
+
+- **[Separate work and personal](https://cc-profiles.andreaia.com/how-to/work-and-personal.html)**: a Work profile in five minutes
+- **[Move a project](https://cc-profiles.andreaia.com/how-to/move-a-project.html)**: with its conversations, memories, history and settings
+- **[Relink a moved folder](https://cc-profiles.andreaia.com/how-to/relink-a-moved-folder.html)**: get the history back after renaming a folder
+- **[Share skills between profiles](https://cc-profiles.andreaia.com/how-to/share-skills.html)**: share the folder or copy one skill
 
 ### Guides by Tab
 
@@ -342,6 +350,9 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 
 - **[Configuration](https://cc-profiles.andreaia.com/configuration.html)**: `config.json`, command line, environment variables
 - **[Troubleshooting](https://cc-profiles.andreaia.com/troubleshooting.html)**: common problems and their fixes
+- **[Glossary](https://cc-profiles.andreaia.com/glossary.html)**: the words the app uses
+- **[Uninstall](https://cc-profiles.andreaia.com/uninstall.html)**: remove cc-profiles; your profiles stay as they are
+- **[What's new](https://cc-profiles.andreaia.com/changelog.html)**: every release
 
 ### For Contributors
 

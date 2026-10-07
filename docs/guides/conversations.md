@@ -4,7 +4,7 @@ The **Conversations** tab shows the conversations Claude Code saved for each pro
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/conversations-dark.jpg">
-  <img src="../assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the conversations of a project, with one open showing prompts, replies and the tools Claude used" width="1440" height="900" loading="lazy">
+  <img src="../assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the conversations of a project, with one open showing prompts, replies and the tools Claude used" width="1440" height="814" loading="lazy">
 </picture>
 
 ## Browse
