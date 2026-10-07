@@ -9,7 +9,7 @@ The **Profiles** tab lists your profiles with their command, folder and how many
 
 ## Create a profile
 
-**+ New profile** asks for:
+**New profile** (in the Profiles tab, or the **+ New profile** card at the top) asks for:
 
 - **Name**: shown in the UI and the [status line](../status-line.md), for example *Work*.
 - **Id**: lowercase letters, digits and dashes, for example `work`. It defines the folder `~/.claude-work` and the command `claude-work`.

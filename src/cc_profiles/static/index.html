@@ -57,6 +57,42 @@ header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
 .logo { width: 45px; height: 30px; flex: none; }
 .lg-front { fill: var(--logo); } .lg-back { fill: var(--logo-back); } .lg-eye { fill: var(--logo-eye); }
+/* each mascot is whole; a border of the background's color as wide as the gap between them (1 pixel, square
+   corners) hides the part of the one behind, so it never looks cut when they move */
+.lg-e rect { fill: none; stroke: var(--logo-edge, var(--bg)); stroke-width: 14; }
+.modal .logo { --logo-edge: var(--panel); } .notice .logo { --logo-edge: var(--warn-soft); }
+/* The mascots move in whole pixels (7 units of the 126×84 drawing): a hop each and a blink when the
+   page opens; each time the pointer reaches the title, the next of five gestures (g-blink, g-look,
+   g-antenna, g-peek, g-jump); in loading panels they hop in turn. */
+.logo { overflow: visible; }
+@keyframes lg-hop { 30% { transform: translateY(-7px); } 70% { transform: translateY(0); } }
+@keyframes lg-blink { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes lg-pulse { 50% { opacity: .45; } }
+@keyframes lg-blink2 { 0% { opacity: 0; } 15% { opacity: 1; } 35% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes lg-look-r { 0% { transform: translateX(7px); } 75% { transform: none; } }
+@keyframes lg-look-l { 0% { transform: translateX(-7px); } 75% { transform: none; } }
+@keyframes lg-wiggle { 0% { transform: translateX(-7px); } 20% { transform: translateX(7px); } 40% { transform: translateX(-7px); } 60% { transform: translateX(7px); } 80% { transform: none; } }
+@keyframes lg-peek { 0% { transform: translateX(-7px); } 15% { transform: translateX(-14px); } 30% { transform: translate(-14px, 7px); }
+  55% { transform: translate(-14px, -7px); } 75% { transform: translateX(-7px); } 90% { transform: none; } }
+@keyframes lg-jump { 0% { transform: translateY(-7px); } 25% { transform: none; } 45% { transform: translateY(-7px); } 70% { transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .logo.play .m-front { animation: lg-hop .5s steps(1); }
+  .logo.play .m-back { animation: lg-hop .5s steps(1) .2s; }
+  .logo.play .lg-eye { animation: lg-blink .15s steps(1) .8s; }
+  .logo.g-blink .lg-eye { animation: lg-blink2 .9s steps(1); }
+  .logo.g-look .m-front .lg-eye { animation: lg-look-r 1.4s steps(1); }
+  .logo.g-look .m-back .lg-eye { animation: lg-look-l 1.4s steps(1); }
+  .logo.g-antenna .lg-ant { animation: lg-wiggle .9s steps(1); }
+  .logo.g-peek .m-back { animation: lg-peek 1.4s steps(1); }
+  .logo.g-jump .m-front, .logo.g-jump .m-back { animation: lg-jump .8s steps(1); }
+  .loader .m-front { animation: lg-hop .8s steps(1) infinite; }
+  .loader .m-back { animation: lg-hop .8s steps(1) .4s infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .loader .logo { animation: lg-pulse 1.6s ease-in-out infinite; } }
+.spinner.loader { width: auto; height: auto; border: 0; border-radius: 0; animation: none; vertical-align: -6px; }
+.loader .logo { width: 33px; height: 22px; }
+.empty .loader { display: block; margin: 0 auto 10px; width: max-content; }
+.empty .loader .logo { width: 45px; height: 30px; }
 header .sub { color: var(--muted); }
 .profiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
@@ -111,16 +147,24 @@ kbd { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px s
 @media (hover: none) { #keys-btn { display: none; } }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 11px; cursor: pointer; font-size: 13px; }
+.chip:hover { background: var(--panel-2); }
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 input.search, input.text, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 input.search { min-width: 240px; margin-left: auto; }
+/* selects draw their own arrow, in the theme's colors, with room on both sides (the native one sat on the border) */
+select:not(.slbr) { appearance: none; -webkit-appearance: none; padding: 7px 32px 7px 12px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+select:not(.slbr):hover { border-color: var(--faint); }
+select:disabled { cursor: default; opacity: .6; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--panel-2); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.btn.primary:hover { filter: brightness(1.07); }
+/* the logo's orange in both themes, with the eyes' dark text (5.45:1; white would be 3.1:1) */
+.btn.primary { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); }
+.btn.primary:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }  /* #e19279: 6.96:1 */
 .btn.danger { color: var(--err); }
 .btn.small { padding: 3px 9px; font-size: 12.5px; }
 .btn:disabled { opacity: .5; cursor: default; }
@@ -153,6 +197,7 @@ td.acts .btn + .btn { margin-left: 6px; }
 .side .head { padding: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { flex: 1; border: 0; background: var(--panel); padding: 6px; cursor: pointer; }
+.seg button:hover { background: var(--panel-2); }
 .seg button.on { background: var(--text); color: var(--bg); }
 .plist { max-height: 62vh; overflow: auto; }
 .plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
@@ -320,6 +365,11 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .popover h2 { margin: 0 0 2px; font-size: 15px; }
 .popover .seg button { padding: 6px 4px; }
 .iconbtn svg { width: 18px; height: 18px; }
+.iconbtn.has-update { position: relative; }
+.iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--logo); border: 2px solid var(--bg); }
+/* an update is out: the logo's orange, with the eyes' dark text (5.45:1; white would be 3:1) */
+.btn.update-on { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); font-weight: 600; }
+.btn.update-on:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
 .drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
@@ -418,7 +468,7 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
 </head>
 <body>
 <div class="wrap">
-  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><rect class="lg-back" x="84" y="0" width="7" height="7"/><rect class="lg-back" x="77" y="7" width="7" height="7"/><rect class="lg-back" x="56" y="14" width="56" height="7"/><rect class="lg-back" x="77" y="21" width="42" height="7"/><rect class="lg-back" x="84" y="28" width="14" height="7"/><rect class="lg-back" x="105" y="28" width="14" height="7"/><rect class="lg-back" x="84" y="35" width="14" height="7"/><rect class="lg-back" x="105" y="35" width="14" height="7"/><rect class="lg-back" x="84" y="42" width="35" height="7"/><rect class="lg-back" x="84" y="49" width="35" height="7"/><rect class="lg-back" x="84" y="56" width="35" height="7"/><rect class="lg-back" x="98" y="63" width="14" height="7"/><rect class="lg-front" x="42" y="14" width="7" height="7"/><rect class="lg-front" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-eye" x="98" y="28" width="7" height="7"/><rect class="lg-eye" x="98" y="35" width="7" height="7"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><g class="m-back"><g transform="translate(42 -14)"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-back lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-back lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-back" x="14" y="28" width="56" height="7"/><rect class="lg-back" x="7" y="35" width="70" height="7"/><rect class="lg-back" x="7" y="42" width="14" height="7"/><rect class="lg-back" x="28" y="42" width="28" height="7"/><rect class="lg-back" x="63" y="42" width="14" height="7"/><rect class="lg-back" x="7" y="49" width="14" height="7"/><rect class="lg-back" x="28" y="49" width="28" height="7"/><rect class="lg-back" x="63" y="49" width="14" height="7"/><rect class="lg-back" x="7" y="56" width="70" height="7"/><rect class="lg-back" x="7" y="63" width="70" height="7"/><rect class="lg-back" x="7" y="70" width="70" height="7"/><rect class="lg-back" x="14" y="77" width="14" height="7"/><rect class="lg-back" x="56" y="77" width="14" height="7"/><rect class="lg-back" x="21" y="42" width="7" height="14"/><rect class="lg-back" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></g><g class="m-front"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-front lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-front lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-front" x="21" y="42" width="7" height="14"/><rect class="lg-front" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
     <input class="search" id="gsearch" type="search" placeholder="Search everything…" aria-label="Search everything: projects, memories, skills, MCP servers, CLAUDE.md" autocomplete="off">
     <button class="iconbtn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
@@ -468,6 +518,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+// While a panel loads: the logo's two mascots hopping in turn (class spinner too, for code that waits for it to go)
+const LOADER = `<span class="spinner loader">${$("header .logo").outerHTML}</span>`;
 function badge(id) {
   if (!id) return `<span class="badge b-none">unassigned</span>`;
   if (id === "shared") return `<span class="badge b-shared">All profiles</span>`;
@@ -706,7 +758,7 @@ function renderMemories() {
     </aside>
     <section>${!cur ? `<div class="empty">Pick a project on the left.</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(cur.pretty)}</code> · ${esc(label(m.profile))}</div>
-      ${!m.list ? `<div class="empty"><span class="spinner"></span></div>` : `
+      ${!m.list ? `<div class="empty">${LOADER}</div>` : `
         ${m.list.missing.length ? `<div class="issue err" style="margin-bottom:8px">MEMORY.md lists files that do not exist: ${m.list.missing.map(esc).join(", ")}</div>` : ""}
         <div class="cards">${m.list.items.map(it => `<div class="mcard ${it.file === m.file ? "on" : ""}" data-mfile="${esc(it.file)}" tabindex="0" role="button">
           <div class="t">${esc(it.name)} ${it.type ? `<span class="badge b-none">${esc(it.type)}</span>` : ""}
@@ -779,14 +831,14 @@ function renderConversations() {
       <div class="plist">${plist.map(p => `<button data-cproj="${esc(p.name)}" class="${p.name === c.project ? "on" : ""}">
         <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No conversations in this profile.</div>`}</div>
     </aside>
-    <section>${!c.project ? `<div class="empty">Pick a project on the left.</div>` : !c.list ? `<div class="empty"><span class="spinner"></span></div>` : `
+    <section>${!c.project ? `<div class="empty">Pick a project on the left.</div>` : !c.list ? `<div class="empty">${LOADER}</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(c.list.path)}</code> · ${esc(label(c.profile))} · ${plural(c.list.conversations.length, "conversation", "conversations")}</div>
       <div class="cards">${c.list.conversations.map(x => `<div class="ccard ${x.session === c.session ? "on" : ""}" data-conv="${esc(x.session)}" tabindex="0" role="button">
         <div class="t">${esc(x.title) || `<span class="hint">No prompt</span>`}</div>
         <div class="d">${esc(convDate(x))} · ${plural(x.prompts, "prompt", "prompts")} · ${plural(x.replies, "reply", "replies")} · ${size(x.size)}</div></div>`).join("")}</div>
       ${cur ? `<div class="editor">
         <div class="hint" style="margin-bottom:6px"><code>${esc(cur.session)}.jsonl</code>${cur.snapshots ? " · with file snapshots" : ""}</div>
-        ${!c.view ? `<div class="empty"><span class="spinner"></span></div>` : `
+        ${!c.view ? `<div class="empty">${LOADER}</div>` : `
           ${c.view.truncated ? `<div class="hint">Shortened: the last ${plural(c.view.messages.length, "message", "messages")} of ${c.view.total}, long texts cut.</div>` : ""}
           <div class="convview">${c.view.messages.map(m => `<div class="msg ${m.role}"><div class="who">${{ user: "You", assistant: "Claude", tool: "Tool" }[m.role]}${m.time ? `<time>${esc(new Date(m.time).toLocaleString())}</time>` : ""}</div>
             <div class="txt">${esc(m.text)}</div></div>`).join("") || `<div class="empty">No messages to show.</div>`}</div>`}
@@ -830,7 +882,7 @@ async function loadHealth() {
 }
 function renderHealth() {
   if (S.tab !== "health") return;
-  if (!S.health) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Checking login, files, links, skills, plugins, memories and folders…</div>`; return; }
+  if (!S.health) { $("#main").innerHTML = `<div class="empty">${LOADER} Checking login, files, links, skills, plugins, memories and folders…</div>`; return; }
   const icon = { ok: "✓", warn: "!", error: "✕" };
   $("#main").innerHTML = `<div class="toolbar"><button class="btn" id="rehealth">Run the checks again</button></div>
     <div class="health">${S.health.map(h => `<div class="hcard"><h2>${esc(h.label)}</h2>
@@ -853,13 +905,13 @@ async function loadSharing() {
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
-  if (!S.sharing) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span></div>`; return; }
+  if (!S.sharing) { $("#main").innerHTML = `<div class="empty">${LOADER}</div>`; return; }
   const src = S.profiles[0];
   $("#main").innerHTML = `
     <div class="toolbar"><span class="hint">A shared item is a link to the folder of <b>${esc(src.label)}</b>, the source profile: install or edit it once and every profile gets it.</span>
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
       <button class="btn" id="ptemplates">Templates…</button>
-      <button class="btn primary" data-newprofile>+ New profile</button></div>
+      <button class="btn primary" data-newprofile>New profile</button></div>
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
@@ -1128,7 +1180,7 @@ function renderExt() {
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
   if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }
-  if (!data) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading ${S.tab === "skills" ? "skills" : "MCP servers"}…</div>`; return; }
+  if (!data) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading ${S.tab === "skills" ? "skills" : "MCP servers"}…</div>`; return; }
   return S.tab === "skills" ? renderSkills(head) : renderMcp(head);
 }
 function renderSkills(head) {
@@ -1494,7 +1546,7 @@ function renderSettings() {
   if (S.tab !== "settings") return;
   const st = S.set, d = st?.data;
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-setprof="${p.id}" class="${st?.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
-  if (!d) { $("#main").innerHTML = `<div class="toolbar">${seg}</div><div class="empty"><span class="spinner"></span></div>`; return; }
+  if (!d) { $("#main").innerHTML = `<div class="toolbar">${seg}</div><div class="empty">${LOADER}</div>`; return; }
   const sh = f => f.shared ? `<span class="shared-note">shared with ${esc(S.profiles[0].label)}</span>` : "";
   const errs = ["settings", "local"].filter(k => d.files[k].error).map(k => `<div class="danger-box"><code>${esc(d.files[k].path)}</code>: ${esc(d.files[k].error)}. Fix it in the advanced editor below.</div>`).join("");
   $("#main").innerHTML = `<div class="toolbar">${seg}<span class="hint">Changes apply from the next Claude Code session in this profile. Every save goes to the backup.</span></div>
@@ -1656,14 +1708,15 @@ function openTheme() {
 async function openAbout() {
   const bg = document.createElement("div"); bg.className = "drawer-bg";
   const dr = document.createElement("aside"); dr.className = "drawer"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true"); dr.setAttribute("aria-label", "About Claude Code");
-  const loading = `<div class="empty"><span class="spinner"></span> Collecting version, accounts and profile contents…</div>`;
-  dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
+  const loading = `<div class="empty">${LOADER} Collecting version, accounts and profile contents…</div>`;
+  dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-update" disabled>Update</button><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
     <div class="db" id="ab-body">${loading}</div>`;
   const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); $("#about-btn").focus(); };
   const onKey = e => { if (e.key === "Escape") close(); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
   document.body.append(bg, dr);
   $("#ab-close", dr).onclick = close; $("#ab-close", dr).focus();
+  syncUpdateButton(dr);
   const load = async () => {
     $("#ab-body", dr).innerHTML = loading;
     try { renderAbout(dr, await api("/api/about")); } catch (e) { $("#ab-body", dr).innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
@@ -1686,10 +1739,17 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div>
+      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
+      <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
+  if (S.upd?.newer) showUpdate(dr, S.upd);
+  $("#upd-auto", dr).onchange = async e => {
+    const box = /** @type {HTMLInputElement} */ (e.target);
+    try { await run(() => api("/api/update/auto", { enabled: box.checked })); } catch { box.checked = !box.checked; return; }
+    loadUpdateStatus();
+  };
   $("#ab-news", dr).onclick = () => showWhatsNew();
   $("#ab-report", dr).onclick = () => reportProblem(a);
 }
@@ -1699,12 +1759,17 @@ async function checkUpdate(dr) {
   let u;
   try { u = await api("/api/update"); } catch (e) { st.textContent = e.message; btn.disabled = false; return; }
   btn.disabled = false;
+  S.upd = { ...(S.upd || {}), ...u }; markUpdate();
   if (!u.newer) { st.innerHTML = `<span class="okmark">✓ cc-profiles ${esc(u.current)} is the latest version.</span>`; return; }
-  st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
-    ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
-      : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
+  showUpdate(dr, u);
+}
+function showUpdate(dr, u) {
+  const st = $("#upd-status", dr);
+  if (!st) return;  // the panel is still loading
+  // the version is told here; the Update button is the one at the top, next to Refresh
+  st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).<br>
+    ${u.can_update ? `Click <b>Update</b> at the top.` : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">What's new</a>`;
-  if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u, dr);
 }
 async function runUpdate(u, dr) {
   if (!(await confirmBox(`Update to ${u.latest}?`,
@@ -1714,16 +1779,15 @@ async function runUpdate(u, dr) {
   let r;
   try { r = await api("/api/update", {}); } catch (e) { toast(e.message, "", true); if (st) st.textContent = e.message; return; }
   if (r.retry && st) {  // just released: PyPI's download index is not there yet
-    st.innerHTML = `${esc(r.message)} <button class="btn small" id="upd-run">Try again</button>
+    st.innerHTML = `${esc(r.message)} Then click <b>Update</b> at the top again.
       ${r.details ? `<details style="margin-top:6px"><summary>Details</summary><pre class="log">${esc(r.details)}</pre></details>` : ""}`;
-    $("#upd-run", dr).onclick = () => runUpdate(u, dr);
     return;
   }
   if (r.message) toast(r.message);
   if (st && !r.restarting) st.textContent = r.message || "";
   if (!r.restarting) return;
   const bg = document.createElement("div"); bg.className = "modal-bg";
-  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2><span class="spinner"></span> Restarting cc-profiles…</h2><div class="hint">The page reloads as soon as the new version answers.</div></div>`;
+  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2>${LOADER} Restarting cc-profiles…</h2><div class="hint">The page reloads as soon as the new version answers.</div></div>`;
   document.body.append(bg);
   await new Promise(res => setTimeout(res, 1500));
   for (let i = 0; i < 60; i++) {  // up to a minute
@@ -1731,6 +1795,38 @@ async function runUpdate(u, dr) {
     await new Promise(res => setTimeout(res, 1000));
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
+}
+
+// ---------- automatic update check ----------
+// The server asks PyPI at most once a day (unless turned off in About); the page only reads its last answer.
+async function loadUpdateStatus() {
+  try { S.upd = await api("/api/update/auto"); } catch { return; }
+  markUpdate();
+  if (!S.upd.newer) return;
+  let told = null;
+  try { told = localStorage.getItem("cc-profiles.update-notified"); localStorage.setItem("cc-profiles.update-notified", S.upd.latest); } catch {}
+  if (told !== S.upd.latest) toast(`cc-profiles ${S.upd.latest} is available`, "Open About (ⓘ) to update");
+}
+// In the About panel's header, next to Refresh: off and not clickable until a new version is out
+function syncUpdateButton(dr) {
+  const b = $("#ab-update", dr), u = S.upd, on = !!u?.newer;
+  if (!b) return;
+  b.disabled = !on;
+  b.classList.toggle("update-on", on);
+  b.textContent = "Update";
+  b.title = !on ? "cc-profiles is up to date" : u.can_update ? `Update to ${u.latest}: runs ${u.command}` : "Shows how to update this copy";
+  b.onclick = !on ? null : () => {
+    if (u.can_update) return runUpdate(u, dr);
+    showUpdate(dr, u);
+    $("#upd-status", dr)?.scrollIntoView({ block: "center" });
+  };
+}
+function markUpdate() {
+  const ab = $("#ab-update");
+  if (ab) syncUpdateButton(ab.closest(".drawer"));
+  const b = $("#about-btn"), on = !!S.upd?.newer;
+  b.classList.toggle("has-update", on);
+  b.title = b.ariaLabel = on ? `About Claude Code on this computer. cc-profiles ${S.upd.latest} is available` : "About Claude Code on this computer";
 }
 
 // ---------- what's new, report a problem ----------
@@ -1844,7 +1940,7 @@ function renderPlugins() {
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-plugprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">Install and remove plugins with <code>/plugin</code> in Claude Code; here you see them and turn them on or off.</span></div>`;
   if (x.error) $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`;
-  else if (!d) $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Loading plugins…</div>`;
+  else if (!d) $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading plugins…</div>`;
   else $("#main").innerHTML = `${head}
     <div class="ext-head" style="margin-top:0"><h2>Plugins</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
     <div class="table">${d.plugins.map((g, i) => `<div class="prow plug-row"><div class="txt">
@@ -1869,7 +1965,7 @@ function renderPlugins() {
 async function loadClaudeStatus() {
   try { S.cc = await api("/api/claude/status"); } catch { return; }
   const c = S.cc, el = $("#notice");
-  if (c.job?.running) el.innerHTML = `<div class="notice"><span class="spinner"></span><div class="txt"><b>Installing Claude Code…</b><span>${esc(c.job.method)}</span></div><button class="btn" data-install-log>Show</button></div>`;
+  if (c.job?.running) el.innerHTML = `<div class="notice">${LOADER}<div class="txt"><b>Installing Claude Code…</b><span>${esc(c.job.method)}</span></div><button class="btn" data-install-log>Show</button></div>`;
   else if (!c.installed) el.innerHTML = `<div class="notice"><div class="txt"><b>Claude Code is not installed on this computer</b>
       <span>Without it profiles cannot be used: login, sessions and health checks do not work.</span></div>
       ${c.supported ? `<button class="btn primary" data-install>Install Claude Code…</button>` : `<span class="hint">Installing from here is supported on macOS and Linux.</span>`}</div>`;
@@ -1954,7 +2050,7 @@ function renderSearch() {
   if (S.tab !== "search") return;
   const x = S.search, d = x.data;
   if (x.error) { $("#main").innerHTML = `<div class="empty">${esc(x.error)}</div>`; return; }
-  if (!d) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span> Searching every profile for “${esc(x.q)}”…</div>`; return; }
+  if (!d) { $("#main").innerHTML = `<div class="empty">${LOADER} Searching every profile for “${esc(x.q)}”…</div>`; return; }
   const total = Object.values(d.counts).reduce((a, b) => a + b, 0);
   const others = r => (r.profiles || [r.profile]).map(badge).join(" ");
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(total, "result", "results")} for “${esc(d.q)}” in every profile${d.truncated ? " · only the first ones: refine the search to see more" : ""}. Values of MCP environment variables and headers are not searched.</span>
@@ -2013,7 +2109,7 @@ function renderCompare() {
   const head = S.profiles.length < 2 ? "" : `<div class="toolbar"><span class="hint">Compare</span> ${sel("cmp-a", c.a, c.b)} <span class="hint">with</span> ${sel("cmp-b", c.b, c.a)}
       <span class="hint">Rows that differ are marked; copies go through the usual operations and their backups.</span></div>`;
   if (c.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(c.error)}</div>`; return bindCompare(); }
-  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Comparing…</div>`; return bindCompare(); }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Comparing…</div>`; return bindCompare(); }
   const A = esc(d.a.label), B = esc(d.b.label);
   const SRC = { local: "settings.local.json", settings: "settings.json" };
   const val = (v, src) => `${esc(fmt(v))}${src ? `<span class="src">${SRC[src]}</span>` : ""}`;
@@ -2135,7 +2231,7 @@ function renderUsage() {
         `<button data-udays="${n}" class="${u.days === n ? "on" : ""}" aria-pressed="${u.days === n}">${n} days</button>`).join("")}</div>
       <button class="btn" id="u-csv" style="margin-left:auto">Export CSV</button></div>`;
   if (u.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(u.error)}</div>`; return bindUsage(); }
-  if (!d) { $("#main").innerHTML = `${head}<div class="empty"><span class="spinner"></span> Reading the conversations…</div>`; return bindUsage(); }
+  if (!d) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Reading the conversations…</div>`; return bindUsage(); }
   const T = d.totals, who = d.profile === "all" ? "all profiles" : label(d.profile);
   const note = `<p class="hint">Cost is an estimate at Anthropic's list prices per token (checked ${esc(d.prices_checked)}), from the usage Claude Code records on every reply. Subscription plans (Pro, Max, Team) are not billed per token: for them it shows what the same use would cost through the API.${T.unpriced_tokens ? ` ${tok(T.unpriced_tokens)} tokens come from models without a list price and are not in the cost.` : ""}</p>`;
   if (!T.replies) {
@@ -2202,7 +2298,7 @@ const size = n => n > 1e9 ? (n / 1e9).toFixed(1) + " GB" : n > 1e6 ? (n / 1e6).t
 const when = t => new Date(t * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 function renderBackups() {
   if (S.tab !== "backups") return;
-  if (!S.backups) { $("#main").innerHTML = `<div class="empty"><span class="spinner"></span></div>`; return; }
+  if (!S.backups) { $("#main").innerHTML = `<div class="empty">${LOADER}</div>`; return; }
   const tot = S.backups.reduce((a, b) => a + b.size, 0);
   const where = S.backups[0]?.path.replace(/\/[^/]+$/, "") || "~/.cc-profiles/backups";
   $("#main").innerHTML = `<div class="toolbar"><span class="hint">${plural(S.backups.length, "backup", "backups")} · ${size(tot)} in <code>${esc(where)}</code>. Restoring undoes the operation and creates a backup of its own.</span>
@@ -2273,7 +2369,7 @@ async function showChanges(name, trigger) {
   const dr = document.createElement("aside"); dr.className = "drawer wide"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true");
   dr.setAttribute("aria-label", `Changes of ${b.title}`);
   dr.innerHTML = `<div class="dh"><h2>${esc(b.title)}</h2><button class="btn small" id="ch-close">Close</button></div>
-    <div class="db" id="ch-body"><div class="empty"><span class="spinner"></span> Comparing the backup with the files as they are now…</div></div>`;
+    <div class="db" id="ch-body"><div class="empty">${LOADER} Comparing the backup with the files as they are now…</div></div>`;
   const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); trigger?.focus(); };
   const onKey = e => { if (e.key === "Escape") close(); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
@@ -2448,9 +2544,19 @@ function render() {
   else renderHealth();
 }
 $("#about-btn").onclick = openAbout;
+{
+  // a hop and a blink when the page opens, then a different gesture each time the pointer reaches the title
+  const logo = $("header .logo"), GESTURES = ["g-blink", "g-look", "g-antenna", "g-peek", "g-jump"];
+  let next = 0;
+  const play = cls => { logo.classList.remove("play", ...GESTURES); void logo.getBoundingClientRect(); logo.classList.add(cls); };
+  $("header h1").addEventListener("mouseenter", () => { play(GESTURES[next]); next = (next + 1) % GESTURES.length; });
+  play("play");
+}
 $("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
 checkWhatsNew();
+loadUpdateStatus();
+setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
 refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
 </script>
 </body>

@@ -24,7 +24,7 @@ from .core import (
     write_text,
 )
 from .sharing import link_shared, primary, share_items
-from .command import command_state, write_command
+from .command import command_state, command_wanted, write_command
 from .launchers import command_conflict, launcher_dir_in_path, write_launcher
 
 # ---------------------------------------------------------------------------
@@ -98,8 +98,8 @@ def op_create_profile(label, pid, base, include_projects, share):
                 settings["statusLine"] = sl
             write_json(os.path.join(new, "settings.json"), settings)
     link_shared(new, share, bk)
-    # every new profile gets /cc-profiles (a cc-profiles.md written by someone else is left alone)
-    if command_state(new) in ("missing", "outdated"):
+    # every new profile gets /cc-profiles, unless it was turned off (a cc-profiles.md written by someone else is left alone)
+    if command_wanted() and command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
     add_profile_to_config(label, pid, command)

@@ -40,7 +40,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
-| `cli.py` | `serve` (with the automatic backup cleanup at start and daily), `open`, `stop`, `restart`, `install-command`, `label`, argument parsing |
+| `cli.py` | `serve` (with the automatic backup cleanup at start and daily, and `/cc-profiles` added or updated at start), `open`, `stop`, `restart`, `install-command`, `label`, argument parsing |
 | `entry.py` | the console script: `which` and `shell-init` go to `byfolder.py` without loading the server, everything else to `cli.main` |
 
 `server.py` re-exports every public name, so `from cc_profiles import server` keeps working; the `cc-profiles` console script is `entry.main`. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.

@@ -659,4 +659,72 @@ def test_server_on_a_busy_port_says_so(home):
         env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
         r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(port)], env=env,
                            capture_output=True, text=True, timeout=20)
-    assert r.returncode == 1 and f"Port {port} is busy" in r.stdout and f"--port {port + 1}" in r.stdout
+    assert r.returncode == 1 and f"Port {port} is busy with another program" in r.stdout and f"--port {port + 1}" in r.stdout
+
+
+def test_starting_it_again_opens_the_running_one(home, app_factory, monkeypatch):
+    """`cc-profiles` while it already runs (e.g. started by /cc-profiles): the browser opens on
+    it, instead of an error about the port."""
+    import cc_profiles.cli as CLI
+    app = app_factory()
+    env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
+    r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(app.port)], env=env,
+                       capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0 and f"cc-profiles is already running on http://127.0.0.1:{app.port}" in r.stdout
+    opened = []
+    monkeypatch.setattr(CLI, "open_url", opened.append)
+    monkeypatch.setattr(CLI, "load_config", lambda: {})
+    monkeypatch.setattr(CLI, "cleanup_backups", lambda: None)
+    monkeypatch.setattr(CLI, "ensure_command", lambda: ([], None))  # this process's paths are the real home's
+    monkeypatch.setattr(CLI.threading, "Thread", lambda *a, **k: type("T", (), {"start": lambda self: None})())
+    monkeypatch.setattr(CLI.signal, "signal", lambda *a: None)
+    with pytest.raises(SystemExit) as e:
+        CLI.serve(app.port, True)
+    assert e.value.code == 0 and opened == [f"http://127.0.0.1:{app.port}"]
+
+
+# --- automatic update check ---------------------------------------------------------
+def test_auto_check_asks_pypi_at_most_once_a_day(tmp_path, monkeypatch):
+    monkeypatch.setattr(U, "UPDATE_STATE", str(tmp_path / "update-check.json"))
+    monkeypatch.setattr(U, "load_config", lambda: {})
+    monkeypatch.delenv("CC_PROFILES_UPDATE_CHECK", raising=False)
+    calls = []
+    monkeypatch.setattr(U, "check_update", lambda: calls.append(1) or U.write_json(U.UPDATE_STATE, {"checked": U.time.time(), "latest": "99.0.0"}))
+    U.auto_check()
+    U.auto_check()  # the answer is fresh: PyPI is not asked again
+    assert calls == [1]
+    U.write_json(U.UPDATE_STATE, {"checked": U.time.time() - U.CHECK_EVERY - 1, "latest": "99.0.0"})
+    U.auto_check()
+    assert calls == [1, 1]
+    monkeypatch.setattr(U, "load_config", lambda: {"update_check": False})  # turned off
+    U.write_json(U.UPDATE_STATE, {"checked": 0})
+    U.auto_check()
+    assert calls == [1, 1]
+    monkeypatch.setattr(U, "load_config", lambda: {})
+    monkeypatch.setenv("CC_PROFILES_UPDATE_CHECK", "0")  # the tests' own servers
+    U.auto_check()
+    assert calls == [1, 1]
+
+
+def test_update_status_and_the_switch(home, app_factory, tmp_path):
+    """The page reads the last answer (no request to PyPI); a manual check refreshes it; the switch
+    in About writes "update_check" in config.json, with a backup."""
+    basic_home(home)
+    app = app_factory(CC_PROFILES_PYPI_URL=pypi(tmp_path, "99.0.0"))
+    st = app.get("/api/update/auto")
+    assert st["latest"] is None and st["newer"] is False and st["enabled"] is False  # off in tests (CC_PROFILES_UPDATE_CHECK=0)
+    app.get("/api/update")  # Check for updates
+    st = app.get("/api/update/auto")
+    assert st["latest"] == "99.0.0" and st["newer"] is True and st["checked"] and "can_update" in st
+    assert json.loads(home.path(".cc-profiles/update-check.json").read_text())["latest"] == "99.0.0"
+
+    app2 = app_factory(CC_PROFILES_UPDATE_CHECK="")
+    assert app2.get("/api/update/auto")["enabled"] is True
+    before = home.snapshot()
+    r = app2.post("/api/update/auto", {"enabled": False})
+    assert "only when you click" in r["message"]
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["update_check"] is False
+    assert app2.get("/api/update/auto")["enabled"] is False
+    assert "Nothing to change" in app2.post_error("/api/update/auto", {"enabled": False})
+    app2.post("/api/backups/restore", {"name": app2.get("/api/backups")[0]["name"]})
+    assert home.snapshot() == before

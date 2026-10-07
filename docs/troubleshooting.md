@@ -1,8 +1,8 @@
 # Troubleshooting
 
-## "Port 4777 is busy"
+## "Port 4777 is busy with another program"
 
-cc-profiles is probably already running in another terminal: open `http://127.0.0.1:4777`, or start another instance with `--port 4778`.
+Another program uses port 4777: start cc-profiles on another one, `cc-profiles --port 4778`. If it is cc-profiles itself, already running (started by `/cc-profiles` or in another terminal), `cc-profiles` does not complain: it opens your browser on it.
 
 ## A tab says the page is newer than the server
 
@@ -53,6 +53,10 @@ Some files the backup needs were changed again by a later operation. Restore the
 ## Settings dropdowns do not show a value I know exists
 
 Dropdown options come from a specific Claude Code version, shown in the Settings tab. A newer Claude Code may accept more values. Set it from the advanced editor, and [open an issue](https://github.com/andreaiannarone/cc-profiles/issues) so the list can be updated.
+
+## `/cc-profiles` is missing or says the command was not found
+
+The command appears after cc-profiles has started once: the install script starts nothing, but adds it right away; with pipx, uv, pip or Homebrew, run `cc-profiles` once. It calls cc-profiles by full path; if you reinstalled cc-profiles another way (pipx instead of Homebrew, for example), run `cc-profiles` once again and it points the command to the new place. Restart open Claude Code sessions to see the change.
 
 ## The browser does not open (WSL)
 
