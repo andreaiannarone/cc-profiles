@@ -81,7 +81,7 @@ Rules:
 | Usage chart | `.uchart`, `usageChart(daily)` | inline SVG bars, one `g.day` per day with a `<title>` tooltip and an `aria-label` summary on the `svg`; segments use `--p1` (output), `--p3` (input and cache write) and `--faint` (cache read), with a legend, never the accent. Summary numbers are `.ucard`s |
 | Changes drawer | `.drawer.wide`, `showChanges(name, trigger)` | Backups → *Show changes*: a wider drawer with the steps in plain words and one `details.chg` per copied file; `pre.diff` lines are `.a` (added, `--ok` mixed into `--panel`), `.d` (removed, `--err-soft`), `.h` (hunk, `--panel-2`), always with the `+`/`-` prefix so color is not the only cue |
 | Download | `download(path, fallback)` | fetches with the token and saves the Blob under the server's file name: profile export, usage CSV |
-| Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors); `sub` in monospace for the backup path; `role="status"` or `alert` |
+| Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors), in the theme's colors (`--panel`, `--text`, `--line`; errors `--err-soft` with an `--err` border); `sub` in monospace for the backup path; `role="status"` or `alert` |
 | Loading | `.spinner` | always with a sentence about what we are waiting for when the wait is long |
 
 ## Writing

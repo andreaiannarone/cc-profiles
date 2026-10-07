@@ -377,9 +377,10 @@ pre.diff .f { color: var(--muted); }
 .linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .linkbtn:hover { text-decoration: underline; }
 .toasts { position: fixed; bottom: 18px; right: 18px; display: grid; gap: 8px; z-index: 20; max-width: min(440px, calc(100vw - 36px)); }
-.toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
-.toast.err { background: var(--err); color: #fff; }
-.toast small { display: block; opacity: .75; margin-top: 2px; font-family: var(--mono); font-size: 11px; }
+/* in the colors of the theme in use, like a panel */
+.toast { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+.toast.err { background: var(--err-soft); border-color: var(--err); }
+.toast small { display: block; color: var(--muted); margin-top: 2px; font-family: var(--mono); font-size: 11px; }
 /* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
 .useg { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
 .useg .seg { min-width: 0; }

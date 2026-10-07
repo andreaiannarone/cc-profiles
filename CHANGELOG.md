@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Notices at the bottom right follow the theme: light in light mode, dark in dark mode (they were always inverted); errors have a red border.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added
