@@ -5,7 +5,7 @@
     .venv/bin/python scripts/make_screenshots.py --no-gif   # skip the GIF (it needs ffmpeg)
 
 It builds the /sandbox fake home, starts the app on it and drives it with Playwright:
-- docs/assets/screenshots/<tab>-<theme>.jpg for the README gallery, in light and dark;
+- docs/assets/screenshots/<tab>-<theme>.jpg for the README gallery and the docs guides, in light and dark;
 - docs/assets/demo-<theme>.gif, the animated preview under the logo (one frame per step);
 - docs/assets/social-preview.png, rendered from social-preview.html (uses skills-dark.jpg).
 Nothing outside the sandbox and docs/assets is touched.
@@ -39,6 +39,11 @@ def sandbox():
     root = Path(tempfile.mkdtemp(prefix="cc-profiles-shots-"))
     subprocess.run([sys.executable, str(ROOT / ".claude" / "skills" / "sandbox" / "make_home.py"), str(root)],
                    check=True, capture_output=True)
+    # a stand-in claude in the fake ~/.local/bin, also on PATH: no notice about installing Claude Code
+    claude = root / ".local" / "bin" / "claude"
+    claude.parent.mkdir(parents=True, exist_ok=True)
+    claude.write_text("#!/bin/sh\necho '2.1.0 (Claude Code)'\n")
+    claude.chmod(0o755)
     return root
 
 
@@ -82,8 +87,17 @@ def open_conversation(s, profile):
 
 
 def gallery(s, theme):
-    """The README gallery: one screenshot per tab worth showing."""
+    """The README gallery and the guides of the docs site: one screenshot per tab."""
     s.go(theme)
+    s.tab("projects")
+    s.page.click('[data-filter="all"]')
+    s.shot(SHOTS / f"projects-{theme}.jpg")
+    s.tab("profiles")
+    s.shot(SHOTS / f"profiles-{theme}.jpg")
+    s.tab("backups")
+    s.shot(SHOTS / f"backups-{theme}.jpg")
+    s.tab("health")
+    s.shot(SHOTS / f"health-{theme}.jpg")
     s.tab("memories")
     s.js("S.mem.profile = 'default'; await loadMemProjects();"
          " await openMemProject(S.mem.projects.find(p => p.pretty.endsWith('work/api')).name);"
@@ -184,7 +198,7 @@ def main():
         for theme in THEMES:
             for step in (gallery, ) + (() if args.no_gif else ("gif",)):
                 root = sandbox()  # a fresh home for every run: the demo moves a project
-                app = App(FakeHome(root))
+                app = App(FakeHome(root), {"PATH": f"{root}/.local/bin:/usr/bin:/bin"})
                 try:
                     app.post("/api/rules", {"match": "code/personal", "profile": "default"})
                     app.post("/api/rules", {"match": "code/work", "profile": "work"})

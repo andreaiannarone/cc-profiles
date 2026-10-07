@@ -17,13 +17,16 @@ def strip_code(text):
 
 
 def slug(heading):
-    h = re.sub(r"[`*_]", "", heading.strip().lower())
+    # underscores stay, as on GitHub and the docs site: ### `search_roots` → #search_roots
+    h = re.sub(r"[`*]", "", heading.strip().lower())
     h = re.sub(r"[^\w\- ]", "", h)
     return h.replace(" ", "-")
 
 
 def anchors(path):
-    return {slug(m.group(1)) for m in re.finditer(r"^#{1,6}\s+(.*)$", strip_code(path.read_text()), re.M)}
+    # only code blocks go: inline code in a title is part of its anchor
+    text = re.sub(r"```.*?```", "", path.read_text(), flags=re.S)
+    return {slug(m.group(1)) for m in re.finditer(r"^#{1,6}\s+(.*)$", text, re.M)}
 
 
 def test_relative_links_and_anchors_exist():
@@ -39,6 +42,24 @@ def test_relative_links_and_anchors_exist():
             elif anchor and dest.suffix == ".md" and anchor not in anchors(dest):
                 broken.append(f"{doc.relative_to(ROOT)} → {target} (no such heading)")
     assert not broken, "broken links:\n" + "\n".join(broken)
+
+
+def test_html_images_and_links_in_docs_exist():
+    """Screenshots are <picture>s written in HTML: their src, srcset and href must exist too,
+    and every screenshot comes in both themes."""
+    broken, single = [], []
+    for doc in ROOT.glob("docs/**/*.md"):
+        text = strip_code(doc.read_text())
+        for target in re.findall(r'(?:src|srcset|href)="([^"#]+)', text):
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            if not (doc.parent / target).resolve().exists():
+                broken.append(f"{doc.relative_to(ROOT)} → {target}")
+        for pic in re.findall(r"<picture>.*?</picture>", text, re.S):
+            if not ("-dark." in pic and "-light." in pic):
+                single.append(f"{doc.relative_to(ROOT)}: {pic[:80]}")
+    assert not broken, "missing files:\n" + "\n".join(broken)
+    assert not single, "a <picture> needs a -light and a -dark image:\n" + "\n".join(single)
 
 
 def test_every_doc_page_is_linked_from_the_index():

@@ -8,6 +8,11 @@ The **Projects** tab lists every project that has a folder under `projects/` in 
 
 The tab opens on **Needs attention**. Use the chips to see all projects, the projects of one profile, or the shared ones, and the search field to filter by path.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/projects-dark.jpg">
+  <img src="../assets/screenshots/projects-light.jpg" alt="The Projects tab: five projects with their profile, conversations and memories per profile, one folder not found on disk and one project to move to Work" width="1440" height="900" loading="lazy">
+</picture>
+
 ## Move a project to another profile
 
 When a project has content in a profile it does not belong to, its row shows **Move to …**. You can also choose *Move from A to B* under **Manage**.

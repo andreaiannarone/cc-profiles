@@ -19,7 +19,12 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
 1. [Getting started](getting-started.md): install, first run, launcher commands, [keyboard shortcuts](getting-started.md#keyboard-shortcuts)
 2. [Concepts](concepts.md): profiles, the source profile, projects, rules, sharing, backups
 3. [FAQ](faq.md): several accounts, a profile per project, credentials, safety, undo
-4. Guides by tab:
+4. How-to, step by step:
+   - [Separate work and personal](how-to/work-and-personal.md)
+   - [Move a project to another profile](how-to/move-a-project.md)
+   - [Relink a project you moved](how-to/relink-a-moved-folder.md)
+   - [Use the same skills in every profile](how-to/share-skills.md)
+5. Guides by tab:
    - [Projects](guides/projects.md): move, relink, assign
    - [Memories](guides/memories.md): browse, edit, move
    - [Conversations](guides/conversations.md): read, move one to another profile, delete
@@ -34,8 +39,8 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
    - [Status line](status-line.md): build the line under Claude Code's prompt, or write your own
    - [Backups](guides/backups.md): what gets saved and how restoring works
    - [Health and About](guides/health.md): checks, orphan projects, installing Claude Code
-5. [Configuration reference](configuration.md): `config.json`, command line, environment variables
-6. [Troubleshooting](troubleshooting.md)
+6. [Configuration reference](configuration.md): `config.json`, command line, environment variables
+7. [Troubleshooting](troubleshooting.md)
 
 ## Working on cc-profiles
 

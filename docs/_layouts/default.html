@@ -132,7 +132,27 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     <p class="eyebrow">{{ nav_group }}</p>
     {%- endif %}
     {{ content }}
+    {%- comment -%}Previous and next page, in the order of the sidebar.{%- endcomment -%}
+    {%- assign pg_prev = "" %}{% assign pg_next = "" %}{% assign pg_last = "" %}{% assign pg_found = false %}
+    {%- for group in site.data.nav %}{% for item in group.pages %}
+      {%- if pg_found and pg_next == "" %}{% assign pg_next = item %}{% endif %}
+      {%- if item.url == page.path %}{% assign pg_found = true %}{% assign pg_prev = pg_last %}{% endif %}
+      {%- assign pg_last = item %}
+    {%- endfor %}{% endfor %}
+    {%- if pg_prev != "" or pg_next != "" %}
+    <nav class="pager" aria-label="Previous and next page">
+      {%- if pg_prev != "" %}
+        {%- if pg_prev.url == "README.md" %}{% assign href = '/' | relative_url %}{% else %}{% assign href = pg_prev.url | replace: '.md', '.html' | relative_url %}{% endif %}
+      <a class="prev" href="{{ href }}" rel="prev"><span>Previous</span>{{ pg_prev.title }}</a>
+      {%- endif %}
+      {%- if pg_next != "" %}
+        {%- assign href = pg_next.url | replace: '.md', '.html' | relative_url %}
+      <a class="next" href="{{ href }}" rel="next"><span>Next</span>{{ pg_next.title }}</a>
+      {%- endif %}
+    </nav>
+    {%- endif %}
     <footer class="foot">
+      <a id="updated" href="https://github.com/andreaiannarone/cc-profiles/commits/main/docs/{{ page.path }}" data-path="docs/{{ page.path }}" hidden></a><span id="updated-sep" hidden>·</span>
       <a href="https://github.com/andreaiannarone/cc-profiles/edit/main/docs/{{ page.path }}">Edit this page</a>
       <span>·</span><span>GPL-3.0-or-later</span>
       <span>·</span><span>© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a></span>
@@ -149,7 +169,16 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   // System → light → dark, remembered like in the app.
   const order = ["system", "light", "dark"], btn = document.getElementById("theme-btn");
   const cur = () => document.documentElement.dataset.theme || "system";
-  const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); };
+  // Screenshots are <picture>s with a dark source for prefers-color-scheme (as on GitHub):
+  // a theme picked here overrides the system one for them too.
+  const pictures = () => document.querySelectorAll(".doc picture source").forEach(src => {
+    if (!src.dataset.media) {
+      if (!src.media.includes("prefers-color-scheme")) return;
+      src.dataset.media = src.media;  // the original, for "system"
+    }
+    src.media = cur() === "dark" ? "all" : cur() === "light" ? "not all" : src.dataset.media;
+  });
+  const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); pictures(); };
   btn.addEventListener("click", () => {
     const next = order[(order.indexOf(cur()) + 1) % order.length];
     if (next === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = next;
@@ -314,6 +343,39 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
     links.forEach((a, i) => { const on = heads[i] === cur; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
   };
   addEventListener("scroll", mark, { passive: true }); mark();
+})();
+(() => {
+  // A # link next to each section title, to share a link to that section.
+  document.querySelectorAll(".doc h2[id], .doc h3[id]").forEach(h => {
+    const a = document.createElement("a");
+    a.className = "anchor"; a.href = "#" + h.id; a.textContent = "#";
+    a.setAttribute("aria-label", "Link to this section: " + h.textContent);
+    h.appendChild(a);
+  });
+})();
+(() => {
+  // Last updated: the date of the page's latest commit, from GitHub's API (kept for the session).
+  // Without an answer (offline, rate limit) the footer simply does not show it.
+  const el = document.getElementById("updated"), sep = document.getElementById("updated-sep");
+  const key = "cc-profiles.updated:" + el.dataset.path;
+  const show = iso => {
+    const d = new Date(iso);
+    if (isNaN(d)) return;
+    el.textContent = "Updated " + d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    el.title = "History of this page on GitHub";
+    el.hidden = sep.hidden = false;
+  };
+  let cached = null;
+  try { cached = sessionStorage.getItem(key); } catch (e) {}
+  if (cached) return show(cached);
+  fetch("https://api.github.com/repos/andreaiannarone/cc-profiles/commits?sha=main&per_page=1&path=" + encodeURIComponent(el.dataset.path))
+    .then(r => r.ok ? r.json() : [])
+    .then(list => {
+      const iso = list[0] && list[0].commit && list[0].commit.committer.date;
+      if (!iso) return;
+      try { sessionStorage.setItem(key, iso); } catch (e) {}
+      show(iso);
+    }).catch(() => {});
 })();
 </script>
 </body>

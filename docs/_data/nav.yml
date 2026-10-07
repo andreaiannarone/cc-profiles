@@ -9,6 +9,13 @@
     - { title: Getting started, url: getting-started.md, description: "Install cc-profiles with one command (pipx or uv), open it, and start Claude Code in the right profile with claude-<profile> launchers or /cc-profiles." }
     - { title: Concepts, url: concepts.md, description: "How Claude Code profiles work with CLAUDE_CONFIG_DIR, and what cc-profiles means by source profile, projects, rules, sharing and backups." }
     - { title: FAQ, url: faq.md, description: "Answers to common questions: using several Claude Code accounts, switching profile per project, credentials, safety, and how to undo a change." }
+- title: How-to
+  icon: compass
+  pages:
+    - { title: Separate work and personal, url: how-to/work-and-personal.md, description: "Give work its own Claude Code profile in five minutes: create it, log in, move the work projects, and let claude pick the profile from the folder." }
+    - { title: Move a project, url: how-to/move-a-project.md, description: "Move a Claude Code project to another profile with its conversations, memories, prompt history and settings, so /resume keeps working." }
+    - { title: Relink a moved folder, url: how-to/relink-a-moved-folder.md, description: "Renamed or moved a project folder and Claude Code lost its history? Relink it: conversations, memories and arrow-up prompts come back." }
+    - { title: Share skills between profiles, url: how-to/share-skills.md, description: "Use the same Claude Code skills in every profile: share the skills folder, or copy one skill to all profiles; MCP servers and plugins too." }
 - title: Guides
   icon: book
   pages:

@@ -139,6 +139,13 @@ a:hover { text-decoration: underline; }
 .doc li { margin: 3px 0; }
 .doc li > ul, .doc li > ol { margin: 4px 0; }
 .doc img { max-width: 100%; height: auto; border-radius: var(--radius); }
+.doc picture { display: block; margin: 4px 0 18px; }
+.doc picture img { display: block; border: 1px solid var(--line); }
+/* the # link of a section title: shown on hover or focus, always a little on touch screens */
+.doc .anchor { margin-left: 8px; color: var(--faint); font-weight: 500; text-decoration: none; opacity: 0; transition: opacity .15s; }
+.doc h2:hover .anchor, .doc h3:hover .anchor, .doc .anchor:focus-visible { opacity: 1; }
+.doc .anchor:hover { color: var(--accent); }
+@media (hover: none) { .doc .anchor { opacity: .6; } }
 .doc hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
 .doc blockquote { margin: 0 0 14px; padding: 10px 14px; background: var(--panel-2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; color: var(--text); }
 .doc blockquote p:last-child { margin-bottom: 0; }
@@ -164,6 +171,15 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc th { text-align: left; font-size: 12.5px; color: var(--muted); font-weight: 600; background: var(--panel-2); }
 .doc th, .doc td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .doc tr:last-child td { border-bottom: 0; }
+/* Previous and next page, at the end of every page */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 40px; }
+.pager a { display: grid; gap: 2px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); font-weight: 600; }
+.pager a:hover { border-color: var(--accent); text-decoration: none; }
+.pager a span { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.pager .prev span::before { content: "‹ "; }
+.pager .next { grid-column: 2; text-align: right; }
+.pager .next span::after { content: " ›"; }
+.pager + .foot { margin-top: 24px; }
 .foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 
 /* code colors (Rouge), muted to match the app */

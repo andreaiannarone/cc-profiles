@@ -2,6 +2,11 @@
 
 Two read-only views that look across profiles: they never change anything by themselves.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/compare-dark.jpg">
+  <img src="../assets/screenshots/compare-light.jpg" alt="The Compare tab: two profiles side by side, with what only one of them has" width="1440" height="900" loading="lazy">
+</picture>
+
 ## Search everything
 
 The field at the top of the page, next to the theme button, searches every profile at once. Type at least two characters: results appear after a short pause, or right away with Enter.

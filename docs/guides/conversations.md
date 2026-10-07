@@ -2,6 +2,11 @@
 
 The **Conversations** tab shows the conversations Claude Code saved for each project, and moves or deletes them one at a time. To move a whole project, with its memories, prompt history and settings, use the [Projects](projects.md) tab instead.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/conversations-dark.jpg">
+  <img src="../assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the conversations of a project, with one open showing prompts, replies and the tools Claude used" width="1440" height="900" loading="lazy">
+</picture>
+
 ## Browse
 
 Pick a profile and a project on the left: only projects with at least one conversation are listed, with how many they have. Each conversation shows:
@@ -29,6 +34,17 @@ The prompt history (`history.jsonl`), the project's memories and its settings st
 ## Delete
 
 **Delete** moves the conversation and its file snapshots to the backup: restore it from the [Backups](backups.md) tab.
+
+## Example: a conversation started in the wrong profile
+
+You opened `claude` in `~/code/work/api` but forgot that the terminal was in your personal profile. The conversation is useful and you want to resume it from Work.
+
+1. Close that Claude Code session.
+2. In the **Conversations** tab, pick the personal profile and the `~/code/work/api` project.
+3. Find the conversation by its title or date, and click **Move to…** → *Work*.
+4. In the project folder, run `claude-work --resume`: the conversation is in the list.
+
+The prompts you typed stay in the personal profile's arrow-up history. To move everything the project has in that profile, use [Move a project](../how-to/move-a-project.md) instead.
 
 ## Open sessions
 

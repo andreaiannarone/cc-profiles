@@ -1,5 +1,12 @@
 # Profiles and sharing
 
+The **Profiles** tab lists your profiles with their command, folder and how many conversations, projects and memories each has. From here you create, edit and delete profiles, start one from a template, choose what each profile shares with the source profile, and turn on [profile by folder](profile-by-folder.md).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/profiles-dark.jpg">
+  <img src="../assets/screenshots/profiles-light.jpg" alt="The Profiles tab: three profiles with their command, folder and counts, and the Sharing switches below" width="1440" height="900" loading="lazy">
+</picture>
+
 ## Create a profile
 
 **+ New profile** asks for:

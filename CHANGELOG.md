@@ -5,7 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Documentation: four How-to guides (separate work and personal, move a project, relink a moved folder, share skills between profiles), worked examples in Memories, Conversations and Plugins, and a screenshot of the tab in each guide, in light or dark like the site. Each page ends with links to the previous and next page and shows the date it was last updated; section titles have a # link to share them.
+- A test checks the images and HTML links of the documentation, and anchors with an underscore (`#search_roots`) are now checked like the site builds them.
+
 ### Changed
+- Screenshots and demo GIFs regenerated: the light ones showed a "Claude Code is not installed" notice that came from the screenshot sandbox. `make_screenshots.py` also captures Projects, Profiles, Backups and Health.
 - Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). Each sidebar group has an icon, like On this page. Each page shows its group above the title. On tablets and phones, a bar under the header shows where you are (Guides › Settings) and opens the menu as a drawer from the left (closes with Esc, a tap outside or a link). Responsive: from 561 to 860 px wide the page now switches to one column with the Menu (the sidebar was hidden there); on phones, tables are more compact and show a shadow where they continue sideways. Less empty space at the bottom of the page. The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.
 - Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated.
 

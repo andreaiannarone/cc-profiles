@@ -2,6 +2,11 @@
 
 Claude Code can run a script to draw a [status line](https://code.claude.com/docs/en/statusline) at the bottom of the terminal. With several profiles, it is useful to see which one you are in.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/statusline-dark.jpg">
+  <img src="assets/screenshots/statusline-light.jpg" alt="The status line editor: the pieces to show, their order and colors, and a live preview of the line" width="1440" height="900" loading="lazy">
+</picture>
+
 ## From the Settings tab
 
 **Settings → Status line** sets it up without writing anything by hand:

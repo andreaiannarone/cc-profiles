@@ -136,6 +136,17 @@ def test_docs_code_blocks_have_a_copy_button():
     assert "/getting-started.html#install" in layout and "## Install" in (ROOT / "docs" / "getting-started.md").read_text()
 
 
+def test_docs_page_navigation():
+    """Previous and next page in sidebar order, a # link on section titles, the date of the last
+    commit, and screenshots that follow the theme picked on the site, not only the system one."""
+    layout = (ROOT / "docs" / "_layouts" / "default.html").read_text()
+    css = (ROOT / "docs" / "assets" / "site.css").read_text()
+    assert 'class="pager"' in layout and 'rel="prev"' in layout and 'rel="next"' in layout and ".pager" in css
+    assert 'a.className = "anchor"' in layout and ".doc .anchor" in css
+    assert 'id="updated"' in layout and "api.github.com/repos/andreaiannarone/cc-profiles/commits" in layout
+    assert '.doc picture source' in layout and "prefers-color-scheme" in layout
+
+
 def test_docs_seo_and_llms_files():
     """Every sidebar page has a meta description under 160 characters; the FAQ page and the
     FAQPage data ask the same questions; robots.txt points to the sitemap and lets AI crawlers in."""
