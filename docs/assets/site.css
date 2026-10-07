@@ -111,7 +111,7 @@ a:hover { text-decoration: underline; }
 .ngroup { display: grid; gap: 0; margin-bottom: 18px; }
 .ngroup:last-child { margin-bottom: 0; }
 .nlabel svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
-.nlabel { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 0 8px; }
+.nlabel { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); padding: 0 0 8px; }
 /* links like On this page: a thin line on the left, the current page in orange with its own bar */
 .side a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--muted); font-size: 14px; line-height: 1.4;
   background: linear-gradient(var(--line), var(--line)) 0 0 / 1px 100% no-repeat border-box; }
