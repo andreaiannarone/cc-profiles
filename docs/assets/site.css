@@ -53,6 +53,33 @@ a:hover { text-decoration: underline; }
 .brand:hover { text-decoration: none; }
 .logo { width: 42px; height: 28px; flex: none; }
 .lg-front { fill: var(--logo); } .lg-back { fill: var(--logo-back); } .lg-eye { fill: var(--logo-eye); }
+/* each mascot is whole; a border of the background's color as wide as the gap between them (1 pixel, square
+   corners) hides the part of the one behind, so it never looks cut when they move (same as the app) */
+.lg-e rect { fill: none; stroke: var(--logo-edge, var(--bg)); stroke-width: 14; }
+/* The mascots move in whole pixels (7 units of the 126×84 drawing): a hop each and a blink when the
+   page opens; each time the pointer reaches the title, the next of five gestures (g-blink, g-look,
+   g-antenna, g-peek, g-jump). Same as the app (src/cc_profiles/static/index.html). */
+.logo { overflow: visible; }
+@keyframes lg-hop { 30% { transform: translateY(-7px); } 70% { transform: translateY(0); } }
+@keyframes lg-blink { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes lg-blink2 { 0% { opacity: 0; } 15% { opacity: 1; } 35% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes lg-look-r { 0% { transform: translateX(7px); } 75% { transform: none; } }
+@keyframes lg-look-l { 0% { transform: translateX(-7px); } 75% { transform: none; } }
+@keyframes lg-wiggle { 0% { transform: translateX(-7px); } 20% { transform: translateX(7px); } 40% { transform: translateX(-7px); } 60% { transform: translateX(7px); } 80% { transform: none; } }
+@keyframes lg-peek { 0% { transform: translateX(-7px); } 15% { transform: translateX(-14px); } 30% { transform: translate(-14px, 7px); }
+  55% { transform: translate(-14px, -7px); } 75% { transform: translateX(-7px); } 90% { transform: none; } }
+@keyframes lg-jump { 0% { transform: translateY(-7px); } 25% { transform: none; } 45% { transform: translateY(-7px); } 70% { transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .logo.play .m-front { animation: lg-hop .5s steps(1); }
+  .logo.play .m-back { animation: lg-hop .5s steps(1) .2s; }
+  .logo.play .lg-eye { animation: lg-blink .15s steps(1) .8s; }
+  .logo.g-blink .lg-eye { animation: lg-blink2 .9s steps(1); }
+  .logo.g-look .m-front .lg-eye { animation: lg-look-r 1.4s steps(1); }
+  .logo.g-look .m-back .lg-eye { animation: lg-look-l 1.4s steps(1); }
+  .logo.g-antenna .lg-ant { animation: lg-wiggle .9s steps(1); }
+  .logo.g-peek .m-back { animation: lg-peek 1.4s steps(1); }
+  .logo.g-jump .m-front, .logo.g-jump .m-back { animation: lg-jump .8s steps(1); }
+}
 .sub { color: var(--muted); }
 .grow { flex: 1; }
 .toplink { color: var(--muted); font-weight: 550; font-size: 14px; }

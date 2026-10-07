@@ -53,7 +53,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
 | `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
-| `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called |
+| `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
+| `GET /api/update/auto` | | the same fields from the last answer, without asking PyPI, plus `enabled` (the automatic daily check) and `checked` (when PyPI was last asked) |
+| `POST /api/update/auto` | `{enabled}` | turn the automatic daily check on or off (`update_check` in `config.json`), with a backup |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |
 | `GET /api/shell` | | profile by folder: `{installed, targets: [{file, shell, line}], shell, lines, on_path, rules: [{text, exact, profile, label}], projects: [{path, rule, profile, label}]}`: the rc files that have the line, the ones turning it on would write, the rules, and what `cc-profiles which` gives each known project |
 | `GET /api/shell/which` | `path` (absolute or starting with `~`) | `{path, exists, rule, profile, label, dir, default}`: the profile `claude` would start in there. `rule` is what the rules say (`shared` included), `profile` is `null` when claude keeps the default profile; `default` is true for `~/.claude`, where `CLAUDE_CONFIG_DIR` stays unset |

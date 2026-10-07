@@ -6,7 +6,7 @@ The example assumes your work code is under `~/code/work` and the rest under `~/
 
 ## 1. Create the Work profile
 
-In the **Profiles** tab, click **+ New profile**:
+In the **Profiles** tab, click **New profile**:
 
 - **Name**: `Work`. **Id**: `work`, which gives the folder `~/.claude-work` and the command `claude-work`.
 - **Base**: *Copy of Default* to start with your current settings, skills and MCP servers, or *Empty* for a clean slate. Leave conversations unticked: the next steps move the work ones.

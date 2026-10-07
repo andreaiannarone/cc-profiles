@@ -81,7 +81,7 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
 <body>
 <header class="top">
   <a class="brand" href="{{ '/' | relative_url }}">{% include logo.svg %}<span>cc-profiles</span></a>
-  <span class="sub">documentation</span>
+  <span class="sub">Documentation</span>
   <span class="grow"></span>
   <div class="search" role="search">
     <label class="sr" for="search-q">Search the documentation</label>
@@ -171,6 +171,14 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   </aside>
 </div>
 <script>
+(() => {
+  // a hop and a blink when the page opens, then a different gesture each time the pointer reaches the title
+  const logo = document.querySelector(".brand .logo"), GESTURES = ["g-blink", "g-look", "g-antenna", "g-peek", "g-jump"];
+  let next = 0;
+  const play = cls => { logo.classList.remove("play", ...GESTURES); void logo.getBoundingClientRect(); logo.classList.add(cls); };
+  document.querySelector(".brand").addEventListener("mouseenter", () => { play(GESTURES[next]); next = (next + 1) % GESTURES.length; });
+  play("play");
+})();
 (() => {
   // System → light → dark, remembered like in the app.
   const order = ["system", "light", "dark"], btn = document.getElementById("theme-btn");

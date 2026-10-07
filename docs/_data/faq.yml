@@ -17,6 +17,6 @@
 - q: How can I see how many tokens each Claude Code profile uses?
   a: The Usage tab adds up the token usage Claude Code records on every reply, per day, project, model and profile, with an estimated cost at list price and a CSV export.
 - q: Does cc-profiles send my data anywhere?
-  a: No. It runs on your computer and listens on 127.0.0.1 only, with a token on every request. It contacts the internet only when you click to check for updates or to install Claude Code.
+  a: No. It runs on your computer and listens on 127.0.0.1 only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click.
 - q: Which systems does cc-profiles run on, and what does it cost?
   a: macOS and Linux, and Windows through WSL 2, with Python 3.9 or later and no other dependencies. It is free and open source under the GNU GPL v3.0 or later.

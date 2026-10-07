@@ -29,7 +29,7 @@ FORMULA = """class CcProfiles < Formula
   def caveats
     <<~EOS
       Open it with: cc-profiles open
-      Add /cc-profiles to Claude Code with: cc-profiles install-command
+      Start it once and it adds /cc-profiles to Claude Code in every profile.
     EOS
   end
 

@@ -737,7 +737,7 @@ def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
 
     app.post("/api/profiles/create", {"label": "Empty", "id": "empty", "base": "", "share": []})
     text = home.path(".claude-empty/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
+    assert is_current_command(text) and "argument-hint:" in text
 
     # sharing commands with the source: the command goes into the source, through the link
     app.post("/api/profiles/create", {"label": "Shared", "id": "shared-cmd", "base": "", "share": ["commands"]})
@@ -1129,12 +1129,18 @@ def test_open_with_an_action_restarts_or_stops(home):
     place of $ARGUMENTS in the command's ! line, which then runs cc-profiles open <action>."""
     sys.path.insert(0, str(SRC))
     from cc_profiles import server
-    line = re.search(r"^!`(.*)`$", server.COMMAND_TEXT, re.M).group(1)
-    assert line == "cc-profiles open $ARGUMENTS"
+    basic_home(home)
+    run_cli(home, "install-command")
+    text = home.path(".claude/commands/cc-profiles.md").read_text()
+    line = re.search(r"^!`(.*)`$", text, re.M).group(1)
+    exe = line[:-len(" open $ARGUMENTS")]
+    assert line.endswith(" open $ARGUMENTS") and f"allowed-tools: Bash({exe} open:*)" in text
+    assert os.path.isabs(exe.split()[0]), "an absolute path: Claude Code's PATH may not have cc-profiles"
 
-    def slash(arguments):
-        args = line.replace("$ARGUMENTS", arguments).split()[1:]
-        return run_cli(home, *args, "--no-browser", "--port", str(port))
+    def slash(arguments):  # what Claude Code does: the ! line, in a shell whose PATH has no cc-profiles
+        cmd = line.replace("$ARGUMENTS", arguments) + f" --no-browser --port {port}"
+        e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
+        return subprocess.run(cmd, shell=True, env=e, capture_output=True, text=True, timeout=20)
 
     port = free_port()
     first = slash("")
@@ -1175,6 +1181,14 @@ def test_open_command_port_taken(home):
     assert "did not start" in r.stdout and "is busy" in r.stdout
 
 
+def is_current_command(text):
+    """The /cc-profiles text this version writes, with the cc-profiles it found (an absolute path)."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    exe = re.search(r"^!`(.*) open \$ARGUMENTS`$", text, re.M).group(1)
+    return os.path.isabs(exe.split()[0]) and text == server.command_text(exe)
+
+
 def test_install_command(home, app_factory):
     basic_home(home)
     home.profile("client")
@@ -1189,7 +1203,7 @@ def test_install_command(home, app_factory):
     assert "Work: added ~/.claude-work/commands/cc-profiles.md" in out
     assert "Client: skipped" in out and "Shared: shares commands with Default" in out
     text = home.path(".claude/commands/cc-profiles.md").read_text()
-    assert "# managed by cc-profiles" in text and "!`cc-profiles open $ARGUMENTS`" in text and "argument-hint:" in text
+    assert is_current_command(text) and "argument-hint:" in text
     assert home.path(".claude-client/commands/cc-profiles.md").read_text() == "my own command\n"
     assert home.path(".claude-shared/commands/cc-profiles.md").read_text() == text  # through the link
 
@@ -1207,19 +1221,61 @@ def test_install_command_updates_an_older_command(home):
     sys.path.insert(0, str(SRC))
     from cc_profiles import server
     basic_home(home)
-    old = server.COMMAND_TEXT.replace("!`cc-profiles open $ARGUMENTS`", "!`cc-profiles open`")
+    old = server.command_text("cc-profiles").replace("!`cc-profiles open $ARGUMENTS`", "!`cc-profiles open`")
     old = old.replace('argument-hint: "[restart|stop]"\n', "")
     home.write(".claude/commands/cc-profiles.md", old)
     out = run_cli(home, "install-command").stdout
-    assert "Default: added ~/.claude/commands/cc-profiles.md" in out
-    assert home.path(".claude/commands/cc-profiles.md").read_text() == server.COMMAND_TEXT
+    assert "Default: updated ~/.claude/commands/cc-profiles.md" in out
+    assert is_current_command(home.path(".claude/commands/cc-profiles.md").read_text())
+
+
+def test_server_adds_the_command_the_first_time_then_only_updates_it(home, app_factory):
+    """No need for `cc-profiles install-command`: the first start adds /cc-profiles everywhere,
+    later starts rewrite only the copies an older version wrote, and a deleted one stays deleted."""
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import server
+    basic_home(home)
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")
+    for d in (".claude", ".claude-work"):
+        assert is_current_command(home.path(f"{d}/commands/cc-profiles.md").read_text())
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is True
+    assert app.get("/api/backups")[0]["title"] == "Add the /cc-profiles command"
+    app.stop()
+
+    home.path(".claude-work/commands/cc-profiles.md").unlink()  # the user does not want it there
+    current = home.path(".claude/commands/cc-profiles.md").read_text()
+    home.write(".claude/commands/cc-profiles.md", current.replace("one short line", "a line"))  # an older version
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")
+    assert home.path(".claude/commands/cc-profiles.md").read_text() == current
+    assert not home.path(".claude-work/commands/cc-profiles.md").exists()
+    assert app.get("/api/backups")[0]["title"] == "Update the /cc-profiles command"
+    n = len(app.get("/api/backups"))
+    app.stop()
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")  # nothing to do: no new backup
+    assert len(app.get("/api/backups")) == n
+
+
+def test_install_command_off(home, app_factory):
+    """install-command --off (install.sh --no-command runs it): the app never adds the command,
+    not at start and not in new profiles; install-command turns it back on."""
+    basic_home(home)
+    r = run_cli(home, "install-command", "--off")
+    assert r.returncode == 0 and "no longer add" in r.stdout
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is False
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")
+    assert not home.path(".claude/commands/cc-profiles.md").exists()
+    app.post("/api/profiles/create", {"label": "Side", "id": "side", "base": "", "share": []})
+    assert not home.path(".claude-side/commands/cc-profiles.md").exists()
+    out = run_cli(home, "install-command").stdout
+    assert "Default: added" in out
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is True
 
 
 def test_plugin_command_matches_installed_command():
     sys.path.insert(0, str(SRC))
     from cc_profiles import server
     plugin = (SRC.parent / "plugin" / "commands" / "open.md").read_text()
-    assert plugin == server.COMMAND_TEXT.replace(server.COMMAND_MARK + "\n", "", 1)
+    assert plugin == server.command_text("cc-profiles", mark=False)
 
 
 def test_install_script_options():
@@ -1727,7 +1783,8 @@ def test_usage_csv_has_one_row_per_day_and_model(home, app_factory):
         rows = list(csv.reader(io.StringIO(r.read().decode("utf-8"))))
     assert rows[0] == ["date", "model", "input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens",
                        "replies", "estimated_cost_usd"]
-    today, two_ago = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m-%d", time.localtime(time.time() - 2 * 86400))
+    # the days of the replies themselves (0.01 and 2 days ago): right after midnight "0.01 days ago" is yesterday
+    today, two_ago = (time.strftime("%Y-%m-%d", time.localtime(time.time() - d * 86400)) for d in (0.01, 2))
     body = {(x[0], x[1]): x[2:] for x in rows[1:]}
     assert len(rows) == 5 and [x[0] for x in rows[1:]] == sorted(x[0] for x in rows[1:])  # oldest first
     assert body[(two_ago, "claude-sonnet-5-5")] == ["0", str(M), "0", "0", "1", "10.0000"]
