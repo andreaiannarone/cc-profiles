@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated.
+
 ## [0.5.0] - 2026-10-06
 
 ### Changed

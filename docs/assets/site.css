@@ -89,8 +89,11 @@ a:hover { text-decoration: underline; }
 .sresults .snone { padding: 10px; color: var(--muted); font-size: 13.5px; }
 
 /* sidebar like the app's tab groups */
-.layout { display: grid; grid-template-columns: 230px minmax(0, 1fr) 210px; gap: 36px; max-width: 1360px; margin: 0 auto; padding: 24px 28px 80px; }
+/* full width, aligned with the header: sidebar, page, On this page */
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) 230px; gap: 48px; padding: 24px 28px 80px; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
+/* thin scrollbars, in the theme's colors */
+.side, .toc, .doc pre, .doc table { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .side summary { display: none; }
 .ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
 .nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 10px 4px; }
@@ -99,7 +102,7 @@ a:hover { text-decoration: underline; }
 .side a.on { color: var(--text); background: var(--panel); box-shadow: inset 2px 0 0 var(--accent), 0 0 0 1px var(--line); }
 
 /* the page */
-.doc { min-width: 0; max-width: 820px; }
+.doc { min-width: 0; }
 /* On this page, on the right */
 .toc { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; font-size: 13.5px; }
 .toc[hidden] { display: none; }
@@ -110,7 +113,7 @@ a:hover { text-decoration: underline; }
 .toc a.sub { padding-left: 24px; font-size: 13px; }
 .toc a:hover { color: var(--text); text-decoration: none; }
 .toc a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 550; }
-@media (max-width: 1199px) { .layout { grid-template-columns: 230px minmax(0, 1fr); max-width: 1180px; } .toc { display: none; } }
+@media (max-width: 1199px) { .layout { grid-template-columns: 230px minmax(0, 1fr); gap: 36px; } .toc { display: none; } }
 .doc h1 { font-size: 30px; letter-spacing: -0.02em; line-height: 1.2; margin: 6px 0 18px; }
 .doc h2 { font-size: 21px; letter-spacing: -0.01em; margin: 38px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
 .doc h3 { font-size: 17px; margin: 28px 0 8px; }
@@ -129,7 +132,9 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .doc pre { padding: 12px 14px; overflow-x: auto; line-height: 1.5; margin: 0 0 16px; }
 /* the Copy button of code blocks: on hover or focus, always on touch screens */
 .doc .has-copy { position: relative; }
-.doc .has-copy > pre { padding-right: 48px; }
+.doc .has-copy > pre { padding-right: 14px; }
+/* the copy icon never covers a line: the code reserves its width, also when it scrolls sideways */
+.doc .has-copy > pre > code { display: inline-block; min-width: 100%; padding-right: 40px; box-sizing: border-box; }
 .doc .copy { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
   color: var(--muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
 .doc .copy svg { width: 16px; height: 16px; }
