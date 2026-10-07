@@ -3,6 +3,22 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.5.1] - 2026-10-07
+
+**Added**
+- **What's new** after an update: the next time you open cc-profiles, a window shows what changed since the version you used before (once; nothing is fetched from the internet, the notes come with the app). Open it any time from the About panel.
+- **Report a problem…** in the About panel opens a GitHub bug report with the versions of cc-profiles, Claude Code, Python and your system filled in. The About panel also shows the system.
+- **Homebrew**: `brew install andreaiannarone/cc-profiles/cc-profiles`, and **Update to …** in the app runs `brew upgrade cc-profiles` for a Homebrew install. The release script updates the tap at every release.
+- **Windows through WSL 2**: under WSL the app opens in the Windows browser (`wslview`, or Windows' `start`), and the About panel and bug reports say WSL. The documentation explains how to install it there.
+- Documentation: new pages Why cc-profiles, Uninstall, Glossary and What's new (the changelog, rebuilt by the release script). Search finds sections, not only pages, and opens the page at that section. Screenshots open full size on click, are cropped to the content, and the How-to guides show the dialogs they talk about (move, relink, new profile, copy to all). The page-not-found page suggests the pages closest to the address you typed. Each page ends with a link to open an issue about it.
+- Documentation: four How-to guides (separate work and personal, move a project, relink a moved folder, share skills between profiles), worked examples in Memories, Conversations and Plugins, and a screenshot of the tab in each guide, in light or dark like the site. Each page ends with links to the previous and next page and shows the date it was last updated; section titles have a # link to share them.
+- A test checks the images and HTML links of the documentation, and anchors with an underscore (`#search_roots`) are now checked like the site builds them.
+
+**Changed**
+- Screenshots and demo GIFs regenerated: the light ones showed a "Claude Code is not installed" notice that came from the screenshot sandbox. `make_screenshots.py` also captures Projects, Profiles, Backups and Health.
+- Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). Each sidebar group has an icon, like On this page. Each page shows its group above the title. On tablets and phones, a bar under the header shows where you are (Guides › Settings) and opens the menu as a drawer from the left (closes with Esc, a tap outside or a link). Responsive: from 561 to 860 px wide the page now switches to one column with the Menu (the sidebar was hidden there); on phones, tables are more compact and show a shadow where they continue sideways. Less empty space at the bottom of the page. The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.
+- Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated.
+
 ## [0.5.0] - 2026-10-06
 
 **Changed**
@@ -208,6 +224,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.5.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.4.7...v0.4.8
