@@ -29,7 +29,6 @@ With [Homebrew](https://brew.sh), on macOS or Linux:
 
 ```sh
 brew install andreaiannarone/cc-profiles/cc-profiles
-cc-profiles install-command     # optional: adds /cc-profiles to Claude Code
 ```
 
 Homebrew gets each new version shortly after it is on PyPI. To try it once without installing:
@@ -69,15 +68,14 @@ Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, whic
 | `/cc-profiles restart` | `cc-profiles open restart` | stops the server and starts it again, e.g. after an update; then reload the page |
 | `/cc-profiles stop` | `cc-profiles open stop` | stops the server |
 
-From a terminal, `cc-profiles restart` and `cc-profiles stop` do the same. A command added by an older version of cc-profiles does not take `restart` or `stop` yet: run `cc-profiles install-command` (or the install script) again to update it.
+From a terminal, `cc-profiles restart` and `cc-profiles stop` do the same.
 
-The [install script](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) adds the command for you. Otherwise run:
+You do not need to add the command yourself. The install script adds it at once; with pipx, uv, pip or Homebrew, start `cc-profiles` once (with plain `pip --user`, whose folder is often not in `PATH`: `python3 -m cc_profiles`), and it writes `commands/cc-profiles.md` in every profile. The command calls cc-profiles by its full path, such as `~/.local/bin/cc-profiles` or `/opt/homebrew/bin/cc-profiles`, so it works even when Claude Code was started from a terminal whose `PATH` does not have it. It skips profiles that share `commands` with the [source profile](concepts.md#the-source-profile) (they get it through the link) and never overwrites a `cc-profiles.md` it did not create. After an update, it rewrites the copies it wrote, so `/cc-profiles` always matches the app; a copy you delete stays deleted. Profiles you create from the app get it too. Each of these changes has a backup you can restore from the **Backups** tab. Sessions that are already open see the command after a restart.
 
-```sh
-cc-profiles install-command
-```
-
-It writes `commands/cc-profiles.md` in every profile, skips profiles that share `commands` with the [source profile](concepts.md#the-source-profile) (they get it through the link), and never overwrites a `cc-profiles.md` it did not create. Like every change cc-profiles makes, it is saved in a backup you can restore from the **Backups** tab. Sessions that are already open see the command after a restart.
+| Command | Does |
+|---|---|
+| `cc-profiles install-command` | adds the command again, also where you deleted it |
+| `cc-profiles install-command --off` | stops adding and updating it; the copies already written stay ([remove them](uninstall.md#2-remove-the-cc-profiles-command)). The install script's `--no-command` does the same |
 
 ### As a plugin
 
