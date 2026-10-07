@@ -675,6 +675,7 @@ def test_starting_it_again_opens_the_running_one(home, app_factory, monkeypatch)
     monkeypatch.setattr(CLI, "open_url", opened.append)
     monkeypatch.setattr(CLI, "load_config", lambda: {})
     monkeypatch.setattr(CLI, "cleanup_backups", lambda: None)
+    monkeypatch.setattr(CLI, "ensure_command", lambda: ([], None))  # this process's paths are the real home's
     monkeypatch.setattr(CLI.threading, "Thread", lambda *a, **k: type("T", (), {"start": lambda self: None})())
     monkeypatch.setattr(CLI.signal, "signal", lambda *a: None)
     with pytest.raises(SystemExit) as e:
