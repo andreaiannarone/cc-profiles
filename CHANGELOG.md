@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added

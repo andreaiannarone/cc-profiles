@@ -48,7 +48,7 @@ Rules:
 
 - The container spans the full window width, with 24px at the top and 28px at the sides (16px below 820px).
 - 12–16px between cards; 14–16px inside cards, 9–12px inside table cells.
-- Radii: `--radius` 10px for cards and tables, 12px for modals, 8px for buttons and inputs, `99px` for chips, badges and switches.
+- Radii: `--radius` 10px for cards and tables, 12px for modals, 8px for buttons, inputs and chips, `99px` for badges and switches.
 - Shadows only for things that float above the page: modals, toasts, the drawer and the switch knob. Cards only have a border.
 
 ## Components
