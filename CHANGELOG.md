@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- Documentation site: the page you are on is marked in the sidebar like a hovered link.
+- Documentation site: the page you are on is marked in the sidebar like a hovered link. The sidebar and On this page show their scrollbar only while the pointer is over them.
 - Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated.
 
 ## [0.5.0] - 2026-10-06
