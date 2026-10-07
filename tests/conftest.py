@@ -19,6 +19,33 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+
+# Some tests call cc_profiles code in this process, where its paths point to the real home:
+# nothing they start may write there on its own (the /cc-profiles command, the update check).
+os.environ["CC_PROFILES_AUTO_COMMAND"] = "0"
+os.environ["CC_PROFILES_UPDATE_CHECK"] = "0"
+REAL_HOME = Path(os.path.expanduser("~"))
+
+
+def real_home_state():
+    """What the tests must never change in the real home: cc-profiles' data and each profile's command."""
+    out = {}
+    for p in [REAL_HOME / ".cc-profiles" / "config.json", *REAL_HOME.glob(".claude*/commands/cc-profiles.md")]:
+        try:
+            out[str(p)] = p.stat().st_mtime_ns
+        except OSError:
+            out[str(p)] = None
+    return out
+
+
+@pytest.fixture(scope="session", autouse=True)
+def real_home_untouched():
+    """A safety net: fail the run if anything wrote into the real home's cc-profiles data or commands."""
+    before = real_home_state()
+    yield
+    after = real_home_state()
+    changed = sorted(k for k in set(before) | set(after) if before.get(k) != after.get(k))
+    assert not changed, f"the tests changed the real home: {changed}"
 OLD = time.time() - 3600  # files older than the "session open" window
 
 
@@ -26,6 +53,7 @@ def child_env(env):
     """Environment for a cc-profiles process started by a test. Under coverage
     (COVERAGE_PROCESS_START is set) the process is measured too."""
     env = dict(env)
+    env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
         # data next to the config, never in the process's working folder (often a fake home):
@@ -124,6 +152,7 @@ class App:
             "PYTHONDONTWRITEBYTECODE": "1",
             "CC_PROFILES_QUIET": "1",
             "CC_PROFILES_INSTALL_DRYRUN": "1",
+            "CC_PROFILES_AUTO_COMMAND": "0",  # tests compare the fake home: no /cc-profiles written at start
         }
         env.update(extra_env or {})
         env = child_env(env)

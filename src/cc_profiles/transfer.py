@@ -25,7 +25,7 @@ from .core import (
     write_json,
 )
 from .sharing import SHARE_ITEMS, link_shared, primary, share_items, share_state
-from .command import command_state, write_command
+from .command import command_state, command_wanted, write_command
 from .launchers import launcher_dir_in_path, write_launcher
 from .newprofile import PROJECT_DATA, RUNTIME, add_profile_to_config, check_new_profile
 
@@ -224,7 +224,7 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
                 cfg.pop(k, None)
             write_json(os.path.join(new, ".claude.json"), cfg)
             link_shared(new, share, bk)  # before the command: a shared commands/ gets it in the source
-            if command_state(new) in ("missing", "outdated"):
+            if command_wanted() and command_state(new) in ("missing", "outdated"):
                 write_command(new, bk, pid)
             write_launcher(command, f"~/.claude-{pid}", label, bk)
         except Exception:
