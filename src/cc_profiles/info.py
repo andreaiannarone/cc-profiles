@@ -134,5 +134,6 @@ def about():
             "Backup disk usage": recent_dir_size(BACKUP_DIR) if os.path.isdir(BACKUP_DIR) else 0,
             "Address": f"http://127.0.0.1:{core.PORT}",
             "Python": sys.version.split(" ")[0],
+            "System": core.system_name(),
         },
     }

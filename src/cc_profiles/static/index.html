@@ -197,6 +197,12 @@ label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; c
 .orphan .c { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px; z-index: 17; overflow-y: auto; }
+.wn-body { max-height: min(60vh, 520px); overflow: auto; }
+.wn-v { margin: 14px 0 4px; font-size: 15px; } .wn-v:first-child { margin-top: 0; }
+.wn-s { margin: 8px 0 2px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+ul.wn a, .wn-more a { color: var(--accent); }
+.wn-more { margin: 10px 0 0; }
+ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-height: 1.45; }
 .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(560px, 100%); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .modal h2 { margin: 0 0 4px; font-size: 16px; }
 .modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
@@ -1679,9 +1685,12 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div></div>
+      <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version, only when you click.</span></div>
+      <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
+  $("#ab-news", dr).onclick = () => showWhatsNew();
+  $("#ab-report", dr).onclick = () => reportProblem(a);
 }
 async function checkUpdate(dr) {
   const st = $("#upd-status", dr), btn = $("#upd-check", dr);
@@ -1693,7 +1702,7 @@ async function checkUpdate(dr) {
   st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
     ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
       : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
-    <a href="https://github.com/andreaiannarone/cc-profiles/releases" target="_blank" rel="noopener">What's new</a>`;
+    <a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">What's new</a>`;
   if (u.can_update) $("#upd-run", dr).onclick = () => runUpdate(u, dr);
 }
 async function runUpdate(u, dr) {
@@ -1721,6 +1730,46 @@ async function runUpdate(u, dr) {
     await new Promise(res => setTimeout(res, 1000));
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
+}
+
+// ---------- what's new, report a problem ----------
+// The release notes ship with the app (static/whatsnew.json, from CHANGELOG.md). The page remembers
+// the last version it showed: after an update it shows what changed since then, once.
+const SEEN_VERSION = "cc-profiles.seen-version";
+const vnums = v => ((v || "").match(/^\d+(?:\.\d+)*/)?.[0] || "0").split(".").map(Number);
+const isNewer = (a, b) => {
+  const x = vnums(a), y = vnums(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+};
+// the few bits of Markdown the changelog uses: `code`, **bold**, *italics*, [links](https://…)
+const inlineMd = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+  .replace(/(^|[^*\w])\*([^*\s][^*]*)\*(?!\*)/g, "$1<i>$2</i>")
+  .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+async function checkWhatsNew() {
+  let d;
+  try { d = await api("/api/whatsnew"); } catch { return; }
+  let seen = null;
+  try { seen = localStorage.getItem(SEEN_VERSION); localStorage.setItem(SEEN_VERSION, d.version); } catch {}
+  if (seen && isNewer(d.version, seen)) showWhatsNew(d, seen);
+}
+async function showWhatsNew(d, since) {
+  if (!d) { try { d = await api("/api/whatsnew"); } catch { return; } }
+  const list = (since ? d.releases.filter(r => isNewer(r.version, since)) : d.releases).slice(0, since ? 5 : 3);
+  const body = list.length ? list.map(r => `<h3 class="wn-v">${esc(r.version)} <span class="hint">${esc(r.date)}</span></h3>
+      ${r.sections.map(sec => `<h4 class="wn-s">${esc(sec.title)}</h4><ul class="wn">${sec.items.map(i => `<li>${inlineMd(i)}</li>`).join("")}</ul>`).join("")}`).join("")
+    : `<div class="hint">No release notes in this copy of cc-profiles.</div>`;
+  await modal({ title: since ? `Updated to cc-profiles ${d.version}` : "What's new in cc-profiles",
+    sub: since ? `What changed since ${esc(since)}.` : `You have version ${esc(d.version)}.`,
+    body: `<div class="wn-body">${body}</div><p class="hint wn-more"><a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">Every release</a></p>`,
+    cancel: "Close" });
+}
+function reportProblem(a) {
+  // GitHub's bug report form, with the versions filled in. Nothing is sent: the browser opens the page.
+  const sys = a.app.System || "", os = /^macOS/.test(sys) ? "macOS" : /WSL/.test(sys) ? "Windows (WSL)" : /^Linux/.test(sys) ? "Linux" : "Other";
+  const q = new URLSearchParams({ template: "bug_report.yml", version: a.app["cc-profiles"], claude: a.claude.Version, os,
+    system: `${sys} · Python ${a.app.Python}` });
+  window.open("https://github.com/andreaiannarone/cc-profiles/issues/new?" + q, "_blank", "noopener");
 }
 
 // ---------- export, import and plugins ----------
@@ -2400,6 +2449,7 @@ function render() {
 $("#about-btn").onclick = openAbout;
 $("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
+checkWhatsNew();
 refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
 </script>
 </body>

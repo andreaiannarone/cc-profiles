@@ -1593,6 +1593,15 @@ def test_health_reports_problems_and_notices_fixes(home, app_factory):
     assert not any("loose.md" in t for t in texts) and any(t.endswith("gone.md is missing") for t in texts)
 
 
+def test_whats_new_lists_the_release_notes_shipped_with_the_app(home, app_factory):
+    """/api/whatsnew needs nothing from the internet: the notes are in static/whatsnew.json."""
+    d = app_factory().get("/api/whatsnew")
+    from cc_profiles import __version__
+    assert d["version"] == __version__
+    assert d["releases"] and all({"version", "date", "sections"} <= set(r) for r in d["releases"])
+    assert all(s["title"] and s["items"] for r in d["releases"] for s in r["sections"])
+
+
 def test_about_counts_each_profile(home, app_factory):
     basic_home(home)
     about = app_factory().get("/api/about")

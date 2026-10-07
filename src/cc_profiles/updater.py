@@ -13,7 +13,7 @@ import urllib.request
 
 from . import __version__
 from . import core
-from .core import APP_DIR, ApiError, find_tool, tool_env
+from .core import APP_DIR, STATIC_DIR, ApiError, find_tool, tool_env
 
 # ---------------------------------------------------------------------------
 # Updating cc-profiles
@@ -22,16 +22,18 @@ from .core import APP_DIR, ApiError, find_tool, tool_env
 # to the internet (PyPI sees the IP address). The commands are fixed here, like
 # INSTALL_METHODS: the client picks an action, never a command.
 PYPI_URL = os.environ.get("CC_PROFILES_PYPI_URL", "https://pypi.org/pypi/cc-profiles/json")  # tests: a file:// URL
-UPDATE_COMMANDS = {"pipx": ["pipx", "upgrade", "cc-profiles"], "uv": ["uv", "tool", "upgrade", "cc-profiles"]}
+UPDATE_COMMANDS = {"pipx": ["pipx", "upgrade", "cc-profiles"], "uv": ["uv", "tool", "upgrade", "cc-profiles"],
+                   "brew": ["brew", "upgrade", "cc-profiles"]}
 # PyPI's JSON API lists a release minutes before the index pip and uv download from
 # does. An update in those minutes fails with one of these, or "succeeds" without
 # changing anything: the user is told to try again shortly, not shown pip's output.
 INDEX_LAG_SIGNS = ("no matching distribution found", "could not find a version that satisfies",
-                   "already at latest version", "nothing to upgrade", "no solution found")
+                   "already at latest version", "nothing to upgrade", "no solution found",
+                   "already installed")  # brew, while the tap does not have the new version yet
 
 
 def install_kind():
-    """How this copy of cc-profiles was installed: pipx, uv, or source (editable or a checkout)."""
+    """How this copy of cc-profiles was installed: pipx, uv, brew, pip, or source (editable or a checkout)."""
     if os.environ.get("CC_PROFILES_INSTALL_KIND"):  # tests only, with a fake pipx or uv on PATH
         return os.environ["CC_PROFILES_INSTALL_KIND"]
     if "site-packages" not in APP_DIR:
@@ -41,6 +43,8 @@ def install_kind():
         return "pipx"
     if "/uv/tools/" in prefix:
         return "uv"
+    if "/Cellar/cc-profiles/" in prefix:  # Homebrew: <prefix>/Cellar/cc-profiles/<version>/libexec
+        return "brew"
     return "pip"
 
 
@@ -116,3 +120,15 @@ def op_update():
         raise ApiError(f"The update failed ({' '.join(cmd)} ended with code {r.returncode}): {' / '.join(out)}", 500)
     restart_soon()
     return {"message": f"Updated to cc-profiles {info['latest']}. Restarting…", "restarting": True}
+
+
+def whats_new():
+    """This version and the release notes shipped with it (static/whatsnew.json, written by
+    scripts/release.py from CHANGELOG.md). The page shows the ones newer than the version it
+    saw last, so after an update you see what changed; nothing is fetched from the internet."""
+    try:
+        with open(os.path.join(STATIC_DIR, "whatsnew.json")) as f:
+            releases = json.load(f).get("releases") or []
+    except (OSError, ValueError):
+        releases = []
+    return {"version": __version__, "releases": releases}

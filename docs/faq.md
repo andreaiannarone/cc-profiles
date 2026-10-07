@@ -40,4 +40,4 @@ No. It runs on your computer and listens on `127.0.0.1` only, with a token on ev
 
 ## Which systems does cc-profiles run on, and what does it cost?
 
-macOS and Linux, with Python 3.9 or later and no other dependencies. It is free and open source under the GNU GPL v3.0 or later. See [Getting started](getting-started.md).
+macOS and Linux, and Windows through WSL 2, with Python 3.9 or later and no other dependencies. It is free and open source under the GNU GPL v3.0 or later. See [Getting started](getting-started.md).

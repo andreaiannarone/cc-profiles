@@ -31,7 +31,7 @@ With the tool you installed it with:
 
 ```sh
 cc-profiles stop              # stop the server if it is running
-pipx uninstall cc-profiles    # or: uv tool uninstall cc-profiles
+pipx uninstall cc-profiles    # or: uv tool uninstall cc-profiles, brew uninstall cc-profiles
 ```
 
 ## 4. Remove its data (optional)

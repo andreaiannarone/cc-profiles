@@ -26,6 +26,21 @@ from .web import Handler, Server
 # ---------------------------------------------------------------------------
 # Command line
 # ---------------------------------------------------------------------------
+def open_url(url):
+    """Open the app in the browser. Under WSL the browser is a Windows program that Python's
+    webbrowser does not know: wslview (from wslu) if installed, else Windows' own handler."""
+    if core.is_wsl():
+        for cmd in (["wslview", url], ["cmd.exe", "/c", "start", "", url]):
+            exe = find_tool(cmd[0])
+            if exe:
+                try:
+                    subprocess.Popen([exe] + cmd[1:], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    return
+                except OSError:
+                    continue
+    webbrowser.open(url)
+
+
 def current_label():
     """Label of the profile Claude Code is using now (for status lines)."""
     d = os.path.realpath(expand(os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude")).rstrip("/")
@@ -89,7 +104,7 @@ def serve(port, open_browser):
     url = f"http://127.0.0.1:{port}"
     print(f"cc-profiles {__version__} on {url}  (ctrl+C to stop)")
     if open_browser:
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.6, lambda: open_url(url)).start()
     threading.Thread(target=warm_caches, daemon=True).start()
     try:
         srv.serve_forever()
@@ -175,7 +190,7 @@ def open_app(port, open_browser):
             sys.exit(1)
         print(f"cc-profiles started in the background on {url} (pid {proc.pid}). Stop it with: cc-profiles stop{port_arg}")
     if open_browser:
-        webbrowser.open(url)
+        open_url(url)
 
 
 def main(argv=None):

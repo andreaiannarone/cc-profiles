@@ -101,6 +101,21 @@ def test_docs_changelog_page_is_up_to_date():
         "open(\"docs/changelog.md\", \"w\").write(release.docs_changelog(open(\"CHANGELOG.md\").read()))'"
 
 
+def test_whatsnew_holds_the_last_released_versions():
+    import json
+    notes = json.loads(release.whatsnew(release.rewrite_changelog(CHANGELOG, "0.4.4", "0.4.3", "2026-10-07"), keep=2))
+    assert [r["version"] for r in notes["releases"]] == ["0.4.4", "0.4.3"]
+    first = notes["releases"][0]
+    assert first["date"] == "2026-10-07" and first["sections"][0]["title"] and first["sections"][0]["items"]
+
+
+def test_whatsnew_of_the_app_is_up_to_date():
+    """static/whatsnew.json is rebuilt by the release from CHANGELOG.md, like docs/changelog.md."""
+    shipped = (ROOT / "src" / "cc_profiles" / "static" / "whatsnew.json").read_text()
+    assert shipped == release.whatsnew((ROOT / "CHANGELOG.md").read_text()), \
+        "src/cc_profiles/static/whatsnew.json is stale: rebuild it with release.whatsnew(CHANGELOG.md)"
+
+
 def release_files(tmp_path, changelog=CHANGELOG):
     (tmp_path / "src" / "cc_profiles").mkdir(parents=True)
     (tmp_path / "src" / "cc_profiles" / "__init__.py").write_text('__version__ = "0.4.3"\n')
@@ -129,11 +144,12 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "+## [0.4.4] - 2026-10-07",
         f"+[0.4.4]: {URL}/compare/v0.4.3...v0.4.4",
         "would edit docs/changelog.md",
+        "would edit src/cc_profiles/static/whatsnew.json",
         "$ git switch -c release-0.4.4",
         "$ git commit -m 'Release 0.4.4'",
         "$ git push -u origin release-0.4.4",
         "$ gh pr create --base main --head release-0.4.4 --title 'Release 0.4.4' "
-        "--body 'Bump the version to 0.4.4, date the CHANGELOG section and rebuild docs/changelog.md.'",
+        "--body 'Bump the version to 0.4.4, date the CHANGELOG section and rebuild the release notes from it.'",
         "$ gh pr checks '<n>' --json name",
         "$ git commit --allow-empty -m 'Trigger CI'",
         "$ gh pr checks '<n>' --watch --interval 10",
@@ -144,6 +160,8 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "$ gh run list --workflow release.yml --branch v0.4.4",
         "$ gh run watch '<run id>' --exit-status",
         "GET https://pypi.org/simple/cc-profiles/ (Cache-Control: no-cache)",
+        "GET https://pypi.org/pypi/cc-profiles/0.4.4/json for the sdist URL and SHA-256",
+        "$ gh api repos/andreaiannarone/homebrew-cc-profiles/contents/Formula/cc-profiles.rb --jq .sha",
         "$ git branch -D release-0.4.4",
         "$ git ls-remote --heads origin release-0.4.4",
         "deleted only if listed",

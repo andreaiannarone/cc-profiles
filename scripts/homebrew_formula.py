@@ -3,7 +3,8 @@
     python3 scripts/homebrew_formula.py 0.4.3 > Formula/cc-profiles.rb
 
 It reads the sdist's URL and SHA-256 from PyPI, so run it after the release is
-published. No tap is published yet: the formula is ready for one.
+published. scripts/release.py does it at every release and writes the result in the
+tap, github.com/andreaiannarone/homebrew-cc-profiles (brew install andreaiannarone/cc-profiles/cc-profiles).
 """
 import json
 import sys
@@ -48,11 +49,15 @@ def sdist(version):
     raise SystemExit(f"No sdist on PyPI for cc-profiles {version}")
 
 
+def formula(version):
+    url, sha256 = sdist(version)
+    return FORMULA.format(url=url, sha256=sha256)
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__.strip().splitlines()[2].strip())
-    url, sha256 = sdist(sys.argv[1])
-    sys.stdout.write(FORMULA.format(url=url, sha256=sha256))
+    sys.stdout.write(formula(sys.argv[1]))
 
 
 if __name__ == "__main__":

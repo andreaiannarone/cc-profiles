@@ -2,9 +2,9 @@
 
 ## Requirements
 
-- macOS or Linux
+- macOS or Linux; on Windows, [WSL 2](#windows-wsl)
 - Python 3.9 or later (the one that ships with macOS works)
-- [pipx](https://pipx.pypa.io) or [uv](https://docs.astral.sh/uv/)
+- [pipx](https://pipx.pypa.io), [uv](https://docs.astral.sh/uv/) or [Homebrew](https://brew.sh)
 - Claude Code, or let cc-profiles install it for you (see [Health and About](guides/health.md#installing-claude-code))
 
 ## Install
@@ -23,11 +23,26 @@ pipx install cc-profiles
 uv tool install cc-profiles
 ```
 
-Both put a `cc-profiles` command in `~/.local/bin`, in an isolated environment, so nothing else on your system is affected. To try it once without installing:
+Both put a `cc-profiles` command in `~/.local/bin`, in an isolated environment, so nothing else on your system is affected.
+
+With [Homebrew](https://brew.sh), on macOS or Linux:
+
+```sh
+brew install andreaiannarone/cc-profiles/cc-profiles
+cc-profiles install-command     # optional: adds /cc-profiles to Claude Code
+```
+
+Homebrew gets each new version shortly after it is on PyPI. To try it once without installing:
 
 ```sh
 uvx cc-profiles
 ```
+
+### Windows (WSL)
+
+Claude Code runs on Windows inside [WSL 2](https://learn.microsoft.com/windows/wsl/install), and so does cc-profiles: open your WSL terminal, in the same Linux distribution where you use Claude Code, and install it with the commands above. Its profiles are the ones in your Linux home (`~/.claude`), as Claude Code sees them.
+
+The app still opens in your Windows browser: cc-profiles uses `wslview` when it is installed (package `wslu`), or else Windows' own `start`. WSL 2 forwards `127.0.0.1` to Windows, so the address works as it is. WSL support is new: if something does not work, [report it](troubleshooting.md#reporting-a-bug).
 
 ## First run
 

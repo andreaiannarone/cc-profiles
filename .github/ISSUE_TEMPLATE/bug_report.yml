@@ -27,7 +27,7 @@ body:
     id: version
     attributes:
       label: cc-profiles version
-      description: Output of `cc-profiles --version`
+      description: Output of `cc-profiles --version`. **Report a problem…** in the About panel (ⓘ) fills in this and the fields below.
     validations:
       required: true
   - type: input
@@ -39,9 +39,14 @@ body:
     id: os
     attributes:
       label: Operating system
-      options: [macOS, Linux, Other]
+      options: [macOS, Linux, Windows (WSL), Other]
     validations:
       required: true
+  - type: input
+    id: system
+    attributes:
+      label: System details (optional)
+      description: Operating system version and Python, from the About panel
   - type: textarea
     id: backup
     attributes:

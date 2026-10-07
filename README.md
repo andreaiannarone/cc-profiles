@@ -94,6 +94,12 @@ pipx install cc-profiles        # or: uv tool install cc-profiles
 cc-profiles install-command     # optional: adds /cc-profiles to Claude Code
 ```
 
+With Homebrew:
+
+```bash
+brew install andreaiannarone/cc-profiles/cc-profiles
+```
+
 Try it without installing anything:
 
 ```bash
@@ -143,7 +149,7 @@ cc-profiles
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
-- 🔄 **Updates from the app**: **Check for updates** in the (i) panel asks PyPI for the latest version and, for a pipx or uv install, updates and restarts cc-profiles with one click.
+- 🔄 **Updates from the app**: **Check for updates** in the (i) panel asks PyPI for the latest version and, for a pipx or uv install, updates and restarts cc-profiles with one click (pipx, uv or Homebrew); then it shows what's new. **Report a problem…** opens a bug report with the versions filled in.
 
 ---
 
@@ -387,9 +393,9 @@ See the **[Configuration reference](https://cc-profiles.andreaia.com/configurati
 
 ## System Requirements
 
-- **macOS or Linux** (Windows is not supported yet)
+- **macOS or Linux**; on Windows, inside [WSL 2](https://cc-profiles.andreaia.com/getting-started.html#windows-wsl)
 - **Python 3.9 or later**: macOS's built-in Python works
-- **pipx or uv** to install it
+- **pipx, uv or Homebrew** to install it
 - **[Claude Code](https://code.claude.com/docs/en/setup)**, or let cc-profiles install it for you with the official installer
 
 No dependencies: cc-profiles uses only the Python standard library.

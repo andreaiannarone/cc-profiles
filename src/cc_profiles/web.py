@@ -83,7 +83,7 @@ from .plugins import list_plugins, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
-from .updater import check_update, op_update
+from .updater import check_update, op_update, whats_new
 
 # ---------------------------------------------------------------------------
 # HTTP
@@ -291,6 +291,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/shell/which": lambda: shell_which(q.get("path", "")),
                 "/api/claude/status": lambda: claude_status(),
                 "/api/update": lambda: check_update(),
+                "/api/whatsnew": lambda: whats_new(),
                 "/api/skills": lambda: list_skills(q["profile"]),
                 "/api/skills/file": lambda: skill_read(q["profile"], q["name"]),
                 "/api/mcp": lambda: list_mcp(q["profile"]),

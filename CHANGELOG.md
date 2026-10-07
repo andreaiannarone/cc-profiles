@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **What's new** after an update: the next time you open cc-profiles, a window shows what changed since the version you used before (once; nothing is fetched from the internet, the notes come with the app). Open it any time from the About panel.
+- **Report a problem…** in the About panel opens a GitHub bug report with the versions of cc-profiles, Claude Code, Python and your system filled in. The About panel also shows the system.
+- **Homebrew**: `brew install andreaiannarone/cc-profiles/cc-profiles`, and **Update to …** in the app runs `brew upgrade cc-profiles` for a Homebrew install. The release script updates the tap at every release.
+- **Windows through WSL 2**: under WSL the app opens in the Windows browser (`wslview`, or Windows' `start`), and the About panel and bug reports say WSL. The documentation explains how to install it there.
 - Documentation: new pages Why cc-profiles, Uninstall, Glossary and What's new (the changelog, rebuilt by the release script). Search finds sections, not only pages, and opens the page at that section. Screenshots open full size on click, are cropped to the content, and the How-to guides show the dialogs they talk about (move, relink, new profile, copy to all). The page-not-found page suggests the pages closest to the address you typed. Each page ends with a link to open an issue about it.
 - Documentation: four How-to guides (separate work and personal, move a project, relink a moved folder, share skills between profiles), worked examples in Memories, Conversations and Plugins, and a screenshot of the tab in each guide, in light or dark like the site. Each page ends with links to the previous and next page and shows the date it was last updated; section titles have a # link to share them.
 - A test checks the images and HTML links of the documentation, and anchors with an underscore (`#search_roots`) are now checked like the site builds them.

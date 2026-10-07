@@ -9,13 +9,16 @@
 Checks that main is clean and up to date and that CHANGELOG.md has something under
 ## [Unreleased]; bumps the version in src/cc_profiles/__init__.py and
 plugin/.claude-plugin/plugin.json, dates the CHANGELOG section and rebuilds the docs
-site's What's new page from it (docs/changelog.md); opens the
+site's What's new page (docs/changelog.md) and the app's release notes
+(src/cc_profiles/static/whatsnew.json) from it; opens the
 "Release <v>" pull request, waits for its checks and squash-merges it; tags v<v>,
-waits for the Release workflow and for the wheel on PyPI; deletes the release branch.
+waits for the Release workflow and for the wheel on PyPI; points the Homebrew formula
+in the tap to the new version; deletes the release branch.
 Needs git and an authenticated gh. Standard library only.
 """
 
 import argparse
+import base64
 import datetime
 import difflib
 import json
@@ -24,6 +27,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 
@@ -32,8 +36,11 @@ INIT = os.path.join("src", "cc_profiles", "__init__.py")
 PLUGIN = os.path.join("plugin", ".claude-plugin", "plugin.json")
 CHANGELOG = "CHANGELOG.md"
 DOCS_CHANGELOG = os.path.join("docs", "changelog.md")
+WHATSNEW = os.path.join("src", "cc_profiles", "static", "whatsnew.json")
 PYPI_SIMPLE = "https://pypi.org/simple/cc-profiles/"
-PR_BODY = "Bump the version to {v}, date the CHANGELOG section and rebuild docs/changelog.md."
+TAP = "andreaiannarone/homebrew-cc-profiles"   # the Homebrew tap: brew install andreaiannarone/cc-profiles/cc-profiles
+TAP_FORMULA = "Formula/cc-profiles.rb"
+PR_BODY = "Bump the version to {v}, date the CHANGELOG section and rebuild the release notes from it."
 CHECKS_APPEAR_TIMEOUT = 60      # seconds before pushing an empty "Trigger CI" commit
 RUN_APPEAR_TIMEOUT = 180        # seconds for the Release workflow run to show up
 PYPI_TIMEOUT = 15 * 60
@@ -129,6 +136,25 @@ def docs_changelog(changelog):
             "Every release of cc-profiles, newest first. To update, use **Update to …** in the app "
             "(see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.\n\n"
             + body.rstrip() + "\n")
+
+
+def whatsnew(changelog, keep=10):
+    """The release notes the app shows after an update (static/whatsnew.json): the last
+    `keep` released versions of CHANGELOG.md, as sections of bullet items in Markdown."""
+    releases = []
+    for m in re.finditer(r"^## \[(\d[^\]]*)\] - (\S+)\n(.*?)(?=^## \[|^\[[^\]]+\]: |\Z)", changelog, re.M | re.S):
+        sections = []
+        for line in m.group(3).splitlines():
+            if line.startswith("### "):
+                sections.append({"title": line[4:].strip(), "items": []})
+            elif line.startswith("- ") and sections:
+                sections[-1]["items"].append(line[2:].strip())
+            elif line.startswith("  ") and line.strip() and sections and sections[-1]["items"]:
+                sections[-1]["items"][-1] += " " + line.strip()  # a wrapped or nested line
+        releases.append({"version": m.group(1), "date": m.group(2), "sections": sections})
+        if len(releases) == keep:
+            break
+    return json.dumps({"releases": releases}, indent=1, ensure_ascii=False) + "\n"
 
 
 def pr_number(url):
@@ -237,10 +263,12 @@ class Releaser:
         self.write(CHANGELOG, changelog, new_changelog)
         old_docs = self.read(DOCS_CHANGELOG) if os.path.exists(os.path.join(self.root, DOCS_CHANGELOG)) else ""
         self.write(DOCS_CHANGELOG, old_docs, docs_changelog(new_changelog))
+        old_notes = self.read(WHATSNEW) if os.path.exists(os.path.join(self.root, WHATSNEW)) else ""
+        self.write(WHATSNEW, old_notes, whatsnew(new_changelog))
 
         self.step("Open the release pull request")
         self.run(["git", "switch", "-c", branch])
-        self.run(["git", "add", INIT, PLUGIN, CHANGELOG, DOCS_CHANGELOG])
+        self.run(["git", "add", INIT, PLUGIN, CHANGELOG, DOCS_CHANGELOG, WHATSNEW])
         self.run(["git", "commit", "-m", f"Release {new}"])
         self.run(["git", "push", "-u", "origin", branch])
         url = self.run(["gh", "pr", "create", "--base", "main", "--head", branch, "--title", f"Release {new}",
@@ -276,14 +304,43 @@ class Releaser:
         self.step(f"Wait for cc-profiles {new} on PyPI")
         self.wait_for_pypi(new)
 
+        self.step("Update the Homebrew tap")
+        try:
+            self.update_tap(new)
+        except (ReleaseError, OSError, ValueError, KeyError) as e:  # PyPI has it already: only warn
+            self.say(f"  ! The tap was not updated ({e}). By hand: python3 scripts/homebrew_formula.py {new} "
+                     f"> {TAP_FORMULA} in a clone of {TAP}, then commit and push.")
+
         self.step("Delete the release branch")
         self.run(["git", "branch", "-D", branch])
         self.delete_remote_branch(branch)
 
         self.say(f"\ncc-profiles {new} is on PyPI. To upgrade:")
-        self.say("  pipx upgrade cc-profiles      # or: uv tool upgrade cc-profiles")
+        self.say("  pipx upgrade cc-profiles      # or: uv tool upgrade cc-profiles, brew upgrade cc-profiles")
         self.say("  cc-profiles restart           # or /cc-profiles restart in Claude Code")
         self.say("or click Check for updates in the app's About panel.")
+
+    def update_tap(self, new):
+        """Write the formula for `new` (its sdist URL and SHA-256 from PyPI) in the tap repository,
+        through GitHub's contents API: no clone needed."""
+        path = f"repos/{TAP}/contents/{TAP_FORMULA}"
+        if self.dry:
+            self.say(f"GET https://pypi.org/pypi/cc-profiles/{new}/json for the sdist URL and SHA-256")
+            self.run(["gh", "api", path, "--jq", ".sha"])
+            self.run(["gh", "api", "-X", "PUT", path, "-f", f"message=cc-profiles {new}", "-F", "content=@<formula>", "-f", "sha=<sha>"])
+            return
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import homebrew_formula
+        text = homebrew_formula.formula(new)
+        sha = self.run(["gh", "api", path, "--jq", ".sha"], capture=True)
+        with tempfile.NamedTemporaryFile("w", suffix=".b64", delete=False) as f:
+            f.write(base64.b64encode(text.encode()).decode())
+        try:
+            self.run(["gh", "api", "-X", "PUT", path, "-f", f"message=cc-profiles {new}", "-F", f"content=@{f.name}",
+                      "-f", f"sha={sha}"], capture=True)
+        finally:
+            os.unlink(f.name)
+        self.say(f"{TAP_FORMULA} in {TAP} now installs {new}")
 
     def delete_remote_branch(self, branch):
         """Delete the branch on origin, unless GitHub already did when it merged the pull request."""
