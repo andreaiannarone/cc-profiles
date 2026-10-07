@@ -9,7 +9,7 @@ Tell the user, in one short line, what the output above says: the URL where cc-p
 
 If the output says the action is unknown, say that this command accepts nothing, `restart` or `stop`.
 
-If the `cc-profiles` command was not found, say that this command only opens the app and does not install it, and give this install command:
+If the command was not found, cc-profiles was moved or uninstalled. Say that running `cc-profiles` once in a terminal fixes this command, and that if it is not installed, this installs it:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
