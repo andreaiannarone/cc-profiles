@@ -1783,7 +1783,8 @@ def test_usage_csv_has_one_row_per_day_and_model(home, app_factory):
         rows = list(csv.reader(io.StringIO(r.read().decode("utf-8"))))
     assert rows[0] == ["date", "model", "input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens",
                        "replies", "estimated_cost_usd"]
-    today, two_ago = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m-%d", time.localtime(time.time() - 2 * 86400))
+    # the days of the replies themselves (0.01 and 2 days ago): right after midnight "0.01 days ago" is yesterday
+    today, two_ago = (time.strftime("%Y-%m-%d", time.localtime(time.time() - d * 86400)) for d in (0.01, 2))
     body = {(x[0], x[1]): x[2:] for x in rows[1:]}
     assert len(rows) == 5 and [x[0] for x in rows[1:]] == sorted(x[0] for x in rows[1:])  # oldest first
     assert body[(two_ago, "claude-sonnet-5-5")] == ["0", str(M), "0", "0", "1", "10.0000"]

@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
+- Notices at the bottom right follow the theme: light in light mode, dark in dark mode (they were always inverted); errors have a red border.
 - Filter chips (Needs attention, All, a profile…) and the status line presets have the same rounded corners as the buttons, and color on hover like them; so do the profile switches above Skills, MCP, Memories and the other tabs. Dropdowns have even room inside and their own arrow in the theme's colors (the browser's arrow sat on the border). The **New profile** button of the Profiles tab no longer starts with a +. Primary buttons (Assign…, Relink…, Move to …, the confirmations) take the logo's orange, with dark text, and turn a lighter orange on hover.
 ### Added
 - cc-profiles checks for updates by itself, at most once a day: a few seconds after it starts and every day while it runs. A new version shows an orange dot on the ⓘ button, a notice once per version, and the **Update** button at the top of the About panel, next to Refresh, lights up in the logo's orange (grey and not clickable while there is nothing new), with the new version written at the bottom of the panel; nothing is installed until you click. PyPI sees your IP address: untick **Check for updates automatically** in the About panel (`"update_check": false`) to check only when you click.
