@@ -120,7 +120,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--panel-2); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* the logo's orange in both themes, with the eyes' dark text (5.45:1; white would be 3.1:1) */
+.btn.primary { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); }
 .btn.primary:hover { filter: brightness(1.07); }
 .btn.danger { color: var(--err); }
 .btn.small { padding: 3px 9px; font-size: 12.5px; }

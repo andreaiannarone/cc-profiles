@@ -22,7 +22,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--text` | `#1d1c1a` | `#ecebe7` | main text; also the background of active chips and segments |
 | `--muted` | `#6e6a62` | `#a29e95` | secondary text, counts, labels |
 | `--faint` | `#9b968c` | `#75716a` | hover borders |
-| `--accent` / `--accent-soft` | `#c2410c` / `#fbe9df` | `#fb8a4c` / `#3a2418` | primary action, active tab, focus, switches that are on, selection |
+| `--accent` / `--accent-soft` | `#c2410c` / `#fbe9df` | `#fb8a4c` / `#3a2418` | active tab, focus, links, switches that are on, selection (primary buttons use `--logo`) |
 | `--on-accent` | `#ffffff` | `#1d1c1a` | text on `--accent`; in dark mode the orange is light, so the text turns dark |
 | `--p0` … `--p5` (+ `-soft`) | green, blue, pink, teal, indigo, amber | lighter versions | profile badges, assigned by the profile's position in the config |
 | `--shared` / `--shared-soft` | `#6d28d9` / `#ede5fb` | `#c4a5ff` / `#2a2140` | the "All profiles" badge |
@@ -59,7 +59,7 @@ Rules:
 | Navigation | `nav.tabs#tabs` > `.tabrow`, `.more` | an underline nav like GitHub's, under the profile cards: each tab is a 16px stroke icon (`.ti`) plus its name, muted until hovered (a `--panel-2` rounded background) or active (full text color and a 2px orange underline on the nav's bottom line). Tabs that do not fit move, in order, into the **More** menu (`#moremenu`); the active tab always stays in the row, More is underlined when the active tab is in it, and a red dot marks it when a tab inside has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
 | Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal, drawer or popover open. The header button is hidden on touch screens (`hover: none`) |
 | Filters | `.chip` / `.chip.on` | the active chip is inverted (background `--text`) |
-| Buttons | `.btn` | `.primary` (orange, at most one per row or modal), `.danger` (red text), `.small` |
+| Buttons | `.btn` | `.primary` (the logo's orange `--logo` with `--logo-eye` text in both themes, at most one per row or modal), `.danger` (red text), `.small` |
 | Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-default`, `.b-warn`, `.b-err` | always short text, never an icon alone; `.b-default` (outlined) marks a setting left at its default. Never fade a badge with `opacity`: it breaks contrast |
 | Table | `.table > table` | header on `--panel-2`; paths in `td.path` (monospace, wrap anywhere); actions aligned right |
 | Side list | `.side` + `.plist` | scrolls on its own (max 62vh); the selected item is on `--accent-soft` |
@@ -100,7 +100,7 @@ Rules:
 - Modals and the drawer have `role="dialog"`, `aria-modal="true"` and a label; Esc closes them and focus returns to the trigger.
 - Inputs without a visible label have an `aria-label`.
 - Search fields keep the caret position when the list re-renders.
-- Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons use `--on-accent` (5.2:1 light, 7.2:1 dark). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
+- Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons are `--logo-eye` on `--logo` (5.45:1 in both themes). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.
 - `prefers-reduced-motion` disables the drawer's slide-in.
 - Landmarks: one `header`, `nav` labelled *Sections*, `main`; the profile cards are a labelled `section`.
 - Headings never skip a level: the page title is the only `h1`; section titles inside a tab are `h2` and their groups `h3`, sized by class so the level does not change the look; modals and the About panel start at `h2`.
