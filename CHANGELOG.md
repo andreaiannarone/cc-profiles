@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The logo moves: its two mascots hop and blink once when the app opens and when the pointer reaches the title, and while a panel loads they hop in turn instead of the round spinner. With reduced motion turned on in the system, the logo stays still and the loading mascots only fade in and out.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added
