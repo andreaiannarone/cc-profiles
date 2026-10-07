@@ -42,7 +42,7 @@ The release notes come with the app: after cc-profiles updates, from the app or 
 
 ## Updating cc-profiles
 
-cc-profiles asks PyPI for its latest version by itself, at most once a day: a few seconds after it starts, and again every day while it runs. When a newer version exists, the ⓘ button gets an orange dot, a notice says so once for each new version, and the About panel shows **Update to …**. Nothing is installed until you click. At the bottom of the About panel, **Check for updates** asks PyPI right away.
+cc-profiles asks PyPI for its latest version by itself, at most once a day: a few seconds after it starts, and again every day while it runs. When a newer version exists, the ⓘ button gets an orange dot, a notice says so once for each new version, and the **Update** button at the top of the About panel, next to **Refresh**, lights up as **Update to …** (it stays grey and cannot be clicked while cc-profiles is up to date). Nothing is installed until you click. At the bottom of the About panel, **Check for updates** asks PyPI right away.
 
 The check sends PyPI only a request for the version, and PyPI sees your IP address. To turn it off, untick **Check for updates automatically, once a day** in the About panel (it writes `"update_check": false` in `config.json`): then cc-profiles asks only when you click. With the Claude Code installer, these are the only times cc-profiles reaches the internet.
 

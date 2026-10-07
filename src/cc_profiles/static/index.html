@@ -1658,13 +1658,14 @@ async function openAbout() {
   const bg = document.createElement("div"); bg.className = "drawer-bg";
   const dr = document.createElement("aside"); dr.className = "drawer"; dr.setAttribute("role", "dialog"); dr.setAttribute("aria-modal", "true"); dr.setAttribute("aria-label", "About Claude Code");
   const loading = `<div class="empty"><span class="spinner"></span> Collecting version, accounts and profile contents…</div>`;
-  dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
+  dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-update" disabled>Update</button><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
     <div class="db" id="ab-body">${loading}</div>`;
   const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); $("#about-btn").focus(); };
   const onKey = e => { if (e.key === "Escape") close(); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
   document.body.append(bg, dr);
   $("#ab-close", dr).onclick = close; $("#ab-close", dr).focus();
+  syncUpdateButton(dr);
   const load = async () => {
     $("#ab-body", dr).innerHTML = loading;
     try { renderAbout(dr, await api("/api/about")); } catch (e) { $("#ab-body", dr).innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
@@ -1713,6 +1714,7 @@ async function checkUpdate(dr) {
 }
 function showUpdate(dr, u) {
   const st = $("#upd-status", dr);
+  if (!st) return;  // the panel is still loading
   st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).
     ${u.can_update ? `<button class="btn small primary" id="upd-run">Update to ${esc(u.latest)}…</button>`
       : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
@@ -1756,7 +1758,23 @@ async function loadUpdateStatus() {
   try { told = localStorage.getItem("cc-profiles.update-notified"); localStorage.setItem("cc-profiles.update-notified", S.upd.latest); } catch {}
   if (told !== S.upd.latest) toast(`cc-profiles ${S.upd.latest} is available`, "Open About (ⓘ) to update");
 }
+// In the About panel's header, next to Refresh: off and not clickable until a new version is out
+function syncUpdateButton(dr) {
+  const b = $("#ab-update", dr), u = S.upd, on = !!u?.newer;
+  if (!b) return;
+  b.disabled = !on;
+  b.classList.toggle("primary", on);
+  b.textContent = on ? `Update to ${u.latest}…` : "Update";
+  b.title = !on ? "cc-profiles is up to date" : u.can_update ? `Runs ${u.command}` : "Shows how to update this copy";
+  b.onclick = !on ? null : () => {
+    if (u.can_update) return runUpdate(u, dr);
+    showUpdate(dr, u);
+    $("#upd-status", dr)?.scrollIntoView({ block: "center" });
+  };
+}
 function markUpdate() {
+  const ab = $("#ab-update");
+  if (ab) syncUpdateButton(ab.closest(".drawer"));
   const b = $("#about-btn"), on = !!S.upd?.newer;
   b.classList.toggle("has-update", on);
   b.title = b.ariaLabel = on ? `About Claude Code on this computer. cc-profiles ${S.upd.latest} is available` : "About Claude Code on this computer";
