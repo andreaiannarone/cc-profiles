@@ -431,7 +431,8 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 | "Port 4777 is busy" | cc-profiles is already running: open the URL, or start it with `--port 4778` |
 | A tab says the page is newer than the server | you updated cc-profiles while it was running: run `cc-profiles restart` (or `/cc-profiles restart` in Claude Code), then reload the page |
 | `cc-profiles: command not found` | run `pipx ensurepath` (or `uv tool update-shell`) and open a new terminal |
-| `/cc-profiles` does not appear in Claude Code | restart the session; if it is still missing, run `cc-profiles install-command` |
+| `/cc-profiles` does not appear in Claude Code | start `cc-profiles` once, then restart the session; if it is still missing, run `cc-profiles install-command` |
+| `/cc-profiles` says the command was not found | cc-profiles was moved or reinstalled another way: start `cc-profiles` once and it points the command to the new place |
 | A project shows "folder not found on disk" | click **Relink…** and pick the folder where it lives now |
 | A setting has no effect | the **Settings** tab shows which file the value comes from: `settings.local.json` wins over `settings.json` |
 
