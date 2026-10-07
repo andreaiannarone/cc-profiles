@@ -94,13 +94,16 @@ a:hover { text-decoration: underline; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
 /* thin scrollbars, in the theme's colors */
 .side, .toc, .doc pre, .doc table { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-/* the sidebar and On this page show theirs only while the pointer is over them */
-.side, .toc { scrollbar-color: transparent transparent; }
-.side:hover, .toc:hover, .side:focus-within, .toc:focus-within { scrollbar-color: var(--line) transparent; }
+/* the sidebar and On this page show theirs only while the pointer is over them, fading in and out.
+   Chrome and Firefox animate scrollbar-color through a registered property; Safari, which only has
+   ::-webkit-scrollbar, gets the thumb from the element's border-color, which can be transitioned. */
+@property --sb-thumb { syntax: "<color>"; inherits: true; initial-value: transparent; }
+.side, .toc { --sb-thumb: transparent; scrollbar-color: var(--sb-thumb) transparent; border-color: transparent;
+  transition: --sb-thumb .3s ease, border-color .3s ease; }
+.side:hover, .toc:hover, .side:focus-within, .toc:focus-within { --sb-thumb: var(--line); border-color: var(--line); }
 .side::-webkit-scrollbar, .toc::-webkit-scrollbar { width: 8px; }
-.side::-webkit-scrollbar-thumb, .toc::-webkit-scrollbar-thumb { background: transparent; border-radius: 8px; }
-.side:hover::-webkit-scrollbar-thumb, .toc:hover::-webkit-scrollbar-thumb,
-.side:focus-within::-webkit-scrollbar-thumb, .toc:focus-within::-webkit-scrollbar-thumb { background: var(--line); }
+.side::-webkit-scrollbar-thumb, .toc::-webkit-scrollbar-thumb { border-right: 8px solid; border-color: inherit; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .side, .toc { transition: none; } }
 .side summary { display: none; }
 .ngroup { display: grid; gap: 1px; margin-bottom: 16px; }
 .nlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text); padding: 0 10px 4px; }
