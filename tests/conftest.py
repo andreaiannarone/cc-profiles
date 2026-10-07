@@ -124,6 +124,7 @@ class App:
             "PYTHONDONTWRITEBYTECODE": "1",
             "CC_PROFILES_QUIET": "1",
             "CC_PROFILES_INSTALL_DRYRUN": "1",
+            "CC_PROFILES_AUTO_COMMAND": "0",  # tests compare the fake home: no /cc-profiles written at start
         }
         env.update(extra_env or {})
         env = child_env(env)

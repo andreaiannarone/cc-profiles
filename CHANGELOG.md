@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- `/cc-profiles` is added to Claude Code by the app itself: the first time cc-profiles starts, however you installed it (pipx, uv, Homebrew), it writes the command in every profile, and after an update it rewrites the copies it wrote, so `restart` and `stop` always work. A copy you delete stays deleted. `cc-profiles install-command` is no longer part of the install instructions; `cc-profiles install-command --off` (run by `install.sh --no-command`) tells cc-profiles never to add it. If you installed with `--no-command` before this version, the first start adds the command once: remove it as the Uninstall page shows, after `install-command --off`.
+
 ## [0.5.1] - 2026-10-07
 
 ### Added

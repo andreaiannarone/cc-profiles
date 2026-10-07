@@ -91,7 +91,7 @@ By hand, with pipx or uv:
 
 ```bash
 pipx install cc-profiles        # or: uv tool install cc-profiles
-cc-profiles install-command     # optional: adds /cc-profiles to Claude Code
+cc-profiles                     # the first start adds /cc-profiles to Claude Code
 ```
 
 With Homebrew:
@@ -263,7 +263,7 @@ cc-profiles does all of this for you, from a page in your browser.
 3. **Backups with a journal**: before any change, the files it touches are copied to `~/.cc-profiles/backups/<date>_<operation>/`, and every step (copy, move, new folder, new link) is written to a `manifest.json`. **Restore** replays the journal backwards.
 4. **Atomic writes**: every file is written to a temporary file in the same folder and then renamed, so a running Claude Code never reads a half-written file. Writes follow symlinks, so shared files stay shared.
 5. **Path recovery**: Claude Code's project folder names cannot be turned back into paths. cc-profiles rebuilds them from config files, prompt history and the `cwd` of conversations, and walks the disk when nothing mentions them.
-6. **Launchers and commands**: new profiles get a small `claude-<id>` script in `~/.local/bin`; `cc-profiles install-command` adds `/cc-profiles` to Claude Code. Files cc-profiles creates carry a mark, and it never overwrites a file without it.
+6. **Launchers and commands**: new profiles get a small `claude-<id>` script in `~/.local/bin`; the app adds `/cc-profiles` to Claude Code the first time it starts and keeps it up to date. Files cc-profiles creates carry a mark, and it never overwrites a file without it.
 
 See [Architecture](https://cc-profiles.andreaia.com/architecture.html) and [Claude Code's on-disk formats](https://cc-profiles.andreaia.com/claude-code-formats.html) for details.
 
@@ -277,13 +277,13 @@ cc-profiles --port 4800       # another port
 cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
 cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
-cc-profiles install-command   # adds the /cc-profiles command to Claude Code in every profile
+cc-profiles install-command   # adds /cc-profiles again (the app does it by itself); --off: never add it
 cc-profiles label             # prints the name of the active profile, for status lines
 ```
 
 ### Open it from Claude Code
 
-Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. `/cc-profiles restart` and `/cc-profiles stop` restart or stop the app. The command is a small file, `commands/cc-profiles.md`, that `cc-profiles install-command` writes in every profile; profiles you create from the app get it automatically. Profiles that share `commands` with the source profile get it through the link.
+Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. `/cc-profiles restart` and `/cc-profiles stop` restart or stop the app. The command is a small file, `commands/cc-profiles.md`: cc-profiles writes it in every profile the first time it starts, rewrites it after an update, and adds it to the profiles you create from the app. A copy you delete stays deleted. Profiles that share `commands` with the source profile get it through the link.
 
 ### Commands for each profile
 
@@ -431,7 +431,7 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 | "Port 4777 is busy" | cc-profiles is already running: open the URL, or start it with `--port 4778` |
 | A tab says the page is newer than the server | you updated cc-profiles while it was running: run `cc-profiles restart` (or `/cc-profiles restart` in Claude Code), then reload the page |
 | `cc-profiles: command not found` | run `pipx ensurepath` (or `uv tool update-shell`) and open a new terminal |
-| `/cc-profiles` does not appear in Claude Code | run `cc-profiles install-command`, then restart the session |
+| `/cc-profiles` does not appear in Claude Code | restart the session; if it is still missing, run `cc-profiles install-command` |
 | A project shows "folder not found on disk" | click **Relink…** and pick the folder where it lives now |
 | A setting has no effect | the **Settings** tab shows which file the value comes from: `settings.local.json` wins over `settings.json` |
 

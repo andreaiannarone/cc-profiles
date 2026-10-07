@@ -12,9 +12,10 @@ You can skip this: the line checks that `cc-profiles` exists, so once it is unin
 
 ## 2. Remove the /cc-profiles command
 
-The install script and `cc-profiles install-command` wrote `commands/cc-profiles.md` in each profile. Remove the ones cc-profiles wrote, which start with `# managed by cc-profiles`:
+cc-profiles wrote `commands/cc-profiles.md` in each profile. First tell it to stop, or it adds them again at its next start, then remove the ones it wrote, which start with `# managed by cc-profiles`:
 
 ```sh
+cc-profiles install-command --off
 grep -l "managed by cc-profiles" ~/.claude*/commands/cc-profiles.md | xargs rm
 ```
 

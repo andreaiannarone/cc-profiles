@@ -4,7 +4,7 @@
 
 import os
 
-from .core import Backup, pretty, profiles, write_text
+from .core import CONFIG_FILE, Backup, load_config, pretty, profiles, write_json, write_text
 from .sharing import primary, share_state
 
 # ---------------------------------------------------------------------------
@@ -66,27 +66,68 @@ def write_command(dir_abs, bk, label):
     bk.note(f"/cc-profiles command: {pretty(path)}")
 
 
-def install_command():
-    """Write /cc-profiles into every profile that does not get it through sharing.
+def command_wanted():
+    """Whether cc-profiles adds /cc-profiles to profiles: "slash_command" in config.json is
+    false after `cc-profiles install-command --off` (or install.sh --no-command)."""
+    return load_config().get("slash_command") is not False
+
+
+def ensure_command():
+    """At every start of the server. The first time (no "slash_command" in config.json yet)
+    /cc-profiles goes into every profile, as `install-command` does; after that only the
+    copies cc-profiles wrote and an older version left behind are rewritten, so a command
+    the user deleted stays deleted. Nothing happens with "slash_command": false.
     Returns (lines to print, backup path or None)."""
+    setting = load_config().get("slash_command")
+    if setting is False:
+        return [], None
+    return install_command(add_missing=setting is None, remember=setting is None, quiet=True)
+
+
+def set_command_off():
+    """`cc-profiles install-command --off`: stop adding and updating /cc-profiles. The files
+    already written stay (see the Uninstall page to remove them)."""
+    cfg = load_config()
+    if cfg.get("slash_command") is False:
+        return None
+    bk = Backup("slash-command-off", "Stop adding the /cc-profiles command")
+    bk.copy(CONFIG_FILE, "config.json")
+    cfg["slash_command"] = False
+    write_json(CONFIG_FILE, cfg)
+    return bk.close()
+
+
+def install_command(add_missing=True, remember=True, quiet=False):
+    """Write /cc-profiles into every profile that does not get it through sharing: missing
+    copies only with add_missing, outdated ones always. With remember, config.json records
+    "slash_command": true. Returns (lines to print, backup path or None); quiet leaves out
+    the profiles where nothing changed."""
     src, lines, bk = primary(), [], None
+    skip = (lambda text: None) if quiet else lines.append  # a profile where nothing changes
+    cfg = load_config()
+    if remember and cfg.get("slash_command") is not True:
+        bk = Backup("slash-command", "Add the /cc-profiles command")
+        bk.copy(CONFIG_FILE, "config.json")
+        cfg["slash_command"] = True
+        write_json(CONFIG_FILE, cfg)
     for p in profiles():
         if p["id"] != src["id"] and share_state(p, "commands", "dir")["shared"]:
-            lines.append(f"{p['label']}: shares commands with {src['label']}")
+            skip(f"{p['label']}: shares commands with {src['label']}")
             continue
         if not os.path.isdir(p["dir_abs"]):
-            lines.append(f"{p['label']}: skipped, {pretty(p['dir_abs'])} does not exist")
+            skip(f"{p['label']}: skipped, {pretty(p['dir_abs'])} does not exist")
             continue
         path = os.path.join(p["dir_abs"], "commands", COMMAND_NAME)
         state = command_state(p["dir_abs"])
         if state == "foreign":
-            lines.append(f"{p['label']}: skipped, {pretty(path)} exists and was not created by cc-profiles")
+            skip(f"{p['label']}: skipped, {pretty(path)} exists and was not created by cc-profiles")
             continue
-        if state == "current":
-            lines.append(f"{p['label']}: already up to date")
+        if state == "current" or (state == "missing" and not add_missing):
+            skip(f"{p['label']}: already up to date")
             continue
         if bk is None:
-            bk = Backup("slash-command", "Add the /cc-profiles command")
+            bk = Backup("slash-command", "Update the /cc-profiles command" if state == "outdated" and not add_missing
+                        else "Add the /cc-profiles command")
         write_command(p["dir_abs"], bk, p["id"])
-        lines.append(f"{p['label']}: added {pretty(path)}")
+        lines.append(f"{p['label']}: {'updated' if state == 'outdated' else 'added'} {pretty(path)}")
     return lines, (bk.close() if bk else None)
