@@ -115,9 +115,8 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .plug-row .m code { font-size: 11.5px; }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
-.ghtable td { vertical-align: middle; }
-.ghaccs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 13px; }
-.ghaccs .gh-dir { color: var(--muted); }
+.ghaccs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 6px; font-size: 13px; }
+.ghrow .gh-dir { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 4px; }
 .ghacc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
 .ghacc.on { padding-right: 8px; }
 .cmdrow { display: flex; gap: 8px; align-items: center; }
@@ -927,8 +926,7 @@ function renderSharing() {
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
         <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
-        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div>
-        ${ghAccountsHtml(p.id)}</div>
+        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
@@ -964,37 +962,28 @@ function githubHtml() {
   const g = S.github;
   if (!g) return "";
   const src = esc(S.profiles[0].label);
-  const account = p => {
-    if (p.shared) return `<span class="hint">the account of ${src}: its <code>settings.json</code> is shared</span>`;
-    if (!p.set_up) return `<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button>`;
-    const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];
-    return `<select data-ghacc="${p.id}" aria-label="GitHub account of ${esc(p.label)}">
-      ${p.user ? "" : `<option value="" selected disabled>not signed in</option>`}
-      ${users.map(u => `<option value="${esc(u)}" ${u === p.user ? "selected" : ""}>${esc(u)}</option>`).join("")}
-      <option value="+">Another account…</option></select>`;
-  };
-  const rows = g.profiles.map(p => `<tr><td>${esc(p.label)}</td><td>${account(p)}</td>
-      <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
-      <td>${p.name ? `${esc(p.name)} <span class="hint">&lt;${esc(p.email)}&gt;</span>` : `<span class="hint">your git config</span>`}</td>
-      <td class="acts"><button class="btn small" data-ghedit="${p.id}">Commit identity…</button></td></tr>`).join("");
+  const rows = g.profiles.map(p => `<div class="prow ghrow"><div class="txt">
+      <div class="t">${esc(p.label)} <code class="gh-dir">${esc(p.dir)}</code>${p.default ? ` <span class="gh-dir">· also your terminal</span>` : ""}</div>
+      ${ghAccountsHtml(p.id)}
+      <div class="m">Commits by ${p.name ? `${esc(p.name)} &lt;${esc(p.email)}&gt;` : "your git config"}</div></div>
+    <div class="acts"><button class="btn small" data-ghedit="${p.id}">Commit identity…</button></div></div>`).join("");
   return `<h2 class="section-title">GitHub</h2>
     <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry their own name and email. Tokens stay in the system keychain.</span></div>
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
     ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
-    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="table">${rows}</div>`;
 }
 // Under each profile: its GitHub CLI folder and the accounts it can use, with Connect on the others
 function ghAccountsHtml(pid) {
   const g = S.github, p = g?.profiles.find(x => x.id === pid);
   if (!p || !g.gh && !p.user) return "";
-  const head = `<span class="gh-dir">GitHub CLI <code>${esc(p.dir)}</code></span>`;
-  if (p.shared) return `<div class="ghaccs">${head}<span class="hint">uses the account of ${esc(S.profiles[0].label)}: its settings.json is shared</span></div>`;
-  if (!p.set_up) return `<div class="ghaccs">${head}<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button></div>`;
+  if (p.shared) return `<div class="ghaccs"><span class="hint">uses the account of ${esc(S.profiles[0].label)}: its <code>settings.json</code> is shared</span></div>`;
+  if (!p.set_up) return `<div class="ghaccs"><button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button></div>`;
   const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];
-  return `<div class="ghaccs">${head}
+  return `<div class="ghaccs">
     ${users.map(u => u === p.user
-      ? `<span class="ghacc on"><b>${esc(u)}</b> <span class="badge b-shared">connected</span></span>`
+      ? `<span class="ghacc on" data-ghon="${p.id}"><b>${esc(u)}</b> <span class="badge b-shared">connected</span></span>`
       : `<span class="ghacc">${esc(u)} <button class="btn small" data-ghconnect="${p.id}" data-user="${esc(u)}">Connect</button></span>`).join("")}
     <button class="btn small" data-ghanother="${p.id}">Another account…</button></div>`;
 }
@@ -1025,11 +1014,6 @@ function wireGithub() {
   document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
   document.querySelectorAll("[data-ghconnect]").forEach(b => b.onclick = () => githubPost("/api/github/account", { profile: b.dataset.ghconnect, user: b.dataset.user }));
   document.querySelectorAll("[data-ghanother]").forEach(b => b.onclick = () => signInAnother(prof(b.dataset.ghanother)));
-  document.querySelectorAll("[data-ghacc]").forEach(sel => sel.onchange = () => {
-    const p = prof(sel.dataset.ghacc);
-    if (sel.value === "+") { sel.value = p.user || ""; return signInAnother(p); }
-    githubPost("/api/github/account", { profile: p.id, user: sel.value });
-  });
   document.querySelectorAll("[data-ghedit]").forEach(b => b.onclick = async () => {
     const p = prof(b.dataset.ghedit);
     const res = await modal({ title: `Commits in ${p.label}`,

@@ -274,24 +274,21 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
 def test_github_account_per_profile(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
+    on = "() => document.querySelector('[data-ghon=\"work\"]')?.textContent.includes('{}')"
     # the test server does not set folders up at start: Work gets its own on request
     page.click('[data-ghsetup="work"]')
-    page.wait_for_selector('[data-ghacc="work"]')
-    assert page.input_value('[data-ghacc="work"]') == "me-at-work"  # ~/.config/gh-work already existed
-    page.select_option('[data-ghacc="work"]', "me-personal")
-    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-personal'")
+    page.wait_for_function(on.format("me-at-work"))  # ~/.config/gh-work already existed
+    page.click('[data-ghconnect="work"][data-user="me-personal"]')
+    page.wait_for_function(on.format("me-personal"))
     page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-personal'))")
+    assert page.is_visible('[data-ghconnect="work"][data-user="me-at-work"]')
     page.click('[data-ghedit="work"]')
     page.fill("#gh-name", "Me At Work")
     page.fill("#gh-email", "me@work.example")
     page.click('.modal button:has-text("Save")')
     page.wait_for_function("() => document.querySelector('#main').textContent.includes('Me At Work')")
-    # under the profile, every account with Connect on the ones not in use
-    page.click('[data-ghconnect="work"][data-user="me-at-work"]')
-    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-at-work'")
-    assert page.is_visible('[data-ghconnect="work"][data-user="me-personal"]')
     # another account: the sign-in command for the profile's own folder
-    page.select_option('[data-ghacc="work"]', "+")
+    page.click('[data-ghanother="work"]')
     page.wait_for_selector("#gh-cmd")
     assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-work gh auth login"
     page.keyboard.press("Escape")

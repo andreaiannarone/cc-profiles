@@ -93,14 +93,14 @@ Signing in to GitHub is not part of a Claude Code profile: the GitHub CLI (`gh`)
 
 cc-profiles creates the missing folders when it starts, and a new profile gets its own right away. A new folder starts with the account the profile used until then (`config.yml` and `hosts.yml` are copied without any token line), and `GH_CONFIG_DIR` in the `env` of the profile's `settings.json` points to it: Claude Code passes it to every command it runs, so `gh` in that profile's sessions uses that folder. The profile cards and the About panel show the account: **GitHub as …**.
 
-Under each profile in **Your profiles**, the line *GitHub CLI* shows its folder and every account signed in on this computer: the one in use is marked **connected**, the others have **Connect**, and **Another account…** signs in a new one. The **GitHub** section at the bottom of the tab has the same choices in a table, with the commit identity:
+The **GitHub** section at the bottom of the Profiles tab has one row per profile, with its folder and every account signed in on this computer:
 
-- **GitHub account**: pick any account signed in on this computer. It becomes the active account of that profile's folder only, without signing in again: `gh` keeps each account's token in the system keychain under its name. Picking an account for Default changes your terminal's too.
-- **Another account…** (at the end of the menu) shows the command to sign in with a new account in the profile's folder, ready to copy:
+- The account in use is marked **connected**. **Connect** on another one makes it the active account of that profile's folder only, without signing in again: `gh` keeps each account's token in the system keychain under its name. Connecting an account for Default changes your terminal's too.
+- **Another account…** shows the command to sign in with a new account in the profile's folder, ready to copy:
   ```sh
   GH_CONFIG_DIR=~/.config/gh-work gh auth login
   ```
-  Then click **I signed in, refresh**: from then on every profile can pick that account too.
+  Then click **I signed in, refresh**: from then on every profile can connect that account too.
 - **Commit identity…** sets the name and email of the commits made in the profile (`GIT_AUTHOR_*` and `GIT_COMMITTER_*` in its `env`; both or neither), for example the `…@users.noreply.github.com` address of its account.
 
 A profile whose `settings.json` is shared with the source profile also shares its GitHub account, so it has no folder. An account whose token is written in `hosts.yml` (`gh auth login --insecure-storage`) is not offered to the other profiles, because its token is not in the keychain; a folder copied from it asks for a sign-in.
