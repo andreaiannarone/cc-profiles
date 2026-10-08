@@ -728,6 +728,263 @@ def test_mcp_servers_are_managed_and_undoable(home, app_factory):
     assert home.snapshot() == before
 
 
+
+def test_claude_ai_connectors_can_be_kept_out_of_a_profile(home, app_factory):
+    basic_home(home)
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
+                               "claudeAiMcpEverConnected": ["claude.ai Gmail", "claude.ai Google Drive",
+                                                            "claude.ai vidIQ for Claude", "github"]})
+    home.json(".claude/settings.local.json", {"permissions": {"deny": ["mcp__claude_ai_Gmail__*", "Bash(rm:*)"]}})
+    home.json(".claude/settings.json", {"permissions": {"defaultMode": "plan",
+                                                        "deny": ["mcp__claude_ai_Old_One", "mcp__claude_ai_Gmail__send"]}})
+    before = home.snapshot()
+    app = app_factory()
+
+    listed = app.get("/api/connectors?profile=default")
+    assert [(c["name"], c["rule"], c["blocked"], c["where"]) for c in listed["connectors"]] == [
+        ("Gmail", "mcp__claude_ai_Gmail", True, ["local"]),
+        ("Google Drive", "mcp__claude_ai_Google_Drive", False, []),
+        ("Old One", "mcp__claude_ai_Old_One", True, ["settings"]),  # only a deny rule names it
+        ("vidIQ for Claude", "mcp__claude_ai_vidIQ_for_Claude", False, [])]
+    assert listed["all_off"] == [] and app.get("/api/connectors?profile=work")["connectors"] == []
+
+    app.post("/api/connectors/set", {"profile": "default", "name": "Google Drive", "enabled": False})
+    app.post("/api/connectors/set", {"profile": "default", "name": "Gmail", "enabled": True})
+    settings = json.loads(home.path(".claude/settings.json").read_text())
+    assert settings["permissions"] == {"defaultMode": "plan", "deny": [
+        "mcp__claude_ai_Old_One", "mcp__claude_ai_Gmail__send", "mcp__claude_ai_Google_Drive"]}
+    # one tool's rule stays; the rule for the whole connector is gone from settings.local.json
+    assert json.loads(home.path(".claude/settings.local.json").read_text()) == {"permissions": {"deny": ["Bash(rm:*)"]}}
+    assert "already off" in app.post("/api/connectors/set", {"profile": "default", "name": "Google Drive",
+                                                             "enabled": False})["message"]
+    app.post("/api/connectors/set", {"profile": "default", "name": "Old One", "enabled": True})
+    assert "Old One" not in [c["name"] for c in app.get("/api/connectors?profile=default")["connectors"]]
+
+    # Claude Code never shortens its list: a connector removed on claude.ai is forgotten here
+    assert [c["seen"] for c in app.get("/api/connectors?profile=default")["connectors"]] == [True, True, True]
+    assert "turn it on first" in app.post_error("/api/connectors/forget", {"profile": "default", "name": "Google Drive"})
+    app.post("/api/connectors/forget", {"profile": "default", "name": "vidIQ for Claude"})
+    assert json.loads(home.path(".claude.json").read_text())["claudeAiMcpEverConnected"] == [
+        "claude.ai Gmail", "claude.ai Google Drive", "github"]
+    assert "Unknown connector" in app.post_error("/api/connectors/forget", {"profile": "default",
+                                                                            "name": "vidIQ for Claude"})
+
+    app.post("/api/connectors/all", {"profile": "work", "enabled": False})
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["disableClaudeAiConnectors"] is True
+    assert app.get("/api/connectors?profile=work")["all_off"] == ["settings"]
+    app.post("/api/connectors/all", {"profile": "work", "enabled": True})
+    assert "disableClaudeAiConnectors" not in json.loads(home.path(".claude-work/settings.json").read_text())
+
+    assert "Unknown connector" in app.post_error("/api/connectors/set", {"profile": "default", "name": "Nope",
+                                                                         "enabled": False})
+    home.write(".claude/settings.local.json", "{ broken")
+    assert "has an error" in app.post_error("/api/connectors/set", {"profile": "default", "name": "Google Drive",
+                                                                    "enabled": True})
+    home.json(".claude/settings.local.json", {"permissions": {"deny": ["Bash(rm:*)"]}})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_connectors_follow_the_account(home, app_factory):
+    """`claude mcp list` tells which connectors the account has now: gone ones leave the list."""
+    basic_home(home)
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
+                               "claudeAiMcpEverConnected": ["claude.ai Gmail", "claude.ai Old Remote",
+                                                            "claude.ai Old Blocked", "claude.ai Google Drive"]})
+    home.json(".claude/settings.json", {"permissions": {"deny": ["mcp__claude_ai_Old_Blocked"]}})
+    claude = home.write(".local/bin/claude", """#!/bin/sh
+echo "$CLAUDE_CONFIG_DIR|$@" >> "$HOME/claude-calls"
+cat "$HOME/mcp-list.txt"
+""")
+    claude.chmod(0o755)
+    listing = home.write("mcp-list.txt", "Checking MCP server health…\n\n"
+               "claude.ai Gmail: https://gmailmcp.googleapis.com/mcp/v1 - ✔ Connected\n"
+               "claude.ai Google Drive: https://drivemcp.googleapis.com/mcp/v1 - ! Needs authentication\n"
+               "claude.ai Linear: https://mcp.linear.app/mcp - ✔ Connected\n"
+               "filesystem: npx -y server-filesystem - ✔ Connected\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    r = app.get("/api/connectors/check?profile=default")
+    assert r == {"skipped": None, "gone": ["Old Remote"], "error": None}  # the blocked one keeps its rule
+    app.post("/api/connectors/sync", {"profile": "default"})
+    assert json.loads(home.path(".claude.json").read_text())["claudeAiMcpEverConnected"] == [
+        "claude.ai Gmail", "claude.ai Old Blocked", "claude.ai Google Drive"]
+    listed = {c["name"]: c for c in app.get("/api/connectors?profile=default")["connectors"]}
+    assert sorted(listed) == ["Gmail", "Google Drive", "Linear", "Old Blocked"]  # Linear: new, not seen yet
+    assert listed["Linear"]["on_account"] and not listed["Linear"]["seen"]
+    assert listed["Old Blocked"]["on_account"] is False and listed["Old Blocked"]["blocked"]
+    # turned on, its rule goes; the next sync takes it off the list
+    app.post("/api/connectors/set", {"profile": "default", "name": "Old Blocked", "enabled": True})
+    assert app.get("/api/connectors/check?profile=default")["gone"] == ["Old Blocked"]
+    app.post("/api/connectors/sync", {"profile": "default"})
+    assert "up to date" in app.post("/api/connectors/sync", {"profile": "default"})["message"]
+
+    # once an hour, unless asked again; the default profile runs without CLAUDE_CONFIG_DIR
+    app.get("/api/connectors/check?profile=default")
+    app.get("/api/connectors/check?profile=default&force=1")
+    assert home.path("claude-calls").read_text().splitlines() == ["|mcp list"] * 2  # the first check and the forced one
+    # no answer from claude.ai: nothing is taken off
+    full = listing.read_text()
+    listing.write_text("Checking MCP server health…\n")
+    r = app.get("/api/connectors/check?profile=default&force=1")
+    assert "listed no connectors" in r["error"] and r["gone"] == []
+    # a profile without an account, or with connectors off, is not checked
+    assert "not signed in" in app.get("/api/connectors/check?profile=work")["skipped"]
+
+    app.restore_all()
+    home.path("claude-calls").unlink()
+    listing.write_text(full)
+    assert home.snapshot() == before
+
+
+def test_every_profile_has_its_own_github_folder(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    git_protocol: https\n    users:\n        me:\n"
+                                       "        me-at-work:\n    user: me\n")
+    home.write(".config/gh/config.yml", "editor: vim\n")
+    home.write(".config/gh-old/hosts.yml", "github.com:\n    users:\n        stray:\n            oauth_token: gho_x\n"
+                                           "    user: stray\n")
+    home.json(".claude-work/settings.local.json", {"env": {"GIT_AUTHOR_EMAIL": "old@example.com", "FOO": "1"}})
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_AUTO_GITHUB="1")  # at start, Work gets ~/.config/gh-work
+
+    assert home.path(".config/gh-work/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
+    assert home.path(".config/gh-work/config.yml").read_text() == "editor: vim\n"
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-work"))}
+    g = app.get("/api/github")
+    assert "gho_" not in json.dumps(g)
+    assert g["accounts"] == ["me", "me-at-work"]  # a user with its token in hosts.yml is not offered
+    assert [(p["id"], p["dir"], p["user"], p["set_up"]) for p in g["profiles"]] == [
+        ("default", "~/.config/gh", "me", True), ("work", "~/.config/gh-work", "me", True)]
+    assert "already has" in app.post("/api/github/setup", {"profile": "work"})["message"]
+
+    # picking an account makes it the active user of the profile's own folder only
+    app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})
+    assert "user: me-at-work" in home.path(".config/gh-work/hosts.yml").read_text()
+    assert "user: me\n" in home.path(".config/gh/hosts.yml").read_text()
+    assert {p["id"]: p["github"] for p in app.get("/api/profiles")} == {"default": "me", "work": "me-at-work"}
+    assert "already uses" in app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})["message"]
+    assert "terminal" in app.post("/api/github/account", {"profile": "default", "user": "me-at-work"})["message"]
+    assert "not signed in" in app.post_error("/api/github/account", {"profile": "work", "user": "stray"})
+
+    # commit identity: a key already in settings.local.json is changed there
+    app.post("/api/github/identity", {"profile": "work", "name": "Me At Work", "email": "me@work.example"})
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {
+        "GIT_AUTHOR_EMAIL": "me@work.example", "FOO": "1"}
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "Me At Work",
+        "GIT_COMMITTER_NAME": "Me At Work", "GIT_COMMITTER_EMAIL": "me@work.example"}
+    app.post("/api/github/identity", {"profile": "work", "name": "", "email": ""})
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {"FOO": "1"}
+    assert "both the name and the email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me"})
+    assert "not an email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me", "email": "me"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+
+def test_github_accounts_are_listed_and_removed(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n        old:\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        old:\n        me:\n    user: me\n")
+    home.write(".config/gh-accounts/hosts.yml", "github.com:\n    users:\n        side:\n            oauth_token: gho_x\n"
+                                                "    user: side\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
+    before = home.snapshot()
+    app = app_factory()
+
+    g = app.get("/api/github")
+    assert g["accounts_dir"] == "~/.config/gh-accounts" and "gho_" not in json.dumps(g)
+    assert g["account_list"] == [
+        {"user": "me", "folders": ["~/.config/gh", "~/.config/gh-work"], "used_by": ["Default", "Work"], "insecure": False},
+        {"user": "old", "folders": ["~/.config/gh", "~/.config/gh-work"], "used_by": [], "insecure": False},
+        {"user": "side", "folders": ["~/.config/gh-accounts"], "used_by": [], "insecure": True}]
+    assert g["accounts"] == ["me", "old"]  # side's token is not in the keychain
+
+    assert "connect another account there first" in app.post_error("/api/github/remove", {"user": "me"})
+    assert "gh auth logout" in app.post_error("/api/github/remove", {"user": "side"})
+    r = app.post("/api/github/remove", {"user": "old"})
+    assert "2 GitHub CLI folders" in r["message"] and "gh auth logout --hostname github.com --user old" in r["message"]
+    assert home.path(".config/gh-work/hosts.yml").read_text() == "github.com:\n    users:\n        me:\n    user: me\n"
+    assert [a["user"] for a in app.get("/api/github")["account_list"]] == ["me", "side"]
+    assert "Unknown GitHub account" in app.post_error("/api/github/remove", {"user": "old"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_github_table_is_saved_in_one_backup(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n        me-at-work:\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        me:\n    user: me\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
+    before = home.snapshot()
+    app = app_factory()
+
+    # every change is checked before anything is written
+    assert "both the name and the email" in app.post_error("/api/github/save", {"changes": [
+        {"profile": "work", "user": "me-at-work"}, {"profile": "default", "name": "Me", "email": ""}]})
+    assert "user: me\n" in home.path(".config/gh-work/hosts.yml").read_text()
+    r = app.post("/api/github/save", {"changes": [
+        {"profile": "work", "user": "me-at-work", "name": "Me At Work", "email": "me@work.example"},
+        {"profile": "default", "name": "Me", "email": "me@example.com"}]})
+    assert r["message"].startswith("Work uses GitHub as me-at-work; commits in Work are by Me At Work")
+    assert "user: me-at-work" in home.path(".config/gh-work/hosts.yml").read_text()
+    assert json.loads(home.path(".claude/settings.json").read_text())["env"]["GIT_AUTHOR_NAME"] == "Me"
+    assert len(app.get("/api/backups")) == 1
+    assert app.post("/api/github/save", {"changes": [{"profile": "work", "user": "me-at-work"}]})["message"] == "Nothing changed."
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+def test_with_active_user_keeps_the_rest_of_hosts_yml():
+    from cc_profiles.github import parse_users, with_active_user
+    lines = ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh", "    users:",
+             "        me:", "    user: me"]
+    out = with_active_user(lines, "other")
+    assert out == ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh", "    users:",
+                   "        other:", "        me:", "    user: other"]
+    assert parse_users(out)[:2] == ("other", ["other", "me"])
+    assert parse_users(with_active_user([], "me"))[:2] == ("me", ["me"])
+    from cc_profiles.github import without_user
+    assert without_user(out, "other") == ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh",
+                                          "    users:", "        me:", "    user: me"]
+    assert without_user(["github.com:", "    users:", "        me:", "    user: me"], "me") == ["github.com:", "    users:"]
+
+
+def test_new_profiles_get_their_own_github_folder(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
+    home.write(".config/gh/config.yml", "editor: vim\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    r = app.post("/api/profiles/create", {"label": "Noa", "id": "noa", "share": []})
+    assert "GitHub as me, from ~/.config/gh-noa" in r["message"]
+    assert home.path(".config/gh-noa/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
+    assert home.path(".config/gh-noa/config.yml").read_text() == "editor: vim\n"
+    assert oct(home.path(".config/gh-noa/hosts.yml").stat().st_mode & 0o777) == "0o600"
+    assert json.loads(home.path(".claude-noa/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-noa"))}
+
+    # a token written in hosts.yml (gh's insecure storage) is never copied: that folder needs a sign-in
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n            oauth_token: gho_secret\n"
+                                       "    oauth_token: gho_secret\n    user: me\n")
+    r = app.post("/api/profiles/create", {"label": "Lab", "id": "lab", "share": []})
+    assert "GH_CONFIG_DIR=~/.config/gh-lab gh auth login" in r["message"]
+    assert "gho_" not in home.path(".config/gh-lab/hosts.yml").read_text()
+    # a shared settings.json shares the account too
+    r = app.post("/api/profiles/create", {"label": "Same", "id": "same", "share": ["settings.json"]})
+    assert "Its settings.json is shared" in r["message"] and not home.path(".config/gh-same").exists()
+
+    app.restore_all()
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)
@@ -1271,6 +1528,60 @@ def test_install_command_off(home, app_factory):
     assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is True
 
 
+
+def fake_pipx(home):
+    """A pipx in the fake ~/.local/bin that only records its arguments."""
+    pipx = home.write(".local/bin/pipx", '#!/bin/sh\necho "$@" >> "$HOME/pipx-calls"\necho "pipx $1 done"\n')
+    pipx.chmod(0o755)
+    return home.path("pipx-calls")
+
+
+def test_uninstall_removes_what_cc_profiles_added(home, app_factory):
+    basic_home(home)
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")  # writes /cc-profiles in both profiles
+    app.post("/api/shell", {"install": True})
+    app.stop()
+    rcs = lambda: "".join(home.path(f).read_text() for f in (".zshrc", ".bashrc", ".bash_profile") if home.path(f).exists())
+    assert "cc-profiles: profile by folder" in rcs()  # .zshrc or .bashrc, after the shell
+    home.write(".claude-other/commands/cc-profiles.md", "my own command\n")
+    calls = fake_pipx(home)
+    port = str(free_port())
+
+    # asked without a terminal: nothing happens
+    r = run_cli(home, "uninstall", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 1 and "Nothing was changed" in r.stdout and not calls.exists()
+    assert "pipx uninstall cc-profiles" in r.stdout and "are not touched" in r.stdout
+
+    r = run_cli(home, "uninstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert calls.read_text() == "uninstall cc-profiles\n"
+    assert not home.path(".claude/commands/cc-profiles.md").exists()
+    assert not home.path(".claude-work/commands/cc-profiles.md").exists()
+    assert home.path(".claude-other/commands/cc-profiles.md").read_text() == "my own command\n"
+    assert "cc-profiles: profile by folder" not in rcs()
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is False
+    assert "Backup:" in r.stdout and home.path(".cc-profiles/backups").is_dir()
+    assert home.path(".claude/projects").is_dir()  # the profiles stay
+
+    # --purge deletes the app's data too
+    r = run_cli(home, "uninstall", "--yes", "--purge", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0 and not home.path(".cc-profiles").exists()
+
+
+def test_reinstall(home, app_factory):
+    basic_home(home)
+    app_factory().stop()
+    calls = fake_pipx(home)
+    port = str(free_port())
+    r = run_cli(home, "reinstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert calls.read_text() == "install --force cc-profiles\n" and "reinstalled" in r.stdout
+    assert home.path(".cc-profiles/config.json").exists()  # settings and backups are kept
+    r = run_cli(home, "reinstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="source")
+    assert r.returncode == 1 and "source checkout" in r.stdout
+    r = run_cli(home, "uninstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="uv")
+    assert r.returncode == 1 and "uv is not installed" in r.stdout
+
 def test_plugin_command_matches_installed_command():
     sys.path.insert(0, str(SRC))
     from cc_profiles import server
@@ -1660,7 +1971,11 @@ def test_whats_new_lists_the_release_notes_shipped_with_the_app(home, app_factor
 
 def test_about_counts_each_profile(home, app_factory):
     basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    user: me\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
     about = app_factory().get("/api/about")
+    github = {p["id"]: p["account"]["GitHub"] for p in about["profiles"]}
+    assert github == {"default": "me · ~/.config/gh", "work": "not signed in · ~/.config/gh-work"}
     usage = {p["id"]: p["usage"] for p in about["profiles"]}
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0

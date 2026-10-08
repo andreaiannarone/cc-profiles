@@ -8,6 +8,8 @@ cc-profiles open [restart|stop] [--port PORT] [--no-browser]
 cc-profiles stop [--port PORT]
 cc-profiles restart [--port PORT]
 cc-profiles install-command [--off]
+cc-profiles reinstall [--yes]
+cc-profiles uninstall [--purge] [--yes]
 cc-profiles label
 cc-profiles which [PATH] [--dir]
 cc-profiles shell-init [zsh|bash]
@@ -22,6 +24,8 @@ cc-profiles --version
 | `stop` | | stop the server running on the port. A write in progress finishes first; another program on the port is left alone |
 | `restart` | | `stop`, then `open` without the browser: use it after an update, then reload the page |
 | `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date. The server does the same the first time it starts, and later only rewrites outdated copies; you need this command only to add it back where you deleted it. With `--off`, cc-profiles stops adding and updating it (`"slash_command": false` in `config.json`) |
+| `reinstall` | | install cc-profiles again from scratch with the tool it was installed with (`pipx install --force`, `uv tool install --force --reinstall`, `brew reinstall` or `pip install --force-reinstall`), for when something is broken. Stops the server first and starts it again afterwards if it was running. `~/.cc-profiles` (settings, templates, backups) and the profiles are kept. Asks before doing anything; `--yes` skips the question. A source checkout cannot reinstall itself |
+| `uninstall` | | remove cc-profiles: stops the server, stops adding `/cc-profiles` and removes the copies it wrote (with a backup), removes the [profile by folder](guides/profile-by-folder.md) line, then uninstalls the app with the tool it was installed with. Keeps `~/.cc-profiles` unless `--purge`. Never touches the profiles. Asks before doing anything; `--yes` skips the question. See [Uninstall](uninstall.md) for what stays |
 | `label` | | print the active profile's name and exit (see [Status line](status-line.md)) |
 | `which [PATH]` | the current folder | print the name of the profile the [rules](concepts.md#rules) give `PATH`; with `--dir`, its config folder as an absolute path. Prints nothing and exits with status 1 when no rule matches, the rule says `shared`, or it names a profile that no longer exists. Read-only and fast (it does not load the server): it runs every time the [profile by folder](guides/profile-by-folder.md) function starts `claude` |
 | `shell-init [zsh\|bash]` | from `$SHELL` | print the `claude` shell function of [profile by folder](guides/profile-by-folder.md), for `eval "$(cc-profiles shell-init zsh)"` in your shell's startup file |
@@ -40,7 +44,10 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
-| `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv` or `source`), for the update tests |
+| `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv`, `brew` or `source`), for the update, uninstall and reinstall tests |
+| `CC_PROFILES_AUTO_COMMAND` | `0`: at start, do not add or update `/cc-profiles` in the profiles (the tests set it) |
+| `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
+| `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
 | `CC_PROFILES_SOURCE` | for `install.sh`: install from this folder instead of PyPI |
 | `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile; when it is set, the [profile by folder](guides/profile-by-folder.md) function leaves it as it is |
@@ -111,4 +118,5 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 |---|---|
 | profile folders and `~/.claude.json` | the operations you run |
 | `~/.local/bin/<command>` | creating, editing or deleting a profile (launcher scripts). Only files containing `# managed by cc-profiles` are ever rewritten or removed |
+| `~/.config/gh`, `~/.config/gh-<id>`, `~/.config/gh-accounts` | GitHub CLI folders. At start, each profile without one gets `~/.config/gh-<id>` (a copy of `config.yml` and of `hosts.yml` without any token line), and `GH_CONFIG_DIR` in the `env` of its `settings.json`; picking an account rewrites the `user:` line of its `hosts.yml`, removing an account its entry. Tokens in the system keychain are never read or written. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile) |
 | `~/.zshrc`, `~/.bashrc`, `~/.bash_profile` | only to rename or remove a profile alias that was already there, together with the `# Claude Code:` comment line above it; and to add or remove the one line ending in `# cc-profiles: profile by folder` when you turn [profile by folder](guides/profile-by-folder.md) on or off |

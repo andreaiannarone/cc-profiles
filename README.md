@@ -132,9 +132,9 @@ cc-profiles
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
 - 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
 - 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
-- 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches.
+- 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches. Each profile also gets its own GitHub account (a GitHub CLI folder named after it) and commit identity, without touching tokens.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile, or copy one to every profile at once.
-- 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list.
+- 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list. Turn claude.ai connectors (Gmail, Google Drive…) off in one profile, one by one or all together, even though they come with the account.
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
 - 📁 **Profile by folder**: type `claude` in a work folder and it starts in your Work profile. One switch in the Profiles tab adds one marked line to your `~/.zshrc` (backed up, undoable); the folder rules you already use for projects decide the profile, and a `CLAUDE_CONFIG_DIR` you set yourself still wins.
@@ -205,7 +205,7 @@ cc-profiles
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available, and the claude.ai connectors with a switch each">
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
     </td>
@@ -278,6 +278,8 @@ cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
 cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
 cc-profiles install-command   # adds /cc-profiles again (the app does it by itself); --off: never add it
+cc-profiles reinstall         # installs it again from scratch if something is broken; settings and backups stay
+cc-profiles uninstall         # removes /cc-profiles, the profile by folder line and the app; --purge: its data too
 cc-profiles label             # prints the name of the active profile, for status lines
 ```
 
@@ -409,7 +411,8 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Writes are atomic (temporary file, then rename), so Claude Code never reads a half-written file, even while it is running.
 - Names of projects, memories, skills and backups are validated against path traversal.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
-- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer.
+- GitHub tokens are never read or copied: cc-profiles reads only the user names in the GitHub CLI's `hosts.yml`, and the tokens stay in the system keychain.
+- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer. The list of your claude.ai connectors comes from `claude mcp list`, so that request is Claude Code's own, with its own sign-in.
 
 See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 
@@ -420,7 +423,9 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 - Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.289; the **About** panel shows which version you have.
 - "Session open" means a `claude` process is running in the profile (read from the process list on macOS and from `/proc` on Linux), or a conversation was written in the last 2 minutes.
 - Claude Code keeps `.claude.json` in memory while it runs: restart open sessions after changing their MCP servers.
-- Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it.
+- Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it, nor its GitHub CLI folder.
+- The account's claude.ai connectors are known only through `claude mcp list`, which also starts every MCP server of the profile to check it: cc-profiles runs it at most once an hour per profile.
+- `cc-profiles uninstall` and `reinstall` work with pipx, uv, Homebrew and pip; a source checkout is removed or updated by hand.
 
 ---
 

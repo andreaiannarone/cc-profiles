@@ -16,7 +16,7 @@ See [Profiles and sharing](../guides/profiles.md#create-a-profile) for every opt
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/newprofile-dark.jpg">
-  <img src="../assets/screenshots/newprofile-light.jpg" alt="The New profile dialog: name, id, a copy of Default as the base, and skills and plugins shared with Default" width="560" height="561" loading="lazy">
+  <img src="../assets/screenshots/newprofile-light.jpg" alt="The New profile dialog: name, id, a copy of Default as the base, and skills and plugins shared with Default" width="560" height="609" loading="lazy">
 </picture>
 
 ## 2. Log in

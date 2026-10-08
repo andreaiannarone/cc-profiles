@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- `cc-profiles uninstall` removes cc-profiles in one go: it stops the server, removes the `/cc-profiles` copies it wrote and the profile by folder line (with a backup), then uninstalls the app with the tool it was installed with (pipx, uv, Homebrew or pip). `--purge` also deletes `~/.cc-profiles`. `cc-profiles reinstall` installs it again from scratch when something is broken, keeping settings, templates and backups, and restarts the server if it was running. Both say what they will do and ask first (`--yes` skips the question); neither touches your profiles.
+- Every profile has its own GitHub account: a GitHub CLI folder named after it (`~/.config/gh-<id>`; Default keeps `~/.config/gh`), created when cc-profiles starts and for every new profile, with `GH_CONFIG_DIR` in the profile's `env`. In Profiles → **GitHub** each profile picks any account signed in on the computer, without signing in again (tokens stay in the keychain and are never read or copied); **Another account…** gives the sign-in command for that profile's folder, ready to copy; its commit name and email are written in the same row; as in Settings, the changes are marked and saved together with **Save changes**, in one backup. Under it, **Accounts** lists every GitHub account signed in on the computer with the profiles using it: **Add account…** signs in a new one in `~/.config/gh-accounts` without changing any profile, **Remove…** takes one no profile uses off every folder (its token stays in the keychain; the command to delete it is given). The profile cards and the About panel show the GitHub account. A warning, with the command to copy, says when git does not ask `gh` for passwords (`gh auth setup-git`). Every change goes to the backup.
+- MCP tab: a **claude.ai connectors** section. Connectors come with the claude.ai account, so every profile signed in with it has the same ones; now each profile can keep some out. A switch per connector adds a deny rule for the whole connector (`mcp__claude_ai_Gmail`) to the profile's `settings.json`, and **All connectors** sets `disableClaudeAiConnectors`, so Claude Code does not connect any of them in that profile. The list follows the account by itself: opening the tab runs `claude mcp list` in the profile (at most once an hour, or with **Check now**), so connectors removed or renamed on claude.ai leave the list and new ones appear, without cc-profiles ever reading the token. **Forget** removes one by hand when the check cannot run. Every change goes to the backup.
+
+### Changed
+- Switches that are on take the logo's orange (`#d97757`), like the mascot and the primary buttons, in both themes.
+- The profile switches (Skills, MCP, Memories, Settings…), the status line and theme pickers have room inside: the options sit in rounded pills inset from the border, with more space around each name.
+- The Profiles tab stays where you are after a change (sharing, profile by folder, GitHub) instead of jumping back to the top.
+
 ## [0.5.2] - 2026-10-08
 
 ### Added

@@ -28,6 +28,7 @@ from .sharing import SHARE_ITEMS, link_shared, primary, share_items, share_state
 from .command import command_state, command_wanted, write_command
 from .launchers import launcher_dir_in_path, write_launcher
 from .newprofile import PROJECT_DATA, RUNTIME, add_profile_to_config, check_new_profile
+from .github import new_profile_folder
 
 # ---------------------------------------------------------------------------
 # Export and import
@@ -227,6 +228,7 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
             if command_wanted() and command_state(new) in ("missing", "outdated"):
                 write_command(new, bk, pid)
             write_launcher(command, f"~/.claude-{pid}", label, bk)
+            gh = new_profile_folder(new, pid, bk)
         except Exception:
             shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
             raise
@@ -243,6 +245,8 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
         bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
                 f"conversations: {'yes' if man.get('projects') else 'no'}")
         msg = f"Profile {label} imported. It is not logged in: run {command} and log in with /login."
+    if gh:
+        msg += f" {gh[0].upper()}{gh[1:]}."
     if not launcher_dir_in_path():
         msg += f" Note: {pretty(LAUNCHER_DIR)} is not in your PATH yet."
     return {"message": msg, "backup": bk.close()}

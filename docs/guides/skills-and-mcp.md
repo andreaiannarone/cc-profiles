@@ -28,7 +28,7 @@ Skills that come from plugins are not listed here: manage them with `/plugin` in
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/mcp-dark.jpg">
-  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL" width="1440" height="718" loading="lazy">
+  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL, and the claude.ai connectors with a switch each" width="1440" height="900" loading="lazy">
 </picture>
 
 The tab lists the servers configured in the profile's `.claude.json` (for the default profile, `~/.claude.json`):
@@ -48,6 +48,28 @@ Not listed here, because they are configured elsewhere:
 
 - servers in a project's `.mcp.json`, which is part of the project and usually committed with it
 - servers from plugins
-- claude.ai connectors (Gmail, Google Drive, Canva…), which belong to your claude.ai account
 
 Claude Code keeps `.claude.json` in memory while it runs. Close open sessions in the profile before changing its MCP servers, or restart them afterwards.
+
+## claude.ai connectors
+
+Connectors (Gmail, Google Drive, Canva…) belong to your claude.ai account, not to the profile: every profile signed in with the same account gets the same ones, and you connect or remove them on [claude.ai](https://claude.ai/customize/connectors). What a profile can do is keep some of them out, and the **claude.ai connectors** section under the MCP servers does that with a switch:
+
+- **A connector's switch** adds a deny rule for the whole connector, such as `mcp__claude_ai_Gmail`, to the profile's `settings.json`: in that profile Claude can no longer use any of its tools. Turning it back on removes that rule from `settings.json` and from `settings.local.json`; rules for a single tool of the connector (`mcp__claude_ai_Gmail__send_email`) are left alone.
+- **All connectors** sets `"disableClaudeAiConnectors": true` in `settings.json`: Claude Code does not even connect them in that profile. While it is on, the switches of single connectors are greyed out.
+
+The list shows the connectors Claude Code has connected in the profile at least once (it records them in `.claude.json`), plus any connector a deny rule names.
+
+Claude Code only ever adds to that list, so a connector you removed or renamed on claude.ai would stay there. cc-profiles keeps it in step with your account by itself: when you open the MCP tab it runs `claude mcp list` in the profile, which asks claude.ai for the account's connectors with the profile's own sign-in (cc-profiles never reads the token). Then:
+
+- a connector no longer on the account leaves the profile's list (with a backup);
+- a new one appears right away, without waiting for a Claude Code session;
+- a renamed one is both: the old name leaves, the new one appears. If the old name was blocked, its deny rule stays and the row says **not on the account**: turn it on to remove the rule, and it leaves the list.
+
+`claude mcp list` also starts every MCP server of the profile to check it, so the check runs at most once an hour per profile; **Check now** runs it again. It is skipped when Claude Code is not installed, when the profile is not signed in, or when all connectors are off. If claude.ai lists no connectors at all, nothing is taken off, because that is also what a failed answer looks like.
+
+**Forget** takes a connector off the profile's list by hand, when the check cannot run (the switch must be on, so no deny rule is left behind). If the connector still exists, Claude Code adds it back at its next session, so forgetting one by mistake loses nothing.
+
+The connector itself stays connected on your account, and other profiles keep using it. To give two profiles different connectors, for example a work Google Drive and a personal one, sign them in with two different accounts.
+
+Every change goes to the backup, and an open session picks it up when it restarts.

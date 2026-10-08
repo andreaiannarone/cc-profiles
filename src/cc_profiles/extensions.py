@@ -1,26 +1,33 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Andrea Iannarone
-"""cc-profiles: Skills and MCP servers."""
+"""cc-profiles: Skills, MCP servers and claude.ai connectors."""
 
 import json
 import os
 import re
 import shutil
+import subprocess
+import threading
+import time
 
 from .core import (
+    HOME,
     ApiError,
     Backup,
-    active_session,
+    find_tool,
+    load_settings,
     parse_memory,
     pretty,
     profile,
     profiles,
     read_json,
+    session_hint,
+    tool_env,
     write_json,
     write_text,
 )
 from .sharing import primary, share_state
-from .settings import no_targets, plan_message
+from .settings import no_targets, plan_message, save_settings_file, settings_files, shared_note
 from .info import names_in
 
 # ---------------------------------------------------------------------------
@@ -29,7 +36,7 @@ from .info import names_in
 # Skills are folders in <profile>/skills/<name>/ with a SKILL.md. MCP servers live
 # in the profile's .claude.json: "mcpServers" (user scope, every project) and
 # projects[<path>].mcpServers (one project). Servers from plugins, from a
-# project's .mcp.json and claude.ai connectors are configured elsewhere.
+# project's .mcp.json are configured elsewhere; claude.ai connectors are at the end of this module.
 NEW_SKILL_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
 MCP_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}")
 MCP_TYPES = ("stdio", "http", "sse")
@@ -241,11 +248,6 @@ def check_mcp_config(conf):
             raise ApiError(f"{k} must map names to text values")
 
 
-def session_hint(prof):
-    return f" Restart the open session in {prof['label']} to load it." if active_session(prof) else \
-        f" New Claude Code sessions in {prof['label']} will use it."
-
-
 def op_mcp_save(pid, scope, name, conf, old_name=None):
     prof = profile(pid)
     if not MCP_NAME.fullmatch(name or ""):
@@ -346,4 +348,261 @@ def op_mcp_copy_all(pid, scope, name):
     msg = plan_message(f"MCP server {name} copied", plan)
     if conf.get("type") in ("http", "sse"):
         msg += " If it needs a sign-in, run /mcp in each profile to authenticate."
+    return {"message": msg, "backup": bk.close()}
+
+
+# claude.ai connectors belong to the account, not to the profile: every profile signed in with
+# the same account gets the same ones. A profile can still keep one out with a deny rule naming
+# the whole server (mcp__claude_ai_Gmail), or all of them with "disableClaudeAiConnectors": true
+# (any settings file with true wins). Claude Code records the ones it has connected in the
+# profile's .claude.json, "claudeAiMcpEverConnected", as "claude.ai <name>", and never removes them.
+CONNECTOR_PREFIX = "claude.ai "
+CONNECTORS_OFF = "disableClaudeAiConnectors"
+CONNECTORS_SEEN = "claudeAiMcpEverConnected"
+CONNECTORS_URL = "https://claude.ai/customize/connectors"
+
+
+def connector_rule(name):
+    """The permission rule for a whole connector: Claude Code's own server name, as in its tool names."""
+    slug = re.sub(r"_+", "_", re.sub(r"[^A-Za-z0-9_-]", "_", CONNECTOR_PREFIX + name)).strip("_")
+    return "mcp__" + slug
+
+
+def connector_rules(name):
+    """Every deny rule that blocks the whole connector."""
+    r = connector_rule(name)
+    return (r, r + "__*")
+
+
+def settings_pair(prof, writing=False):
+    """settings.json and settings.local.json, each as (data, error). Before a write, both must be readable:
+    a rule in a file that cannot be read could still block the connector."""
+    f = settings_files(prof)
+    pair = {which: load_settings(f[which]) for which in ("settings", "local")}
+    for which, (_, err) in pair.items():
+        if writing and err:
+            raise ApiError(f"{os.path.basename(f[which])} has an error ({err}): fix it in the advanced editor")
+    return pair
+
+
+def deny_list(data):
+    perms = data.get("permissions") if isinstance(data.get("permissions"), dict) else {}
+    deny = perms.get("deny")
+    return [r for r in deny if isinstance(r, str)] if isinstance(deny, list) else []
+
+
+def seen_connectors(cfg):
+    """The connectors Claude Code has connected in the profile. It only ever adds to this list:
+    one removed or renamed on claude.ai stays until it is forgotten here."""
+    seen = cfg.get(CONNECTORS_SEEN) if isinstance(cfg, dict) else None
+    return {n[len(CONNECTOR_PREFIX):] for n in (seen if isinstance(seen, list) else [])
+            if isinstance(n, str) and n.startswith(CONNECTOR_PREFIX)}
+
+
+def connector_names(prof):
+    """The connectors Claude Code has connected in this profile, the ones claude.ai listed at the
+    last check, and the ones a deny rule names."""
+    names = seen_connectors(read_json(prof["config_abs"], {}) or {}) | set(live_connectors(prof) or ())
+    known = {connector_rule(n) for n in names}
+    for data, _ in settings_pair(prof).values():
+        for rule in deny_list(data):
+            m = re.fullmatch(r"mcp__claude_ai_([A-Za-z0-9-]+(?:_[A-Za-z0-9-]+)*)(?:__\*)?", rule)
+            if m and "mcp__claude_ai_" + m.group(1) not in known:
+                names.add(m.group(1).replace("_", " "))
+                known.add("mcp__claude_ai_" + m.group(1))
+    return sorted(names, key=str.lower)
+
+
+def list_connectors(pid):
+    prof = profile(pid)
+    files = settings_pair(prof)
+    off = [which for which, (data, _) in files.items() if data.get(CONNECTORS_OFF) is True]
+    seen = seen_connectors(read_json(prof["config_abs"], {}) or {})
+    live = live_connectors(prof)
+    out = []
+    for name in connector_names(prof):
+        rules = connector_rules(name)
+        where = [which for which, (data, _) in files.items() if any(r in deny_list(data) for r in rules)]
+        out.append({"name": name, "rule": rules[0], "blocked": bool(where), "where": where, "seen": name in seen,
+                    "on_account": None if live is None else name in live})
+    return {"connectors": out, "all_off": off, "url": CONNECTORS_URL, "check": check_state(prof),
+            "errors": {which: err for which, (_, err) in files.items() if err}}
+
+
+# The account's connectors as claude.ai lists them now. Only Claude Code knows them, with the
+# profile's own sign-in, so cc-profiles asks it: `claude mcp list` prints one "claude.ai <name>: <url> -
+# <status>" line per connector. It also starts every MCP server of the profile to check it, so it runs
+# at most once an hour per profile, unless asked again. cc-profiles never reads the token.
+LIVE_EVERY = 3600
+_live = {}  # profile folder -> {"at": time, "names": [...] or None, "error": text or None}
+_live_lock = threading.Lock()
+CONNECTOR_LINE = re.compile(r"^claude\.ai (.+?): \S+ - ", re.M)
+
+
+def live_connectors(prof):
+    """The names claude.ai listed at the last successful check, or None if there is none."""
+    got = _live.get(os.path.realpath(prof["dir_abs"]))
+    return got["names"] if got else None
+
+
+def check_state(prof):
+    got = _live.get(os.path.realpath(prof["dir_abs"]))
+    return {"at": got["at"], "error": got["error"]} if got else None
+
+
+def check_skipped(prof):
+    """Why claude.ai cannot be asked for this profile, or None."""
+    cfg = read_json(prof["config_abs"], {}) or {}
+    if not find_tool("claude"):
+        return "Claude Code is not installed"
+    if not (isinstance(cfg, dict) and (cfg.get("oauthAccount") or {}).get("emailAddress")):
+        return f"{prof['label']} is not signed in to a claude.ai account"
+    if any(d.get(CONNECTORS_OFF) is True for d, _ in settings_pair(prof).values()):
+        return "connectors are off in this profile"
+    return None
+
+
+def run_mcp_list(prof):
+    """Names of the account's connectors from `claude mcp list` in the profile, or raise ApiError."""
+    env = tool_env()
+    if prof["dir_abs"] != os.path.join(HOME, ".claude"):
+        env["CLAUDE_CONFIG_DIR"] = prof["dir_abs"]
+    else:
+        env.pop("CLAUDE_CONFIG_DIR", None)
+    try:  # in the profile folder: no project's .mcp.json is started
+        r = subprocess.run([find_tool("claude"), "mcp", "list"], env=env, cwd=prof["dir_abs"],
+                           capture_output=True, text=True, timeout=90)
+    except subprocess.TimeoutExpired:
+        raise ApiError("claude mcp list did not answer within 90 seconds")
+    except OSError as e:
+        raise ApiError(f"claude mcp list could not start: {e}")
+    names = sorted(set(CONNECTOR_LINE.findall(r.stdout)), key=str.lower)
+    if r.returncode != 0:
+        raise ApiError(f"claude mcp list failed: {(r.stderr or r.stdout).strip()[-300:]}")
+    if not names:  # no answer from claude.ai looks the same as an account without connectors: keep the list
+        raise ApiError("claude.ai listed no connectors: the list is kept as it is")
+    return names
+
+
+def connectors_check(pid, force=False):
+    """Ask claude.ai (through Claude Code) which connectors the account has now; cached for an hour."""
+    prof = profile(pid)
+    key = os.path.realpath(prof["dir_abs"])
+    skipped = check_skipped(prof)
+    if skipped:
+        return {"skipped": skipped, "gone": []}
+    with _live_lock:
+        got = _live.get(key)
+        if force or not got or time.time() - got["at"] > LIVE_EVERY:
+            try:
+                got = {"at": time.time(), "names": run_mcp_list(prof), "error": None}
+            except ApiError as e:
+                got = {"at": time.time(), "names": got["names"] if got else None, "error": str(e)}
+            _live[key] = got
+    return {"skipped": None, "gone": gone_connectors(prof), "error": got["error"]}
+
+
+def gone_connectors(prof):
+    """Connectors in the profile's list that claude.ai no longer has, and that no deny rule blocks
+    (a blocked one keeps its rule until it is turned on, so nothing is left behind)."""
+    live = live_connectors(prof)
+    if live is None:
+        return []
+    files = settings_pair(prof)
+    blocked = {r for d, _ in files.values() for r in deny_list(d)}
+    seen = seen_connectors(read_json(prof["config_abs"], {}) or {})
+    return sorted((n for n in seen if n not in live and not blocked & set(connector_rules(n))), key=str.lower)
+
+
+def op_connectors_sync(pid):
+    """Take off the profile's list the connectors the last check found gone from the account."""
+    prof = profile(pid)
+    gone = gone_connectors(prof)
+    if not gone:
+        return {"message": f"The connectors of {prof['label']} are up to date."}
+    cfg = load_claude_json(prof)
+    bk = Backup("connectors-sync", f"claude.ai connectors no longer on the account ({prof['label']})")
+    bk.copy(prof["config_abs"], "claude.json")
+    drop = {CONNECTOR_PREFIX + n for n in gone}
+    cfg[CONNECTORS_SEEN] = [n for n in cfg[CONNECTORS_SEEN] if n not in drop]
+    write_json(prof["config_abs"], cfg)
+    bk.note("removed " + ", ".join(gone))
+    return {"message": f"No longer on your claude.ai account, taken off the list of {prof['label']}: {', '.join(gone)}.",
+            "backup": bk.close()}
+
+
+def op_connector(pid, name, enabled):
+    """Let a connector into the profile (remove its deny rules) or keep it out (a deny rule in settings.json)."""
+    prof = profile(pid)
+    if name not in connector_names(prof):
+        raise ApiError(f"Unknown connector: {name}", 404)
+    rules = connector_rules(name)
+    files = settings_pair(prof, writing=True)
+    changes = {}
+    for which, (data, _) in files.items():
+        deny = deny_list(data)
+        if enabled and any(r in deny for r in rules):
+            changes[which] = [r for r in deny if r not in rules]
+        elif not enabled and which == "settings" and not any(r in deny_list(d) for d, _ in files.values() for r in rules):
+            changes[which] = deny + [rules[0]]
+    if not changes:
+        return {"message": f"{name} is already {'on' if enabled else 'off'} in {prof['label']}."}
+    bk = Backup("connector", f"claude.ai connector {name} {'on' if enabled else 'off'} ({prof['label']})")
+    for which, deny in changes.items():
+        data = files[which][0]
+        perms = dict(data.get("permissions") if isinstance(data.get("permissions"), dict) else {})
+        if deny:
+            perms["deny"] = deny
+        else:
+            perms.pop("deny", None)
+        if perms:
+            data["permissions"] = perms
+        else:
+            data.pop("permissions", None)
+        save_settings_file(prof, which, data, bk)
+        bk.note(f"{'removed' if enabled else 'added'} deny {rules[0]} in {os.path.basename(settings_files(prof)[which])}")
+    path = settings_files(prof)["settings"]
+    msg = f"{name} {'allowed again' if enabled else 'blocked'} in {prof['label']}{shared_note(path)}." + session_hint(prof)
+    return {"message": msg, "backup": bk.close()}
+
+
+def op_connector_forget(pid, name):
+    """Take a connector off the profile's list, for one removed or renamed on claude.ai.
+    If it still exists, Claude Code adds it back at its next session."""
+    prof = profile(pid)
+    cfg = load_claude_json(prof)
+    if name not in seen_connectors(cfg):
+        raise ApiError(f"Unknown connector: {name}", 404)
+    rules = connector_rules(name)
+    if any(r in deny_list(d) for d, _ in settings_pair(prof).values() for r in rules):
+        raise ApiError(f"{name} is blocked in {prof['label']}: turn it on first, so no deny rule is left behind")
+    bk = Backup("connector-forget", f"Forget claude.ai connector {name} ({prof['label']})")
+    bk.copy(prof["config_abs"], "claude.json")
+    cfg[CONNECTORS_SEEN] = [n for n in cfg[CONNECTORS_SEEN] if n != CONNECTOR_PREFIX + name]
+    write_json(prof["config_abs"], cfg)
+    return {"message": f"{name} forgotten in {prof['label']}. If it is still connected on claude.ai, "
+                       f"it comes back at the next Claude Code session.", "backup": bk.close()}
+
+
+def op_connectors_all(pid, enabled):
+    """Turn every claude.ai connector on or off in the profile, with disableClaudeAiConnectors."""
+    prof = profile(pid)
+    files = settings_pair(prof, writing=True)
+    if enabled:
+        targets = [which for which, (data, _) in files.items() if CONNECTORS_OFF in data]
+    else:
+        targets = [] if any(d.get(CONNECTORS_OFF) is True for d, _ in files.values()) else ["settings"]
+    if not targets:
+        return {"message": f"claude.ai connectors are already {'on' if enabled else 'off'} in {prof['label']}."}
+    bk = Backup("connectors", f"claude.ai connectors {'on' if enabled else 'off'} ({prof['label']})")
+    for which in targets:
+        data = files[which][0]
+        if enabled:
+            data.pop(CONNECTORS_OFF, None)
+        else:
+            data[CONNECTORS_OFF] = True
+        save_settings_file(prof, which, data, bk)
+        bk.note(f"{CONNECTORS_OFF} {'removed from' if enabled else '= true in'} {os.path.basename(settings_files(prof)[which])}")
+    msg = (f"claude.ai connectors {'on' if enabled else 'off'} in {prof['label']}"
+           f"{shared_note(settings_files(prof)['settings'])}." + session_hint(prof))
     return {"message": msg, "backup": bk.close()}

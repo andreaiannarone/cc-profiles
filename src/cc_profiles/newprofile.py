@@ -26,6 +26,7 @@ from .core import (
 from .sharing import link_shared, primary, share_items
 from .command import command_state, command_wanted, write_command
 from .launchers import command_conflict, launcher_dir_in_path, write_launcher
+from .github import new_profile_folder
 
 # ---------------------------------------------------------------------------
 # New profile
@@ -102,10 +103,11 @@ def op_create_profile(label, pid, base, include_projects, share):
     if command_wanted() and command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
+    gh = new_profile_folder(new, pid, bk)
     add_profile_to_config(label, pid, command)
     bk.note(f"base: {src['label'] if src else 'empty'}, projects: {'yes' if include_projects else 'no'}, "
             f"shared: {', '.join(share) or 'nothing'}")
-    msg = f"Profile {label} created. Run {command} and log in with /login."
+    msg = f"Profile {label} created. Run {command} and log in with /login." + (f" {gh[0].upper()}{gh[1:]}." if gh else "")
     if not launcher_dir_in_path():
         msg += f" Note: {pretty(LAUNCHER_DIR)} is not in your PATH yet."
     return {"message": msg, "backup": bk.close()}

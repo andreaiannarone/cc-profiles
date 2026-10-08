@@ -253,6 +253,70 @@ def test_profile_by_folder_section(page_on_sandbox):
     assert errors == []
 
 
+
+def test_claude_ai_connectors_switches(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "mcp")
+    page.wait_for_selector('[data-conn="Gmail"]', state="attached")
+    assert "claude.ai connectors" in page.inner_text("#main")
+    page.click('label.switch:has([data-conn="Gmail"])')
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => { const c = document.querySelector('[data-conn=\"Gmail\"]'); return c && !c.checked; }")
+    assert "mcp__claude_ai_Gmail in deny of settings.json" in page.inner_text("#main")
+    page.click('[data-connforget="Linear"]')
+    page.wait_for_function("() => !document.querySelector('[data-conn=\"Linear\"]')")
+    page.click("label.switch:has(#conn-all)")
+    page.wait_for_function("() => document.querySelector('[data-conn=\"Google Drive\"]')?.disabled")
+    assert "All connectors are off" in page.inner_text("#main")
+    assert errors == []
+
+
+def test_github_account_per_profile(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    # the test server does not set folders up at start: Work gets its own on request
+    page.click('[data-ghsetup="work"]')
+    page.wait_for_selector('[data-ghacc="work"]')
+    assert page.input_value('[data-ghacc="work"]') == "me-at-work"  # ~/.config/gh-work already existed
+    # as in Settings: changes are a draft, marked, until Save changes
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.fill('[data-ghname="work"]', "Me At Work")
+    page.fill('[data-ghemail="work"]', "me@work.example")
+    assert page.is_visible("#gh-bar") and page.inner_text("#gh-count") == "1 profile changed"
+    assert "changed" in page.get_attribute('[data-ghrow="work"]', "class")
+    page.click("#gh-cancel")
+    assert page.input_value('[data-ghacc="work"]') == "me-at-work" and page.is_hidden("#gh-bar")
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.fill('[data-ghname="work"]', "Me At Work")
+    page.fill('[data-ghemail="work"]', "me@work.example")
+    page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+    y = page.evaluate("window.scrollY")
+    page.click("#gh-save")
+    page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-personal'))")
+    page.wait_for_function("() => document.querySelector('#gh-bar')?.hidden")
+    page.wait_for_function("() => document.querySelector('[data-ghname=\"work\"]')?.value === 'Me At Work'")
+    assert y - 150 < page.evaluate("window.scrollY") <= y  # in place (the save bar is gone), not back to the top
+    # another account: the sign-in command for the profile's own folder
+    page.select_option('[data-ghacc="work"]', "+")
+    page.wait_for_selector("#gh-cmd")
+    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-work gh auth login"
+    page.keyboard.press("Escape")
+    # the accounts: add one in the accounts folder, remove one no profile uses
+    page.click("#gh-addacc")
+    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-accounts gh auth login"
+    page.keyboard.press("Escape")
+    page.wait_for_selector('[data-ghremove="me-at-work"]')
+    page.click('[data-ghremove="me-at-work"]')
+    page.click('.modal button:has-text("Remove")')
+    page.wait_for_function("() => !document.querySelector('[data-ghremove=\"me-at-work\"]')")
+    # a new profile gets its own folder
+    page.click("[data-newprofile] >> nth=0")
+    page.fill("#np-label", "Noa")
+    assert page.inner_text("#np-ghdir") == "~/.config/gh-noa"
+    page.click('.modal button:has-text("Create profile")')
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('~/.config/gh-noa'))")
+    assert errors == []
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")

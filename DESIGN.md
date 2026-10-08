@@ -65,7 +65,7 @@ Rules:
 | Side list | `.side` + `.plist` | scrolls on its own (max 62vh); the selected item is on `--accent-soft` |
 | Memory card | `.mcard` / `.mcard.on` | focusable; orange border while open in the editor |
 | Editor | `.editor` | monospace textarea; actions at the bottom right: Delete · Move… · **Save** |
-| Switch | `.switch` | hidden checkbox plus a `span`; on = `--accent`. Changes always go through a confirmation and flip back if cancelled |
+| Switch | `.switch` | hidden checkbox plus a `span`; on = `--logo`, the mascot's orange like the primary buttons. Changes always go through a confirmation and flip back if cancelled |
 | Health check | `.check.ok` `.warn` `.error` | ✓ ! ✕ icon in a 16px column |
 | Modal | `modal({ title, sub, body, actions })` | closes with Esc, a click outside, or Cancel; the first field gets focus; actions without a `label` do not appear in the footer |
 | Typed confirmation | "Type *Name* to confirm" field | only for the biggest operations (deleting a profile): the button stays disabled until the text matches |

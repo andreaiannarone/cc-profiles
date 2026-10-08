@@ -34,9 +34,21 @@ Yes. A profile can share skills, plugins, agents, commands, `CLAUDE.md` or `sett
 
 The Usage tab adds up the token usage Claude Code records on every reply, per day, project, model and profile, with an estimated cost at list price and a CSV export. See [Usage](guides/usage.md).
 
+## Can each Claude Code profile use its own GitHub account?
+
+Yes. Every profile gets its own GitHub CLI folder (`~/.config/gh-<id>`), and Profiles → **GitHub** picks which signed-in account each one uses and the name and email of its commits, so `gh` and `git push` in a work profile use your work account. Tokens stay in the system keychain. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile).
+
+## Can I turn off claude.ai connectors in one profile only?
+
+Yes. Connectors such as Gmail or Google Drive belong to your claude.ai account, so every profile signed in with it has them, but the MCP tab can keep any of them, or all of them, out of one profile. See [claude.ai connectors](guides/skills-and-mcp.md#claudeai-connectors).
+
+## Does uninstalling cc-profiles delete my profiles?
+
+No. `cc-profiles uninstall` removes only what cc-profiles added (the `/cc-profiles` command, the profile by folder line) and the app itself; your profiles, conversations, memories, settings and logins stay, and Claude Code keeps working in each of them. If something is broken, `cc-profiles reinstall` installs it again and keeps your settings and backups. See [Uninstall](uninstall.md).
+
 ## Does cc-profiles send my data anywhere?
 
-No. It runs on your computer and listens on `127.0.0.1` only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click. See [Security](https://github.com/andreaiannarone/cc-profiles#security) in the README.
+No. It runs on your computer and listens on `127.0.0.1` only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click. To list your claude.ai connectors it runs `claude mcp list`, so that request is Claude Code's own, with its own sign-in. See [Security](https://github.com/andreaiannarone/cc-profiles#security) in the README.
 
 ## Which systems does cc-profiles run on, and what does it cost?
 

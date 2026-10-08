@@ -115,6 +115,15 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .plug-row .m code { font-size: 11.5px; }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.ghtable td { vertical-align: middle; }
+.ghtable tr.changed td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.ghtable tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.ghid { display: flex; gap: 6px; }
+.ghid input { min-width: 0; flex: 1; }
+.cmdrow { display: flex; gap: 8px; align-items: center; }
+.cmdrow pre { flex: 1; margin: 0; }
+.conn-all { font-size: 13px; color: var(--muted); align-self: center; }
+.ext-head .switch { align-self: center; }
 .mcp-target { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .pcard .nums { display: flex; gap: 16px; margin-top: 10px; }
 .pcard .nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -195,8 +204,8 @@ td.acts .btn + .btn { margin-left: 6px; }
 .memgrid { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
 .side { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .side .head { padding: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { flex: 1; border: 0; background: var(--panel); padding: 6px; cursor: pointer; }
+.seg { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.seg button { flex: 1; border: 0; border-radius: 7px; background: transparent; padding: 5px 14px; white-space: nowrap; cursor: pointer; }
 .seg button:hover { background: var(--panel-2); }
 .seg button.on { background: var(--text); color: var(--bg); }
 .plist { max-height: 62vh; overflow: auto; }
@@ -257,7 +266,7 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .switch input { opacity: 0; width: 0; height: 0; }
 .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; cursor: pointer; transition: background .15s; }
 .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: var(--panel); border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
-.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span { background: var(--logo); }
 .switch input:checked + span::before { transform: translateX(16px); }
 .switch input:disabled + span { opacity: .5; cursor: default; }
 .share { display: flex; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
@@ -468,7 +477,7 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
 </head>
 <body>
 <div class="wrap">
-  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><g class="m-back"><g transform="translate(42 -14)"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-back lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-back lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-back" x="14" y="28" width="56" height="7"/><rect class="lg-back" x="7" y="35" width="70" height="7"/><rect class="lg-back" x="7" y="42" width="14" height="7"/><rect class="lg-back" x="28" y="42" width="28" height="7"/><rect class="lg-back" x="63" y="42" width="14" height="7"/><rect class="lg-back" x="7" y="49" width="14" height="7"/><rect class="lg-back" x="28" y="49" width="28" height="7"/><rect class="lg-back" x="63" y="49" width="14" height="7"/><rect class="lg-back" x="7" y="56" width="70" height="7"/><rect class="lg-back" x="7" y="63" width="70" height="7"/><rect class="lg-back" x="7" y="70" width="70" height="7"/><rect class="lg-back" x="14" y="77" width="14" height="7"/><rect class="lg-back" x="56" y="77" width="14" height="7"/><rect class="lg-back" x="21" y="42" width="7" height="14"/><rect class="lg-back" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></g><g class="m-front"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-front lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-front lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-front" x="21" y="42" width="7" height="14"/><rect class="lg-front" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></svg>cc-profiles</h1><span class="sub">profiles, projects and memories for Claude Code</span>
+  <header><h1><svg class="logo" viewBox="0 0 126 84" aria-hidden="true" shape-rendering="crispEdges"><g class="m-back"><g transform="translate(42 -14)"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-back lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-back lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-back" x="14" y="28" width="56" height="7"/><rect class="lg-back" x="7" y="35" width="70" height="7"/><rect class="lg-back" x="7" y="42" width="14" height="7"/><rect class="lg-back" x="28" y="42" width="28" height="7"/><rect class="lg-back" x="63" y="42" width="14" height="7"/><rect class="lg-back" x="7" y="49" width="14" height="7"/><rect class="lg-back" x="28" y="49" width="28" height="7"/><rect class="lg-back" x="63" y="49" width="14" height="7"/><rect class="lg-back" x="7" y="56" width="70" height="7"/><rect class="lg-back" x="7" y="63" width="70" height="7"/><rect class="lg-back" x="7" y="70" width="70" height="7"/><rect class="lg-back" x="14" y="77" width="14" height="7"/><rect class="lg-back" x="56" y="77" width="14" height="7"/><rect class="lg-back" x="21" y="42" width="7" height="14"/><rect class="lg-back" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></g><g class="m-front"><g class="lg-e"><rect class="lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-ant" x="35" y="21" width="7" height="7"/><rect x="14" y="28" width="56" height="7"/><rect x="7" y="35" width="70" height="7"/><rect x="7" y="42" width="14" height="7"/><rect x="28" y="42" width="28" height="7"/><rect x="63" y="42" width="14" height="7"/><rect x="7" y="49" width="14" height="7"/><rect x="28" y="49" width="28" height="7"/><rect x="63" y="49" width="14" height="7"/><rect x="7" y="56" width="70" height="7"/><rect x="7" y="63" width="70" height="7"/><rect x="7" y="70" width="70" height="7"/><rect x="14" y="77" width="14" height="7"/><rect x="56" y="77" width="14" height="7"/><rect x="21" y="42" width="7" height="14"/><rect x="56" y="42" width="7" height="14"/></g><rect class="lg-front lg-ant" x="42" y="14" width="7" height="7"/><rect class="lg-front lg-ant" x="35" y="21" width="7" height="7"/><rect class="lg-front" x="14" y="28" width="56" height="7"/><rect class="lg-front" x="7" y="35" width="70" height="7"/><rect class="lg-front" x="7" y="42" width="14" height="7"/><rect class="lg-front" x="28" y="42" width="28" height="7"/><rect class="lg-front" x="63" y="42" width="14" height="7"/><rect class="lg-front" x="7" y="49" width="14" height="7"/><rect class="lg-front" x="28" y="49" width="28" height="7"/><rect class="lg-front" x="63" y="49" width="14" height="7"/><rect class="lg-front" x="7" y="56" width="70" height="7"/><rect class="lg-front" x="7" y="63" width="70" height="7"/><rect class="lg-front" x="7" y="70" width="70" height="7"/><rect class="lg-front" x="14" y="77" width="14" height="7"/><rect class="lg-front" x="56" y="77" width="14" height="7"/><rect class="lg-front" x="21" y="42" width="7" height="14"/><rect class="lg-front" x="56" y="42" width="7" height="14"/><rect class="lg-eye" x="21" y="42" width="7" height="7"/><rect class="lg-eye" x="56" y="42" width="7" height="7"/><rect class="lg-eye" x="21" y="49" width="7" height="7"/><rect class="lg-eye" x="56" y="49" width="7" height="7"/></g></svg>cc-profiles</h1><span class="sub">Profiles, projects and memories for Claude Code</span>
     <input class="search" id="gsearch" type="search" placeholder="Search everything…" aria-label="Search everything: projects, memories, skills, MCP servers, CLAUDE.md" autocomplete="off">
     <button class="iconbtn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
@@ -510,7 +519,7 @@ const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
             conv: { profile: null, project: null, projects: [], list: null, session: null, view: null, q: "" },
-            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, error: null, skill: null, content: "", files: [], q: "" } };
+            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, conn: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 /** @type {(s: string, el?: ParentNode) => any} */
@@ -585,7 +594,7 @@ async function loadProfiles() {
     <div class="pcard">
       <div class="top"><span class="name">${esc(p.label)}</span>${badge(p.id)}
         ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
-      <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+      <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
       <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code></div>
       <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
         <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
@@ -898,10 +907,16 @@ function renderHealth() {
 }
 
 // ---------- profiles and sharing ----------
+// After a change the tab is redrawn in place: the loader only shows the first time, and the page
+// keeps its scroll position, as in Settings.
 async function loadSharing() {
-  S.sharing = null; renderSharing();
-  const [sharing, shell] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null)]);
-  S.sharing = sharing; S.shell = shell; renderSharing();
+  if (!S.sharing) renderSharing();
+  const [sharing, shell, github] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
+    api("/api/github").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; S.github = github;
+  const y = window.scrollY;
+  renderSharing();
+  window.scrollTo(0, y);
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -916,7 +931,7 @@ function renderSharing() {
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
@@ -927,9 +942,11 @@ function renderSharing() {
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
         <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
       </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>
-    ${byFolderHtml()}`;
+    ${byFolderHtml()}
+    ${githubHtml()}`;
   $("#ptemplates").onclick = manageTemplates;
   wireByFolder();
+  wireGithub();
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
@@ -944,6 +961,123 @@ function renderSharing() {
   });
 }
 const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
+
+// ---------- a GitHub account per profile ----------
+// Every profile has its own GitHub CLI folder; the menu picks which signed-in account is active there.
+// The table is a draft, as in Settings: changes are marked and saved together with Save changes.
+S.ghDraft = {};
+const ghVal = (p, k) => (S.ghDraft[p.id] && k in S.ghDraft[p.id]) ? S.ghDraft[p.id][k] : (p[k] || "");
+const ghChanged = p => ["user", "name", "email"].some(k => ghVal(p, k) !== (p[k] || ""));
+function githubHtml() {
+  const g = S.github;
+  if (!g) return "";
+  const src = esc(S.profiles[0].label);
+  const account = p => {
+    if (p.shared) return `<span class="hint">the account of ${src}: its <code>settings.json</code> is shared</span>`;
+    if (!p.set_up) return `<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button>`;
+    const cur = ghVal(p, "user");
+    const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];
+    return `<select data-ghacc="${p.id}" aria-label="GitHub account of ${esc(p.label)}">
+      ${cur ? "" : `<option value="" selected disabled>not signed in</option>`}
+      ${users.map(u => `<option value="${esc(u)}" ${u === cur ? "selected" : ""}>${esc(u)}</option>`).join("")}
+      <option value="+">Another account…</option></select>`;
+  };
+  const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
+      <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
+      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="Name: your git config" aria-label="Commit name in ${esc(p.label)}">
+        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="Email" title="For example ${esc(ghVal(p, "user") || "you")}@users.noreply.github.com" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
+  return `<h2 class="section-title">GitHub</h2>
+    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here (empty: your git config). Tokens stay in the system keychain.</span></div>
+    ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
+    ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
+      <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
+    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="savebar" id="gh-bar" hidden><span id="gh-count"></span><span class="grow"></span><button class="btn" id="gh-cancel">Cancel</button><button class="btn primary" id="gh-save">Save changes</button></div>
+    ${githubAccountsHtml()}`;
+}
+function ghMark() {
+  const g = S.github; if (!g) return;
+  const changed = g.profiles.filter(ghChanged);
+  document.querySelectorAll("[data-ghrow]").forEach(r => r.classList.toggle("changed", changed.some(p => p.id === r.dataset.ghrow)));
+  const bar = $("#gh-bar"); if (!bar) return;
+  bar.hidden = !changed.length;
+  $("#gh-count").textContent = plural(changed.length, "profile changed", "profiles changed");
+}
+window.addEventListener("beforeunload", e => { if (S.github?.profiles.some(ghChanged)) { e.preventDefault(); e.returnValue = ""; } });
+async function copyCommand(text, btn) {
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy command"; }, 1500); }
+  catch { toast("Copy it by hand: " + text, "", true); }
+}
+async function githubPost(path, body) {
+  try { await run(() => api(path, body)); } catch {}
+  await refresh(); loadSharing();
+}
+// The accounts signed in on this computer, whichever folder they are in
+function githubAccountsHtml() {
+  const g = S.github, list = g.account_list || [];
+  const rows = list.map(a => `<tr><td><b>${esc(a.user)}</b></td>
+      <td>${a.used_by.length ? a.used_by.map(esc).join(", ") : `<span class="hint">no profile</span>`}</td>
+      <td class="path">${a.folders.map(f => `<code>${esc(f)}</code>`).join(" · ")}</td>
+      <td class="acts">${a.insecure ? `<span class="badge b-warn" title="Its token is written in hosts.yml, not in the keychain: other profiles cannot use it">token in hosts.yml</span>`
+        : a.used_by.length ? `<button class="btn small" disabled title="In use: connect another account to ${esc(a.used_by.join(", "))} first">Remove…</button>`
+        : `<button class="btn small danger" data-ghremove="${esc(a.user)}">Remove…</button>`}</td></tr>`).join("");
+  return `<div class="ext-head"><h2>Accounts</h2><span class="hint">Every GitHub account signed in on this computer. A new one is added in <code>${esc(g.accounts_dir)}</code>, so no profile changes: connect it to a profile above.</span>
+      <button class="btn" id="gh-addacc">Add account…</button></div>
+    <div class="table ghtable">${rows ? `<table><thead><tr><th>Account</th><th>Used by</th><th>Folders</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+      : `<div class="empty">No GitHub account is signed in yet: add one.</div>`}</div>`;
+}
+function signInAnother(p) {
+  return signInModal(`Another GitHub account for ${p.label}`,
+    `Sign in once in a terminal: the account becomes the active one in <code>${esc(p.dir)}</code>, and every other profile can pick it from its menu too.${p.default ? " Your terminal uses it as well." : ""}`,
+    (p.default ? "" : `GH_CONFIG_DIR=${p.dir} `) + "gh auth login");
+}
+async function signInModal(title, sub, cmd) {
+  const resP = modal({ title, sub,
+    body: `<div class="form"><div class="cmdrow"><pre class="log" id="gh-cmd">${esc(cmd)}</pre><button class="btn small" id="gh-copy">Copy command</button></div>
+      <div class="hint">The token goes to the system keychain; cc-profiles only reads the user's name.</div></div>`,
+    actions: [{ label: "I signed in, refresh", kind: "primary", value: "ok" }], cancel: "Close" });
+  $("#gh-copy").onclick = e => copyCommand(cmd, e.target);
+  await resP;
+  await refresh(); loadSharing();
+}
+function wireGithub() {
+  const g = S.github;
+  if (!g) return;
+  const prof = id => g.profiles.find(x => x.id === id);
+  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyCommand(b.dataset.copy, b));
+  document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
+  $("#gh-addacc")?.addEventListener("click", () => signInModal("Add a GitHub account",
+    `Sign in once in a terminal, in <code>${esc(g.accounts_dir)}</code>: no profile changes account. Then connect it to the profiles you want.`,
+    `GH_CONFIG_DIR=${g.accounts_dir} gh auth login`));
+  document.querySelectorAll("[data-ghremove]").forEach(b => b.onclick = async () => {
+    const a = g.account_list.find(x => x.user === b.dataset.ghremove);
+    const logout = `gh auth logout --hostname github.com --user ${a.user}`;
+    if (!(await confirmBox(`Remove ${a.user}?`, `It is taken off ${a.folders.map(f => `<code>${esc(f)}</code>`).join(", ")}; those files go to the backup first. Its token stays in the system keychain: to delete it too, run <code>${esc(logout)}</code> afterwards.`, "Remove", "danger"))) return;
+    githubPost("/api/github/remove", { user: a.user });
+  });
+  const draft = (id, k, v) => { (S.ghDraft[id] = S.ghDraft[id] || {})[k] = v; ghMark(); };
+  document.querySelectorAll("[data-ghacc]").forEach(sel => sel.onchange = () => {
+    const p = prof(sel.dataset.ghacc);
+    if (sel.value === "+") { sel.value = ghVal(p, "user"); return signInAnother(p); }
+    draft(p.id, "user", sel.value);
+  });
+  document.querySelectorAll("[data-ghname]").forEach(i => i.oninput = () => draft(i.dataset.ghname, "name", i.value.trim()));
+  document.querySelectorAll("[data-ghemail]").forEach(i => i.oninput = () => draft(i.dataset.ghemail, "email", i.value.trim()));
+  document.querySelectorAll("[data-ghname], [data-ghemail]").forEach(i => i.onkeydown = e => { if (e.key === "Enter" && !$("#gh-bar").hidden) $("#gh-save").click(); });
+  $("#gh-cancel").onclick = () => { S.ghDraft = {}; const y = window.scrollY; renderSharing(); window.scrollTo(0, y); };
+  $("#gh-save").onclick = async () => {
+    const changes = g.profiles.filter(ghChanged).map(p => {
+      const c = { profile: p.id };
+      if (ghVal(p, "user") !== (p.user || "")) c.user = ghVal(p, "user");
+      if (ghVal(p, "name") !== (p.name || "") || ghVal(p, "email") !== (p.email || "")) { c.name = ghVal(p, "name"); c.email = ghVal(p, "email"); }
+      return c;
+    });
+    try { await run(() => api("/api/github/save", { changes })); } catch { return; }
+    S.ghDraft = {};
+    await refresh(); loadSharing();
+  };
+  ghMark();
+}
 
 // ---------- profile by folder ----------
 function byFolderHtml() {
@@ -999,8 +1133,9 @@ function wireByFolder() {
   $("#bf-path").onkeydown = e => { if (e.key === "Enter") go(); };
 }
 async function newProfile() {
-  let tpl = [];
+  let tpl = [], gh = null;
   try { tpl = (await api("/api/templates")).templates; } catch {}
+  try { gh = await api("/api/github"); } catch {}
   const opts = S.profiles.map(p => `<label><input type="radio" name="base" value="${p.id}" ${p.id === S.profiles[0].id ? "checked" : ""}> Copy of ${esc(p.label)} <span class="hint">(settings, MCP servers; you log in again)</span></label>`).join("")
     + tpl.map(t => `<label><input type="radio" name="base" value="template:${esc(t.name)}"> From template: ${esc(t.name)} <span class="hint">(${esc(t.items.join(", ") || "empty")})</span></label>`).join("");
   const resP = modal({ title: "New profile", sub: "Creates the folder <code>~/.claude-&lt;id&gt;</code> and a <code>claude-&lt;id&gt;</code> command in <code>~/.local/bin</code> that starts Claude Code in it.",
@@ -1013,10 +1148,14 @@ async function newProfile() {
       <div id="np-share"><div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
       <div class="checks">${SHARE_NEW.map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
       <div class="hint" id="np-tpl" hidden></div>
+      ${gh?.gh ? `<div class="hint">It gets its own GitHub CLI folder, <code id="np-ghdir">~/.config/gh-&lt;id&gt;</code>, signed in as your current account until you pick another one in Profiles → GitHub.</div>` : ""}
     </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
   const L = $("#np-label"), I = $("#np-id"); let touched = false;
   const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
-  const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
+  const upd = () => {
+    $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : "";
+    if ($("#np-ghdir")) $("#np-ghdir").textContent = `~/.config/gh-${I.value || "<id>"}`;
+  };
   L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
   I.oninput = () => { touched = true; upd(); };
   // A template fills the items it holds; an item shared with the source is linked instead,
@@ -1153,7 +1292,7 @@ async function loadExt(pid) {
   renderExt();
   try {
     if (tab === "skills") x.skills = await api("/api/skills?profile=" + x.profile);
-    else x.mcp = await api("/api/mcp?profile=" + x.profile);
+    else [x.mcp, x.conn] = await Promise.all([api("/api/mcp?profile=" + x.profile), api("/api/connectors?profile=" + x.profile)]);
   } catch (e) {
     // "Not found" means the page is newer than the running server: the page is read from disk at every load
     x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server: run cc-profiles restart (or /cc-profiles restart in Claude Code), then reload the page." : e.message;
@@ -1161,6 +1300,22 @@ async function loadExt(pid) {
   }
   if (x.skills && x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
   renderExt();
+  if (tab === "mcp") checkConnectors(false);
+}
+// Ask claude.ai, through `claude mcp list`, which connectors the account has now (the server keeps
+// the answer for an hour), then take off the list the ones that are gone.
+async function checkConnectors(force) {
+  const x = S.ext, pid = x.profile;
+  x.connChecking = true; renderExt();
+  try {
+    const r = await api(`/api/connectors/check?profile=${encodeURIComponent(pid)}${force ? "&force=1" : ""}`);
+    x.connSkipped = r.skipped;
+    if (r.error && force) toast(r.error, "", true);
+    if (r.gone.length) await run(() => api("/api/connectors/sync", { profile: pid }));
+    if (x.profile === pid) x.conn = await api("/api/connectors?profile=" + encodeURIComponent(pid));
+  } catch {}
+  x.connChecking = false;
+  if (x.profile === pid) renderExt();
 }
 async function openSkill(name) {
   const x = S.ext;
@@ -1224,16 +1379,25 @@ function renderSkills(head) {
 function renderMcp(head) {
   const x = S.ext;
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h2>MCP servers</h2><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins, from a project's <code>.mcp.json</code> and claude.ai connectors are managed elsewhere</span>
+    <div class="ext-head" style="margin-top:0"><h2>MCP servers</h2><span class="hint"><code>${esc(x.mcp.config)}</code> · servers from plugins and from a project's <code>.mcp.json</code> are managed elsewhere</span>
       <button class="btn primary" id="mcpnew">Add server…</button></div>
     <div class="table">${x.mcp.servers.map((m, i) => `<div class="prow"><div class="txt">
         <div class="t">${esc(m.name)} <span class="badge b-none">${esc(m.type)}</span> <span class="badge b-none" title="${esc(m.scope === "user" ? "Available in every project" : m.scope)}">${esc(scopeLabel(m.scope))}</span></div>
         <div class="mcp-target">${esc(m.target)}</div>
         ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
       <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button><button class="btn small" data-mcpall="${i}">Copy to all…</button>
-        <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>`;
+        <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>
+    ${connectorsSection()}`;
 
   $("#mcpnew").onclick = () => editMcp(null);
+  const setConn = (path, body, cb) => run(() => api(path, { profile: x.profile, ...body })).then(() => loadExt(), () => { cb.checked = !cb.checked; });
+  $("#conn-check")?.addEventListener("click", () => checkConnectors(true));
+  $("#conn-all")?.addEventListener("change", e => setConn("/api/connectors/all", { enabled: e.target.checked }, e.target));
+  document.querySelectorAll("[data-conn]").forEach(cb => cb.onchange = () => setConn("/api/connectors/set", { name: cb.dataset.conn, enabled: cb.checked }, cb));
+  document.querySelectorAll("[data-connforget]").forEach(b => b.onclick = async () => {
+    try { await run(() => api("/api/connectors/forget", { profile: x.profile, name: b.dataset.connforget })); } catch { return; }
+    loadExt();
+  });
   document.querySelectorAll("[data-mcpedit]").forEach(b => b.onclick = () => editMcp(x.mcp.servers[b.dataset.mcpedit]));
   document.querySelectorAll("[data-mcpcopy]").forEach(b => b.onclick = async () => {
     const m = x.mcp.servers[b.dataset.mcpcopy];
@@ -1253,6 +1417,32 @@ function renderMcp(head) {
     try { await run(() => api("/api/mcp/delete", { profile: x.profile, scope: m.scope, name: m.name })); } catch {}
     loadExt();
   });
+}
+function connCheckText(c) {
+  const x = S.ext;
+  if (x.connChecking) return `Asking claude.ai for the account's connectors (<code>claude mcp list</code>, a few seconds)…`;
+  if (x.connSkipped) return `The list shows the connectors Claude Code has connected in this profile; it is not checked with claude.ai because ${esc(x.connSkipped)}. If you removed or renamed one on claude.ai, <b>Forget</b> it here.`;
+  const at = c.check?.at ? new Date(c.check.at * 1000).toTimeString().slice(0, 5) : "";
+  return `${c.check?.error ? `Last check failed: ${esc(c.check.error)}.` : at ? `Checked with claude.ai at ${at}: connectors removed there leave this list, new ones appear.` : ""}
+    The check runs <code>claude mcp list</code>, which also starts this profile's MCP servers, so it runs at most once an hour. <button class="btn small" id="conn-check">Check now</button>`;
+}
+// claude.ai connectors: they come with the account, so a profile can only keep them out
+function connectorsSection() {
+  const c = S.ext.conn, prof = S.profiles.find(p => p.id === S.ext.profile);
+  if (!c) return "";
+  const off = c.all_off.length > 0, files = { settings: "settings.json", local: "settings.local.json" };
+  const err = Object.entries(c.errors).map(([w, e]) => `<code>${files[w]}</code> has an error (${esc(e)}): fix it in the advanced editor`).join("; ");
+  const rows = c.connectors.map(k => `<div class="prow"><div class="txt">
+      <div class="t">${esc(k.name)}${k.blocked ? ` <span class="badge b-none">blocked</span>` : ""}${k.on_account === false ? ` <span class="badge b-none" title="claude.ai no longer lists it: turn it on to remove its deny rule, then it leaves the list">not on the account</span>` : ""}</div>
+      <div class="m"><code>${esc(k.rule)}</code>${k.blocked ? ` in deny of ${k.where.map(w => `<code>${files[w]}</code>`).join(" and ")}` : ""}</div></div>
+    ${k.seen && !k.blocked && k.on_account !== true ? `<button class="btn small" data-connforget="${esc(k.name)}" title="Take it off this list: for a connector removed or renamed on claude.ai">Forget</button>` : ""}
+    <label class="switch" title="${k.blocked ? "Off in this profile" : "On"}"><input type="checkbox" data-conn="${esc(k.name)}" ${k.blocked ? "" : "checked"} ${off || err ? "disabled" : ""} aria-label="Use ${esc(k.name)} in ${esc(prof?.label || "")}"><span></span></label></div>`).join("");
+  return `<div class="ext-head"><h2>claude.ai connectors</h2><span class="hint">They come with the account${prof?.email ? ` <b>${esc(prof.email)}</b>` : ""}, so every profile signed in with it has the same ones. Turning one off adds a deny rule to this profile's <code>settings.json</code>; connect or remove them on <a href="${esc(c.url)}" target="_blank" rel="noopener">claude.ai</a>.</span>
+      <span class="conn-all">All connectors</span><label class="switch" title="${off ? "All off" : "On"}"><input type="checkbox" id="conn-all" ${off ? "" : "checked"} ${err ? "disabled" : ""} aria-label="Use claude.ai connectors in ${esc(prof?.label || "")}"><span></span></label></div>
+    ${err ? `<div class="hint" style="margin-bottom:8px">${err}</div>` : ""}
+    ${off ? `<div class="hint" style="margin-bottom:8px">All connectors are off in this profile: <code>disableClaudeAiConnectors</code> is true in ${c.all_off.map(w => `<code>${files[w]}</code>`).join(" and ")}.</div>` : ""}
+    <div class="table">${rows || `<div class="empty">No connectors seen in this profile yet: Claude Code lists the ones it has connected here at least once.</div>`}</div>
+    <p class="hint conn-check">${connCheckText(c)}</p>`;
 }
 async function newSkill() {
   const x = S.ext;

@@ -16,7 +16,13 @@
   a: Yes. A profile can share skills, plugins, agents, commands, CLAUDE.md or settings.json with the source profile through a symbolic link, so you install or edit them once and every sharing profile sees the change.
 - q: How can I see how many tokens each Claude Code profile uses?
   a: The Usage tab adds up the token usage Claude Code records on every reply, per day, project, model and profile, with an estimated cost at list price and a CSV export.
+- q: Can each Claude Code profile use its own GitHub account?
+  a: Yes. Every profile gets its own GitHub CLI folder (~/.config/gh-<id>), and the GitHub section of the Profiles tab picks which signed-in account each one uses and the name and email of its commits, so gh and git push in a work profile use your work account. Tokens stay in the system keychain.
+- q: Can I turn off claude.ai connectors in one profile only?
+  a: Yes. Connectors such as Gmail or Google Drive belong to your claude.ai account, so every profile signed in with it has them, but the MCP tab can keep any of them, or all of them, out of one profile.
+- q: Does uninstalling cc-profiles delete my profiles?
+  a: No. cc-profiles uninstall removes only what cc-profiles added (the /cc-profiles command, the profile by folder line) and the app itself; your profiles, conversations, memories, settings and logins stay. If something is broken, cc-profiles reinstall installs it again and keeps your settings and backups.
 - q: Does cc-profiles send my data anywhere?
-  a: No. It runs on your computer and listens on 127.0.0.1 only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click.
+  a: No. It runs on your computer and listens on 127.0.0.1 only, with a token on every request. It contacts the internet only to check for its own updates on PyPI, once a day (you can turn that off in the About panel, or check only when you click), and to install Claude Code when you click. To list your claude.ai connectors it runs claude mcp list, so that request is Claude Code's own.
 - q: Which systems does cc-profiles run on, and what does it cost?
   a: macOS and Linux, and Windows through WSL 2, with Python 3.9 or later and no other dependencies. It is free and open source under the GNU GPL v3.0 or later.

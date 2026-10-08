@@ -25,6 +25,7 @@ from .core import (
 from .paths import history_stats, memory_files, project_folders
 from .projects import list_projects
 from .memories import index_check
+from .github import profile_github
 
 def list_profiles():
     out = []
@@ -37,6 +38,7 @@ def list_profiles():
             "primary": p["id"] == profs[0]["id"],
             "command": p.get("command", ""),
             "email": (cfg.get("oauthAccount") or {}).get("emailAddress", ""),
+            "github": profile_github(p)["user"] or "",
             "projects": len(projs),
             "conv": sum(len(convs) for _, _, convs in projs),
             "memories": sum(len(memory_files(d)) for _, d, _ in projs),
