@@ -100,12 +100,12 @@ If your token is written in `hosts.yml` rather than in the keychain (`gh auth lo
 
 ### Existing profiles
 
-1. Sign in with the other account once, in a terminal, in a separate folder of the GitHub CLI:
+1. Sign in with the other account once, in a terminal, in a separate folder of the GitHub CLI. **Add account…** writes the command for you, with a button to copy it:
    ```sh
    GH_CONFIG_DIR=~/.config/gh-work gh auth login
    ```
-   Any `~/.config/gh-<name>` folder works. The section lists every folder it finds, with the account signed in there.
-2. Click **Change…** next to the profile and pick the account. Optionally write a commit name and email (both or neither), for example the `…@users.noreply.github.com` address of that account.
+   Any `~/.config/gh-<name>` folder works. Then click **I signed in, refresh**.
+2. In the table, pick the account in the profile's **GitHub account** menu: it is saved right away. **Commit identity…** sets the name and email of its commits (both or neither), for example the `…@users.noreply.github.com` address of that account.
 
 cc-profiles writes them in the `env` of the profile's `settings.json`, which Claude Code passes to every command it runs:
 
@@ -117,6 +117,6 @@ cc-profiles writes them in the `env` of the profile's `settings.json`, which Cla
 
 A variable already in `settings.local.json` is changed there, so it keeps winning. Picking the default account with an empty name and email removes the variables and leaves the rest of `env` alone. Every change goes to the backup.
 
-For `git push` to follow the account too, git must ask `gh` for GitHub passwords: run `gh auth setup-git` once. The section warns when it is not set up. It applies to Claude Code sessions in the profile, not to your own terminal, and an open session picks it up when it restarts.
+For `git push` to follow the account too, git must ask `gh` for GitHub passwords: run `gh auth setup-git` once. The section warns when it is not set up, with a button to copy the command. It applies to Claude Code sessions in the profile, not to your own terminal, and an open session picks it up when it restarts.
 
 cc-profiles reads only which user each folder is signed in as (the `user:` line of `hosts.yml`). Tokens stay in the GitHub CLI and the system keychain, and are never read or copied.

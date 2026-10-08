@@ -274,15 +274,21 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
 def test_github_account_per_profile(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
-    page.wait_for_selector('[data-ghedit="work"]')
+    page.wait_for_selector('[data-ghacc="work"]')
+    page.select_option('[data-ghacc="work"]', "~/.config/gh-work")
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === '~/.config/gh-work'")
     page.click('[data-ghedit="work"]')
-    page.select_option("#gh-acc", "~/.config/gh-work")
     page.fill("#gh-name", "Me At Work")
     page.fill("#gh-email", "me@work.example")
     page.click('.modal button:has-text("Save")')
-    page.wait_for_selector(".toast")
-    page.wait_for_function("() => document.querySelector('#main').textContent.includes('GitHub as me-at-work')")
-    assert "commits by Me At Work" in page.inner_text("#main")
+    page.wait_for_function("() => document.querySelector('#main').textContent.includes('Me At Work')")
+    assert page.input_value('[data-ghacc="work"]') == "~/.config/gh-work"
+    # Add account prepares the sign-in command
+    page.click("#gh-add")
+    page.fill("#gh-new", "Side Job")
+    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-side-job gh auth login"
+    page.keyboard.press("Escape")
     page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-at-work'))")
     # a new profile gets its own GitHub folder, signed in as the default account
     page.click("[data-newprofile] >> nth=0")
