@@ -101,6 +101,11 @@ The **GitHub** section at the bottom of the Profiles tab has a row per profile:
   GH_CONFIG_DIR=~/.config/gh-work gh auth login
   ```
   Then click **I signed in, refresh**: from then on every profile can pick that account too.
+Under the table, **Accounts** lists every GitHub account signed in on this computer, the profiles that use it and the folders it is in:
+
+- **Add account…** gives the command to sign in in `~/.config/gh-accounts`, a folder no profile uses, so adding an account changes none of them; then pick it in the menu of the profiles you want.
+- **Remove…** takes an account off every folder (they go to the backup first). An account a profile uses cannot be removed until you pick another one there. Its token stays in the system keychain: the confirmation gives the `gh auth logout --hostname github.com --user <name>` command to delete it too. An account whose token is written in `hosts.yml` is marked *token in hosts.yml*: sign it out in a terminal.
+
 - **Commit identity…** sets the name and email of the commits made in the profile (`GIT_AUTHOR_*` and `GIT_COMMITTER_*` in its `env`; both or neither), for example the `…@users.noreply.github.com` address of its account.
 
 A profile whose `settings.json` is shared with the source profile also shares its GitHub account, so it has no folder. An account whose token is written in `hosts.yml` (`gh auth login --insecure-storage`) is not offered to the other profiles, because its token is not in the keychain; a folder copied from it asks for a sign-in.

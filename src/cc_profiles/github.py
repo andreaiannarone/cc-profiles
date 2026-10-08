@@ -150,16 +150,81 @@ def set_up(prof):
     return os.path.isdir(own) and os.path.realpath(used_folder(prof)) == os.path.realpath(own)
 
 
-def known_users():
-    """Users signed in in some profile's folder with their token in the keychain: any of them can
-    become a profile's account without signing in again."""
-    out, written = [], set()  # written: users whose token is in a hosts.yml, not in the keychain
+def accounts_folder():
+    """Where Add account signs in: a folder no profile uses, so adding an account changes none."""
+    return os.path.join(HOME, ".config", "gh-accounts")
+
+
+def all_folders():
+    """Every profile's folder, then the accounts folder: (folder, profile or None)."""
+    out, seen = [], set()
     for p in profiles():
-        _, users, insecure = gh_users(own_folder(p))
-        if insecure:
-            written.update(users)
-        out += [u for u in users if u not in out]
-    return [u for u in out if u not in written]
+        f = own_folder(p)
+        if os.path.realpath(f) not in seen:
+            seen.add(os.path.realpath(f))
+            out.append((f, p))
+    if os.path.realpath(accounts_folder()) not in seen:
+        out.append((accounts_folder(), None))
+    return out
+
+
+def account_list():
+    """Every GitHub account signed in on this computer: where, which profiles use it, and whether its
+    token is written in a hosts.yml (gh's insecure storage) instead of the keychain."""
+    accounts = {}
+    for folder, _ in all_folders():
+        _, users, insecure = gh_users(folder)
+        for u in users:
+            a = accounts.setdefault(u, {"user": u, "folders": [], "used_by": [], "insecure": False})
+            a["folders"].append(pretty(folder))
+            a["insecure"] = a["insecure"] or insecure
+    for p in profiles():
+        if shares_settings(p):
+            continue
+        active = gh_user(used_folder(p))
+        if active in accounts:
+            accounts[active]["used_by"].append(p["label"])
+    return list(accounts.values())
+
+
+def known_users():
+    """Accounts with their token in the keychain: any of them can become a profile's account
+    without signing in again."""
+    return [a["user"] for a in account_list() if not a["insecure"]]
+
+
+def without_user(lines, user):
+    """hosts.yml lines without user in the github.com users; if it was the active one, the next user
+    signed in there becomes active (or no one)."""
+    block = github_block(lines)
+    if not block:
+        return list(lines)
+    start, end, indent = block
+    out, skip_deeper = lines[:start + 1], None
+    in_users = False
+    for line in lines[start + 1:end]:
+        depth, text = len(line) - len(line.lstrip()), line.strip()
+        if skip_deeper is not None and (not text or depth > skip_deeper):
+            continue
+        skip_deeper = None
+        if depth == indent:
+            in_users = text == "users:"
+        elif in_users and text.rstrip(":").strip("'\"") == user and text.endswith(":"):
+            skip_deeper = depth
+            continue
+        out.append(line)
+    out += lines[end:]
+    rest = [u for u in parse_users(out)[1] if u != user]
+    start, end, _ = github_block(out)
+    pad = " " * indent
+    for i in range(start + 1, end):
+        if out[i].startswith(pad + "user:") and out[i].split(":", 1)[1].strip().strip("'\"") == user:
+            if rest:
+                out[i] = pad + f"user: {rest[0]}"
+            else:
+                del out[i]
+            break
+    return out
 
 
 def copy_folder(src, dst, bk):
@@ -281,7 +346,39 @@ def github_state():
         rows.append({"id": p["id"], "label": p["label"], "dir": pretty(own_folder(p)), "user": active,
                      "users": users, "set_up": set_up(p), "shared": shares_settings(p), "default": is_default(p),
                      "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], "")})
-    return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows}
+    return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows,
+            "account_list": account_list(), "accounts_dir": pretty(accounts_folder())}
+
+
+def op_github_remove(user):
+    """Take an account off every GitHub CLI folder cc-profiles manages. Its token stays in the keychain
+    (`gh auth logout` removes it): restoring the backup brings the account back as it was."""
+    acc = next((a for a in account_list() if a["user"] == user), None)
+    if not acc:
+        raise ApiError(f"Unknown GitHub account: {user}", 404)
+    if acc["used_by"]:
+        raise ApiError(f"{', '.join(acc['used_by'])} {'uses' if len(acc['used_by']) == 1 else 'use'} {user}: "
+                       "connect another account there first")
+    if acc["insecure"]:
+        raise ApiError(f"The token of {user} is written in hosts.yml: sign out in a terminal with "
+                       f"gh auth logout --hostname github.com --user {user}")
+    bk = Backup("github-remove", f"Remove GitHub account {user}")
+    for folder, _ in all_folders():
+        lines = hosts_lines(folder)
+        if user not in parse_users(lines)[1]:
+            continue
+        path = os.path.join(folder, "hosts.yml")
+        bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
+        write_text(path, "\n".join(without_user(lines, user)) + "\n")
+        os.chmod(path, 0o600)
+        bk.note(f"{pretty(folder)}: {user} removed")
+    return {"message": f"{user} removed from {plural_folders(len(acc['folders']))}. Its token is still in the "
+                       f"keychain: to delete it, run gh auth logout --hostname github.com --user {user}",
+            "backup": bk.close()}
+
+
+def plural_folders(n):
+    return f"{n} GitHub CLI folder" + ("" if n == 1 else "s")
 
 
 def op_github_setup(pid):

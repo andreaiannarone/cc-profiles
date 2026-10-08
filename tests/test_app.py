@@ -886,6 +886,36 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     assert home.snapshot() == before
 
 
+
+def test_github_accounts_are_listed_and_removed(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n        old:\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        old:\n        me:\n    user: me\n")
+    home.write(".config/gh-accounts/hosts.yml", "github.com:\n    users:\n        side:\n            oauth_token: gho_x\n"
+                                                "    user: side\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
+    before = home.snapshot()
+    app = app_factory()
+
+    g = app.get("/api/github")
+    assert g["accounts_dir"] == "~/.config/gh-accounts" and "gho_" not in json.dumps(g)
+    assert g["account_list"] == [
+        {"user": "me", "folders": ["~/.config/gh", "~/.config/gh-work"], "used_by": ["Default", "Work"], "insecure": False},
+        {"user": "old", "folders": ["~/.config/gh", "~/.config/gh-work"], "used_by": [], "insecure": False},
+        {"user": "side", "folders": ["~/.config/gh-accounts"], "used_by": [], "insecure": True}]
+    assert g["accounts"] == ["me", "old"]  # side's token is not in the keychain
+
+    assert "connect another account there first" in app.post_error("/api/github/remove", {"user": "me"})
+    assert "gh auth logout" in app.post_error("/api/github/remove", {"user": "side"})
+    r = app.post("/api/github/remove", {"user": "old"})
+    assert "2 GitHub CLI folders" in r["message"] and "gh auth logout --hostname github.com --user old" in r["message"]
+    assert home.path(".config/gh-work/hosts.yml").read_text() == "github.com:\n    users:\n        me:\n    user: me\n"
+    assert [a["user"] for a in app.get("/api/github")["account_list"]] == ["me", "side"]
+    assert "Unknown GitHub account" in app.post_error("/api/github/remove", {"user": "old"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 def test_with_active_user_keeps_the_rest_of_hosts_yml():
     from cc_profiles.github import parse_users, with_active_user
     lines = ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh", "    users:",
@@ -895,6 +925,10 @@ def test_with_active_user_keeps_the_rest_of_hosts_yml():
                    "        other:", "        me:", "    user: other"]
     assert parse_users(out)[:2] == ("other", ["other", "me"])
     assert parse_users(with_active_user([], "me"))[:2] == ("me", ["me"])
+    from cc_profiles.github import without_user
+    assert without_user(out, "other") == ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh",
+                                          "    users:", "        me:", "    user: me"]
+    assert without_user(["github.com:", "    users:", "        me:", "    user: me"], "me") == ["github.com:", "    users:"]
 
 
 def test_new_profiles_get_their_own_github_folder(home, app_factory):

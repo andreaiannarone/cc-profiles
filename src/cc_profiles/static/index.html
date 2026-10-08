@@ -982,7 +982,8 @@ function githubHtml() {
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
     ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
-    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${githubAccountsHtml()}`;
 }
 async function copyCommand(text, btn) {
   try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy command"; }, 1500); }
@@ -992,10 +993,27 @@ async function githubPost(path, body) {
   try { await run(() => api(path, body)); } catch {}
   await refresh(); loadSharing();
 }
-async function signInAnother(p) {
-  const cmd = (p.default ? "" : `GH_CONFIG_DIR=${p.dir} `) + "gh auth login";
-  const resP = modal({ title: `Another GitHub account for ${p.label}`,
-    sub: `Sign in once in a terminal: the account becomes the active one in <code>${esc(p.dir)}</code>, and every other profile can pick it from its menu too.${p.default ? " Your terminal uses it as well." : ""}`,
+// The accounts signed in on this computer, whichever folder they are in
+function githubAccountsHtml() {
+  const g = S.github, list = g.account_list || [];
+  const rows = list.map(a => `<tr><td><b>${esc(a.user)}</b></td>
+      <td>${a.used_by.length ? a.used_by.map(esc).join(", ") : `<span class="hint">no profile</span>`}</td>
+      <td class="path">${a.folders.map(f => `<code>${esc(f)}</code>`).join(" · ")}</td>
+      <td class="acts">${a.insecure ? `<span class="badge b-warn" title="Its token is written in hosts.yml, not in the keychain: other profiles cannot use it">token in hosts.yml</span>`
+        : a.used_by.length ? `<button class="btn small" disabled title="In use: connect another account to ${esc(a.used_by.join(", "))} first">Remove…</button>`
+        : `<button class="btn small danger" data-ghremove="${esc(a.user)}">Remove…</button>`}</td></tr>`).join("");
+  return `<div class="ext-head"><h2>Accounts</h2><span class="hint">Every GitHub account signed in on this computer. A new one is added in <code>${esc(g.accounts_dir)}</code>, so no profile changes: connect it to a profile above.</span>
+      <button class="btn" id="gh-addacc">Add account…</button></div>
+    <div class="table ghtable">${rows ? `<table><thead><tr><th>Account</th><th>Used by</th><th>Folders</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+      : `<div class="empty">No GitHub account is signed in yet: add one.</div>`}</div>`;
+}
+function signInAnother(p) {
+  return signInModal(`Another GitHub account for ${p.label}`,
+    `Sign in once in a terminal: the account becomes the active one in <code>${esc(p.dir)}</code>, and every other profile can pick it from its menu too.${p.default ? " Your terminal uses it as well." : ""}`,
+    (p.default ? "" : `GH_CONFIG_DIR=${p.dir} `) + "gh auth login");
+}
+async function signInModal(title, sub, cmd) {
+  const resP = modal({ title, sub,
     body: `<div class="form"><div class="cmdrow"><pre class="log" id="gh-cmd">${esc(cmd)}</pre><button class="btn small" id="gh-copy">Copy command</button></div>
       <div class="hint">The token goes to the system keychain; cc-profiles only reads the user's name.</div></div>`,
     actions: [{ label: "I signed in, refresh", kind: "primary", value: "ok" }], cancel: "Close" });
@@ -1009,6 +1027,15 @@ function wireGithub() {
   const prof = id => g.profiles.find(x => x.id === id);
   document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyCommand(b.dataset.copy, b));
   document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
+  $("#gh-addacc")?.addEventListener("click", () => signInModal("Add a GitHub account",
+    `Sign in once in a terminal, in <code>${esc(g.accounts_dir)}</code>: no profile changes account. Then connect it to the profiles you want.`,
+    `GH_CONFIG_DIR=${g.accounts_dir} gh auth login`));
+  document.querySelectorAll("[data-ghremove]").forEach(b => b.onclick = async () => {
+    const a = g.account_list.find(x => x.user === b.dataset.ghremove);
+    const logout = `gh auth logout --hostname github.com --user ${a.user}`;
+    if (!(await confirmBox(`Remove ${a.user}?`, `It is taken off ${a.folders.map(f => `<code>${esc(f)}</code>`).join(", ")}; those files go to the backup first. Its token stays in the system keychain: to delete it too, run <code>${esc(logout)}</code> afterwards.`, "Remove", "danger"))) return;
+    githubPost("/api/github/remove", { user: a.user });
+  });
   document.querySelectorAll("[data-ghacc]").forEach(sel => sel.onchange = () => {
     const p = prof(sel.dataset.ghacc);
     if (sel.value === "+") { sel.value = p.user || ""; return signInAnother(p); }

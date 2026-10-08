@@ -294,6 +294,15 @@ def test_github_account_per_profile(page_on_sandbox):
     page.wait_for_selector("#gh-cmd")
     assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-work gh auth login"
     page.keyboard.press("Escape")
+    # the accounts: add one in the accounts folder, remove one no profile uses
+    page.click("#gh-addacc")
+    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-accounts gh auth login"
+    page.keyboard.press("Escape")
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.wait_for_selector('[data-ghremove="me-at-work"]')
+    page.click('[data-ghremove="me-at-work"]')
+    page.click('.modal button:has-text("Remove")')
+    page.wait_for_function("() => !document.querySelector('[data-ghremove=\"me-at-work\"]')")
     # a new profile gets its own folder
     page.click("[data-newprofile] >> nth=0")
     page.fill("#np-label", "Noa")
