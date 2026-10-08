@@ -880,7 +880,7 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     app.post("/api/github/identity", {"profile": "work", "name": "", "email": ""})
     assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {"FOO": "1"}
     assert "both the name and the email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me"})
-    assert "Not an email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me", "email": "me"})
+    assert "not an email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me", "email": "me"})
 
     app.restore_all()
     assert home.snapshot() == before
@@ -912,6 +912,31 @@ def test_github_accounts_are_listed_and_removed(home, app_factory):
     assert home.path(".config/gh-work/hosts.yml").read_text() == "github.com:\n    users:\n        me:\n    user: me\n"
     assert [a["user"] for a in app.get("/api/github")["account_list"]] == ["me", "side"]
     assert "Unknown GitHub account" in app.post_error("/api/github/remove", {"user": "old"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_github_table_is_saved_in_one_backup(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n        me-at-work:\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        me:\n    user: me\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
+    before = home.snapshot()
+    app = app_factory()
+
+    # every change is checked before anything is written
+    assert "both the name and the email" in app.post_error("/api/github/save", {"changes": [
+        {"profile": "work", "user": "me-at-work"}, {"profile": "default", "name": "Me", "email": ""}]})
+    assert "user: me\n" in home.path(".config/gh-work/hosts.yml").read_text()
+    r = app.post("/api/github/save", {"changes": [
+        {"profile": "work", "user": "me-at-work", "name": "Me At Work", "email": "me@work.example"},
+        {"profile": "default", "name": "Me", "email": "me@example.com"}]})
+    assert r["message"].startswith("Work uses GitHub as me-at-work; commits in Work are by Me At Work")
+    assert "user: me-at-work" in home.path(".config/gh-work/hosts.yml").read_text()
+    assert json.loads(home.path(".claude/settings.json").read_text())["env"]["GIT_AUTHOR_NAME"] == "Me"
+    assert len(app.get("/api/backups")) == 1
+    assert app.post("/api/github/save", {"changes": [{"profile": "work", "user": "me-at-work"}]})["message"] == "Nothing changed."
 
     app.restore_all()
     assert home.snapshot() == before

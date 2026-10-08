@@ -116,6 +116,10 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .plug-row .m code { font-size: 11.5px; }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .ghtable td { vertical-align: middle; }
+.ghtable tr.changed td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.ghtable tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.ghid { display: flex; gap: 6px; }
+.ghid input { min-width: 0; flex: 1; }
 .cmdrow { display: flex; gap: 8px; align-items: center; }
 .cmdrow pre { flex: 1; margin: 0; }
 .conn-all { font-size: 13px; color: var(--muted); align-self: center; }
@@ -960,6 +964,10 @@ const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "sett
 
 // ---------- a GitHub account per profile ----------
 // Every profile has its own GitHub CLI folder; the menu picks which signed-in account is active there.
+// The table is a draft, as in Settings: changes are marked and saved together with Save changes.
+S.ghDraft = {};
+const ghVal = (p, k) => (S.ghDraft[p.id] && k in S.ghDraft[p.id]) ? S.ghDraft[p.id][k] : (p[k] || "");
+const ghChanged = p => ["user", "name", "email"].some(k => ghVal(p, k) !== (p[k] || ""));
 function githubHtml() {
   const g = S.github;
   if (!g) return "";
@@ -967,24 +975,35 @@ function githubHtml() {
   const account = p => {
     if (p.shared) return `<span class="hint">the account of ${src}: its <code>settings.json</code> is shared</span>`;
     if (!p.set_up) return `<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button>`;
+    const cur = ghVal(p, "user");
     const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];
     return `<select data-ghacc="${p.id}" aria-label="GitHub account of ${esc(p.label)}">
-      ${p.user ? "" : `<option value="" selected disabled>not signed in</option>`}
-      ${users.map(u => `<option value="${esc(u)}" ${u === p.user ? "selected" : ""}>${esc(u)}</option>`).join("")}
+      ${cur ? "" : `<option value="" selected disabled>not signed in</option>`}
+      ${users.map(u => `<option value="${esc(u)}" ${u === cur ? "selected" : ""}>${esc(u)}</option>`).join("")}
       <option value="+">Another account…</option></select>`;
   };
-  const rows = g.profiles.map(p => `<tr><td>${esc(p.label)}</td><td>${account(p)}</td>
+  const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
-      <td>${p.name ? `${esc(p.name)} <span class="hint">&lt;${esc(p.email)}&gt;</span>` : `<span class="hint">your git config</span>`}</td>
-      <td class="acts"><button class="btn small" data-ghedit="${p.id}">Commit identity…</button></td></tr>`).join("");
+      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="Name: your git config" aria-label="Commit name in ${esc(p.label)}">
+        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="Email" title="For example ${esc(ghVal(p, "user") || "you")}@users.noreply.github.com" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
   return `<h2 class="section-title">GitHub</h2>
-    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry their own name and email. Tokens stay in the system keychain.</span></div>
+    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here (empty: your git config). Tokens stay in the system keychain.</span></div>
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
     ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
-    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="savebar" id="gh-bar" hidden><span id="gh-count"></span><span class="grow"></span><button class="btn" id="gh-cancel">Cancel</button><button class="btn primary" id="gh-save">Save changes</button></div>
     ${githubAccountsHtml()}`;
 }
+function ghMark() {
+  const g = S.github; if (!g) return;
+  const changed = g.profiles.filter(ghChanged);
+  document.querySelectorAll("[data-ghrow]").forEach(r => r.classList.toggle("changed", changed.some(p => p.id === r.dataset.ghrow)));
+  const bar = $("#gh-bar"); if (!bar) return;
+  bar.hidden = !changed.length;
+  $("#gh-count").textContent = plural(changed.length, "profile changed", "profiles changed");
+}
+window.addEventListener("beforeunload", e => { if (S.github?.profiles.some(ghChanged)) { e.preventDefault(); e.returnValue = ""; } });
 async function copyCommand(text, btn) {
   try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy command"; }, 1500); }
   catch { toast("Copy it by hand: " + text, "", true); }
@@ -1036,20 +1055,28 @@ function wireGithub() {
     if (!(await confirmBox(`Remove ${a.user}?`, `It is taken off ${a.folders.map(f => `<code>${esc(f)}</code>`).join(", ")}; those files go to the backup first. Its token stays in the system keychain: to delete it too, run <code>${esc(logout)}</code> afterwards.`, "Remove", "danger"))) return;
     githubPost("/api/github/remove", { user: a.user });
   });
+  const draft = (id, k, v) => { (S.ghDraft[id] = S.ghDraft[id] || {})[k] = v; ghMark(); };
   document.querySelectorAll("[data-ghacc]").forEach(sel => sel.onchange = () => {
     const p = prof(sel.dataset.ghacc);
-    if (sel.value === "+") { sel.value = p.user || ""; return signInAnother(p); }
-    githubPost("/api/github/account", { profile: p.id, user: sel.value });
+    if (sel.value === "+") { sel.value = ghVal(p, "user"); return signInAnother(p); }
+    draft(p.id, "user", sel.value);
   });
-  document.querySelectorAll("[data-ghedit]").forEach(b => b.onclick = async () => {
-    const p = prof(b.dataset.ghedit);
-    const res = await modal({ title: `Commits in ${p.label}`,
-      sub: `The name and email of commits made in ${esc(p.label)}'s Claude Code sessions, as <code>GIT_AUTHOR_*</code> and <code>GIT_COMMITTER_*</code> in its <code>settings.json</code>. Leave both empty to use your git config.`,
-      body: `<div class="form"><label class="f">Name<input class="text" id="gh-name" value="${esc(p.name)}" placeholder="e.g. Ada Lovelace"></label>
-        <label class="f">Email<input class="text" id="gh-email" value="${esc(p.email)}" placeholder="e.g. ${esc(p.user || "you")}@users.noreply.github.com"></label></div>`,
-      actions: [{ label: "Save", kind: "primary", value: "ok" }] });
-    if (res) githubPost("/api/github/identity", { profile: p.id, name: $("#gh-name", res.el).value, email: $("#gh-email", res.el).value });
-  });
+  document.querySelectorAll("[data-ghname]").forEach(i => i.oninput = () => draft(i.dataset.ghname, "name", i.value.trim()));
+  document.querySelectorAll("[data-ghemail]").forEach(i => i.oninput = () => draft(i.dataset.ghemail, "email", i.value.trim()));
+  document.querySelectorAll("[data-ghname], [data-ghemail]").forEach(i => i.onkeydown = e => { if (e.key === "Enter" && !$("#gh-bar").hidden) $("#gh-save").click(); });
+  $("#gh-cancel").onclick = () => { S.ghDraft = {}; const y = window.scrollY; renderSharing(); window.scrollTo(0, y); };
+  $("#gh-save").onclick = async () => {
+    const changes = g.profiles.filter(ghChanged).map(p => {
+      const c = { profile: p.id };
+      if (ghVal(p, "user") !== (p.user || "")) c.user = ghVal(p, "user");
+      if (ghVal(p, "name") !== (p.name || "") || ghVal(p, "email") !== (p.email || "")) { c.name = ghVal(p, "name"); c.email = ghVal(p, "email"); }
+      return c;
+    });
+    try { await run(() => api("/api/github/save", { changes })); } catch { return; }
+    S.ghDraft = {};
+    await refresh(); loadSharing();
+  };
+  ghMark();
 }
 
 // ---------- profile by folder ----------

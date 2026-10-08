@@ -395,46 +395,94 @@ def op_github_setup(pid):
     return {"message": line + "." + session_hint(prof), "backup": bk.close()}
 
 
-def op_github_account(pid, user):
-    """Make user the active GitHub account of the profile's own folder."""
-    prof = profile(pid)
+def account_change(prof, user):
+    """Check that user can become the profile's account; None when it already is."""
     if shares_settings(prof):
         raise ApiError(f"{prof['label']} shares settings.json with the source profile, and so its GitHub account")
     if not set_up(prof):
         raise ApiError(f"{prof['label']} has no GitHub CLI folder of its own yet: set it up first")
     if user not in known_users():
         raise ApiError(f"{user} is not signed in to the GitHub CLI here: add the account first")
+    return None if gh_user(own_folder(prof)) == user else user
+
+
+def identity_change(prof, name, email):
+    """The env values for a commit identity (both empty: the git config); None when nothing changes."""
+    name, email = (name or "").strip(), (email or "").strip()
+    if "\n" in name or "\n" in email:
+        raise ApiError("Name and email must be one line each")
+    if bool(name) != bool(email):
+        raise ApiError(f"{prof['label']}: write both the name and the email for commits, or neither")
+    if email and not EMAIL.fullmatch(email):
+        raise ApiError(f"{prof['label']}: not an email address: {email}")
+    want = {k: name or None for k in GIT_ENV["name"]}
+    want.update({k: email or None for k in GIT_ENV["email"]})
+    env, _ = profile_env(prof)
+    return None if all(env.get(k) == v for k, v in want.items()) else want
+
+
+def apply_account(prof, user, bk):
     folder = own_folder(prof)
-    if gh_user(folder) == user:
-        return {"message": f"{prof['label']} already uses GitHub as {user}."}
-    bk = Backup("github", f"GitHub account of {prof['label']}: {user}")
     path = os.path.join(folder, "hosts.yml")
     bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
     write_text(path, "\n".join(with_active_user(hosts_lines(folder), user)) + "\n")
     os.chmod(path, 0o600)
-    bk.note(f"{pretty(folder)}: active user {user}")
-    note = " Your terminal uses this account too." if is_default(prof) else ""
-    return {"message": f"{prof['label']} uses GitHub as {user}.{note}" + session_hint(prof), "backup": bk.close()}
+    bk.note(f"{prof['label']}: GitHub as {user} ({pretty(folder)})")
+    return f"{prof['label']} uses GitHub as {user}" + (" (your terminal too)" if is_default(prof) else "")
+
+
+def apply_identity(prof, want, bk):
+    set_env(prof, want, bk)
+    name, email = want[GIT_ENV["name"][0]], want[GIT_ENV["email"][0]]
+    bk.note(f"{prof['label']}: commits by {name} <{email}>" if name else f"{prof['label']}: commits by the git config")
+    return (f"commits in {prof['label']} are by {name} <{email}>" if name else
+            f"commits in {prof['label']} use your git config") + shared_note(settings_files(prof)["settings"])
+
+
+def op_github_save(changes):
+    """Save the GitHub table: every change is checked first, then all are written in one backup.
+    changes: [{"profile", "user"?, "name"?, "email"?}]."""
+    if not isinstance(changes, list) or not changes:
+        raise ApiError("Nothing to save")
+    plan = []
+    for c in changes:
+        if not isinstance(c, dict):
+            raise ApiError("Invalid change")
+        prof = profile(c.get("profile"))
+        user = account_change(prof, c["user"]) if c.get("user") else None
+        want = identity_change(prof, c.get("name"), c.get("email")) if "name" in c or "email" in c else None
+        if user or want:
+            plan.append((prof, user, want))
+    if not plan:
+        return {"message": "Nothing changed."}
+    bk = Backup("github", "GitHub settings of " + ", ".join(p["label"] for p, _, _ in plan))
+    notes = []
+    for prof, user, want in plan:
+        if user:
+            notes.append(apply_account(prof, user, bk))
+        if want:
+            notes.append(apply_identity(prof, want, bk))
+    msg = "; ".join(notes)
+    profs = [p for p, _, _ in plan]
+    hint = session_hint(profs[0]) if len(profs) == 1 else " Open Claude Code sessions pick it up when they restart."
+    return {"message": msg[0].upper() + msg[1:] + "." + hint, "backup": bk.close()}
+
+
+def op_github_account(pid, user):
+    """Make user the active GitHub account of the profile's own folder."""
+    prof = profile(pid)
+    if not account_change(prof, user):
+        return {"message": f"{prof['label']} already uses GitHub as {user}."}
+    bk = Backup("github", f"GitHub account of {prof['label']}: {user}")
+    return {"message": apply_account(prof, user, bk) + "." + session_hint(prof), "backup": bk.close()}
 
 
 def op_github_identity(pid, name, email):
     """Who the commits made in a profile are by: GIT_AUTHOR_* and GIT_COMMITTER_* in its env."""
     prof = profile(pid)
-    name, email = (name or "").strip(), (email or "").strip()
-    if "\n" in name or "\n" in email:
-        raise ApiError("Name and email must be one line each")
-    if bool(name) != bool(email):
-        raise ApiError("Write both the name and the email for commits, or neither")
-    if email and not EMAIL.fullmatch(email):
-        raise ApiError(f"Not an email address: {email}")
-    want = {k: name or None for k in GIT_ENV["name"]}
-    want.update({k: email or None for k in GIT_ENV["email"]})
-    env, _ = profile_env(prof)
-    if all(env.get(k) == v for k, v in want.items()):
+    want = identity_change(prof, name, email)
+    if not want:
         return {"message": f"The commits of {prof['label']} already use these settings."}
     bk = Backup("github", f"Commit identity of {prof['label']}")
-    set_env(prof, want, bk)
-    bk.note(f"commits by {name} <{email}>" if name else "commits by the git config")
-    msg = (f"Commits in {prof['label']} are by {name} <{email}>" if name else
-           f"Commits in {prof['label']} use your git config") + shared_note(settings_files(prof)["settings"]) + "."
-    return {"message": msg + session_hint(prof), "backup": bk.close()}
+    msg = apply_identity(prof, want, bk)
+    return {"message": msg[0].upper() + msg[1:] + "." + session_hint(prof), "backup": bk.close()}

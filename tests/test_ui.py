@@ -278,17 +278,24 @@ def test_github_account_per_profile(page_on_sandbox):
     page.click('[data-ghsetup="work"]')
     page.wait_for_selector('[data-ghacc="work"]')
     assert page.input_value('[data-ghacc="work"]') == "me-at-work"  # ~/.config/gh-work already existed
+    # as in Settings: changes are a draft, marked, until Save changes
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.fill('[data-ghname="work"]', "Me At Work")
+    page.fill('[data-ghemail="work"]', "me@work.example")
+    assert page.is_visible("#gh-bar") and page.inner_text("#gh-count") == "1 profile changed"
+    assert "changed" in page.get_attribute('[data-ghrow="work"]', "class")
+    page.click("#gh-cancel")
+    assert page.input_value('[data-ghacc="work"]') == "me-at-work" and page.is_hidden("#gh-bar")
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.fill('[data-ghname="work"]', "Me At Work")
+    page.fill('[data-ghemail="work"]', "me@work.example")
     page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
     y = page.evaluate("window.scrollY")
-    page.select_option('[data-ghacc="work"]', "me-personal")
-    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-personal'")
-    assert page.evaluate("window.scrollY") == y > 0  # redrawn in place, not back to the top
+    page.click("#gh-save")
     page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-personal'))")
-    page.click('[data-ghedit="work"]')
-    page.fill("#gh-name", "Me At Work")
-    page.fill("#gh-email", "me@work.example")
-    page.click('.modal button:has-text("Save")')
-    page.wait_for_function("() => document.querySelector('#main').textContent.includes('Me At Work')")
+    page.wait_for_function("() => document.querySelector('#gh-bar')?.hidden")
+    page.wait_for_function("() => document.querySelector('[data-ghname=\"work\"]')?.value === 'Me At Work'")
+    assert y - 150 < page.evaluate("window.scrollY") <= y  # in place (the save bar is gone), not back to the top
     # another account: the sign-in command for the profile's own folder
     page.select_option('[data-ghacc="work"]', "+")
     page.wait_for_selector("#gh-cmd")
@@ -298,7 +305,6 @@ def test_github_account_per_profile(page_on_sandbox):
     page.click("#gh-addacc")
     assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-accounts gh auth login"
     page.keyboard.press("Escape")
-    page.select_option('[data-ghacc="work"]', "me-personal")
     page.wait_for_selector('[data-ghremove="me-at-work"]')
     page.click('[data-ghremove="me-at-work"]')
     page.click('.modal button:has-text("Remove")')

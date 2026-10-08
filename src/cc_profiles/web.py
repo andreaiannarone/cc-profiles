@@ -50,7 +50,8 @@ from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
-from .github import github_state, op_github_account, op_github_identity, op_github_remove, op_github_setup
+from .github import (github_state, op_github_account, op_github_identity, op_github_remove, op_github_save,
+                     op_github_setup)
 from .extensions import (
     connectors_check,
     list_connectors,
@@ -377,6 +378,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/github/identity": lambda: op_github_identity(b["profile"], b.get("name"), b.get("email")),
                 "/api/github/setup": lambda: op_github_setup(b["profile"]),
                 "/api/github/remove": lambda: op_github_remove(b["user"]),
+                "/api/github/save": lambda: op_github_save(b.get("changes")),
                 "/api/connectors/sync": lambda: op_connectors_sync(b["profile"]),
                 "/api/connectors/all": lambda: op_connectors_all(b["profile"], bool(b["enabled"])),
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),
