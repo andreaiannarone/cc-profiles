@@ -18,6 +18,7 @@ from .core import CONFIG_FILE, DATA_DIR, expand, find_tool, load_config, pretty,
 from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
+from .github import ensure_gh_folders
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
@@ -111,6 +112,13 @@ def serve(port, open_browser):
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
         print(f"Could not add the /cc-profiles command to Claude Code: {e}. Run: cc-profiles install-command")
+    try:  # every profile with a GitHub CLI folder of its own, ~/.config/gh-<id>
+        lines, backup = ensure_gh_folders() if os.environ.get("CC_PROFILES_AUTO_GITHUB") != "0" else ([], None)
+        if lines:
+            print("GitHub CLI folders: " + "; ".join(lines) + f" (backup {pretty(backup)})")
+    except Exception as e:  # never a reason not to start
+        core.abort_open_backups(str(e))
+        print(f"Could not give every profile its GitHub CLI folder: {e}")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     threading.Thread(target=update_daily, daemon=True).start()

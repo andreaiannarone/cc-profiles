@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: a GitHub account per profile."""
 
-import glob
 import os
 import re
 import subprocess
@@ -14,17 +13,22 @@ from .settings import save_settings_file, settings_files, shared_note
 # ---------------------------------------------------------------------------
 # GitHub accounts
 # ---------------------------------------------------------------------------
-# The GitHub CLI keeps its sign-in in a config folder (~/.config/gh, or the one in GH_CONFIG_DIR),
-# with the token in the system keychain. A profile picks an account with GH_CONFIG_DIR in the "env"
-# of its settings, which Claude Code passes to every command it runs; git follows when its
-# credential helper is `gh auth git-credential` (`gh auth setup-git`). GIT_AUTHOR_* and
-# GIT_COMMITTER_* set who the commits are by. Signing in is `gh auth login`, in a terminal:
-# cc-profiles only reads which user each folder is signed in as, never a token.
+# The GitHub CLI keeps its sign-in in a config folder (~/.config/gh, or the one in GH_CONFIG_DIR):
+# hosts.yml lists the users signed in there and the active one; the tokens are in the system
+# keychain under each user's name. Every profile has a folder of its own: Default uses
+# ~/.config/gh (the same as your terminal), ~/.claude-<id> uses ~/.config/gh-<id> through
+# GH_CONFIG_DIR in the "env" of its settings.json, which Claude Code passes to every command it
+# runs; git follows when its credential helper is `gh auth git-credential` (`gh auth setup-git`).
+# Picking an account makes it the active user of the profile's folder: any user signed in in
+# some folder works, because the keychain finds the token by the name. GIT_AUTHOR_* and
+# GIT_COMMITTER_* set who the commits are by. cc-profiles never reads a token, and never copies a
+# token line (gh's insecure storage writes them in hosts.yml).
 GH_HOST = "github.com"
 GH_ENV = "GH_CONFIG_DIR"
 GIT_ENV = {"name": ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"), "email": ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL")}
 EMAIL = re.compile(r"[^@\s]+@[^@\s]+")
-TOKEN_LINE = re.compile(r"^\s*[A-Za-z_]*token[A-Za-z_]*\s*:", re.I)  # gh's insecure storage: never copied
+USER = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")  # GitHub user names
+TOKEN_LINE = re.compile(r"^\s*[A-Za-z_]*token[A-Za-z_]*\s*:", re.I)
 
 
 def gh_default_dir():
@@ -32,20 +36,84 @@ def gh_default_dir():
     return os.path.join(xdg, "gh") if xdg else os.path.join(HOME, ".config", "gh")
 
 
-def gh_user(folder):
-    """The github.com user a gh config folder is signed in as (the `user:` line of hosts.yml), or None."""
+def is_default(prof):
+    return os.path.realpath(prof["dir_abs"]) == os.path.realpath(os.path.join(HOME, ".claude"))
+
+
+def own_folder(prof):
+    """The GitHub CLI folder that belongs to a profile."""
+    return gh_default_dir() if is_default(prof) else os.path.join(HOME, ".config", f"gh-{prof['id']}")
+
+
+def hosts_lines(folder):
     try:
         with open(os.path.join(folder, "hosts.yml")) as f:
-            lines = f.read().splitlines()
+            return f.read().splitlines()
     except OSError:
-        return None
-    host = None
-    for line in lines:
-        if line and not line[0].isspace():
-            host = line.rstrip(":").strip().strip("'\"")
-        elif host == GH_HOST and line.strip().startswith("user:"):
-            return line.split(":", 1)[1].strip().strip("'\"") or None
+        return []
+
+
+def github_block(lines):
+    """(start, end, indent) of the github.com entry in hosts.yml lines, or None."""
+    for i, line in enumerate(lines):
+        if line.rstrip() in (GH_HOST + ":", f'"{GH_HOST}":', f"'{GH_HOST}':"):
+            end = next((j for j in range(i + 1, len(lines)) if lines[j] and not lines[j][0].isspace()), len(lines))
+            indent = min((len(l) - len(l.lstrip()) for l in lines[i + 1:end] if l.strip()), default=4)
+            return i, end, indent
     return None
+
+
+def parse_users(lines):
+    """(active user or None, every user signed in, whether a token is written in the file)."""
+    block = github_block(lines)
+    if not block:
+        return None, [], False
+    start, end, indent = block
+    active, users, in_users = None, [], False
+    for line in lines[start + 1:end]:
+        depth, text = len(line) - len(line.lstrip()), line.strip()
+        if not text:
+            continue
+        if depth == indent:
+            in_users = text == "users:"
+            if text.startswith("user:"):
+                active = text.split(":", 1)[1].strip().strip("'\"") or None
+        elif in_users and text.endswith(":") and USER.fullmatch(text[:-1].strip("'\"")):
+            users.append(text[:-1].strip("'\""))
+    if active and active not in users:
+        users.append(active)
+    return active, users, any(TOKEN_LINE.match(l) for l in lines[start + 1:end])
+
+
+def gh_users(folder):
+    return parse_users(hosts_lines(folder))
+
+
+def gh_user(folder):
+    """The github.com user a folder is signed in as, or None."""
+    return gh_users(folder)[0]
+
+
+def with_active_user(lines, user):
+    """hosts.yml lines with user signed in and active on github.com (no token is added)."""
+    lines = list(lines)
+    block = github_block(lines)
+    if not block:
+        return lines + [f"{GH_HOST}:", "    git_protocol: https", "    users:", f"        {user}:", f"    user: {user}"]
+    start, end, indent = block
+    pad = " " * indent
+    if user not in parse_users(lines)[1]:
+        at = next((i for i in range(start + 1, end) if lines[i] == pad + "users:"), None)
+        new = [pad * 2 + f"{user}:"] if at is not None else [pad + "users:", pad * 2 + f"{user}:"]
+        at = at + 1 if at is not None else start + 1
+        lines[at:at] = new
+        end += len(new)
+    at = next((i for i in range(start + 1, end) if lines[i].startswith(pad + "user:")), None)
+    if at is None:
+        lines.insert(end, pad + f"user: {user}")
+    else:
+        lines[at] = pad + f"user: {user}"
+    return lines
 
 
 def profile_env(prof):
@@ -59,20 +127,134 @@ def profile_env(prof):
     return env, where
 
 
-def gh_folders():
-    """Every gh config folder: the default one, ~/.config/gh-*, and any a profile points to."""
-    found = [gh_default_dir()] + sorted(glob.glob(os.path.join(HOME, ".config", "gh-*")))
+def used_folder(prof):
+    """The folder a profile's Claude Code sessions use now: its GH_CONFIG_DIR, or the default one."""
+    d = profile_env(prof)[0].get(GH_ENV)
+    return os.path.expanduser(d) if isinstance(d, str) and d else gh_default_dir()
+
+
+def profile_github(prof):
+    folder = used_folder(prof)
+    return {"user": gh_user(folder), "dir": pretty(folder)}
+
+
+def shares_settings(prof):
+    return not is_default(prof) and os.path.islink(settings_files(prof)["settings"])
+
+
+def set_up(prof):
+    """Whether the profile uses its own folder (or cannot have one: its settings.json is shared)."""
+    if is_default(prof) or shares_settings(prof):
+        return True
+    own = own_folder(prof)
+    return os.path.isdir(own) and os.path.realpath(used_folder(prof)) == os.path.realpath(own)
+
+
+def known_users():
+    """Users signed in in some profile's folder with their token in the keychain: any of them can
+    become a profile's account without signing in again."""
+    out, written = [], set()  # written: users whose token is in a hosts.yml, not in the keychain
     for p in profiles():
-        d = profile_env(p)[0].get(GH_ENV)
-        if isinstance(d, str) and d:
-            found.append(os.path.expanduser(d))
-    out, seen = [], set()
-    for d in found:
-        real = os.path.realpath(d)
-        if real not in seen and (os.path.isdir(d) or d == gh_default_dir()):
-            seen.add(real)
-            out.append(d)
-    return out
+        _, users, insecure = gh_users(own_folder(p))
+        if insecure:
+            written.update(users)
+        out += [u for u in users if u not in out]
+    return [u for u in out if u not in written]
+
+
+def copy_folder(src, dst, bk):
+    """A new GitHub CLI folder with src's settings and users, and no token line."""
+    bk.mkdir(os.path.dirname(dst))
+    bk.created(dst)  # journaled first: restoring removes the folder with what is in it
+    os.mkdir(dst, 0o700)
+    lines = [l for l in hosts_lines(src) if not TOKEN_LINE.match(l)]
+    if lines:
+        write_text(os.path.join(dst, "hosts.yml"), "\n".join(lines) + "\n")
+        os.chmod(os.path.join(dst, "hosts.yml"), 0o600)
+    if os.path.isfile(os.path.join(src, "config.yml")):
+        with open(os.path.join(src, "config.yml")) as f:
+            write_text(os.path.join(dst, "config.yml"), f.read())
+
+
+def set_env(prof, values, bk):
+    """Set (or, with None, remove) keys of the profile's env: in the file that has them, else settings.json."""
+    f = settings_files(prof)
+    files = {which: load_settings(f[which]) for which in ("settings", "local")}
+    for which, (_, err) in files.items():
+        if err:
+            raise ApiError(f"{os.path.basename(f[which])} has an error ({err}): fix it in the advanced editor")
+    changed = set()
+    for k, v in values.items():
+        holders = [w for w, (d, _) in files.items() if isinstance(d.get("env"), dict) and k in d["env"]]
+        targets = holders if v is None else \
+            ([w for w in holders if files[w][0]["env"][k] != v] if holders else ["settings"])
+        for w in targets:
+            data = files[w][0]
+            env = dict(data.get("env") if isinstance(data.get("env"), dict) else {})
+            if v is None:
+                env.pop(k, None)
+            else:
+                env[k] = v
+            if env:
+                data["env"] = env
+            else:
+                data.pop("env", None)
+            changed.add(w)
+    for w in sorted(changed):
+        save_settings_file(prof, w, files[w][0], bk)
+
+
+def give_own_folder(prof, bk):
+    """Create the profile's folder if it is missing (signed in as the account it uses now) and point
+    GH_CONFIG_DIR to it. Returns a line saying what happened, or None when there is nothing to do."""
+    if set_up(prof):
+        return None
+    own, now = own_folder(prof), used_folder(prof)
+    if not os.path.isdir(own):
+        src = now if os.path.isdir(now) else gh_default_dir()
+        if not os.path.isdir(src):
+            return None  # the GitHub CLI was never used here: nothing to give it yet
+        copy_folder(src, own, bk)
+    set_env(prof, {GH_ENV: own}, bk)
+    user = gh_user(own)
+    return f"{prof['label']}: {pretty(own)}" + (f", GitHub as {user}" if user else ", not signed in to GitHub")
+
+
+def ensure_gh_folders():
+    """At every start of the server: every profile gets its own GitHub CLI folder.
+    Returns (lines to print, backup path or None)."""
+    todo = [p for p in profiles() if not set_up(p)]
+    if not todo:
+        return [], None
+    bk, lines = Backup("github-folders", "A GitHub CLI folder for each profile"), []
+    for p in todo:
+        line = give_own_folder(p, bk)
+        if line:
+            lines.append(line)
+            bk.note(line)
+    return lines, bk.close()
+
+
+def new_profile_folder(new, pid, bk):
+    """For a profile being created: its own GitHub CLI folder, signed in as the default account.
+    Returns a note for the message, or None."""
+    if os.path.islink(os.path.join(new, "settings.json")):
+        return "its settings.json is shared, so its GitHub account is the source profile's"
+    own, src = os.path.join(HOME, ".config", f"gh-{pid}"), gh_default_dir()
+    if not os.path.isdir(own):
+        if not os.path.isdir(src):
+            return None
+        copy_folder(src, own, bk)
+    settings = os.path.join(new, "settings.json")
+    data = read_json(settings, {}) if os.path.exists(settings) else {}
+    data = data if isinstance(data, dict) else {}
+    data["env"] = dict(data.get("env") if isinstance(data.get("env"), dict) else {}, **{GH_ENV: own})
+    write_json(settings, data)  # inside the new profile's folder: restoring removes it with the folder
+    bk.note(f"{GH_ENV} = {pretty(own)}")
+    user = gh_user(own)
+    if not user or gh_users(src)[2]:  # the token stayed in the source's hosts.yml
+        return f"sign in to GitHub for it with GH_CONFIG_DIR={pretty(own)} gh auth login"
+    return f"GitHub as {user}, from {pretty(own)}: pick another account in Profiles → GitHub"
 
 
 def git_uses_gh():
@@ -91,75 +273,55 @@ def git_uses_gh():
     return any("gh auth git-credential" in h for h in helpers)
 
 
-def profile_github(prof):
-    """The GitHub account a profile's Claude Code sessions use: its GH_CONFIG_DIR, or the default folder."""
-    d = profile_env(prof)[0].get(GH_ENV)
-    folder = os.path.expanduser(d) if isinstance(d, str) and d else gh_default_dir()
-    return {"user": gh_user(folder), "dir": pretty(folder), "own": bool(d)}
-
-
-def new_profile_folder(pid):
-    return os.path.join(HOME, ".config", f"gh-{pid}")
-
-
-def give_gh_folder(new, pid, bk):
-    """A GitHub CLI folder of its own for a new profile, ~/.config/gh-<id>, signed in as the default
-    folder's account for now, and GH_CONFIG_DIR in the profile's settings.json. Only hosts.yml without
-    any token line and config.yml are copied: gh keeps the token in the keychain, under the user's
-    name, so the new folder finds it. Returns a note for the message, or None when nothing was done."""
-    settings = os.path.join(new, "settings.json")
-    if os.path.islink(settings):
-        return "its settings.json is shared, so its GitHub account is too: pick another one in the GitHub section"
-    src, dst = gh_default_dir(), new_profile_folder(pid)
-    user, needs_login = gh_user(src), False
-    if not os.path.lexists(dst):
-        if not user:
-            return None  # gh is not signed in: nothing to give it yet
-        bk.mkdir(os.path.dirname(dst))
-        bk.created(dst)
-        os.mkdir(dst, 0o700)
-        with open(os.path.join(src, "hosts.yml")) as f:
-            lines = f.read().splitlines()
-        needs_login = any(TOKEN_LINE.match(l) for l in lines)  # that token stays behind
-        write_text(os.path.join(dst, "hosts.yml"), "\n".join(l for l in lines if not TOKEN_LINE.match(l)) + "\n")
-        os.chmod(os.path.join(dst, "hosts.yml"), 0o600)
-        if os.path.isfile(os.path.join(src, "config.yml")):
-            with open(os.path.join(src, "config.yml")) as f:
-                write_text(os.path.join(dst, "config.yml"), f.read())
-    elif not gh_user(dst):
-        needs_login = True
-    data = read_json(settings, {}) if os.path.exists(settings) else {}
-    data = data if isinstance(data, dict) else {}
-    env = dict(data.get("env") if isinstance(data.get("env"), dict) else {})
-    env[GH_ENV] = dst
-    data["env"] = env
-    write_json(settings, data)  # inside the new profile's folder: restoring removes it with the folder
-    bk.note(f"{GH_ENV} = {pretty(dst)}")
-    if needs_login:
-        return f"sign in to GitHub for it with GH_CONFIG_DIR={pretty(dst)} gh auth login"
-    return f"GitHub as {gh_user(dst)} from {pretty(dst)}: to change account, GH_CONFIG_DIR={pretty(dst)} gh auth login"
-
-
 def github_state():
-    accounts = [{"dir": pretty(d), "path": d, "user": gh_user(d), "default": d == gh_default_dir()}
-                for d in gh_folders()]
-    by_path = {os.path.realpath(a["path"]): a for a in accounts}
     rows = []
     for p in profiles():
-        env, where = profile_env(p)
-        d = env.get(GH_ENV)
-        acc = by_path.get(os.path.realpath(os.path.expanduser(d))) if isinstance(d, str) and d else \
-            by_path.get(os.path.realpath(gh_default_dir()))
-        rows.append({"id": p["id"], "label": p["label"], "dir": pretty(acc["path"]) if acc else d,
-                     "own": bool(d), "user": acc["user"] if acc else None,
-                     "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], ""),
-                     "files": sorted({where[k] for k in (GH_ENV,) + GIT_ENV["name"] + GIT_ENV["email"] if k in where})})
-    return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": accounts, "profiles": rows,
-            "new_dir": pretty(new_profile_folder("<name>")), "default_user": gh_user(gh_default_dir())}
+        env, _ = profile_env(p)
+        active, users, _ = gh_users(used_folder(p))
+        rows.append({"id": p["id"], "label": p["label"], "dir": pretty(own_folder(p)), "user": active,
+                     "users": users, "set_up": set_up(p), "shared": shares_settings(p), "default": is_default(p),
+                     "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], "")})
+    return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows}
 
 
-def op_github(pid, folder, name, email):
-    """Point a profile to a gh config folder (None: the default one) and set who its commits are by."""
+def op_github_setup(pid):
+    """Give a profile its own folder now (the server does it at every start)."""
+    prof = profile(pid)
+    if set_up(prof):
+        return {"message": f"{prof['label']} already has its own GitHub CLI folder."}
+    bk = Backup("github-folders", f"GitHub CLI folder of {prof['label']}")
+    line = give_own_folder(prof, bk)
+    if not line:
+        bk.close()
+        raise ApiError("The GitHub CLI was never used on this computer: sign in with gh auth login first")
+    bk.note(line)
+    return {"message": line + "." + session_hint(prof), "backup": bk.close()}
+
+
+def op_github_account(pid, user):
+    """Make user the active GitHub account of the profile's own folder."""
+    prof = profile(pid)
+    if shares_settings(prof):
+        raise ApiError(f"{prof['label']} shares settings.json with the source profile, and so its GitHub account")
+    if not set_up(prof):
+        raise ApiError(f"{prof['label']} has no GitHub CLI folder of its own yet: set it up first")
+    if user not in known_users():
+        raise ApiError(f"{user} is not signed in to the GitHub CLI here: add the account first")
+    folder = own_folder(prof)
+    if gh_user(folder) == user:
+        return {"message": f"{prof['label']} already uses GitHub as {user}."}
+    bk = Backup("github", f"GitHub account of {prof['label']}: {user}")
+    path = os.path.join(folder, "hosts.yml")
+    bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
+    write_text(path, "\n".join(with_active_user(hosts_lines(folder), user)) + "\n")
+    os.chmod(path, 0o600)
+    bk.note(f"{pretty(folder)}: active user {user}")
+    note = " Your terminal uses this account too." if is_default(prof) else ""
+    return {"message": f"{prof['label']} uses GitHub as {user}.{note}" + session_hint(prof), "backup": bk.close()}
+
+
+def op_github_identity(pid, name, email):
+    """Who the commits made in a profile are by: GIT_AUTHOR_* and GIT_COMMITTER_* in its env."""
     prof = profile(pid)
     name, email = (name or "").strip(), (email or "").strip()
     if "\n" in name or "\n" in email:
@@ -168,53 +330,14 @@ def op_github(pid, folder, name, email):
         raise ApiError("Write both the name and the email for commits, or neither")
     if email and not EMAIL.fullmatch(email):
         raise ApiError(f"Not an email address: {email}")
-    path = None
-    if folder:
-        path = next((d for d in gh_folders() if pretty(d) == folder or d == folder), None)
-        if path is None:
-            raise ApiError(f"Unknown GitHub CLI folder: {folder}. Sign in there first with gh auth login")
-        if not gh_user(path):
-            raise ApiError(f"{pretty(path)} is not signed in to github.com: run GH_CONFIG_DIR={pretty(path)} gh auth login")
-        if os.path.realpath(path) == os.path.realpath(gh_default_dir()):
-            path = None  # the default folder needs no variable
-    want = {GH_ENV: path}
-    for k in GIT_ENV["name"]:
-        want[k] = name or None
-    for k in GIT_ENV["email"]:
-        want[k] = email or None
-
-    f = settings_files(prof)
-    files = {which: load_settings(f[which]) for which in ("settings", "local")}
-    for which, (_, err) in files.items():
-        if err:
-            raise ApiError(f"{os.path.basename(f[which])} has an error ({err}): fix it in the advanced editor")
-    changed = set()
-    for k, v in want.items():
-        holders = [w for w, (d, _) in files.items() if isinstance(d.get("env"), dict) and k in d["env"]]
-        if v is None:
-            targets = holders
-        else:  # where the key already is, otherwise settings.json
-            targets = [w for w in holders if files[w][0]["env"][k] != v] if holders else ["settings"]
-        for w in targets:
-            data = files[w][0]
-            env = dict(data.get("env") if isinstance(data.get("env"), dict) else {})
-            if v is None:
-                env.pop(k, None)
-            else:
-                env[k] = v
-            if env:
-                data["env"] = env
-            else:
-                data.pop("env", None)
-            changed.add(w)
-    if not changed:
-        return {"message": f"{prof['label']} already uses these GitHub settings."}
-    user = gh_user(path or gh_default_dir())
-    bk = Backup("github", f"GitHub account of {prof['label']}")
-    for w in sorted(changed):
-        save_settings_file(prof, w, files[w][0], bk)
-    bk.note(f"{GH_ENV} = {pretty(path) if path else '(default)'}; commits by {name or '(git config)'} <{email}>")
-    msg = (f"{prof['label']} uses GitHub as {user or 'nobody yet'}"
-           + (f", commits by {name} <{email}>" if name else "")
-           + f"{shared_note(f['settings'])}." + session_hint(prof))
-    return {"message": msg, "backup": bk.close()}
+    want = {k: name or None for k in GIT_ENV["name"]}
+    want.update({k: email or None for k in GIT_ENV["email"]})
+    env, _ = profile_env(prof)
+    if all(env.get(k) == v for k, v in want.items()):
+        return {"message": f"The commits of {prof['label']} already use these settings."}
+    bk = Backup("github", f"Commit identity of {prof['label']}")
+    set_env(prof, want, bk)
+    bk.note(f"commits by {name} <{email}>" if name else "commits by the git config")
+    msg = (f"Commits in {prof['label']} are by {name} <{email}>" if name else
+           f"Commits in {prof['label']} use your git config") + shared_note(settings_files(prof)["settings"]) + "."
+    return {"message": msg + session_hint(prof), "backup": bk.close()}

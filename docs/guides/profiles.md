@@ -84,39 +84,27 @@ Both confirmations have **Show the files and folders it touches**: the own copy 
 
 ## A GitHub account per profile
 
-Signing in to GitHub is not part of a profile: the GitHub CLI (`gh`) keeps one sign-in for your whole user, so by default every profile pushes and opens pull requests as the same account. The **GitHub** section at the bottom of the Profiles tab gives each profile its own.
+Signing in to GitHub is not part of a Claude Code profile: the GitHub CLI (`gh`) keeps its sign-in in a folder, `~/.config/gh`, shared by everything you run. cc-profiles gives **every profile a GitHub CLI folder of its own**, named after it:
 
-The profile cards show the GitHub account next to the Claude account: **GitHub as …**.
-
-### New profiles
-
-**New profile** has the option *its own GitHub account folder* (on by default when `gh` is signed in). The new profile then gets `~/.config/gh-<id>`, next to its `~/.claude-<id>`, with `GH_CONFIG_DIR` pointing to it. The folder starts signed in as the account of `~/.config/gh`: cc-profiles copies `config.yml` and `hosts.yml` without any token line, and `gh` finds the token in the keychain by the user's name. To move that profile to another account, sign in there:
-
-```sh
-GH_CONFIG_DIR=~/.config/gh-<id> gh auth login
-```
-
-If your token is written in `hosts.yml` rather than in the keychain (`gh auth login --insecure-storage`), it is not copied, and the message says to sign in to the new folder. A profile whose `settings.json` is shared also shares its GitHub account, so it gets no folder. Two folders signed in as the same user share the keychain token: `gh auth logout` in one signs the other out too.
-
-### Existing profiles
-
-1. Sign in with the other account once, in a terminal, in a separate folder of the GitHub CLI. **Add account…** writes the command for you, with a button to copy it:
-   ```sh
-   GH_CONFIG_DIR=~/.config/gh-work gh auth login
-   ```
-   Any `~/.config/gh-<name>` folder works. Then click **I signed in, refresh**.
-2. In the table, pick the account in the profile's **GitHub account** menu: it is saved right away. **Commit identity…** sets the name and email of its commits (both or neither), for example the `…@users.noreply.github.com` address of that account.
-
-cc-profiles writes them in the `env` of the profile's `settings.json`, which Claude Code passes to every command it runs:
-
-| Variable | Effect |
+| Profile | GitHub CLI folder |
 |---|---|
-| `GH_CONFIG_DIR` | `gh` signs in as that account; left out for the default folder (`~/.config/gh`) |
-| `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME` | the name on commits made in that profile |
-| `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_EMAIL` | the email on those commits |
+| Default (`~/.claude`) | `~/.config/gh`, the same as your terminal |
+| `~/.claude-<id>` | `~/.config/gh-<id>` |
 
-A variable already in `settings.local.json` is changed there, so it keeps winning. Picking the default account with an empty name and email removes the variables and leaves the rest of `env` alone. Every change goes to the backup.
+cc-profiles creates the missing folders when it starts, and a new profile gets its own right away. A new folder starts with the account the profile used until then (`config.yml` and `hosts.yml` are copied without any token line), and `GH_CONFIG_DIR` in the `env` of the profile's `settings.json` points to it: Claude Code passes it to every command it runs, so `gh` in that profile's sessions uses that folder. The profile cards and the About panel show the account: **GitHub as …**.
 
-For `git push` to follow the account too, git must ask `gh` for GitHub passwords: run `gh auth setup-git` once. The section warns when it is not set up, with a button to copy the command. It applies to Claude Code sessions in the profile, not to your own terminal, and an open session picks it up when it restarts.
+The **GitHub** section at the bottom of the Profiles tab has a row per profile:
 
-cc-profiles reads only which user each folder is signed in as (the `user:` line of `hosts.yml`). Tokens stay in the GitHub CLI and the system keychain, and are never read or copied.
+- **GitHub account**: pick any account signed in on this computer. It becomes the active account of that profile's folder only, without signing in again: `gh` keeps each account's token in the system keychain under its name. Picking an account for Default changes your terminal's too.
+- **Another account…** (at the end of the menu) shows the command to sign in with a new account in the profile's folder, ready to copy:
+  ```sh
+  GH_CONFIG_DIR=~/.config/gh-work gh auth login
+  ```
+  Then click **I signed in, refresh**: from then on every profile can pick that account too.
+- **Commit identity…** sets the name and email of the commits made in the profile (`GIT_AUTHOR_*` and `GIT_COMMITTER_*` in its `env`; both or neither), for example the `…@users.noreply.github.com` address of its account.
+
+A profile whose `settings.json` is shared with the source profile also shares its GitHub account, so it has no folder. An account whose token is written in `hosts.yml` (`gh auth login --insecure-storage`) is not offered to the other profiles, because its token is not in the keychain; a folder copied from it asks for a sign-in.
+
+For `git push` to follow the account too, git must ask `gh` for GitHub passwords: run `gh auth setup-git` once. The section warns when it is not set up, with a button to copy the command. Changes apply to the profile's Claude Code sessions, not to your own terminal (except for Default), and an open session picks them up when it restarts. Every change goes to the backup.
+
+cc-profiles reads only which users each folder is signed in as, never a token. Deleting a profile leaves its GitHub CLI folder in place; `gh auth logout` inside one folder removes that account's token from the keychain, which signs it out in every folder.

@@ -839,49 +839,62 @@ cat "$HOME/mcp-list.txt"
     assert home.snapshot() == before
 
 
-def test_a_github_account_per_profile(home, app_factory):
+def test_every_profile_has_its_own_github_folder(home, app_factory):
     basic_home(home)
     home.write(".config/gh/hosts.yml", "github.com:\n    git_protocol: https\n    users:\n        me:\n"
-                                       "            oauth_token: gho_not-a-real-token\n    user: me\n")
-    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        me-at-work:\n    user: me-at-work\n")
-    home.write(".config/gh-empty/config.yml", "")
+                                       "        me-at-work:\n    user: me\n")
+    home.write(".config/gh/config.yml", "editor: vim\n")
+    home.write(".config/gh-old/hosts.yml", "github.com:\n    users:\n        stray:\n            oauth_token: gho_x\n"
+                                           "    user: stray\n")
     home.json(".claude-work/settings.local.json", {"env": {"GIT_AUTHOR_EMAIL": "old@example.com", "FOO": "1"}})
     before = home.snapshot()
-    app = app_factory()
+    app = app_factory(CC_PROFILES_AUTO_GITHUB="1")  # at start, Work gets ~/.config/gh-work
 
+    assert home.path(".config/gh-work/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
+    assert home.path(".config/gh-work/config.yml").read_text() == "editor: vim\n"
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-work"))}
     g = app.get("/api/github")
-    assert "gho_" not in json.dumps(g)  # only the user name is read
-    assert [(a["dir"], a["user"], a["default"]) for a in g["accounts"]] == [
-        ("~/.config/gh", "me", True), ("~/.config/gh-empty", None, False), ("~/.config/gh-work", "me-at-work", False)]
-    assert [(p["id"], p["user"], p["own"]) for p in g["profiles"]] == [("default", "me", False), ("work", "me", False)]
+    assert "gho_" not in json.dumps(g)
+    assert g["accounts"] == ["me", "me-at-work"]  # a user with its token in hosts.yml is not offered
+    assert [(p["id"], p["dir"], p["user"], p["set_up"]) for p in g["profiles"]] == [
+        ("default", "~/.config/gh", "me", True), ("work", "~/.config/gh-work", "me", True)]
+    assert "already has" in app.post("/api/github/setup", {"profile": "work"})["message"]
 
-    app.post("/api/github", {"profile": "work", "folder": "~/.config/gh-work", "name": "Me At Work",
-                             "email": "me@work.example"})
-    env = json.loads(home.path(".claude-work/settings.json").read_text())["env"]
-    assert env == {"GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "Me At Work",
-                   "GIT_COMMITTER_NAME": "Me At Work", "GIT_COMMITTER_EMAIL": "me@work.example"}
-    # a key already in settings.local.json is changed there
+    # picking an account makes it the active user of the profile's own folder only
+    app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})
+    assert "user: me-at-work" in home.path(".config/gh-work/hosts.yml").read_text()
+    assert "user: me\n" in home.path(".config/gh/hosts.yml").read_text()
+    assert {p["id"]: p["github"] for p in app.get("/api/profiles")} == {"default": "me", "work": "me-at-work"}
+    assert "already uses" in app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})["message"]
+    assert "terminal" in app.post("/api/github/account", {"profile": "default", "user": "me-at-work"})["message"]
+    assert "not signed in" in app.post_error("/api/github/account", {"profile": "work", "user": "stray"})
+
+    # commit identity: a key already in settings.local.json is changed there
+    app.post("/api/github/identity", {"profile": "work", "name": "Me At Work", "email": "me@work.example"})
     assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {
         "GIT_AUTHOR_EMAIL": "me@work.example", "FOO": "1"}
-    work = app.get("/api/github")["profiles"][1]
-    assert (work["user"], work["own"], work["name"], work["email"]) == ("me-at-work", True, "Me At Work", "me@work.example")
-    assert "already uses" in app.post("/api/github", {"profile": "work", "folder": "~/.config/gh-work",
-                                                      "name": "Me At Work", "email": "me@work.example"})["message"]
-
-    # back to the default account and the git config: the variables go, other env keys stay
-    app.post("/api/github", {"profile": "work", "folder": "~/.config/gh", "name": "", "email": ""})
-    assert "env" not in json.loads(home.path(".claude-work/settings.json").read_text())
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "Me At Work",
+        "GIT_COMMITTER_NAME": "Me At Work", "GIT_COMMITTER_EMAIL": "me@work.example"}
+    app.post("/api/github/identity", {"profile": "work", "name": "", "email": ""})
     assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {"FOO": "1"}
-
-    assert "not signed in" in app.post_error("/api/github", {"profile": "work", "folder": "~/.config/gh-empty"})
-    assert "Unknown GitHub CLI folder" in app.post_error("/api/github", {"profile": "work", "folder": "/etc"})
-    assert "both the name and the email" in app.post_error("/api/github", {"profile": "work", "folder": "",
-                                                                           "name": "Me", "email": ""})
-    assert "Not an email" in app.post_error("/api/github", {"profile": "work", "folder": "", "name": "Me",
-                                                            "email": "me"})
+    assert "both the name and the email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me"})
+    assert "Not an email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me", "email": "me"})
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_with_active_user_keeps_the_rest_of_hosts_yml():
+    from cc_profiles.github import parse_users, with_active_user
+    lines = ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh", "    users:",
+             "        me:", "    user: me"]
+    out = with_active_user(lines, "other")
+    assert out == ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh", "    users:",
+                   "        other:", "        me:", "    user: other"]
+    assert parse_users(out)[:2] == ("other", ["other", "me"])
+    assert parse_users(with_active_user([], "me"))[:2] == ("me", ["me"])
 
 
 def test_new_profiles_get_their_own_github_folder(home, app_factory):
@@ -891,27 +904,23 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
     before = home.snapshot()
     app = app_factory()
 
-    r = app.post("/api/profiles/create", {"label": "Noa", "id": "noa", "share": [], "github": True})
-    assert "GitHub as me from ~/.config/gh-noa" in r["message"]
+    r = app.post("/api/profiles/create", {"label": "Noa", "id": "noa", "share": []})
+    assert "GitHub as me, from ~/.config/gh-noa" in r["message"]
     assert home.path(".config/gh-noa/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
     assert home.path(".config/gh-noa/config.yml").read_text() == "editor: vim\n"
     assert oct(home.path(".config/gh-noa/hosts.yml").stat().st_mode & 0o777) == "0o600"
     assert json.loads(home.path(".claude-noa/settings.json").read_text())["env"] == {
         "GH_CONFIG_DIR": str(home.path(".config/gh-noa"))}
-    assert {p["id"]: p["github"] for p in app.get("/api/profiles")} == {"default": "me", "work": "me", "noa": "me"}
 
     # a token written in hosts.yml (gh's insecure storage) is never copied: that folder needs a sign-in
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n            oauth_token: gho_secret\n"
                                        "    oauth_token: gho_secret\n    user: me\n")
-    r = app.post("/api/profiles/create", {"label": "Lab", "id": "lab", "share": [], "github": True})
+    r = app.post("/api/profiles/create", {"label": "Lab", "id": "lab", "share": []})
     assert "GH_CONFIG_DIR=~/.config/gh-lab gh auth login" in r["message"]
     assert "gho_" not in home.path(".config/gh-lab/hosts.yml").read_text()
     # a shared settings.json shares the account too
-    r = app.post("/api/profiles/create", {"label": "Same", "id": "same", "share": ["settings.json"], "github": True})
+    r = app.post("/api/profiles/create", {"label": "Same", "id": "same", "share": ["settings.json"]})
     assert "Its settings.json is shared" in r["message"] and not home.path(".config/gh-same").exists()
-    # without the option nothing is made
-    app.post("/api/profiles/create", {"label": "Plain", "id": "plain", "share": []})
-    assert not home.path(".config/gh-plain").exists()
 
     app.restore_all()
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
@@ -1853,7 +1862,7 @@ def test_about_counts_each_profile(home, app_factory):
     home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
     about = app_factory().get("/api/about")
     github = {p["id"]: p["account"]["GitHub"] for p in about["profiles"]}
-    assert github == {"default": "me · ~/.config/gh (the default)", "work": "not signed in · ~/.config/gh-work"}
+    assert github == {"default": "me · ~/.config/gh", "work": "not signed in · ~/.config/gh-work"}
     usage = {p["id"]: p["usage"] for p in about["profiles"]}
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0

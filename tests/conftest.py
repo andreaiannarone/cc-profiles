@@ -24,13 +24,16 @@ SRC = ROOT / "src"
 # nothing they start may write there on its own (the /cc-profiles command, the update check).
 os.environ["CC_PROFILES_AUTO_COMMAND"] = "0"
 os.environ["CC_PROFILES_UPDATE_CHECK"] = "0"
+os.environ["CC_PROFILES_AUTO_GITHUB"] = "0"
 REAL_HOME = Path(os.path.expanduser("~"))
 
 
 def real_home_state():
-    """What the tests must never change in the real home: cc-profiles' data and each profile's command."""
+    """What the tests must never change in the real home: cc-profiles' data, each profile's command,
+    and the GitHub CLI folders."""
     out = {}
-    for p in [REAL_HOME / ".cc-profiles" / "config.json", *REAL_HOME.glob(".claude*/commands/cc-profiles.md")]:
+    for p in [REAL_HOME / ".cc-profiles" / "config.json", *REAL_HOME.glob(".claude*/commands/cc-profiles.md"),
+              *REAL_HOME.glob(".config/gh*"), *REAL_HOME.glob(".config/gh*/hosts.yml")]:
         try:
             out[str(p)] = p.stat().st_mtime_ns
         except OSError:
@@ -153,6 +156,7 @@ class App:
             "CC_PROFILES_QUIET": "1",
             "CC_PROFILES_INSTALL_DRYRUN": "1",
             "CC_PROFILES_AUTO_COMMAND": "0",  # tests compare the fake home: no /cc-profiles written at start
+            "CC_PROFILES_AUTO_GITHUB": "0",  # nor GitHub CLI folders
         }
         env.update(extra_env or {})
         env = child_env(env)

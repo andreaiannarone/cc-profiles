@@ -26,7 +26,7 @@ from .core import (
 from .sharing import link_shared, primary, share_items
 from .command import command_state, command_wanted, write_command
 from .launchers import command_conflict, launcher_dir_in_path, write_launcher
-from .github import give_gh_folder
+from .github import new_profile_folder
 
 # ---------------------------------------------------------------------------
 # New profile
@@ -63,7 +63,7 @@ def add_profile_to_config(label, pid, command):
     write_json(CONFIG_FILE, cfg)
 
 
-def op_create_profile(label, pid, base, include_projects, share, github=False):
+def op_create_profile(label, pid, base, include_projects, share):
     label, pid, new, command = check_new_profile(label, pid)
     share = share_items(share)
     bk = Backup("new-profile", f"New profile {label} ({pretty(new)})")
@@ -103,7 +103,7 @@ def op_create_profile(label, pid, base, include_projects, share, github=False):
     if command_wanted() and command_state(new) in ("missing", "outdated"):
         write_command(new, bk, pid)
     write_launcher(command, f"~/.claude-{pid}", label, bk)
-    gh = give_gh_folder(new, pid, bk) if github else None
+    gh = new_profile_folder(new, pid, bk)
     add_profile_to_config(label, pid, command)
     bk.note(f"base: {src['label'] if src else 'empty'}, projects: {'yes' if include_projects else 'no'}, "
             f"shared: {', '.join(share) or 'nothing'}")

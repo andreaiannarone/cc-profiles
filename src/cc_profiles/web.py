@@ -50,7 +50,7 @@ from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
-from .github import github_state, op_github
+from .github import github_state, op_github_account, op_github_identity, op_github_setup
 from .extensions import (
     connectors_check,
     list_connectors,
@@ -346,7 +346,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/templates/save": lambda: op_template_save(b["profile"], b["name"]),
                 "/api/templates/delete": lambda: op_template_delete(b["name"]),
                 "/api/templates/create": lambda: op_create_from_template(b["name"], b["label"], b["id"],
-                                                                         b.get("share") or [], bool(b.get("github"))),
+                                                                         b.get("share") or []),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
@@ -373,7 +373,9 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/mcp/delete": lambda: op_mcp_delete(b["profile"], b["scope"], b["name"]),
                 "/api/connectors/set": lambda: op_connector(b["profile"], b["name"], bool(b["enabled"])),
                 "/api/connectors/forget": lambda: op_connector_forget(b["profile"], b["name"]),
-                "/api/github": lambda: op_github(b["profile"], b.get("folder"), b.get("name"), b.get("email")),
+                "/api/github/account": lambda: op_github_account(b["profile"], b["user"]),
+                "/api/github/identity": lambda: op_github_identity(b["profile"], b.get("name"), b.get("email")),
+                "/api/github/setup": lambda: op_github_setup(b["profile"]),
                 "/api/connectors/sync": lambda: op_connectors_sync(b["profile"]),
                 "/api/connectors/all": lambda: op_connectors_all(b["profile"], bool(b["enabled"])),
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),
@@ -383,7 +385,7 @@ class Handler(BaseHTTPRequestHandler):
                                                                   bool(b.get("force"))),
                 "/api/profiles/create": lambda: op_create_profile(
                     b["label"], b["id"], b.get("base") or None,
-                    bool(b.get("include_projects")), b.get("share") or [], bool(b.get("github"))),
+                    bool(b.get("include_projects")), b.get("share") or []),
             }
             if self.path not in routes:
                 return self._json(404, {"error": "Not found"})

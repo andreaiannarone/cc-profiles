@@ -274,26 +274,27 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
 def test_github_account_per_profile(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
+    # the test server does not set folders up at start: Work gets its own on request
+    page.click('[data-ghsetup="work"]')
     page.wait_for_selector('[data-ghacc="work"]')
-    page.select_option('[data-ghacc="work"]', "~/.config/gh-work")
-    page.wait_for_selector(".toast")
-    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === '~/.config/gh-work'")
+    assert page.input_value('[data-ghacc="work"]') == "me-at-work"  # ~/.config/gh-work already existed
+    page.select_option('[data-ghacc="work"]', "me-personal")
+    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-personal'")
+    page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-personal'))")
     page.click('[data-ghedit="work"]')
     page.fill("#gh-name", "Me At Work")
     page.fill("#gh-email", "me@work.example")
     page.click('.modal button:has-text("Save")')
     page.wait_for_function("() => document.querySelector('#main').textContent.includes('Me At Work')")
-    assert page.input_value('[data-ghacc="work"]') == "~/.config/gh-work"
-    # Add account prepares the sign-in command
-    page.click("#gh-add")
-    page.fill("#gh-new", "Side Job")
-    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-side-job gh auth login"
+    # another account: the sign-in command for the profile's own folder
+    page.select_option('[data-ghacc="work"]', "+")
+    page.wait_for_selector("#gh-cmd")
+    assert page.inner_text("#gh-cmd") == "GH_CONFIG_DIR=~/.config/gh-work gh auth login"
     page.keyboard.press("Escape")
-    page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-at-work'))")
-    # a new profile gets its own GitHub folder, signed in as the default account
+    # a new profile gets its own folder
     page.click("[data-newprofile] >> nth=0")
     page.fill("#np-label", "Noa")
-    assert page.is_checked("#np-gh") and page.inner_text("#np-ghdir") == "~/.config/gh-noa"
+    assert page.inner_text("#np-ghdir") == "~/.config/gh-noa"
     page.click('.modal button:has-text("Create profile")')
     page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('~/.config/gh-noa'))")
     assert errors == []

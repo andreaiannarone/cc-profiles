@@ -68,7 +68,7 @@ def names_in(d, suffix=None, dirs=False):
 def github_line(p):
     """The GitHub account of a profile's Claude Code sessions, and the GitHub CLI folder it comes from."""
     g = profile_github(p)
-    return f"{g['user'] or 'not signed in'} · {g['dir']}" + ("" if g["own"] else " (the default)")
+    return f"{g['user'] or 'not signed in'} · {g['dir']}"
 
 
 def about():
