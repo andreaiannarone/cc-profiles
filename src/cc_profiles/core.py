@@ -464,5 +464,11 @@ def tool_env():
     return env
 
 
+def session_hint(prof):
+    """How a change to a profile's settings reaches Claude Code."""
+    return f" Restart the open session in {prof['label']} to load it." if active_session(prof) else \
+        f" New Claude Code sessions in {prof['label']} will use it."
+
+
 def find_tool(name):
     return shutil.which(name, path=tool_env()["PATH"])

@@ -283,6 +283,13 @@ def test_github_account_per_profile(page_on_sandbox):
     page.wait_for_selector(".toast")
     page.wait_for_function("() => document.querySelector('#main').textContent.includes('GitHub as me-at-work')")
     assert "commits by Me At Work" in page.inner_text("#main")
+    page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-at-work'))")
+    # a new profile gets its own GitHub folder, signed in as the default account
+    page.click("[data-newprofile] >> nth=0")
+    page.fill("#np-label", "Noa")
+    assert page.is_checked("#np-gh") and page.inner_text("#np-ghdir") == "~/.config/gh-noa"
+    page.click('.modal button:has-text("Create profile")')
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('~/.config/gh-noa'))")
     assert errors == []
 
 def test_status_line_section(page_on_sandbox):

@@ -587,7 +587,7 @@ async function loadProfiles() {
     <div class="pcard">
       <div class="top"><span class="name">${esc(p.label)}</span>${badge(p.id)}
         ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
-      <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+      <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
       <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code></div>
       <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
         <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
@@ -919,7 +919,7 @@ function renderSharing() {
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
@@ -985,7 +985,7 @@ function wireGithub() {
     if (!res) return;
     const v = sel => $(sel, res.el).value;
     try { await run(() => api("/api/github", { profile: p.id, folder: v("#gh-acc"), name: v("#gh-name"), email: v("#gh-email") })); } catch { return; }
-    loadSharing();
+    await refresh(); loadSharing();
   });
 }
 
@@ -1043,8 +1043,9 @@ function wireByFolder() {
   $("#bf-path").onkeydown = e => { if (e.key === "Enter") go(); };
 }
 async function newProfile() {
-  let tpl = [];
+  let tpl = [], gh = null;
   try { tpl = (await api("/api/templates")).templates; } catch {}
+  try { gh = await api("/api/github"); } catch {}
   const opts = S.profiles.map(p => `<label><input type="radio" name="base" value="${p.id}" ${p.id === S.profiles[0].id ? "checked" : ""}> Copy of ${esc(p.label)} <span class="hint">(settings, MCP servers; you log in again)</span></label>`).join("")
     + tpl.map(t => `<label><input type="radio" name="base" value="template:${esc(t.name)}"> From template: ${esc(t.name)} <span class="hint">(${esc(t.items.join(", ") || "empty")})</span></label>`).join("");
   const resP = modal({ title: "New profile", sub: "Creates the folder <code>~/.claude-&lt;id&gt;</code> and a <code>claude-&lt;id&gt;</code> command in <code>~/.local/bin</code> that starts Claude Code in it.",
@@ -1057,10 +1058,14 @@ async function newProfile() {
       <div id="np-share"><div class="hint">Share with ${esc(S.profiles[0].label)}:</div>
       <div class="checks">${SHARE_NEW.map(i => `<label><input type="checkbox" name="share" value="${i}" ${i === "skills" || i === "plugins" ? "checked" : ""}> <code>${i}</code></label>`).join("")}</div></div>
       <div class="hint" id="np-tpl" hidden></div>
+      ${gh?.default_user ? `<label class="check"><input type="checkbox" id="np-gh" checked> <span>its own GitHub account folder <code id="np-ghdir">~/.config/gh-&lt;id&gt;</code>, signed in as <b>${esc(gh.default_user)}</b> for now <span class="hint">(sign in there with another account whenever you like)</span></span></label>` : ""}
     </div>`, actions: [{ label: "Create profile", kind: "primary", value: "ok" }] });
   const L = $("#np-label"), I = $("#np-id"); let touched = false;
   const slug = v => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
-  const upd = () => { $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : ""; };
+  const upd = () => {
+    $("#np-cmd").innerHTML = I.value ? `Command <code>claude-${esc(I.value)}</code> · folder <code>~/.claude-${esc(I.value)}</code>` : "";
+    if ($("#np-ghdir")) $("#np-ghdir").textContent = `~/.config/gh-${I.value || "<id>"}`;
+  };
   L.oninput = () => { if (!touched) I.value = slug(L.value); upd(); };
   I.oninput = () => { touched = true; upd(); };
   // A template fills the items it holds; an item shared with the source is linked instead,
@@ -1098,9 +1103,9 @@ async function newProfile() {
   const base = v('input[name="base"]:checked').value;
   const body = { label: v("#np-label").value, id: v("#np-id").value,
     base, include_projects: v("#np-proj").checked,
-    share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value) };
+    share: [...res.el.querySelectorAll('input[name="share"]:checked')].map(c => c.value), github: !!v("#np-gh")?.checked };
   const req = base.startsWith("template:")
-    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id, share: body.share })
+    ? () => api("/api/templates/create", { name: base.slice(9), label: body.label, id: body.id, share: body.share, github: body.github })
     : () => api("/api/profiles/create", body);
   try { await run(req); } catch { return; }
   await refresh(); if (S.tab === "profiles") loadSharing();

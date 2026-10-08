@@ -28,6 +28,7 @@ from .sharing import SHARE_ITEMS, link_shared, primary, share_items, share_state
 from .command import command_state, command_wanted, write_command
 from .launchers import launcher_dir_in_path, write_launcher
 from .newprofile import PROJECT_DATA, RUNTIME, add_profile_to_config, check_new_profile
+from .github import give_gh_folder
 
 # ---------------------------------------------------------------------------
 # Export and import
@@ -168,7 +169,7 @@ def shared_instead(share, skipped, source, origin="the template"):
     return out
 
 
-def op_import_profile(zip_path, label, pid, template=None, share=None):
+def op_import_profile(zip_path, label, pid, template=None, share=None, github=False):
     """Create a profile from an export. template: the name of the template it comes from.
     share: items linked to the source profile instead of being unpacked from the archive."""
     share = share_items(share)
@@ -227,6 +228,7 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
             if command_wanted() and command_state(new) in ("missing", "outdated"):
                 write_command(new, bk, pid)
             write_launcher(command, f"~/.claude-{pid}", label, bk)
+            gh = give_gh_folder(new, pid, bk) if github else None
         except Exception:
             shutil.rmtree(new, ignore_errors=True)  # nothing else was changed yet
             raise
@@ -239,6 +241,8 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
         if notes:
             msg += " " + "; ".join(notes) + "."
         msg += f" Run {command} and log in with /login."
+        if gh:
+            msg += f" {gh[0].upper()}{gh[1:]}."
     else:
         bk.note(f"from the export of {man.get('label')} ({man.get('created', '?')}), "
                 f"conversations: {'yes' if man.get('projects') else 'no'}")

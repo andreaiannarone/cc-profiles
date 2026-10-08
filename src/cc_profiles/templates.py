@@ -91,6 +91,6 @@ def op_template_delete(name):
     return {"message": f"Template {name} deleted.", "backup": bk.close()}
 
 
-def op_create_from_template(name, label, pid, share=None):
+def op_create_from_template(name, label, pid, share=None, github=False):
     """share: items linked to the source profile instead of being filled from the template."""
-    return op_import_profile(template_path(name), label, pid, template=name, share=share)
+    return op_import_profile(template_path(name), label, pid, template=name, share=share, github=github)

@@ -23,11 +23,11 @@ The code is one module per area. Each module imports only from the ones above it
 | `memories.py` | list, read, save, move, delete |
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
+| `github.py` | a GitHub account per profile: GitHub CLI folders and their user, `GH_CONFIG_DIR` and the commit identity in the profile's `env`, and a folder of its own for each new profile |
 | `health.py` | profile summaries, candidate folders, health checks |
 | `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`, 90 days by default), kept backups |
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all; claude.ai connectors kept out of a profile, and checked against the account with `claude mcp list` |
-| `github.py` | a GitHub account per profile: GitHub CLI folders and their user, `GH_CONFIG_DIR` and the commit identity in the profile's `env` |
 | `conversations.py` | list, view, move one, delete |
 | `usage.py` | tokens and estimated cost per day, project, model, profile and conversation, and the CSV export, from the usage of every reply (read-only); the list-price table |
 | `search.py` | global search and profile comparison (read-only) |

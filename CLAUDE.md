@@ -55,7 +55,7 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 - **One write at a time**: POST handlers run under `_lock`.
 - **Never trust the client**: project, memory and backup names go through `project_dir()`, `memory_path()` and `backup_path()`, which reject `/`, `..` and empty names. The installer accepts only a method id from `INSTALL_METHODS`, never a command.
 - **Local security**: listen on `127.0.0.1` only. `_guard()` checks the `Host` header (against DNS rebinding) and the `X-Token` header on every `/api/` call (against cross-site requests). Do not relax these checks and do not add CORS headers.
-- **Never copy login credentials** between profiles (`.credentials.json`, `oauthAccount`). A copied token can be invalidated when the original profile refreshes it.
+- **Never copy login credentials** between profiles (`.credentials.json`, `oauthAccount`). A copied token can be invalidated when the original profile refreshes it. The same goes for GitHub: `github.py` reads only the `user:` of a GitHub CLI `hosts.yml` and copies it without token lines.
 
 ## Claude Code's on-disk formats (undocumented, may change)
 

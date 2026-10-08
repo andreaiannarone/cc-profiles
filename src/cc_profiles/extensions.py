@@ -14,7 +14,6 @@ from .core import (
     HOME,
     ApiError,
     Backup,
-    active_session,
     find_tool,
     load_settings,
     parse_memory,
@@ -22,6 +21,7 @@ from .core import (
     profile,
     profiles,
     read_json,
+    session_hint,
     tool_env,
     write_json,
     write_text,
@@ -246,11 +246,6 @@ def check_mcp_config(conf):
     for k in ("env", "headers"):
         if k in conf and not (isinstance(conf[k], dict) and all(isinstance(v, str) for v in conf[k].values())):
             raise ApiError(f"{k} must map names to text values")
-
-
-def session_hint(prof):
-    return f" Restart the open session in {prof['label']} to load it." if active_session(prof) else \
-        f" New Claude Code sessions in {prof['label']} will use it."
 
 
 def op_mcp_save(pid, scope, name, conf, old_name=None):

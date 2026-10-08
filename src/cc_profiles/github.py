@@ -7,9 +7,9 @@ import os
 import re
 import subprocess
 
-from .core import HOME, ApiError, Backup, find_tool, load_settings, pretty, profile, profiles, tool_env
+from .core import (HOME, ApiError, Backup, find_tool, load_settings, pretty, profile, profiles, read_json,
+                   session_hint, tool_env, write_json, write_text)
 from .settings import save_settings_file, settings_files, shared_note
-from .extensions import session_hint
 
 # ---------------------------------------------------------------------------
 # GitHub accounts
@@ -24,6 +24,7 @@ GH_HOST = "github.com"
 GH_ENV = "GH_CONFIG_DIR"
 GIT_ENV = {"name": ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"), "email": ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL")}
 EMAIL = re.compile(r"[^@\s]+@[^@\s]+")
+TOKEN_LINE = re.compile(r"^\s*[A-Za-z_]*token[A-Za-z_]*\s*:", re.I)  # gh's insecure storage: never copied
 
 
 def gh_default_dir():
@@ -90,6 +91,55 @@ def git_uses_gh():
     return any("gh auth git-credential" in h for h in helpers)
 
 
+def profile_github(prof):
+    """The GitHub account a profile's Claude Code sessions use: its GH_CONFIG_DIR, or the default folder."""
+    d = profile_env(prof)[0].get(GH_ENV)
+    folder = os.path.expanduser(d) if isinstance(d, str) and d else gh_default_dir()
+    return {"user": gh_user(folder), "dir": pretty(folder), "own": bool(d)}
+
+
+def new_profile_folder(pid):
+    return os.path.join(HOME, ".config", f"gh-{pid}")
+
+
+def give_gh_folder(new, pid, bk):
+    """A GitHub CLI folder of its own for a new profile, ~/.config/gh-<id>, signed in as the default
+    folder's account for now, and GH_CONFIG_DIR in the profile's settings.json. Only hosts.yml without
+    any token line and config.yml are copied: gh keeps the token in the keychain, under the user's
+    name, so the new folder finds it. Returns a note for the message, or None when nothing was done."""
+    settings = os.path.join(new, "settings.json")
+    if os.path.islink(settings):
+        return "its settings.json is shared, so its GitHub account is too: pick another one in the GitHub section"
+    src, dst = gh_default_dir(), new_profile_folder(pid)
+    user, needs_login = gh_user(src), False
+    if not os.path.lexists(dst):
+        if not user:
+            return None  # gh is not signed in: nothing to give it yet
+        bk.mkdir(os.path.dirname(dst))
+        bk.created(dst)
+        os.mkdir(dst, 0o700)
+        with open(os.path.join(src, "hosts.yml")) as f:
+            lines = f.read().splitlines()
+        needs_login = any(TOKEN_LINE.match(l) for l in lines)  # that token stays behind
+        write_text(os.path.join(dst, "hosts.yml"), "\n".join(l for l in lines if not TOKEN_LINE.match(l)) + "\n")
+        os.chmod(os.path.join(dst, "hosts.yml"), 0o600)
+        if os.path.isfile(os.path.join(src, "config.yml")):
+            with open(os.path.join(src, "config.yml")) as f:
+                write_text(os.path.join(dst, "config.yml"), f.read())
+    elif not gh_user(dst):
+        needs_login = True
+    data = read_json(settings, {}) if os.path.exists(settings) else {}
+    data = data if isinstance(data, dict) else {}
+    env = dict(data.get("env") if isinstance(data.get("env"), dict) else {})
+    env[GH_ENV] = dst
+    data["env"] = env
+    write_json(settings, data)  # inside the new profile's folder: restoring removes it with the folder
+    bk.note(f"{GH_ENV} = {pretty(dst)}")
+    if needs_login:
+        return f"sign in to GitHub for it with GH_CONFIG_DIR={pretty(dst)} gh auth login"
+    return f"GitHub as {gh_user(dst)} from {pretty(dst)}: to change account, GH_CONFIG_DIR={pretty(dst)} gh auth login"
+
+
 def github_state():
     accounts = [{"dir": pretty(d), "path": d, "user": gh_user(d), "default": d == gh_default_dir()}
                 for d in gh_folders()]
@@ -105,7 +155,7 @@ def github_state():
                      "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], ""),
                      "files": sorted({where[k] for k in (GH_ENV,) + GIT_ENV["name"] + GIT_ENV["email"] if k in where})})
     return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": accounts, "profiles": rows,
-            "new_dir": pretty(os.path.join(HOME, ".config", "gh-<name>"))}
+            "new_dir": pretty(new_profile_folder("<name>")), "default_user": gh_user(gh_default_dir())}
 
 
 def op_github(pid, folder, name, email):

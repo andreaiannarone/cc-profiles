@@ -86,6 +86,20 @@ Both confirmations have **Show the files and folders it touches**: the own copy 
 
 Signing in to GitHub is not part of a profile: the GitHub CLI (`gh`) keeps one sign-in for your whole user, so by default every profile pushes and opens pull requests as the same account. The **GitHub** section at the bottom of the Profiles tab gives each profile its own.
 
+The profile cards show the GitHub account next to the Claude account: **GitHub as …**.
+
+### New profiles
+
+**New profile** has the option *its own GitHub account folder* (on by default when `gh` is signed in). The new profile then gets `~/.config/gh-<id>`, next to its `~/.claude-<id>`, with `GH_CONFIG_DIR` pointing to it. The folder starts signed in as the account of `~/.config/gh`: cc-profiles copies `config.yml` and `hosts.yml` without any token line, and `gh` finds the token in the keychain by the user's name. To move that profile to another account, sign in there:
+
+```sh
+GH_CONFIG_DIR=~/.config/gh-<id> gh auth login
+```
+
+If your token is written in `hosts.yml` rather than in the keychain (`gh auth login --insecure-storage`), it is not copied, and the message says to sign in to the new folder. A profile whose `settings.json` is shared also shares its GitHub account, so it gets no folder. Two folders signed in as the same user share the keychain token: `gh auth logout` in one signs the other out too.
+
+### Existing profiles
+
 1. Sign in with the other account once, in a terminal, in a separate folder of the GitHub CLI:
    ```sh
    GH_CONFIG_DIR=~/.config/gh-work gh auth login

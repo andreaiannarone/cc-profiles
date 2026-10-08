@@ -883,6 +883,40 @@ def test_a_github_account_per_profile(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
 
+
+def test_new_profiles_get_their_own_github_folder(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
+    home.write(".config/gh/config.yml", "editor: vim\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    r = app.post("/api/profiles/create", {"label": "Noa", "id": "noa", "share": [], "github": True})
+    assert "GitHub as me from ~/.config/gh-noa" in r["message"]
+    assert home.path(".config/gh-noa/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
+    assert home.path(".config/gh-noa/config.yml").read_text() == "editor: vim\n"
+    assert oct(home.path(".config/gh-noa/hosts.yml").stat().st_mode & 0o777) == "0o600"
+    assert json.loads(home.path(".claude-noa/settings.json").read_text())["env"] == {
+        "GH_CONFIG_DIR": str(home.path(".config/gh-noa"))}
+    assert {p["id"]: p["github"] for p in app.get("/api/profiles")} == {"default": "me", "work": "me", "noa": "me"}
+
+    # a token written in hosts.yml (gh's insecure storage) is never copied: that folder needs a sign-in
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n            oauth_token: gho_secret\n"
+                                       "    oauth_token: gho_secret\n    user: me\n")
+    r = app.post("/api/profiles/create", {"label": "Lab", "id": "lab", "share": [], "github": True})
+    assert "GH_CONFIG_DIR=~/.config/gh-lab gh auth login" in r["message"]
+    assert "gho_" not in home.path(".config/gh-lab/hosts.yml").read_text()
+    # a shared settings.json shares the account too
+    r = app.post("/api/profiles/create", {"label": "Same", "id": "same", "share": ["settings.json"], "github": True})
+    assert "Its settings.json is shared" in r["message"] and not home.path(".config/gh-same").exists()
+    # without the option nothing is made
+    app.post("/api/profiles/create", {"label": "Plain", "id": "plain", "share": []})
+    assert not home.path(".config/gh-plain").exists()
+
+    app.restore_all()
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

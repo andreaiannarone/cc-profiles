@@ -346,7 +346,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/templates/save": lambda: op_template_save(b["profile"], b["name"]),
                 "/api/templates/delete": lambda: op_template_delete(b["name"]),
                 "/api/templates/create": lambda: op_create_from_template(b["name"], b["label"], b["id"],
-                                                                         b.get("share") or []),
+                                                                         b.get("share") or [], bool(b.get("github"))),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
@@ -383,7 +383,7 @@ class Handler(BaseHTTPRequestHandler):
                                                                   bool(b.get("force"))),
                 "/api/profiles/create": lambda: op_create_profile(
                     b["label"], b["id"], b.get("base") or None,
-                    bool(b.get("include_projects")), b.get("share") or []),
+                    bool(b.get("include_projects")), b.get("share") or [], bool(b.get("github"))),
             }
             if self.path not in routes:
                 return self._json(404, {"error": "Not found"})

@@ -5,9 +5,8 @@
 import json
 import os
 
-from .core import ApiError, Backup, load_settings, pretty, profile, read_json
+from .core import ApiError, Backup, load_settings, pretty, profile, read_json, session_hint
 from .settings import save_settings_file, settings_files, shared_note
-from .extensions import session_hint
 from .transfer import share_note
 
 # ---------------------------------------------------------------------------
