@@ -81,3 +81,28 @@ Under **Sharing**, each secondary profile has a switch per item:
 Turning a switch **on** replaces the profile's own copy with a link. The old copy goes to the backup, and the confirmation lists anything the source profile does not have, so you can copy it over first. Turning it **off** gives the profile an independent copy of the current source content.
 
 Both confirmations have **Show the files and folders it touches**: the own copy that goes to the backup, each item only that copy has, the link and its target, and what is created in the source profile when it does not have the item yet; when separating, the link that goes to the backup and the files copied in its place.
+
+## A GitHub account per profile
+
+Signing in to GitHub is not part of a profile: the GitHub CLI (`gh`) keeps one sign-in for your whole user, so by default every profile pushes and opens pull requests as the same account. The **GitHub** section at the bottom of the Profiles tab gives each profile its own.
+
+1. Sign in with the other account once, in a terminal, in a separate folder of the GitHub CLI:
+   ```sh
+   GH_CONFIG_DIR=~/.config/gh-work gh auth login
+   ```
+   Any `~/.config/gh-<name>` folder works. The section lists every folder it finds, with the account signed in there.
+2. Click **Change…** next to the profile and pick the account. Optionally write a commit name and email (both or neither), for example the `…@users.noreply.github.com` address of that account.
+
+cc-profiles writes them in the `env` of the profile's `settings.json`, which Claude Code passes to every command it runs:
+
+| Variable | Effect |
+|---|---|
+| `GH_CONFIG_DIR` | `gh` signs in as that account; left out for the default folder (`~/.config/gh`) |
+| `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME` | the name on commits made in that profile |
+| `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_EMAIL` | the email on those commits |
+
+A variable already in `settings.local.json` is changed there, so it keeps winning. Picking the default account with an empty name and email removes the variables and leaves the rest of `env` alone. Every change goes to the backup.
+
+For `git push` to follow the account too, git must ask `gh` for GitHub passwords: run `gh auth setup-git` once. The section warns when it is not set up. It applies to Claude Code sessions in the profile, not to your own terminal, and an open session picks it up when it restarts.
+
+cc-profiles reads only which user each folder is signed in as (the `user:` line of `hosts.yml`). Tokens stay in the GitHub CLI and the system keychain, and are never read or copied.

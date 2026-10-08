@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Profiles tab: a **GitHub** section, to give each profile its own GitHub account. Sign in once with `GH_CONFIG_DIR=~/.config/gh-<name> gh auth login`, then pick the account for a profile with **Change…**, optionally with the name and email for its commits: cc-profiles sets `GH_CONFIG_DIR` and `GIT_AUTHOR_*` / `GIT_COMMITTER_*` in the profile's `env`, so `gh`, `git push` and commits in its Claude Code sessions use that account. It reads only which user each GitHub CLI folder is signed in as, never a token, and warns when git does not ask `gh` for passwords (`gh auth setup-git`). Every change goes to the backup.
 - MCP tab: a **claude.ai connectors** section. Connectors come with the claude.ai account, so every profile signed in with it has the same ones; now each profile can keep some out. A switch per connector adds a deny rule for the whole connector (`mcp__claude_ai_Gmail`) to the profile's `settings.json`, and **All connectors** sets `disableClaudeAiConnectors`, so Claude Code does not connect any of them in that profile. The list follows the account by itself: opening the tab runs `claude mcp list` in the profile (at most once an hour, or with **Check now**), so connectors removed or renamed on claude.ai leave the list and new ones appear, without cc-profiles ever reading the token. **Forget** removes one by hand when the check cannot run. Every change goes to the backup.
 
 ## [0.5.2] - 2026-10-08

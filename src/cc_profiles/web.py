@@ -50,6 +50,7 @@ from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
+from .github import github_state, op_github
 from .extensions import (
     connectors_check,
     list_connectors,
@@ -303,6 +304,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/skills/file": lambda: skill_read(q["profile"], q["name"]),
                 "/api/mcp": lambda: list_mcp(q["profile"]),
                 "/api/connectors": lambda: list_connectors(q["profile"]),
+                "/api/github": github_state,
                 "/api/connectors/check": lambda: connectors_check(q["profile"], q.get("force") == "1"),
                 "/api/mcp/server": lambda: mcp_server(q["profile"], q["scope"], q["name"]),
             }
@@ -371,6 +373,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/mcp/delete": lambda: op_mcp_delete(b["profile"], b["scope"], b["name"]),
                 "/api/connectors/set": lambda: op_connector(b["profile"], b["name"], bool(b["enabled"])),
                 "/api/connectors/forget": lambda: op_connector_forget(b["profile"], b["name"]),
+                "/api/github": lambda: op_github(b["profile"], b.get("folder"), b.get("name"), b.get("email")),
                 "/api/connectors/sync": lambda: op_connectors_sync(b["profile"]),
                 "/api/connectors/all": lambda: op_connectors_all(b["profile"], bool(b["enabled"])),
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),

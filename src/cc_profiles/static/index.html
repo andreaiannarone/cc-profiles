@@ -902,8 +902,9 @@ function renderHealth() {
 // ---------- profiles and sharing ----------
 async function loadSharing() {
   S.sharing = null; renderSharing();
-  const [sharing, shell] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null)]);
-  S.sharing = sharing; S.shell = shell; renderSharing();
+  const [sharing, shell, github] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
+    api("/api/github").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; S.github = github; renderSharing();
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -929,9 +930,11 @@ function renderSharing() {
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
         <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
       </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>
-    ${byFolderHtml()}`;
+    ${byFolderHtml()}
+    ${githubHtml()}`;
   $("#ptemplates").onclick = manageTemplates;
   wireByFolder();
+  wireGithub();
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
@@ -946,6 +949,45 @@ function renderSharing() {
   });
 }
 const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
+
+// ---------- a GitHub account per profile ----------
+function githubHtml() {
+  const g = S.github;
+  if (!g) return "";
+  const login = `GH_CONFIG_DIR=${g.new_dir} gh auth login`;
+  const rows = g.profiles.map(p => `<div class="share"><div class="txt"><span class="bf-t">${esc(p.label)}</span>
+      <div>${p.user ? `GitHub as <b>${esc(p.user)}</b>` : `<span class="issue">Not signed in to GitHub</span>`} · <code>${esc(p.dir || "")}</code>${p.own ? "" : " (the default)"}
+        · ${p.name ? `commits by ${esc(p.name)} &lt;${esc(p.email)}&gt;` : "commits by your git config"}</div></div>
+      <button class="btn small" data-ghedit="${p.id}">Change…</button></div>`).join("");
+  return `<h2 class="section-title">GitHub</h2>
+    <div class="sec"><div class="b">
+      <div class="hint">Each profile can use its own GitHub account: <code>gh</code> and <code>git push</code> in its Claude Code sessions sign in as that account, and its commits carry their own name and email. cc-profiles sets <code>GH_CONFIG_DIR</code> and <code>GIT_AUTHOR_*</code> in the profile's <code>env</code>; tokens stay in the GitHub CLI and are never read.</div>
+      ${g.gh ? "" : `<div class="share"><div class="txt"><span class="issue">The GitHub CLI (<code>gh</code>) is not installed: install it with <code>brew install gh</code>, then sign in.</span></div></div>`}
+      ${g.git_uses_gh === false ? `<div class="share"><div class="txt"><span class="issue">git does not ask <code>gh</code> for GitHub passwords, so <code>git push</code> keeps your usual account in every profile. Run <code>gh auth setup-git</code> once to fix it.</span></div></div>` : ""}
+      ${rows}
+      <div class="share"><div class="txt"><span class="bf-t">Accounts signed in</span>
+        <div>${g.accounts.map(a => `<code>${esc(a.dir)}</code>: ${a.user ? `<b>${esc(a.user)}</b>` : "not signed in"}`).join(" · ")}</div>
+        <div style="margin-top:6px">To add one, run this in a terminal (pick a name for <code>&lt;name&gt;</code>), then reload: <code>${esc(login)}</code></div></div></div>
+    </div></div>`;
+}
+function wireGithub() {
+  document.querySelectorAll("[data-ghedit]").forEach(b => b.onclick = async () => {
+    const g = S.github, p = g.profiles.find(x => x.id === b.dataset.ghedit);
+    const signed = g.accounts.filter(a => a.user);
+    if (!signed.length) { toast("No GitHub account is signed in yet: run gh auth login in a terminal first.", "", true); return; }
+    const cur = signed.find(a => a.dir === p.dir) || signed.find(a => a.default) || signed[0];
+    const res = await modal({ title: `GitHub account of ${p.label}`,
+      sub: `Saved in the <code>env</code> of the profile's <code>settings.json</code>. Open Claude Code sessions in ${esc(p.label)} use it after a restart.`,
+      body: `<div class="form"><label class="f">Account<select id="gh-acc">${signed.map(a => `<option value="${esc(a.dir)}" ${a === cur ? "selected" : ""}>${esc(a.user)} · ${esc(a.dir)}${a.default ? " (the default)" : ""}</option>`).join("")}</select></label>
+        <label class="f">Commit name (empty: your git config)<input class="text" id="gh-name" value="${esc(p.name)}" placeholder="e.g. Ada Lovelace"></label>
+        <label class="f">Commit email<input class="text" id="gh-email" value="${esc(p.email)}" placeholder="e.g. ${esc(cur.user)}@users.noreply.github.com"></label></div>`,
+      actions: [{ label: "Save", kind: "primary", value: "ok" }] });
+    if (!res) return;
+    const v = sel => $(sel, res.el).value;
+    try { await run(() => api("/api/github", { profile: p.id, folder: v("#gh-acc"), name: v("#gh-name"), email: v("#gh-email") })); } catch { return; }
+    loadSharing();
+  });
+}
 
 // ---------- profile by folder ----------
 function byFolderHtml() {

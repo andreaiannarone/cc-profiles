@@ -838,6 +838,51 @@ cat "$HOME/mcp-list.txt"
     listing.write_text(full)
     assert home.snapshot() == before
 
+
+def test_a_github_account_per_profile(home, app_factory):
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    git_protocol: https\n    users:\n        me:\n"
+                                       "            oauth_token: gho_not-a-real-token\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        me-at-work:\n    user: me-at-work\n")
+    home.write(".config/gh-empty/config.yml", "")
+    home.json(".claude-work/settings.local.json", {"env": {"GIT_AUTHOR_EMAIL": "old@example.com", "FOO": "1"}})
+    before = home.snapshot()
+    app = app_factory()
+
+    g = app.get("/api/github")
+    assert "gho_" not in json.dumps(g)  # only the user name is read
+    assert [(a["dir"], a["user"], a["default"]) for a in g["accounts"]] == [
+        ("~/.config/gh", "me", True), ("~/.config/gh-empty", None, False), ("~/.config/gh-work", "me-at-work", False)]
+    assert [(p["id"], p["user"], p["own"]) for p in g["profiles"]] == [("default", "me", False), ("work", "me", False)]
+
+    app.post("/api/github", {"profile": "work", "folder": "~/.config/gh-work", "name": "Me At Work",
+                             "email": "me@work.example"})
+    env = json.loads(home.path(".claude-work/settings.json").read_text())["env"]
+    assert env == {"GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "Me At Work",
+                   "GIT_COMMITTER_NAME": "Me At Work", "GIT_COMMITTER_EMAIL": "me@work.example"}
+    # a key already in settings.local.json is changed there
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {
+        "GIT_AUTHOR_EMAIL": "me@work.example", "FOO": "1"}
+    work = app.get("/api/github")["profiles"][1]
+    assert (work["user"], work["own"], work["name"], work["email"]) == ("me-at-work", True, "Me At Work", "me@work.example")
+    assert "already uses" in app.post("/api/github", {"profile": "work", "folder": "~/.config/gh-work",
+                                                      "name": "Me At Work", "email": "me@work.example"})["message"]
+
+    # back to the default account and the git config: the variables go, other env keys stay
+    app.post("/api/github", {"profile": "work", "folder": "~/.config/gh", "name": "", "email": ""})
+    assert "env" not in json.loads(home.path(".claude-work/settings.json").read_text())
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {"FOO": "1"}
+
+    assert "not signed in" in app.post_error("/api/github", {"profile": "work", "folder": "~/.config/gh-empty"})
+    assert "Unknown GitHub CLI folder" in app.post_error("/api/github", {"profile": "work", "folder": "/etc"})
+    assert "both the name and the email" in app.post_error("/api/github", {"profile": "work", "folder": "",
+                                                                           "name": "Me", "email": ""})
+    assert "Not an email" in app.post_error("/api/github", {"profile": "work", "folder": "", "name": "Me",
+                                                            "email": "me"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

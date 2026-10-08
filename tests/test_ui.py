@@ -270,6 +270,21 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
     assert "All connectors are off" in page.inner_text("#main")
     assert errors == []
 
+
+def test_github_account_per_profile(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.wait_for_selector('[data-ghedit="work"]')
+    page.click('[data-ghedit="work"]')
+    page.select_option("#gh-acc", "~/.config/gh-work")
+    page.fill("#gh-name", "Me At Work")
+    page.fill("#gh-email", "me@work.example")
+    page.click('.modal button:has-text("Save")')
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => document.querySelector('#main').textContent.includes('GitHub as me-at-work')")
+    assert "commits by Me At Work" in page.inner_text("#main")
+    assert errors == []
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")

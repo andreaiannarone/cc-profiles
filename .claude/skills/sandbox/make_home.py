@@ -32,6 +32,9 @@ home.json(".claude.json", {
         "allowedTools": ["Bash"],
         "mcpServers": {"api-docs": {"type": "http", "url": "https://example.com/mcp",
                                     "headers": {"Authorization": "Bearer not-a-real-token"}}}}}})
+# two GitHub CLI sign-ins (the user only: tokens live in the keychain), for the GitHub section
+for folder, user in ((".config/gh", "me-personal"), (".config/gh-work", "me-at-work")):
+    home.write(folder + "/hosts.yml", f"github.com:\n    git_protocol: https\n    users:\n        {user}:\n    user: {user}\n")
 home.json(".claude-work/.claude.json", {"projects": {}})
 home.json(".claude-client/.claude.json", {"projects": {}})
 home.json(".claude/settings.json", {"model": "sonnet", "timeFormat": "24-hour", "theme": "dark",
