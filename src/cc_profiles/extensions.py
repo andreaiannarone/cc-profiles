@@ -354,9 +354,10 @@ def op_mcp_copy_all(pid, scope, name):
 # the same account gets the same ones. A profile can still keep one out with a deny rule naming
 # the whole server (mcp__claude_ai_Gmail), or all of them with "disableClaudeAiConnectors": true
 # (any settings file with true wins). Claude Code records the ones it has connected in the
-# profile's .claude.json, "claudeAiMcpEverConnected", as "claude.ai <name>".
+# profile's .claude.json, "claudeAiMcpEverConnected", as "claude.ai <name>", and never removes them.
 CONNECTOR_PREFIX = "claude.ai "
 CONNECTORS_OFF = "disableClaudeAiConnectors"
+CONNECTORS_SEEN = "claudeAiMcpEverConnected"
 CONNECTORS_URL = "https://claude.ai/customize/connectors"
 
 
@@ -389,11 +390,17 @@ def deny_list(data):
     return [r for r in deny if isinstance(r, str)] if isinstance(deny, list) else []
 
 
+def seen_connectors(cfg):
+    """The connectors Claude Code has connected in the profile. It only ever adds to this list:
+    one removed or renamed on claude.ai stays until it is forgotten here."""
+    seen = cfg.get(CONNECTORS_SEEN) if isinstance(cfg, dict) else None
+    return {n[len(CONNECTOR_PREFIX):] for n in (seen if isinstance(seen, list) else [])
+            if isinstance(n, str) and n.startswith(CONNECTOR_PREFIX)}
+
+
 def connector_names(prof):
     """The connectors Claude Code has connected in this profile, plus the ones a deny rule names."""
-    cfg = read_json(prof["config_abs"], {}) or {}
-    seen = cfg.get("claudeAiMcpEverConnected") if isinstance(cfg, dict) else None
-    names = {n[len(CONNECTOR_PREFIX):] for n in (seen or []) if isinstance(n, str) and n.startswith(CONNECTOR_PREFIX)}
+    names = seen_connectors(read_json(prof["config_abs"], {}) or {})
     known = {connector_rule(n) for n in names}
     for data, _ in settings_pair(prof).values():
         for rule in deny_list(data):
@@ -408,11 +415,12 @@ def list_connectors(pid):
     prof = profile(pid)
     files = settings_pair(prof)
     off = [which for which, (data, _) in files.items() if data.get(CONNECTORS_OFF) is True]
+    seen = seen_connectors(read_json(prof["config_abs"], {}) or {})
     out = []
     for name in connector_names(prof):
         rules = connector_rules(name)
         where = [which for which, (data, _) in files.items() if any(r in deny_list(data) for r in rules)]
-        out.append({"name": name, "rule": rules[0], "blocked": bool(where), "where": where})
+        out.append({"name": name, "rule": rules[0], "blocked": bool(where), "where": where, "seen": name in seen})
     return {"connectors": out, "all_off": off, "url": CONNECTORS_URL,
             "errors": {which: err for which, (_, err) in files.items() if err}}
 
@@ -450,6 +458,24 @@ def op_connector(pid, name, enabled):
     path = settings_files(prof)["settings"]
     msg = f"{name} {'allowed again' if enabled else 'blocked'} in {prof['label']}{shared_note(path)}." + session_hint(prof)
     return {"message": msg, "backup": bk.close()}
+
+
+def op_connector_forget(pid, name):
+    """Take a connector off the profile's list, for one removed or renamed on claude.ai.
+    If it still exists, Claude Code adds it back at its next session."""
+    prof = profile(pid)
+    cfg = load_claude_json(prof)
+    if name not in seen_connectors(cfg):
+        raise ApiError(f"Unknown connector: {name}", 404)
+    rules = connector_rules(name)
+    if any(r in deny_list(d) for d, _ in settings_pair(prof).values() for r in rules):
+        raise ApiError(f"{name} is blocked in {prof['label']}: turn it on first, so no deny rule is left behind")
+    bk = Backup("connector-forget", f"Forget claude.ai connector {name} ({prof['label']})")
+    bk.copy(prof["config_abs"], "claude.json")
+    cfg[CONNECTORS_SEEN] = [n for n in cfg[CONNECTORS_SEEN] if n != CONNECTOR_PREFIX + name]
+    write_json(prof["config_abs"], cfg)
+    return {"message": f"{name} forgotten in {prof['label']}. If it is still connected on claude.ai, "
+                       f"it comes back at the next Claude Code session.", "backup": bk.close()}
 
 
 def op_connectors_all(pid, enabled):

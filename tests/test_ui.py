@@ -263,8 +263,10 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
     page.wait_for_selector(".toast")
     page.wait_for_function("() => { const c = document.querySelector('[data-conn=\"Gmail\"]'); return c && !c.checked; }")
     assert "mcp__claude_ai_Gmail in deny of settings.json" in page.inner_text("#main")
+    page.click('[data-connforget="Linear"]')
+    page.wait_for_function("() => !document.querySelector('[data-conn=\"Linear\"]')")
     page.click("label.switch:has(#conn-all)")
-    page.wait_for_function("() => document.querySelector('[data-conn=\"Linear\"]')?.disabled")
+    page.wait_for_function("() => document.querySelector('[data-conn=\"Google Drive\"]')?.disabled")
     assert "All connectors are off" in page.inner_text("#main")
     assert errors == []
 

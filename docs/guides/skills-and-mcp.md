@@ -58,7 +58,9 @@ Connectors (Gmail, Google Drive, Canva…) belong to your claude.ai account, not
 - **A connector's switch** adds a deny rule for the whole connector, such as `mcp__claude_ai_Gmail`, to the profile's `settings.json`: in that profile Claude can no longer use any of its tools. Turning it back on removes that rule from `settings.json` and from `settings.local.json`; rules for a single tool of the connector (`mcp__claude_ai_Gmail__send_email`) are left alone.
 - **All connectors** sets `"disableClaudeAiConnectors": true` in `settings.json`: Claude Code does not even connect them in that profile. While it is on, the switches of single connectors are greyed out.
 
-The list shows the connectors Claude Code has connected in the profile at least once (it records them in `.claude.json`), plus any connector a deny rule names. A connector you just added on claude.ai appears after the next Claude Code session in the profile.
+The list shows the connectors Claude Code has connected in the profile at least once (it records them in `.claude.json`), plus any connector a deny rule names. It is not live: a connector you just added on claude.ai appears after the next Claude Code session in the profile, and the page reads the list again when you open the tab or pick another profile.
+
+Claude Code only ever adds to that list, so a connector you removed or renamed on claude.ai stays there. **Forget** takes it off the profile's list (the switch must be on, so no deny rule is left behind). If the connector still exists, Claude Code adds it back at its next session, so forgetting one by mistake loses nothing.
 
 The connector itself stays connected on your account, and other profiles keep using it. To give two profiles different connectors, for example a work Google Drive and a personal one, sign them in with two different accounts.
 

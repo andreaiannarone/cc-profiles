@@ -1240,6 +1240,10 @@ function renderMcp(head) {
   const setConn = (path, body, cb) => run(() => api(path, { profile: x.profile, ...body })).then(() => loadExt(), () => { cb.checked = !cb.checked; });
   $("#conn-all")?.addEventListener("change", e => setConn("/api/connectors/all", { enabled: e.target.checked }, e.target));
   document.querySelectorAll("[data-conn]").forEach(cb => cb.onchange = () => setConn("/api/connectors/set", { name: cb.dataset.conn, enabled: cb.checked }, cb));
+  document.querySelectorAll("[data-connforget]").forEach(b => b.onclick = async () => {
+    try { await run(() => api("/api/connectors/forget", { profile: x.profile, name: b.dataset.connforget })); } catch { return; }
+    loadExt();
+  });
   document.querySelectorAll("[data-mcpedit]").forEach(b => b.onclick = () => editMcp(x.mcp.servers[b.dataset.mcpedit]));
   document.querySelectorAll("[data-mcpcopy]").forEach(b => b.onclick = async () => {
     const m = x.mcp.servers[b.dataset.mcpcopy];
@@ -1269,12 +1273,14 @@ function connectorsSection() {
   const rows = c.connectors.map(k => `<div class="prow"><div class="txt">
       <div class="t">${esc(k.name)}${k.blocked ? ` <span class="badge b-none">blocked</span>` : ""}</div>
       <div class="m"><code>${esc(k.rule)}</code>${k.blocked ? ` in deny of ${k.where.map(w => `<code>${files[w]}</code>`).join(" and ")}` : ""}</div></div>
+    ${k.seen && !k.blocked ? `<button class="btn small" data-connforget="${esc(k.name)}" title="Take it off this list: for a connector removed or renamed on claude.ai">Forget</button>` : ""}
     <label class="switch" title="${k.blocked ? "Off in this profile" : "On"}"><input type="checkbox" data-conn="${esc(k.name)}" ${k.blocked ? "" : "checked"} ${off || err ? "disabled" : ""} aria-label="Use ${esc(k.name)} in ${esc(prof?.label || "")}"><span></span></label></div>`).join("");
   return `<div class="ext-head"><h2>claude.ai connectors</h2><span class="hint">They come with the account${prof?.email ? ` <b>${esc(prof.email)}</b>` : ""}, so every profile signed in with it has the same ones. Turning one off adds a deny rule to this profile's <code>settings.json</code>; connect or remove them on <a href="${esc(c.url)}" target="_blank" rel="noopener">claude.ai</a>.</span>
       <span class="conn-all">All connectors</span><label class="switch" title="${off ? "All off" : "On"}"><input type="checkbox" id="conn-all" ${off ? "" : "checked"} ${err ? "disabled" : ""} aria-label="Use claude.ai connectors in ${esc(prof?.label || "")}"><span></span></label></div>
     ${err ? `<div class="hint" style="margin-bottom:8px">${err}</div>` : ""}
     ${off ? `<div class="hint" style="margin-bottom:8px">All connectors are off in this profile: <code>disableClaudeAiConnectors</code> is true in ${c.all_off.map(w => `<code>${files[w]}</code>`).join(" and ")}.</div>` : ""}
-    <div class="table">${rows || `<div class="empty">No connectors seen in this profile yet: Claude Code lists the ones it has connected here at least once.</div>`}</div>`;
+    <div class="table">${rows || `<div class="empty">No connectors seen in this profile yet: Claude Code lists the ones it has connected here at least once.</div>`}</div>
+    ${rows ? `<p class="hint">The list shows the connectors Claude Code has connected in this profile at least once; a new one appears after the next session here. Claude Code never removes one from the list: if you removed or renamed a connector on claude.ai, <b>Forget</b> it here.</p>` : ""}`;
 }
 async function newSkill() {
   const x = S.ext;

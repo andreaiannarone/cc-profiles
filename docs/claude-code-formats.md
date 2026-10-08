@@ -108,7 +108,7 @@ The values used by the UI are in `SETTING_FIELDS` in `settings.py`, checked agai
 
 Connectors come from the claude.ai account, fetched by Claude Code at start. Each one is an MCP server named `claude.ai <name>`; its tools are `mcp__claude_ai_<name>__<tool>`, where every character other than letters, digits, `_` and `-` becomes `_`, and runs of `_` collapse into one (`claude.ai vidIQ for Claude` → `mcp__claude_ai_vidIQ_for_Claude`).
 
-- `.claude.json` lists the ones connected in the profile at least once in `claudeAiMcpEverConnected`, as `"claude.ai Gmail"`.
+- `.claude.json` lists the ones connected in the profile at least once in `claudeAiMcpEverConnected`, as `"claude.ai Gmail"`. Claude Code appends to it and never removes an entry, even when the connector is gone from the account.
 - A deny rule with only the server name (`mcp__claude_ai_Gmail`, or `mcp__claude_ai_Gmail__*`) blocks all its tools.
 - `"disableClaudeAiConnectors": true` in any settings file stops Claude Code from fetching or connecting them; so does the environment variable `ENABLE_CLAUDEAI_MCP_SERVERS=false`.
 

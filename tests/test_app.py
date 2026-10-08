@@ -760,6 +760,15 @@ def test_claude_ai_connectors_can_be_kept_out_of_a_profile(home, app_factory):
     app.post("/api/connectors/set", {"profile": "default", "name": "Old One", "enabled": True})
     assert "Old One" not in [c["name"] for c in app.get("/api/connectors?profile=default")["connectors"]]
 
+    # Claude Code never shortens its list: a connector removed on claude.ai is forgotten here
+    assert [c["seen"] for c in app.get("/api/connectors?profile=default")["connectors"]] == [True, True, True]
+    assert "turn it on first" in app.post_error("/api/connectors/forget", {"profile": "default", "name": "Google Drive"})
+    app.post("/api/connectors/forget", {"profile": "default", "name": "vidIQ for Claude"})
+    assert json.loads(home.path(".claude.json").read_text())["claudeAiMcpEverConnected"] == [
+        "claude.ai Gmail", "claude.ai Google Drive", "github"]
+    assert "Unknown connector" in app.post_error("/api/connectors/forget", {"profile": "default",
+                                                                            "name": "vidIQ for Claude"})
+
     app.post("/api/connectors/all", {"profile": "work", "enabled": False})
     assert json.loads(home.path(".claude-work/settings.json").read_text())["disableClaudeAiConnectors"] is True
     assert app.get("/api/connectors?profile=work")["all_off"] == ["settings"]
