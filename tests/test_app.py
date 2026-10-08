@@ -1541,6 +1541,8 @@ def test_uninstall_removes_what_cc_profiles_added(home, app_factory):
     app = app_factory(CC_PROFILES_AUTO_COMMAND="")  # writes /cc-profiles in both profiles
     app.post("/api/shell", {"install": True})
     app.stop()
+    rcs = lambda: "".join(home.path(f).read_text() for f in (".zshrc", ".bashrc", ".bash_profile") if home.path(f).exists())
+    assert "cc-profiles: profile by folder" in rcs()  # .zshrc or .bashrc, after the shell
     home.write(".claude-other/commands/cc-profiles.md", "my own command\n")
     calls = fake_pipx(home)
     port = str(free_port())
@@ -1556,7 +1558,7 @@ def test_uninstall_removes_what_cc_profiles_added(home, app_factory):
     assert not home.path(".claude/commands/cc-profiles.md").exists()
     assert not home.path(".claude-work/commands/cc-profiles.md").exists()
     assert home.path(".claude-other/commands/cc-profiles.md").read_text() == "my own command\n"
-    assert "cc-profiles: profile by folder" not in home.path(".zshrc").read_text()
+    assert "cc-profiles: profile by folder" not in rcs()
     assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is False
     assert "Backup:" in r.stdout and home.path(".cc-profiles/backups").is_dir()
     assert home.path(".claude/projects").is_dir()  # the profiles stay
