@@ -278,8 +278,11 @@ def test_github_account_per_profile(page_on_sandbox):
     page.click('[data-ghsetup="work"]')
     page.wait_for_selector('[data-ghacc="work"]')
     assert page.input_value('[data-ghacc="work"]') == "me-at-work"  # ~/.config/gh-work already existed
+    page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+    y = page.evaluate("window.scrollY")
     page.select_option('[data-ghacc="work"]', "me-personal")
     page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-personal'")
+    assert page.evaluate("window.scrollY") == y > 0  # redrawn in place, not back to the top
     page.wait_for_function("() => [...document.querySelectorAll('.pcard')].some(c => c.textContent.includes('GitHub as me-personal'))")
     page.click('[data-ghedit="work"]')
     page.fill("#gh-name", "Me At Work")

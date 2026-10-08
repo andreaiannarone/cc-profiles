@@ -903,11 +903,16 @@ function renderHealth() {
 }
 
 // ---------- profiles and sharing ----------
+// After a change the tab is redrawn in place: the loader only shows the first time, and the page
+// keeps its scroll position, as in Settings.
 async function loadSharing() {
-  S.sharing = null; renderSharing();
+  if (!S.sharing) renderSharing();
   const [sharing, shell, github] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
     api("/api/github").catch(() => null)]);
-  S.sharing = sharing; S.shell = shell; S.github = github; renderSharing();
+  S.sharing = sharing; S.shell = shell; S.github = github;
+  const y = window.scrollY;
+  renderSharing();
+  window.scrollTo(0, y);
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
