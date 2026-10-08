@@ -278,6 +278,8 @@ cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
 cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
 cc-profiles install-command   # adds /cc-profiles again (the app does it by itself); --off: never add it
+cc-profiles reinstall         # installs it again from scratch if something is broken; settings and backups stay
+cc-profiles uninstall         # removes /cc-profiles, the profile by folder line and the app; --purge: its data too
 cc-profiles label             # prints the name of the active profile, for status lines
 ```
 

@@ -40,6 +40,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `editprofile.py` | rename, change command, delete with optional merge, with a preview |
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |
+| `selfinstall.py` | `cc-profiles uninstall` and `reinstall`: what cc-profiles added to Claude Code, and the fixed package commands per install kind |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
 | `cli.py` | `serve` (with the automatic backup cleanup at start and daily, and `/cc-profiles` added or updated at start), `open`, `stop`, `restart`, `install-command`, `label`, argument parsing |
 | `entry.py` | the console script: `which` and `shell-init` go to `byfolder.py` without loading the server, everything else to `cli.main` |

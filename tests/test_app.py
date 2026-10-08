@@ -1528,6 +1528,58 @@ def test_install_command_off(home, app_factory):
     assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is True
 
 
+
+def fake_pipx(home):
+    """A pipx in the fake ~/.local/bin that only records its arguments."""
+    pipx = home.write(".local/bin/pipx", '#!/bin/sh\necho "$@" >> "$HOME/pipx-calls"\necho "pipx $1 done"\n')
+    pipx.chmod(0o755)
+    return home.path("pipx-calls")
+
+
+def test_uninstall_removes_what_cc_profiles_added(home, app_factory):
+    basic_home(home)
+    app = app_factory(CC_PROFILES_AUTO_COMMAND="")  # writes /cc-profiles in both profiles
+    app.post("/api/shell", {"install": True})
+    app.stop()
+    home.write(".claude-other/commands/cc-profiles.md", "my own command\n")
+    calls = fake_pipx(home)
+    port = str(free_port())
+
+    # asked without a terminal: nothing happens
+    r = run_cli(home, "uninstall", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 1 and "Nothing was changed" in r.stdout and not calls.exists()
+    assert "pipx uninstall cc-profiles" in r.stdout and "are not touched" in r.stdout
+
+    r = run_cli(home, "uninstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert calls.read_text() == "uninstall cc-profiles\n"
+    assert not home.path(".claude/commands/cc-profiles.md").exists()
+    assert not home.path(".claude-work/commands/cc-profiles.md").exists()
+    assert home.path(".claude-other/commands/cc-profiles.md").read_text() == "my own command\n"
+    assert "cc-profiles: profile by folder" not in home.path(".zshrc").read_text()
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["slash_command"] is False
+    assert "Backup:" in r.stdout and home.path(".cc-profiles/backups").is_dir()
+    assert home.path(".claude/projects").is_dir()  # the profiles stay
+
+    # --purge deletes the app's data too
+    r = run_cli(home, "uninstall", "--yes", "--purge", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0 and not home.path(".cc-profiles").exists()
+
+
+def test_reinstall(home, app_factory):
+    basic_home(home)
+    app_factory().stop()
+    calls = fake_pipx(home)
+    port = str(free_port())
+    r = run_cli(home, "reinstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="pipx")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert calls.read_text() == "install --force cc-profiles\n" and "reinstalled" in r.stdout
+    assert home.path(".cc-profiles/config.json").exists()  # settings and backups are kept
+    r = run_cli(home, "reinstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="source")
+    assert r.returncode == 1 and "source checkout" in r.stdout
+    r = run_cli(home, "uninstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="uv")
+    assert r.returncode == 1 and "uv is not installed" in r.stdout
+
 def test_plugin_command_matches_installed_command():
     sys.path.insert(0, str(SRC))
     from cc_profiles import server

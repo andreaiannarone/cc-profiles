@@ -23,6 +23,8 @@ from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
 from .updater import auto_check
+from .selfinstall import (REINSTALL_COMMANDS, UNINSTALL_PAGE, package_command, purge_data, remove_traces,
+                          run_package, uninstall_plan)
 from .web import Handler, Server
 
 # ---------------------------------------------------------------------------
@@ -225,6 +227,75 @@ def open_app(port, open_browser):
         open_url(url)
 
 
+def confirm(question, yes):
+    """Ask before a big step, unless --yes. Without a terminal to ask in, the answer is no."""
+    if yes:
+        return True
+    if not sys.stdin.isatty():
+        print("Add --yes to do it without being asked.")
+        return False
+    return input(f"{question} [y/N] ").strip().lower() in ("y", "yes")
+
+
+def uninstall_app(port, yes, purge):
+    """cc-profiles uninstall: everything cc-profiles added to Claude Code, then the package."""
+    plan = uninstall_plan()
+    print("This removes cc-profiles from this computer:")
+    print("- stops the server, if it is running")
+    print(f"- removes the /cc-profiles command from Claude Code ({len(plan['commands'])} "
+          f"{'file' if len(plan['commands']) == 1 else 'files'}) and stops adding it")
+    if plan["shell"]:
+        print(f"- removes the profile by folder line from {', '.join(pretty(rc) for rc in plan['shell'])}")
+    print(f"- uninstalls the app: {' '.join(plan['command'])}" if plan["command"] else f"- cannot uninstall the app: {plan['why']}")
+    print(f"- {'deletes' if purge else 'keeps'} {pretty(plan['data'])} (settings, templates and every backup)"
+          + ("" if purge else ": delete it later with rm -rf " + pretty(plan["data"])))
+    print("Your Claude Code profiles, their conversations, memories, settings and logins are not touched.")
+    if not confirm("Uninstall cc-profiles?", yes):
+        print("Nothing was changed.")
+        sys.exit(1)
+    if is_running(port):
+        stop_app(port)
+    lines, backup = remove_traces()
+    for line in lines:
+        print(line[0].upper() + line[1:] + ("" if line.endswith(".") else "."))
+    if backup and not purge:
+        print(f"Backup: {pretty(backup)}")
+    if purge:
+        purge_data()
+        print(f"Deleted {pretty(plan['data'])}.")
+    if not plan["command"]:
+        print(f"The app itself is still installed: {plan['why']}.")
+        sys.exit(1)
+    code = run_package(plan["command"])
+    if code:
+        print(f"{' '.join(plan['command'])} ended with code {code}: run it again by hand.")
+        sys.exit(code)
+    print(f"cc-profiles is uninstalled. What stays, and still works: {UNINSTALL_PAGE}")
+
+
+def reinstall_app(port, yes):
+    """cc-profiles reinstall: the package again from scratch, keeping the settings and backups."""
+    kind, cmd, why = package_command(REINSTALL_COMMANDS)
+    if not cmd:
+        print(f"cc-profiles cannot reinstall itself: {why}.")
+        sys.exit(1)
+    print(f"This installs cc-profiles again from scratch ({kind}): {' '.join(cmd)}")
+    print(f"Your profiles and {pretty(DATA_DIR)} (settings, templates, backups) are kept.")
+    if not confirm("Reinstall cc-profiles?", yes):
+        print("Nothing was changed.")
+        sys.exit(1)
+    was_running = is_running(port)
+    if was_running:
+        stop_app(port)
+    code = run_package(cmd)
+    if code:
+        print(f"{' '.join(cmd)} ended with code {code}: run it again by hand.")
+        sys.exit(code)
+    print("cc-profiles is reinstalled. /cc-profiles in Claude Code is rewritten at its next start.")
+    if was_running:
+        open_app(port, False)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="cc-profiles", description="A local web UI to manage Claude Code profiles.")
     ap.add_argument("--version", action="version", version=f"cc-profiles {__version__}")
@@ -242,6 +313,15 @@ def main(argv=None):
                     help="restart or stop the server instead (what /cc-profiles restart and /cc-profiles stop run)")
     op.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port to listen on")
     op.add_argument("--no-browser", action="store_true", default=argparse.SUPPRESS, help="do not open the browser")
+    un = sub.add_parser("uninstall", help="remove cc-profiles: the /cc-profiles command, the profile by folder line "
+                        "and the app itself (your profiles are not touched)")
+    un.add_argument("--purge", action="store_true", help="also delete ~/.cc-profiles: settings, templates and backups")
+    un.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    un.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port the server listens on")
+    re_ = sub.add_parser("reinstall", help="install cc-profiles again from scratch, if something is broken "
+                         "(settings and backups are kept)")
+    re_.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    re_.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port the server listens on")
     for name, text in (("stop", "stop the server running in the background"),
                        ("restart", "stop the server and start it again in the background, e.g. after an update")):
         sp = sub.add_parser(name, help=text)
@@ -268,6 +348,12 @@ def main(argv=None):
         if backup:
             print(f"Backup: {backup} (undo it from the Backups tab)")
         print("Restart Claude Code sessions that are already open to see /cc-profiles.")
+        return
+    if args.cmd == "uninstall":
+        uninstall_app(args.port, args.yes, args.purge)
+        return
+    if args.cmd == "reinstall":
+        reinstall_app(args.port, args.yes)
         return
     action = args.cmd
     if args.cmd == "open":

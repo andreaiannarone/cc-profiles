@@ -62,6 +62,16 @@ The command appears after cc-profiles has started once: the install script start
 
 Under WSL, cc-profiles opens the Windows browser with `wslview` or Windows' `start`. If neither works, open the address it prints, `http://127.0.0.1:4777`, in your Windows browser yourself. Installing `wslu` (`sudo apt install wslu`) adds `wslview`.
 
+## Something is broken after an update or a reinstall
+
+If cc-profiles does not start, a tab keeps failing or `/cc-profiles` points to the wrong place, install it again from scratch:
+
+```sh
+cc-profiles reinstall
+```
+
+It uses the tool you installed it with (pipx, uv, Homebrew or pip), keeps your settings, templates and backups in `~/.cc-profiles`, and starts the server again if it was running. If the `cc-profiles` command itself is gone, run the [install script](getting-started.md) again: it installs over the old copy.
+
 ## Reporting a bug
 
 The quickest way: **Report a problem…** in the About panel (ⓘ) opens the bug report with the versions filled in. Otherwise open an issue with the steps to reproduce and the output of `cc-profiles --version` and `claude --version`. If an operation went wrong, the `operation.txt` of its backup folder helps, but check it first for private paths or names. Never paste conversations, memories or credentials.
