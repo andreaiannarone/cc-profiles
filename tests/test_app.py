@@ -1849,7 +1849,11 @@ def test_whats_new_lists_the_release_notes_shipped_with_the_app(home, app_factor
 
 def test_about_counts_each_profile(home, app_factory):
     basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    user: me\n")
+    home.json(".claude-work/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(".config/gh-work"))}})
     about = app_factory().get("/api/about")
+    github = {p["id"]: p["account"]["GitHub"] for p in about["profiles"]}
+    assert github == {"default": "me · ~/.config/gh (the default)", "work": "not signed in · ~/.config/gh-work"}
     usage = {p["id"]: p["usage"] for p in about["profiles"]}
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0

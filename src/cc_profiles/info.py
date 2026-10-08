@@ -25,6 +25,7 @@ from .paths import history_stats, memory_files
 from .sharing import SHARE_ITEMS
 from .settings import SCHEMA_VERSION
 from .health import auth_status
+from .github import profile_github
 from .backups import list_backups, recent_dir_size
 
 # ---------------------------------------------------------------------------
@@ -64,6 +65,12 @@ def names_in(d, suffix=None, dirs=False):
     return out
 
 
+def github_line(p):
+    """The GitHub account of a profile's Claude Code sessions, and the GitHub CLI folder it comes from."""
+    g = profile_github(p)
+    return f"{g['user'] or 'not signed in'} · {g['dir']}" + ("" if g["own"] else " (the default)")
+
+
 def about():
     binary = claude_binary()
     primary_cfg = read_json(profiles()[0]["config_abs"], {}) or {}
@@ -93,6 +100,7 @@ def about():
                 "Plan": PLANS.get(a.get("subscriptionType"), a.get("subscriptionType") or "—"),
                 "Organization": a.get("orgName") or "—",
                 "API provider": a.get("apiProvider") or "—",
+                "GitHub": github_line(p),
                 "Analytics": "off" if a.get("analyticsDisabled") else "on",
             },
             "usage": {
