@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - MCP tab: a **claude.ai connectors** section. Connectors come with the claude.ai account, so every profile signed in with it has the same ones; now each profile can keep some out. A switch per connector adds a deny rule for the whole connector (`mcp__claude_ai_Gmail`) to the profile's `settings.json`, and **All connectors** sets `disableClaudeAiConnectors`, so Claude Code does not connect any of them in that profile. The list follows the account by itself: opening the tab runs `claude mcp list` in the profile (at most once an hour, or with **Check now**), so connectors removed or renamed on claude.ai leave the list and new ones appear, without cc-profiles ever reading the token. **Forget** removes one by hand when the check cannot run. Every change goes to the backup.
 
 ### Changed
+- Switches that are on take the logo's orange (`#d97757`), like the mascot and the primary buttons, in both themes.
 - The profile switches (Skills, MCP, Memories, Settings…), the status line and theme pickers have room inside: the options sit in rounded pills inset from the border, with more space around each name.
 - The Profiles tab stays where you are after a change (sharing, profile by folder, GitHub) instead of jumping back to the top.
 
