@@ -116,6 +116,10 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .plug-row .m code { font-size: 11.5px; }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .ghtable td { vertical-align: middle; }
+.ghaccs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 13px; }
+.ghaccs .gh-dir { color: var(--muted); }
+.ghacc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.ghacc.on { padding-right: 8px; }
 .cmdrow { display: flex; gap: 8px; align-items: center; }
 .cmdrow pre { flex: 1; margin: 0; }
 .conn-all { font-size: 13px; color: var(--muted); align-self: center; }
@@ -922,8 +926,9 @@ function renderSharing() {
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
-        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>
+        <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div>
+        ${ghAccountsHtml(p.id)}</div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
@@ -979,6 +984,20 @@ function githubHtml() {
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
     <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
+// Under each profile: its GitHub CLI folder and the accounts it can use, with Connect on the others
+function ghAccountsHtml(pid) {
+  const g = S.github, p = g?.profiles.find(x => x.id === pid);
+  if (!p || !g.gh && !p.user) return "";
+  const head = `<span class="gh-dir">GitHub CLI <code>${esc(p.dir)}</code></span>`;
+  if (p.shared) return `<div class="ghaccs">${head}<span class="hint">uses the account of ${esc(S.profiles[0].label)}: its settings.json is shared</span></div>`;
+  if (!p.set_up) return `<div class="ghaccs">${head}<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button></div>`;
+  const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];
+  return `<div class="ghaccs">${head}
+    ${users.map(u => u === p.user
+      ? `<span class="ghacc on"><b>${esc(u)}</b> <span class="badge b-shared">connected</span></span>`
+      : `<span class="ghacc">${esc(u)} <button class="btn small" data-ghconnect="${p.id}" data-user="${esc(u)}">Connect</button></span>`).join("")}
+    <button class="btn small" data-ghanother="${p.id}">Another account…</button></div>`;
+}
 async function copyCommand(text, btn) {
   try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy command"; }, 1500); }
   catch { toast("Copy it by hand: " + text, "", true); }
@@ -1004,6 +1023,8 @@ function wireGithub() {
   const prof = id => g.profiles.find(x => x.id === id);
   document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyCommand(b.dataset.copy, b));
   document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
+  document.querySelectorAll("[data-ghconnect]").forEach(b => b.onclick = () => githubPost("/api/github/account", { profile: b.dataset.ghconnect, user: b.dataset.user }));
+  document.querySelectorAll("[data-ghanother]").forEach(b => b.onclick = () => signInAnother(prof(b.dataset.ghanother)));
   document.querySelectorAll("[data-ghacc]").forEach(sel => sel.onchange = () => {
     const p = prof(sel.dataset.ghacc);
     if (sel.value === "+") { sel.value = p.user || ""; return signInAnother(p); }

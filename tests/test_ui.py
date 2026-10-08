@@ -286,6 +286,10 @@ def test_github_account_per_profile(page_on_sandbox):
     page.fill("#gh-email", "me@work.example")
     page.click('.modal button:has-text("Save")')
     page.wait_for_function("() => document.querySelector('#main').textContent.includes('Me At Work')")
+    # under the profile, every account with Connect on the ones not in use
+    page.click('[data-ghconnect="work"][data-user="me-at-work"]')
+    page.wait_for_function("() => document.querySelector('[data-ghacc=\"work\"]')?.value === 'me-at-work'")
+    assert page.is_visible('[data-ghconnect="work"][data-user="me-personal"]')
     # another account: the sign-in command for the profile's own folder
     page.select_option('[data-ghacc="work"]', "+")
     page.wait_for_selector("#gh-cmd")

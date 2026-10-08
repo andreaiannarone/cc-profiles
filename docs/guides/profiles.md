@@ -93,7 +93,7 @@ Signing in to GitHub is not part of a Claude Code profile: the GitHub CLI (`gh`)
 
 cc-profiles creates the missing folders when it starts, and a new profile gets its own right away. A new folder starts with the account the profile used until then (`config.yml` and `hosts.yml` are copied without any token line), and `GH_CONFIG_DIR` in the `env` of the profile's `settings.json` points to it: Claude Code passes it to every command it runs, so `gh` in that profile's sessions uses that folder. The profile cards and the About panel show the account: **GitHub as …**.
 
-The **GitHub** section at the bottom of the Profiles tab has a row per profile:
+Under each profile in **Your profiles**, the line *GitHub CLI* shows its folder and every account signed in on this computer: the one in use is marked **connected**, the others have **Connect**, and **Another account…** signs in a new one. The **GitHub** section at the bottom of the tab has the same choices in a table, with the commit identity:
 
 - **GitHub account**: pick any account signed in on this computer. It becomes the active account of that profile's folder only, without signing in again: `gh` keeps each account's token in the system keychain under its name. Picking an account for Default changes your terminal's too.
 - **Another account…** (at the end of the menu) shows the command to sign in with a new account in the profile's folder, ready to copy:
