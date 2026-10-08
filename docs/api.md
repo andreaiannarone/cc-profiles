@@ -16,7 +16,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 
 | Endpoint | Parameters | Returns |
 |---|---|---|
-| `GET /api/profiles` | | profiles with label, command, folder, email, counts, `primary`, `active` |
+| `GET /api/profiles` | | profiles with label, command, folder, email, `github` (the active GitHub account), counts, `primary`, `active` |
 | `GET /api/projects` | | every project: real path, `exists`, expected profile, per-profile counts, `issues` |
 | `GET /api/candidates` | `name` | up to 10 folders with that name under the search roots |
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
@@ -30,6 +30,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/skills` | `profile` | `{skills: [{name, title, description, files, linked}], dir, shared}` |
 | `GET /api/skills/file` | `profile`, `name` | `{content}` of `SKILL.md` and the other `files` in the folder |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
+| `GET /api/connectors` | `profile` | `{connectors: [{name, rule, blocked, where, seen, on_account}], all_off, url, check, errors}`: the claude.ai connectors of the profile. `rule` is the deny rule for the whole connector, `where` the settings files that have it, `seen` whether it is in `claudeAiMcpEverConnected`, `on_account` what the last check found (`null` before one); `all_off` lists the files with `disableClaudeAiConnectors: true` |
+| `GET /api/connectors/check` | `profile`, `force` (`1` to ask again within the hour) | `{skipped, gone, error}`: runs `claude mcp list` in the profile (at most once an hour) to learn the account's connectors; `gone` are the ones in the profile's list that the account no longer has. Skipped without Claude Code, without a sign-in, or with every connector off. Changes nothing |
+| `GET /api/github` | | `{gh, git_uses_gh, accounts, profiles: [{id, label, dir, user, users, set_up, shared, default, name, email}], account_list: [{user, folders, used_by, insecure}], accounts_dir}`: each profile's GitHub CLI folder and active account, its commit identity, and every account signed in on the computer. Only user names are read from `hosts.yml`, never a token |
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
 | `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source}], marketplaces, dir, shared}` |
@@ -84,6 +87,15 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
 | `POST /api/mcp/copy-all` | `profile`, `scope`, `name`: to every profile that lacks it, one backup |
 | `POST /api/mcp/delete` | `profile`, `scope`, `name` |
+| `POST /api/connectors/set` | `profile`, `name`, `enabled`: removes or adds the deny rule for the whole connector |
+| `POST /api/connectors/all` | `profile`, `enabled`: removes or sets `disableClaudeAiConnectors` |
+| `POST /api/connectors/forget` | `profile`, `name`: takes it off `claudeAiMcpEverConnected` (only when no deny rule blocks it) |
+| `POST /api/connectors/sync` | `profile`: takes off the list the connectors the last check found gone from the account |
+| `POST /api/github/save` | `changes: [{profile, user?, name?, email?}]`: the GitHub table, every change checked first, one backup |
+| `POST /api/github/account` | `profile`, `user`: makes a signed-in account the active one in the profile's folder |
+| `POST /api/github/identity` | `profile`, `name`, `email` (both or neither): `GIT_AUTHOR_*` and `GIT_COMMITTER_*` in the profile's `env` |
+| `POST /api/github/setup` | `profile`: gives it its own GitHub CLI folder now (the server does it at start) |
+| `POST /api/github/remove` | `user`: takes an account no profile uses off every folder; its keychain token stays |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
 | `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 500 MB), not JSON |

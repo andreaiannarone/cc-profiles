@@ -5,6 +5,12 @@ The words the app and this documentation use, in alphabetical order.
 ## Backup
 A folder in `~/.cc-profiles/backups/` saved before every change, with the original files and a journal of each step. **Restore** replays the journal backwards. See [Backups](guides/backups.md).
 
+## Connector
+A claude.ai connector (Gmail, Google Drive, Canva…): an MCP server that comes with your claude.ai account, so every profile signed in with it has it. A profile can keep any of them out from the MCP tab. See [claude.ai connectors](guides/skills-and-mcp.md#claudeai-connectors).
+
+## GitHub CLI folder
+Where the GitHub CLI (`gh`) keeps its sign-in: `~/.config/gh` for the Default profile and your terminal, `~/.config/gh-<id>` for each other profile. It decides which GitHub account `gh` and `git push` use in that profile's Claude Code sessions. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile).
+
 ## Launcher
 A small script in `~/.local/bin`, such as `claude-work`, that starts Claude Code in one profile by setting `CLAUDE_CONFIG_DIR`. cc-profiles creates one for each new profile. See [Getting started](getting-started.md#starting-claude-code-in-a-profile).
 

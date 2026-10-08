@@ -64,6 +64,7 @@ rm -rf ~/.cc-profiles
 |---|---|---|
 | your profiles (`~/.claude`, `~/.claude-<id>`) | yes: they are Claude Code's own folders | delete a profile from the **Profiles** tab *before* uninstalling, or remove its folder by hand |
 | launchers such as `claude-work` in `~/.local/bin` | yes: each one only sets `CLAUDE_CONFIG_DIR` and runs `claude` | `grep -l "managed by cc-profiles" ~/.local/bin/claude-* \| xargs rm` |
+| GitHub CLI folders (`~/.config/gh-<id>`, `~/.config/gh-accounts`) and `GH_CONFIG_DIR` in each profile's `settings.json` | yes: each profile keeps its GitHub account | `rm -rf ~/.config/gh-<id>`, then remove `GH_CONFIG_DIR` from the profile's `env` (**Settings → Advanced editor**); keep `~/.config/gh`, your terminal's |
 | shared items (links such as `~/.claude-work/skills → ../.claude/skills`) | yes: they are plain symlinks | turn sharing off in the **Profiles** tab before uninstalling, to give each profile its own copy |
 | the status line made by cc-profiles (`statusline.sh` in each profile) | yes; without `~/.cc-profiles/config.json` it shows the folder name (`work`) instead of the profile name | **Settings → Status line → Off** before uninstalling, or edit `statusLine` in `settings.json` |
 

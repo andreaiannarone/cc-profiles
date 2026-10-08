@@ -44,7 +44,10 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
-| `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv` or `source`), for the update tests |
+| `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv`, `brew` or `source`), for the update, uninstall and reinstall tests |
+| `CC_PROFILES_AUTO_COMMAND` | `0`: at start, do not add or update `/cc-profiles` in the profiles (the tests set it) |
+| `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
+| `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
 | `CC_PROFILES_SOURCE` | for `install.sh`: install from this folder instead of PyPI |
 | `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile; when it is set, the [profile by folder](guides/profile-by-folder.md) function leaves it as it is |
@@ -115,4 +118,5 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 |---|---|
 | profile folders and `~/.claude.json` | the operations you run |
 | `~/.local/bin/<command>` | creating, editing or deleting a profile (launcher scripts). Only files containing `# managed by cc-profiles` are ever rewritten or removed |
+| `~/.config/gh`, `~/.config/gh-<id>`, `~/.config/gh-accounts` | GitHub CLI folders. At start, each profile without one gets `~/.config/gh-<id>` (a copy of `config.yml` and of `hosts.yml` without any token line), and `GH_CONFIG_DIR` in the `env` of its `settings.json`; picking an account rewrites the `user:` line of its `hosts.yml`, removing an account its entry. Tokens in the system keychain are never read or written. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile) |
 | `~/.zshrc`, `~/.bashrc`, `~/.bash_profile` | only to rename or remove a profile alias that was already there, together with the `# Claude Code:` comment line above it; and to add or remove the one line ending in `# cc-profiles: profile by folder` when you turn [profile by folder](guides/profile-by-folder.md) on or off |

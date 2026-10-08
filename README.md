@@ -205,7 +205,7 @@ cc-profiles
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-dark.jpg">
         <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available, and the claude.ai connectors with a switch each">
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
     </td>
@@ -411,7 +411,8 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Writes are atomic (temporary file, then rename), so Claude Code never reads a half-written file, even while it is running.
 - Names of projects, memories, skills and backups are validated against path traversal.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
-- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer.
+- GitHub tokens are never read or copied: cc-profiles reads only the user names in the GitHub CLI's `hosts.yml`, and the tokens stay in the system keychain.
+- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer. The list of your claude.ai connectors comes from `claude mcp list`, so that request is Claude Code's own, with its own sign-in.
 
 See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 
@@ -422,7 +423,9 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 - Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.289; the **About** panel shows which version you have.
 - "Session open" means a `claude` process is running in the profile (read from the process list on macOS and from `/proc` on Linux), or a conversation was written in the last 2 minutes.
 - Claude Code keeps `.claude.json` in memory while it runs: restart open sessions after changing their MCP servers.
-- Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it.
+- Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it, nor its GitHub CLI folder.
+- The account's claude.ai connectors are known only through `claude mcp list`, which also starts every MCP server of the profile to check it: cc-profiles runs it at most once an hour per profile.
+- `cc-profiles uninstall` and `reinstall` work with pipx, uv, Homebrew and pip; a source checkout is removed or updated by hand.
 
 ---
 
