@@ -39,10 +39,18 @@ def sandbox():
     root = Path(tempfile.mkdtemp(prefix="cc-profiles-shots-"))
     subprocess.run([sys.executable, str(ROOT / ".claude" / "skills" / "sandbox" / "make_home.py"), str(root)],
                    check=True, capture_output=True)
-    # a stand-in claude in the fake ~/.local/bin, also on PATH: no notice about installing Claude Code
+    # a stand-in claude in the fake ~/.local/bin, also on PATH: no notice about installing Claude Code,
+    # and `claude mcp list` answers with the sandbox's claude.ai connectors
     claude = root / ".local" / "bin" / "claude"
     claude.parent.mkdir(parents=True, exist_ok=True)
-    claude.write_text("#!/bin/sh\necho '2.1.0 (Claude Code)'\n")
+    claude.write_text("#!/bin/sh\n"
+                      "if [ \"$1\" = mcp ]; then\n"
+                      "  echo 'claude.ai Gmail: https://gmailmcp.googleapis.com/mcp/v1 - ✔ Connected'\n"
+                      "  echo 'claude.ai Google Drive: https://drivemcp.googleapis.com/mcp/v1 - ✔ Connected'\n"
+                      "  echo 'claude.ai Linear: https://mcp.linear.app/mcp - ✔ Connected'\n"
+                      "  exit 0\n"
+                      "fi\n"
+                      "echo '2.1.0 (Claude Code)'\n")
     claude.chmod(0o755)
     return root
 

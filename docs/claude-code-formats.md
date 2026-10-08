@@ -110,6 +110,7 @@ Connectors come from the claude.ai account, fetched by Claude Code at start. Eac
 
 - `.claude.json` lists the ones connected in the profile at least once in `claudeAiMcpEverConnected`, as `"claude.ai Gmail"`. Claude Code appends to it and never removes an entry, even when the connector is gone from the account.
 - A deny rule with only the server name (`mcp__claude_ai_Gmail`, or `mcp__claude_ai_Gmail__*`) blocks all its tools.
+- `claude mcp list` (with `CLAUDE_CONFIG_DIR` for the profile) asks claude.ai for the account's connectors now and prints one `claude.ai <name>: <url> - <status>` line each, after checking every MCP server.
 - `"disableClaudeAiConnectors": true` in any settings file stops Claude Code from fetching or connecting them; so does the environment variable `ENABLE_CLAUDEAI_MCP_SERVERS=false`.
 
 Checked against Claude Code 2.1.294.

@@ -785,6 +785,59 @@ def test_claude_ai_connectors_can_be_kept_out_of_a_profile(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
 
+
+def test_connectors_follow_the_account(home, app_factory):
+    """`claude mcp list` tells which connectors the account has now: gone ones leave the list."""
+    basic_home(home)
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
+                               "claudeAiMcpEverConnected": ["claude.ai Gmail", "claude.ai Old Remote",
+                                                            "claude.ai Old Blocked", "claude.ai Google Drive"]})
+    home.json(".claude/settings.json", {"permissions": {"deny": ["mcp__claude_ai_Old_Blocked"]}})
+    claude = home.write(".local/bin/claude", """#!/bin/sh
+echo "$CLAUDE_CONFIG_DIR|$@" >> "$HOME/claude-calls"
+cat "$HOME/mcp-list.txt"
+""")
+    claude.chmod(0o755)
+    listing = home.write("mcp-list.txt", "Checking MCP server health…\n\n"
+               "claude.ai Gmail: https://gmailmcp.googleapis.com/mcp/v1 - ✔ Connected\n"
+               "claude.ai Google Drive: https://drivemcp.googleapis.com/mcp/v1 - ! Needs authentication\n"
+               "claude.ai Linear: https://mcp.linear.app/mcp - ✔ Connected\n"
+               "filesystem: npx -y server-filesystem - ✔ Connected\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    r = app.get("/api/connectors/check?profile=default")
+    assert r == {"skipped": None, "gone": ["Old Remote"], "error": None}  # the blocked one keeps its rule
+    app.post("/api/connectors/sync", {"profile": "default"})
+    assert json.loads(home.path(".claude.json").read_text())["claudeAiMcpEverConnected"] == [
+        "claude.ai Gmail", "claude.ai Old Blocked", "claude.ai Google Drive"]
+    listed = {c["name"]: c for c in app.get("/api/connectors?profile=default")["connectors"]}
+    assert sorted(listed) == ["Gmail", "Google Drive", "Linear", "Old Blocked"]  # Linear: new, not seen yet
+    assert listed["Linear"]["on_account"] and not listed["Linear"]["seen"]
+    assert listed["Old Blocked"]["on_account"] is False and listed["Old Blocked"]["blocked"]
+    # turned on, its rule goes; the next sync takes it off the list
+    app.post("/api/connectors/set", {"profile": "default", "name": "Old Blocked", "enabled": True})
+    assert app.get("/api/connectors/check?profile=default")["gone"] == ["Old Blocked"]
+    app.post("/api/connectors/sync", {"profile": "default"})
+    assert "up to date" in app.post("/api/connectors/sync", {"profile": "default"})["message"]
+
+    # once an hour, unless asked again; the default profile runs without CLAUDE_CONFIG_DIR
+    app.get("/api/connectors/check?profile=default")
+    app.get("/api/connectors/check?profile=default&force=1")
+    assert home.path("claude-calls").read_text().splitlines() == ["|mcp list"] * 2  # the first check and the forced one
+    # no answer from claude.ai: nothing is taken off
+    full = listing.read_text()
+    listing.write_text("Checking MCP server health…\n")
+    r = app.get("/api/connectors/check?profile=default&force=1")
+    assert "listed no connectors" in r["error"] and r["gone"] == []
+    # a profile without an account, or with connectors off, is not checked
+    assert "not signed in" in app.get("/api/connectors/check?profile=work")["skipped"]
+
+    app.restore_all()
+    home.path("claude-calls").unlink()
+    listing.write_text(full)
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)
