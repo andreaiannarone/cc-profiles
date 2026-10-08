@@ -728,6 +728,54 @@ def test_mcp_servers_are_managed_and_undoable(home, app_factory):
     assert home.snapshot() == before
 
 
+
+def test_claude_ai_connectors_can_be_kept_out_of_a_profile(home, app_factory):
+    basic_home(home)
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
+                               "claudeAiMcpEverConnected": ["claude.ai Gmail", "claude.ai Google Drive",
+                                                            "claude.ai vidIQ for Claude", "github"]})
+    home.json(".claude/settings.local.json", {"permissions": {"deny": ["mcp__claude_ai_Gmail__*", "Bash(rm:*)"]}})
+    home.json(".claude/settings.json", {"permissions": {"defaultMode": "plan",
+                                                        "deny": ["mcp__claude_ai_Old_One", "mcp__claude_ai_Gmail__send"]}})
+    before = home.snapshot()
+    app = app_factory()
+
+    listed = app.get("/api/connectors?profile=default")
+    assert [(c["name"], c["rule"], c["blocked"], c["where"]) for c in listed["connectors"]] == [
+        ("Gmail", "mcp__claude_ai_Gmail", True, ["local"]),
+        ("Google Drive", "mcp__claude_ai_Google_Drive", False, []),
+        ("Old One", "mcp__claude_ai_Old_One", True, ["settings"]),  # only a deny rule names it
+        ("vidIQ for Claude", "mcp__claude_ai_vidIQ_for_Claude", False, [])]
+    assert listed["all_off"] == [] and app.get("/api/connectors?profile=work")["connectors"] == []
+
+    app.post("/api/connectors/set", {"profile": "default", "name": "Google Drive", "enabled": False})
+    app.post("/api/connectors/set", {"profile": "default", "name": "Gmail", "enabled": True})
+    settings = json.loads(home.path(".claude/settings.json").read_text())
+    assert settings["permissions"] == {"defaultMode": "plan", "deny": [
+        "mcp__claude_ai_Old_One", "mcp__claude_ai_Gmail__send", "mcp__claude_ai_Google_Drive"]}
+    # one tool's rule stays; the rule for the whole connector is gone from settings.local.json
+    assert json.loads(home.path(".claude/settings.local.json").read_text()) == {"permissions": {"deny": ["Bash(rm:*)"]}}
+    assert "already off" in app.post("/api/connectors/set", {"profile": "default", "name": "Google Drive",
+                                                             "enabled": False})["message"]
+    app.post("/api/connectors/set", {"profile": "default", "name": "Old One", "enabled": True})
+    assert "Old One" not in [c["name"] for c in app.get("/api/connectors?profile=default")["connectors"]]
+
+    app.post("/api/connectors/all", {"profile": "work", "enabled": False})
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["disableClaudeAiConnectors"] is True
+    assert app.get("/api/connectors?profile=work")["all_off"] == ["settings"]
+    app.post("/api/connectors/all", {"profile": "work", "enabled": True})
+    assert "disableClaudeAiConnectors" not in json.loads(home.path(".claude-work/settings.json").read_text())
+
+    assert "Unknown connector" in app.post_error("/api/connectors/set", {"profile": "default", "name": "Nope",
+                                                                         "enabled": False})
+    home.write(".claude/settings.local.json", "{ broken")
+    assert "has an error" in app.post_error("/api/connectors/set", {"profile": "default", "name": "Google Drive",
+                                                                    "enabled": True})
+    home.json(".claude/settings.local.json", {"permissions": {"deny": ["Bash(rm:*)"]}})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

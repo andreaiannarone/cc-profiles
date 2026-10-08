@@ -51,10 +51,13 @@ from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto,
                       op_backup_prune, op_restore)
 from .info import about
 from .extensions import (
+    list_connectors,
     list_mcp,
     list_skills,
     mcp_all_plan,
     mcp_server,
+    op_connector,
+    op_connectors_all,
     op_mcp_copy,
     op_mcp_copy_all,
     op_mcp_delete,
@@ -296,6 +299,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/skills": lambda: list_skills(q["profile"]),
                 "/api/skills/file": lambda: skill_read(q["profile"], q["name"]),
                 "/api/mcp": lambda: list_mcp(q["profile"]),
+                "/api/connectors": lambda: list_connectors(q["profile"]),
                 "/api/mcp/server": lambda: mcp_server(q["profile"], q["scope"], q["name"]),
             }
             if u.path not in routes:
@@ -361,6 +365,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/mcp/save": lambda: op_mcp_save(b["profile"], b["scope"], b["name"], b["config"],
                                                      b.get("old_name") or None),
                 "/api/mcp/delete": lambda: op_mcp_delete(b["profile"], b["scope"], b["name"]),
+                "/api/connectors/set": lambda: op_connector(b["profile"], b["name"], bool(b["enabled"])),
+                "/api/connectors/all": lambda: op_connectors_all(b["profile"], bool(b["enabled"])),
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),
                 "/api/mcp/copy-all": lambda: op_mcp_copy_all(b["profile"], b["scope"], b["name"]),
                 "/api/profiles/update": lambda: op_update_profile(b["id"], b.get("label"), b.get("command")),

@@ -253,6 +253,21 @@ def test_profile_by_folder_section(page_on_sandbox):
     assert errors == []
 
 
+
+def test_claude_ai_connectors_switches(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "mcp")
+    page.wait_for_selector('[data-conn="Gmail"]', state="attached")
+    assert "claude.ai connectors" in page.inner_text("#main")
+    page.click('label.switch:has([data-conn="Gmail"])')
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => { const c = document.querySelector('[data-conn=\"Gmail\"]'); return c && !c.checked; }")
+    assert "mcp__claude_ai_Gmail in deny of settings.json" in page.inner_text("#main")
+    page.click("label.switch:has(#conn-all)")
+    page.wait_for_function("() => document.querySelector('[data-conn=\"Linear\"]')?.disabled")
+    assert "All connectors are off" in page.inner_text("#main")
+    assert errors == []
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")

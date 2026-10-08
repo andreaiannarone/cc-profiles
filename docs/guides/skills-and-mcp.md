@@ -48,6 +48,18 @@ Not listed here, because they are configured elsewhere:
 
 - servers in a project's `.mcp.json`, which is part of the project and usually committed with it
 - servers from plugins
-- claude.ai connectors (Gmail, Google Drive, Canva…), which belong to your claude.ai account
 
 Claude Code keeps `.claude.json` in memory while it runs. Close open sessions in the profile before changing its MCP servers, or restart them afterwards.
+
+## claude.ai connectors
+
+Connectors (Gmail, Google Drive, Canva…) belong to your claude.ai account, not to the profile: every profile signed in with the same account gets the same ones, and you connect or remove them on [claude.ai](https://claude.ai/customize/connectors). What a profile can do is keep some of them out, and the **claude.ai connectors** section under the MCP servers does that with a switch:
+
+- **A connector's switch** adds a deny rule for the whole connector, such as `mcp__claude_ai_Gmail`, to the profile's `settings.json`: in that profile Claude can no longer use any of its tools. Turning it back on removes that rule from `settings.json` and from `settings.local.json`; rules for a single tool of the connector (`mcp__claude_ai_Gmail__send_email`) are left alone.
+- **All connectors** sets `"disableClaudeAiConnectors": true` in `settings.json`: Claude Code does not even connect them in that profile. While it is on, the switches of single connectors are greyed out.
+
+The list shows the connectors Claude Code has connected in the profile at least once (it records them in `.claude.json`), plus any connector a deny rule names. A connector you just added on claude.ai appears after the next Claude Code session in the profile.
+
+The connector itself stays connected on your account, and other profiles keep using it. To give two profiles different connectors, for example a work Google Drive and a personal one, sign them in with two different accounts.
+
+Every change goes to the backup, and an open session picks it up when it restarts.

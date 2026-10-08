@@ -16,11 +16,12 @@ root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(tempfile.mkdtemp(prefix=
 root.mkdir(parents=True, exist_ok=True)
 home = FakeHome(root)
 
-# Three profiles: Default (~/.claude), Work and Client. Default has two MCP servers.
+# Three profiles: Default (~/.claude), Work and Client. Default has MCP servers and three claude.ai connectors.
 for name in ("", "work", "client"):
     home.profile(name)
 home.json(".claude.json", {
     "oauthAccount": {"emailAddress": "me@example.com"},
+    "claudeAiMcpEverConnected": ["claude.ai Google Drive", "claude.ai Gmail", "claude.ai Linear"],
     "mcpServers": {
         "filesystem": {"type": "stdio", "command": "npx",
                        "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/code"]},

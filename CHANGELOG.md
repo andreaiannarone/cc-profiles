@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- MCP tab: a **claude.ai connectors** section. Connectors come with the claude.ai account, so every profile signed in with it has the same ones; now each profile can keep some out. A switch per connector adds a deny rule for the whole connector (`mcp__claude_ai_Gmail`) to the profile's `settings.json`, and **All connectors** sets `disableClaudeAiConnectors`, so Claude Code does not connect any of them in that profile. The list shows the connectors Claude Code has connected in the profile. Every change goes to the backup.
+
 ## [0.5.2] - 2026-10-08
 
 ### Added
