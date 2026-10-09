@@ -33,6 +33,7 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
    - [Profiles and sharing](guides/profiles.md): create, edit, delete, share
    - [Profile by folder](guides/profile-by-folder.md): `claude` starts in the profile of the folder you are in
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
+   - [Agents](guides/agents.md): create, edit, copy and delete subagents, with a form for their model, tools and instructions
    - [Search and compare](guides/search-and-compare.md): search every profile at once, compare two profiles side by side
    - [Plugins](guides/plugins.md): see the installed plugins and turn them on or off
    - [Export and import](guides/export-import.md): move a profile to another computer

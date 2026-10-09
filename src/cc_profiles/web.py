@@ -50,6 +50,8 @@ from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
+from .agents import (agent_all_plan, agent_read, list_agents, op_agent_copy, op_agent_copy_all, op_agent_delete,
+                     op_agent_save, op_agent_save_raw)
 from .github import (github_state, op_github_account, op_github_identity, op_github_remove, op_github_save,
                      op_github_setup)
 from .extensions import (
@@ -302,6 +304,9 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/update/auto": lambda: update_status(),
                 "/api/whatsnew": lambda: whats_new(),
                 "/api/skills": lambda: list_skills(q["profile"]),
+                "/api/agents": lambda: list_agents(q["profile"]),
+                "/api/agents/file": lambda: agent_read(q["profile"], q["name"]),
+                "/api/agents/copy-all/preview": lambda: agent_all_plan(q["profile"], q["name"]),
                 "/api/skills/file": lambda: skill_read(q["profile"], q["name"]),
                 "/api/mcp": lambda: list_mcp(q["profile"]),
                 "/api/connectors": lambda: list_connectors(q["profile"]),
@@ -367,6 +372,11 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/skills/save": lambda: op_skill_save(b["profile"], b["name"], b["content"]),
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),
                 "/api/skills/delete": lambda: op_skill_delete(b["profile"], b["name"]),
+                "/api/agents/save": lambda: op_agent_save(b["profile"], b.get("fields"), b.get("prompt", ""), b.get("old_name")),
+                "/api/agents/save-raw": lambda: op_agent_save_raw(b["profile"], b["name"], b["content"]),
+                "/api/agents/delete": lambda: op_agent_delete(b["profile"], b["name"]),
+                "/api/agents/copy": lambda: op_agent_copy(b["profile"], b["name"], b["to"]),
+                "/api/agents/copy-all": lambda: op_agent_copy_all(b["profile"], b["name"]),
                 "/api/skills/copy": lambda: op_skill_copy(b["profile"], b["name"], b["to"]),
                 "/api/skills/copy-all": lambda: op_skill_copy_all(b["profile"], b["name"]),
                 "/api/mcp/save": lambda: op_mcp_save(b["profile"], b["scope"], b["name"], b["config"],

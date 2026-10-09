@@ -29,6 +29,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/usage.csv` | the same as `/api/usage` | a `text/csv; charset=utf-8` download, `cc-profiles-usage-<profile>-<days>d.csv`: one row per day and model with `date`, `model`, `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens`, `replies`, `estimated_cost_usd` (empty without a list price). Needs the `X-Token` header like every API call. Read-only |
 | `GET /api/skills` | `profile` | `{skills: [{name, title, description, files, linked}], dir, shared}` |
 | `GET /api/skills/file` | `profile`, `name` | `{content}` of `SKILL.md` and the other `files` in the folder |
+| `GET /api/agents` | `profile` | `{agents: [{name, title, description, model, color, tools, disallowed, effort, valid, linked, lines}], dir, shared, plugins, options, tools, schema_version}`: the profile's subagents; `plugins` the read-only ones of installed plugins (with `plugin`); `options` the dropdowns' values |
+| `GET /api/agents/file` | `profile`, `name` | `{content, fields, prompt, valid, other}`: the whole file, the form's fields, the instructions, and the other keys of the frontmatter |
+| `GET /api/agents/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
 | `GET /api/connectors` | `profile` | `{connectors: [{name, rule, blocked, where, seen, on_account}], all_off, url, check, errors}`: the claude.ai connectors of the profile. `rule` is the deny rule for the whole connector, `where` the settings files that have it, `seen` whether it is in `claudeAiMcpEverConnected`, `on_account` what the last check found (`null` before one); `all_off` lists the files with `disableClaudeAiConnectors: true` |
 | `GET /api/connectors/check` | `profile`, `force` (`1` to ask again within the hour) | `{skipped, gone, error}`: runs `claude mcp list` in the profile (at most once an hour) to learn the account's connectors; `gone` are the ones in the profile's list that the account no longer has. Skipped without Claude Code, without a sign-in, or with every connector off. Changes nothing |
@@ -83,6 +86,11 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/skills/copy` | `profile`, `name`, `to` |
 | `POST /api/skills/copy-all` | `profile`, `name`: to every profile that lacks it, one backup |
 | `POST /api/skills/delete` | `profile`, `name` |
+| `POST /api/agents/save` | `profile`, `fields` (`name`, `description`, `tools`, `disallowedTools`, `model`, `effort`, `permissionMode`, `maxTurns`, `color`), `prompt`, `old_name` (to edit or rename; without it, creates) |
+| `POST /api/agents/save-raw` | `profile`, `name`, `content`: the whole file; `name` in it must stay the same |
+| `POST /api/agents/copy` | `profile`, `name`, `to` |
+| `POST /api/agents/copy-all` | `profile`, `name`: to every profile that lacks it, one backup |
+| `POST /api/agents/delete` | `profile`, `name` |
 | `POST /api/mcp/save` | `profile`, `scope`, `name`, `config` (object), `old_name` (to rename or edit) |
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
 | `POST /api/mcp/copy-all` | `profile`, `scope`, `name`: to every profile that lacks it, one backup |

@@ -134,6 +134,7 @@ cc-profiles
 - 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches. Each profile also gets its own GitHub account (a GitHub CLI folder named after it) and commit identity, without touching tokens.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile, or copy one to every profile at once.
+- 🤖 **Agents**: create, edit, copy (to one profile or to all) and delete subagents, with a form for their model, tools, effort, permissions and instructions; agents from plugins are listed read-only.
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list. Turn claude.ai connectors (Gmail, Google Drive…) off in one profile, one by one or all together, even though they come with the account.
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
@@ -346,6 +347,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 - **[Profiles and sharing](https://cc-profiles.andreaia.com/guides/profiles.html)**: create, edit, delete, share
 - **[Profile by folder](https://cc-profiles.andreaia.com/guides/profile-by-folder.html)**: `claude` starts in the profile of the folder you are in
 - **[Skills and MCP servers](https://cc-profiles.andreaia.com/guides/skills-and-mcp.html)**: create, edit, copy, delete
+- **[Agents](https://cc-profiles.andreaia.com/guides/agents.html)**: create, edit, copy and delete subagents
 - **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and turn them on or off
 - **[Search and compare](https://cc-profiles.andreaia.com/guides/search-and-compare.html)**: search every profile at once, compare two side by side
 - **[Export and import](https://cc-profiles.andreaia.com/guides/export-import.html)**: move a profile to another computer

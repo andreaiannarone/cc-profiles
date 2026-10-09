@@ -12,6 +12,7 @@ from .paths import memory_files, path_index, project_folders
 from .settings import effective, fields_for, settings_files
 from .info import names_in
 from .extensions import mcp_summary
+from .agents import agent_texts
 
 # ---------------------------------------------------------------------------
 # Search and compare (read-only)
@@ -188,6 +189,11 @@ def compare(a, b):
     skills = {"only_a": oa, "only_b": ob, "both": [{"name": n, "same": ska[n] == skb[n]} for n in both],
               "shared": os.path.realpath(os.path.join(pa["dir_abs"], "skills"))
               == os.path.realpath(os.path.join(pb["dir_abs"], "skills"))}
+    aga, agb = agent_texts(pa), agent_texts(pb)
+    oa, ob, both = split3(aga, agb)
+    agents = {"only_a": oa, "only_b": ob, "both": [{"name": n, "same": aga[n] == agb[n]} for n in both],
+              "shared": os.path.realpath(os.path.join(pa["dir_abs"], "agents"))
+              == os.path.realpath(os.path.join(pb["dir_abs"], "agents"))}
     ma = (read_json(pa["config_abs"], {}) or {}).get("mcpServers") or {}
     mb = (read_json(pb["config_abs"], {}) or {}).get("mcpServers") or {}
     oa, ob, both = split3(ma, mb)
@@ -212,4 +218,4 @@ def compare(a, b):
         plugins[k] = {"only_a": oa, "only_b": ob, "both": both}
     return {"a": {"id": pa["id"], "label": pa["label"]}, "b": {"id": pb["id"], "label": pb["label"]},
             "settings": settings, "permissions": {"a": perms["a"], "b": perms["b"], "diff": perm_diff},
-            "skills": skills, "mcp": mcp, "claude_md": claude_md, "plugins": plugins}
+            "skills": skills, "agents": agents, "mcp": mcp, "claude_md": claude_md, "plugins": plugins}

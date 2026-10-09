@@ -121,7 +121,7 @@ The tabs sit in one row under the profile cards. On a narrow window the ones tha
 |---|---|
 | `/` | Search everything |
 | `g` then `p`, `m`, `c`, `u` | Projects, Memories, Conversations, Usage |
-| `g` then `s`, `x`, `l` | Skills, MCP, Plugins |
+| `g` then `s`, `a`, `x`, `l` | Skills, Agents, MCP, Plugins |
 | `g` then `r`, `o` | Profiles, Compare |
 | `g` then `b`, `h`, `t` | Backups, Health, Settings |
 | `?` | Show the list of shortcuts |

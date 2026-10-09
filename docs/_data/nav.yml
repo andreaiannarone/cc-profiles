@@ -27,6 +27,7 @@
     - { title: Profiles and sharing, url: guides/profiles.md, description: "Create, rename and delete Claude Code profiles, start one from a template, and share skills, plugins, agents and settings between profiles." }
     - { title: Profile by folder, url: guides/profile-by-folder.md, description: "Start Claude Code in the right profile automatically from the folder you are in, using the same rules as the Projects tab." }
     - { title: Skills and MCP servers, url: guides/skills-and-mcp.md, description: "Create, edit and copy Claude Code skills and MCP servers, for one profile or all of them, with secrets kept out of view." }
+    - { title: Agents, url: guides/agents.md, description: "Create, edit, copy and delete Claude Code subagents per profile: model, tools, effort, permissions and instructions, with a backup for every change." }
     - { title: Search and compare, url: guides/search-and-compare.md, description: "Search projects, memories, skills, MCP servers and CLAUDE.md in every Claude Code profile, and compare two profiles side by side." }
     - { title: Plugins, url: guides/plugins.md, description: "See the Claude Code plugins installed in each profile, their version and marketplace, and turn them on or off." }
     - { title: Export and import, url: guides/export-import.md, description: "Move a Claude Code profile to another computer as a .zip, with or without conversations; login credentials never travel." }
