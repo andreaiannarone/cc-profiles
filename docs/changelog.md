@@ -3,6 +3,14 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.5.4] - 2026-10-09
+
+**Added**
+- **Agents** tab: the subagents of each profile (`agents/<name>.md`) as cards, with their model, tools and color. **New agent…** and a click on a card open a form for the fields Claude Code reads (name, description, model, effort, permission mode, max turns, color, allowed and disallowed tools) and the instructions; other keys of the file are kept, and **Edit file…** edits it whole. **Copy to…**, **Copy to all…** and **Delete**, each with a backup; agents from plugins are listed read-only, and Compare shows the agents only one profile has. Shortcut `g a`. The new Agents guide also explains how to use an agent in Claude Code: by itself from its description, by name, with `@`, or as a whole session with `claude --agent`.
+
+**Fixed**
+- The **More** menu of the tab bar no longer stays once it has appeared: the tabs are measured without it, so they return to the row as soon as they fit again.
+
 ## [0.5.3] - 2026-10-08
 
 **Added**
@@ -252,6 +260,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.5.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.0...v0.5.1
