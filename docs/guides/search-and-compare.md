@@ -32,6 +32,7 @@ The **Compare** tab puts two profiles side by side: pick them at the top. Rows t
 - **Settings**: the value in use for each setting of the Settings tab, and the file it comes from. **A → B** copies a value into the other profile, like editing it in the Settings tab.
 - **Permissions**: the `allow`, `ask` and `deny` rules of `settings.json` that only one profile has. **Add to …** adds the rule to the other profile and keeps its own rules.
 - **Skills**: the skills only one profile has (**Copy to …** copies the whole folder) and the skills both have with a different `SKILL.md`, to edit in the Skills tab.
+- **Agents**: the agents only one profile has (**Copy to …** copies the file) and the agents both have with a different file, to edit in the Agents tab.
 - **MCP servers** available in every project: the servers only one profile has (**Copy to …** copies the configuration, never the sign-in) and the ones whose configuration differs.
 - **CLAUDE.md**: whether the two files are the same, and how long they are. **Replace …** gives one profile the other's `CLAUDE.md`, after a confirmation.
 - **Plugins**: installed and enabled plugins, read-only: manage them with `/plugin` in Claude Code.

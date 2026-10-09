@@ -2,6 +2,9 @@
 
 The words the app and this documentation use, in alphabetical order.
 
+## Agent
+A subagent: a file `agents/<name>.md` in a profile with a description, instructions, a model and the tools it may use. Claude hands it a task when the description fits, and it works in a context of its own. See [Agents](guides/agents.md).
+
 ## Backup
 A folder in `~/.cc-profiles/backups/` saved before every change, with the original files and a journal of each step. **Restore** replays the journal backwards. See [Backups](guides/backups.md).
 

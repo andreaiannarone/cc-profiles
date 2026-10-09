@@ -146,6 +146,9 @@ def gallery(s, theme):
     s.page.wait_for_selector(".modal")
     s.page.wait_for_timeout(300)  # the preview of who gets it
     s.dialog(SHOTS / f"copyall-{theme}.jpg")
+    s.tab("agents")
+    s.js("await loadExt('default'); await openAgent('code-reviewer');")
+    s.shot(crop=True, path=SHOTS / f"agents-{theme}.jpg")
     s.tab("mcp")
     s.js("await loadExt('default');")
     s.shot(crop=True, path=SHOTS / f"mcp-{theme}.jpg")

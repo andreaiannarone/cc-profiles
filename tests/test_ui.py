@@ -109,7 +109,7 @@ def test_tabs_that_do_not_fit_go_into_the_more_menu(page_on_sandbox):
     assert page.evaluate("document.documentElement.scrollWidth") <= 375  # nothing scrolls sideways
     page.set_viewport_size({"width": 1440, "height": 900})
     page.wait_for_selector("#tabs-more", state="hidden")
-    assert len(row()) == 12
+    assert len(row()) == 13
     assert errors == []
 
 
@@ -315,6 +315,31 @@ def test_github_account_per_profile(page_on_sandbox):
     assert page.inner_text("#np-ghdir") == "~/.config/gh-noa"
     page.click('.modal button:has-text("Create profile")')
     page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('~/.config/gh-noa'))")
+    assert errors == []
+
+
+def test_agents_tab(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "agents")
+    page.click('[data-agent="code-reviewer"]')
+    page.wait_for_selector("#ag-name")
+    assert page.input_value("#ag-model") == "sonnet" and page.input_value("#ag-tools") == "Read, Grep, Glob, Bash"
+    page.fill("#ag-maxTurns", "15")
+    page.click("#agsave")
+    page.wait_for_selector(".toast")
+    page.wait_for_function("() => document.querySelector('#ag-maxTurns')?.value === '15'")
+    # a new agent
+    page.click("#agnew")
+    page.fill("#ag-name", "test-writer")
+    page.fill("#ag-description", "Writes tests for new code")
+    page.fill("#ag-prompt", "You write tests.")
+    page.click("#agsave")
+    page.wait_for_selector('[data-agent="test-writer"]')
+    assert page.input_value("#ag-name") == "test-writer"
+    # the whole file
+    page.click("#agraw")
+    assert "name: test-writer" in page.input_value("#agrawtext")
+    page.keyboard.press("Escape")
     assert errors == []
 
 def test_status_line_section(page_on_sandbox):

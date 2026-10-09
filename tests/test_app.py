@@ -985,6 +985,73 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
     assert home.snapshot() == before
 
+
+def test_agents_are_managed_and_undoable(home, app_factory):
+    basic_home(home)
+    home.write(".claude/agents/reviewer.md", "---\nname: reviewer\ndescription: Reviews diffs. Use after coding.\n"
+                                             "tools:\n  - Read\n  - Grep\nmodel: sonnet\nhooks:\n  Stop:\n    - command: echo done\n"
+                                             "memory: project\n---\nYou review code.\n")
+    home.write(".claude/agents/broken.md", "no frontmatter here\n")
+    home.write(".claude/plugins/installed_plugins.json", json.dumps({"plugins": {"kit@market": [
+        {"installPath": str(home.path("plugin-kit")), "version": "1.0"}]}}))
+    home.write("plugin-kit/agents/helper.md", "---\nname: helper\ndescription: From a plugin\n---\nHelp.\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    listed = app.get("/api/agents?profile=default")
+    assert [(a["name"], a["model"], a["tools"], a["valid"]) for a in listed["agents"]] == [
+        ("broken", "", [], False), ("reviewer", "sonnet", ["Read", "Grep"], True)]
+    assert [(a["name"], a["plugin"]) for a in listed["plugins"]] == [("helper", "kit@market")]
+    assert ("inherit", "Same as the conversation") in [tuple(o) for o in listed["options"]["model"]]
+    r = app.get("/api/agents/file?profile=default&name=reviewer")
+    assert r["fields"]["tools"] == ["Read", "Grep"] and r["prompt"] == "You review code." and r["other"] == ["hooks", "memory"]
+
+    # the form: fields rewritten, keys it does not show kept, the file renamed with the name
+    app.post("/api/agents/save", {"profile": "default", "old_name": "reviewer", "prompt": "You review code carefully.",
+                                  "fields": {"name": "code-reviewer", "description": "Reviews: diffs, before commits",
+                                             "tools": "Read, Grep, Bash", "model": "opus", "effort": "high", "maxTurns": "12",
+                                             "color": "blue", "permissionMode": "", "disallowedTools": ""}})
+    assert not home.path(".claude/agents/reviewer.md").exists()
+    assert home.path(".claude/agents/code-reviewer.md").read_text() == (
+        "---\nname: code-reviewer\ndescription: \"Reviews: diffs, before commits\"\ntools: Read, Grep, Bash\nmodel: opus\n"
+        "effort: high\nmaxTurns: 12\ncolor: blue\nhooks:\n  Stop:\n    - command: echo done\nmemory: project\n---\n"
+        "You review code carefully.\n")
+    assert app.get("/api/agents/file?profile=default&name=code-reviewer")["fields"]["description"] == "Reviews: diffs, before commits"
+
+    # a new one, then the errors
+    app.post("/api/agents/save", {"profile": "work", "prompt": "Write docs.",
+                                  "fields": {"name": "docs", "description": "Writes docs", "model": "inherit"}})
+    assert home.path(".claude-work/agents/docs.md").read_text() == "---\nname: docs\ndescription: Writes docs\nmodel: inherit\n---\nWrite docs.\n"
+    assert "already has an agent" in app.post_error("/api/agents/save", {"profile": "work", "fields": {"name": "docs", "description": "x"}})
+    assert "Invalid name" in app.post_error("/api/agents/save", {"profile": "work", "fields": {"name": "Docs!", "description": "x"}})
+    assert "Write a description" in app.post_error("/api/agents/save", {"profile": "work", "fields": {"name": "x"}})
+    assert "Max turns" in app.post_error("/api/agents/save", {"profile": "work", "fields": {"name": "x", "description": "d", "maxTurns": "-1"}})
+    assert "Effort" in app.post_error("/api/agents/save", {"profile": "work", "fields": {"name": "x", "description": "d", "effort": "huge"}})
+    assert "Invalid agent name" in app.post_error("/api/agents/save-raw", {"profile": "work", "name": "../x", "content": ""})
+
+    # the file editor: anything, as long as the name stays and there is a description
+    raw = "---\nname: docs\ndescription: Writes docs\nskills: [changelog]\n---\nWrite docs well."
+    app.post("/api/agents/save-raw", {"profile": "work", "name": "docs", "content": raw})
+    assert home.path(".claude-work/agents/docs.md").read_text() == raw + "\n"
+    assert "name must stay docs" in app.post_error("/api/agents/save-raw", {"profile": "work", "name": "docs",
+                                                                              "content": "---\nname: other\ndescription: d\n---\n"})
+    assert "frontmatter" in app.post_error("/api/agents/save-raw", {"profile": "work", "name": "docs", "content": "hello"})
+
+    # copy, copy to all, compare, delete
+    app.post("/api/agents/copy", {"profile": "work", "name": "docs", "to": "default"})
+    assert "already has an agent" in app.post_error("/api/agents/copy", {"profile": "work", "name": "docs", "to": "default"})
+    plan = app.get("/api/agents/copy-all/preview?profile=default&name=code-reviewer")
+    assert [t["id"] for t in plan["apply"]] == ["work"]
+    app.post("/api/agents/copy-all", {"profile": "default", "name": "code-reviewer"})
+    cmp = app.get("/api/compare?a=default&b=work")["agents"]
+    assert cmp["only_a"] == ["broken"] and cmp["only_b"] == [] and {x["name"]: x["same"] for x in cmp["both"]} == {
+        "code-reviewer": True, "docs": True}
+    app.post("/api/agents/delete", {"profile": "default", "name": "broken"})
+    assert not home.path(".claude/agents/broken.md").exists()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

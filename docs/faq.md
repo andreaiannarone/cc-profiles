@@ -38,6 +38,10 @@ The Usage tab adds up the token usage Claude Code records on every reply, per da
 
 Yes. Every profile gets its own GitHub CLI folder (`~/.config/gh-<id>`), and Profiles → **GitHub** picks which signed-in account each one uses and the name and email of its commits, so `gh` and `git push` in a work profile use your work account. Tokens stay in the system keychain. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile).
 
+## How do I create and use subagents in Claude Code?
+
+The **Agents** tab creates them per profile with a form for their description, model, tools and instructions, and copies them to other profiles. In a session, Claude uses an agent by itself when its description fits the task; you can also ask for it by name, mention it with `@`, or start a whole session as that agent with `claude --agent <name>`. See [Agents](guides/agents.md#use-an-agent-in-claude-code).
+
 ## Can I turn off claude.ai connectors in one profile only?
 
 Yes. Connectors such as Gmail or Google Drive belong to your claude.ai account, so every profile signed in with it has them, but the MCP tab can keep any of them, or all of them, out of one profile. See [claude.ai connectors](guides/skills-and-mcp.md#claudeai-connectors).

@@ -113,6 +113,17 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .ext-head h2 { margin: 0; font-size: 15px; }
 .ext-head .hint { flex: 1; min-width: 200px; }
 .cards.skgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.adot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.abadges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.mcard.ro { cursor: default; }
+.aggrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; align-items: start; }
+.aggrid .ag-wide { grid-column: span 2; }
+.aggrid label.f:has(textarea) { grid-column: span 2; }
+.agform label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.agform #ag-prompt { min-height: 260px; }
+.agform #ag-description { min-height: 0; font-family: inherit; font-size: 13.5px; line-height: 1.4; }
+textarea.rawtext { width: min(760px, 80vw); min-height: 420px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
+@media (max-width: 820px) { .aggrid { grid-template-columns: 1fr 1fr; } }
 .plug-row .m code { font-size: 11.5px; }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .ghtable td { vertical-align: middle; }
@@ -497,6 +508,7 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
       <button data-tab="conversations"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="tl">Conversations</span></button>
       <button data-tab="usage"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M6 17v-5M11 17V6M16 17v-8M21 17v-3"/></svg><span class="tl">Usage</span></button>
       <button data-tab="skills"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span class="tl">Skills</span></button>
+      <button data-tab="agents"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/></svg><span class="tl">Agents</span></button>
       <button data-tab="mcp"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg><span class="tl">MCP</span></button>
       <button data-tab="plugins"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span class="tl">Plugins</span></button>
       <button data-tab="profiles"><svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg><span class="tl">Profiles</span></button>
@@ -519,7 +531,7 @@ const TOKEN = "__TOKEN__";
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
             conv: { profile: null, project: null, projects: [], list: null, session: null, view: null, q: "" },
-            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, mcp: null, conn: null, error: null, skill: null, content: "", files: [], q: "" } };
+            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, agents: null, agent: null, mcp: null, conn: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 /** @type {(s: string, el?: ParentNode) => any} */
@@ -1282,16 +1294,17 @@ async function deleteProfile(id) {
 }
 
 // ---------- skills and MCP servers ----------
-const EXT_TABS = ["skills", "mcp"];
+const EXT_TABS = ["skills", "agents", "mcp"];
 async function loadExt(pid) {
   const x = S.ext, tab = S.tab;
-  if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; }
+  if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; x.agent = null; }
   x.profile = x.profile || S.profiles[0]?.id;
   x.error = null;
-  if (tab === "skills") x.skills = null; else x.mcp = null;
+  if (tab === "skills") x.skills = null; else if (tab === "agents") x.agents = null; else x.mcp = null;
   renderExt();
   try {
     if (tab === "skills") x.skills = await api("/api/skills?profile=" + x.profile);
+    else if (tab === "agents") x.agents = await api("/api/agents?profile=" + x.profile);
     else [x.mcp, x.conn] = await Promise.all([api("/api/mcp?profile=" + x.profile), api("/api/connectors?profile=" + x.profile)]);
   } catch (e) {
     // "Not found" means the page is newer than the running server: the page is read from disk at every load
@@ -1299,6 +1312,7 @@ async function loadExt(pid) {
     return renderExt();
   }
   if (x.skills && x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
+  if (x.agents && x.agent && x.agent.name && !x.agents.agents.some(a => a.name === x.agent.name)) x.agent = null;
   renderExt();
   if (tab === "mcp") checkConnectors(false);
 }
@@ -1331,12 +1345,12 @@ async function pickProfile(title, sub, pid, okLabel) {
 const scopeLabel = s => s === "user" ? "All projects" : basename(s);
 function renderExt() {
   if (!EXT_TABS.includes(S.tab)) return;
-  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = S.tab === "skills" ? x.skills : x.mcp;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = S.tab === "skills" ? x.skills : S.tab === "agents" ? x.agents : x.mcp;
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
   if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }
-  if (!data) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading ${S.tab === "skills" ? "skills" : "MCP servers"}…</div>`; return; }
-  return S.tab === "skills" ? renderSkills(head) : renderMcp(head);
+  if (!data) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading ${S.tab === "skills" ? "skills" : S.tab === "agents" ? "agents" : "MCP servers"}…</div>`; return; }
+  return S.tab === "skills" ? renderSkills(head) : S.tab === "agents" ? renderAgents(head) : renderMcp(head);
 }
 function renderSkills(head) {
   const x = S.ext;
@@ -1443,6 +1457,104 @@ function connectorsSection() {
     ${off ? `<div class="hint" style="margin-bottom:8px">All connectors are off in this profile: <code>disableClaudeAiConnectors</code> is true in ${c.all_off.map(w => `<code>${files[w]}</code>`).join(" and ")}.</div>` : ""}
     <div class="table">${rows || `<div class="empty">No connectors seen in this profile yet: Claude Code lists the ones it has connected here at least once.</div>`}</div>
     <p class="hint conn-check">${connCheckText(c)}</p>`;
+}
+// ---------- agents ----------
+// The list as cards; the open agent below them as a form (the fields Claude Code reads) and its
+// instructions. Keys the form does not show stay in the file; Edit file… edits everything.
+const AGENT_DOT = { red: "#dc2626", blue: "#6a9bcc", green: "#16a34a", yellow: "#ca8a04", purple: "#827dbd", orange: "#d97757", pink: "#c46686", cyan: "#0e9aa7" };
+function agentDot(c) { return AGENT_DOT[c] ? `<span class="adot" style="background:${AGENT_DOT[c]}" aria-hidden="true"></span>` : ""; }
+function agentBadges(a) {
+  return `${a.model ? `<span class="badge b-none">${esc(a.model)}</span>` : ""}<span class="badge b-none">${a.tools.length ? plural(a.tools.length, "tool", "tools") : "all tools"}</span>${a.linked ? `<span class="badge b-none" title="A link to a file elsewhere">linked</span>` : ""}${a.valid ? "" : `<span class="badge b-warn" title="No frontmatter or no description: Claude Code skips it">invalid</span>`}`;
+}
+function renderAgents(head) {
+  const x = S.ext, d = x.agents, q = x.q.toLowerCase();
+  const list = d.agents.filter(a => !q || (a.name + " " + a.description).toLowerCase().includes(q));
+  const cur = x.agent;
+  $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h2>Agents</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.agents.length, "agent", "agents")}: Claude hands work to them with the Agent tool${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span>
+      <input class="search" style="margin:0" placeholder="Filter agents…" value="${esc(x.q)}" id="extq" aria-label="Filter agents">
+      <button class="btn primary" id="agnew">New agent…</button></div>
+    <div class="cards skgrid">${list.map(a => `<div class="mcard ${cur?.name === a.name ? "on" : ""}" data-agent="${esc(a.name)}" tabindex="0" role="button">
+        <div class="t">${agentDot(a.color)}${esc(a.name)}</div>
+        <div class="d">${esc(a.description) || "No description"}</div>
+        <div class="abadges">${agentBadges(a)}</div></div>`).join("") || `<div class="empty">${d.agents.length ? "No agents match the filter." : "No agents in this profile yet: New agent… creates one."}</div>`}</div>
+    ${cur ? agentEditorHtml(cur) : ""}
+    ${d.plugins.length ? `<div class="ext-head"><h2>From plugins</h2><span class="hint">read-only: the plugin installs and updates them</span></div>
+      <div class="cards skgrid">${d.plugins.map(a => `<div class="mcard ro"><div class="t">${agentDot(a.color)}${esc(a.name)}</div>
+        <div class="d">${esc(a.description) || "No description"}</div><div class="abadges"><span class="badge b-shared">${esc(a.plugin)}</span>${agentBadges(a)}</div></div>`).join("")}</div>` : ""}`;
+  $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
+  $("#agnew").onclick = () => { x.agent = { name: "", fields: { model: "inherit" }, prompt: "", other: [], isNew: true }; renderExt(); $("#ag-name")?.focus(); };
+  if (cur) bindAgentEditor(cur);
+}
+async function openAgent(name) {
+  const x = S.ext;
+  try { const r = await api(`/api/agents/file?profile=${x.profile}&name=${encodeURIComponent(name)}`); x.agent = { name, ...r }; }
+  catch (e) { toast(e.message, "", true); return; }
+  renderExt();
+  $(".editor")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function agentEditorHtml(a) {
+  const d = S.ext.agents, f = a.fields || {};
+  const sel = (key, label, help) => {
+    const opts = d.options[key], v = f[key] || "";
+    const known = opts.some(([o]) => o === v);
+    return `<label class="f">${label}<select id="ag-${key}" title="${esc(help)}"><option value="" ${v ? "" : "selected"}>${key === "model" ? "Not set (inherit)" : "Not set"}</option>
+      ${opts.map(([o, l]) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l)}</option>`).join("")}${v && !known ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : ""}</select></label>`;
+  };
+  if (!a.isNew && !a.valid) return `<div class="editor"><div class="hint" style="margin-bottom:8px"><code>${esc(a.name)}.md</code> has no frontmatter between <code>---</code> lines, so Claude Code skips it: fix it in the file editor.</div>
+    <div class="row"><span class="grow"></span><button class="btn danger" id="agdel">Delete</button><button class="btn primary" id="agraw">Edit file…</button></div></div>`;
+  return `<div class="editor agform">
+    <div class="hint" style="margin-bottom:10px">${a.isNew ? "New agent: saved as" : "Editing"} <code>${esc(d.dir)}/${esc(a.isNew ? "<name>" : a.name)}.md</code>${a.other?.length ? ` · also in the file, kept as they are: ${a.other.map(k => `<code>${esc(k)}</code>`).join(", ")} (Edit file… to change them)` : ""}</div>
+    <div class="aggrid">
+      <label class="f">Name (lowercase letters, digits and dashes)<input class="text" id="ag-name" value="${esc(f.name || a.name || "")}" placeholder="e.g. code-reviewer" autocomplete="off"></label>
+      ${sel("model", "Model", "The model the agent runs on")}
+      <label class="f ag-wide">Description: when Claude should use it<textarea class="text" id="ag-description" rows="2" placeholder="e.g. Reviews a diff for bugs before a commit. Use after writing code.">${esc(f.description || "")}</textarea></label>
+      ${sel("effort", "Effort", "Thinking effort")}
+      ${sel("permissionMode", "Permission mode", "How the agent's tool calls are approved")}
+      <label class="f">Max turns<input class="text" id="ag-maxTurns" inputmode="numeric" value="${esc(f.maxTurns || "")}" placeholder="no limit"></label>
+      ${sel("color", "Color", "Its color in Claude Code")}
+      <label class="f ag-wide">Tools it may use (comma-separated; empty: all of them)<input class="text" id="ag-tools" list="ag-tool-list" value="${esc((f.tools || []).join(", "))}" placeholder="all tools" autocomplete="off"></label>
+      <label class="f ag-wide">Tools it may not use (only when the list above is empty)<input class="text" id="ag-disallowedTools" value="${esc((f.disallowedTools || []).join(", "))}" placeholder="none" autocomplete="off"></label>
+      <datalist id="ag-tool-list">${d.tools.map(t => `<option value="${esc(t)}">`).join("")}</datalist>
+    </div>
+    <label class="f" style="margin-top:12px">Instructions: the agent's system prompt<textarea id="ag-prompt" spellcheck="false" placeholder="You are … When you are called, …">${esc(a.prompt || "")}</textarea></label>
+    <div class="row"><span class="grow">${a.isNew ? "Saving creates the file." : "Saving keeps a copy of the previous version."}</span>
+      ${a.isNew ? `<button class="btn" id="agcancel">Cancel</button>` : `<button class="btn danger" id="agdel">Delete</button><button class="btn" id="agcopy">Copy to…</button><button class="btn" id="agall">Copy to all…</button><button class="btn" id="agraw">Edit file…</button>`}
+      <button class="btn primary" id="agsave">${a.isNew ? "Create agent" : "Save"}</button></div></div>`;
+}
+function bindAgentEditor(a) {
+  const x = S.ext, v = id => $(id)?.value ?? "";
+  $("#agcancel") && ($("#agcancel").onclick = () => { x.agent = null; renderExt(); });
+  $("#agsave") && ($("#agsave").onclick = async () => {
+    const fields = { name: v("#ag-name").trim(), description: v("#ag-description").replace(/\s+/g, " ").trim(), model: v("#ag-model"), effort: v("#ag-effort"),
+      permissionMode: v("#ag-permissionMode"), maxTurns: v("#ag-maxTurns").trim(), color: v("#ag-color"), tools: v("#ag-tools"), disallowedTools: v("#ag-disallowedTools") };
+    try { await run(() => api("/api/agents/save", { profile: x.profile, fields, prompt: v("#ag-prompt"), old_name: a.isNew ? null : a.name })); } catch { return; }
+    x.agents = await api("/api/agents?profile=" + x.profile);
+    await openAgent(fields.name);
+  });
+  $("#agdel") && ($("#agdel").onclick = async () => {
+    if (!(await confirmBox(`Delete ${a.name}?`, `<code>${esc(a.name)}.md</code> goes to the backup.${x.agents.shared ? ` The agents are ${esc(x.agents.shared)}: it disappears there too.` : ""}`, "Delete", "danger"))) return;
+    try { await run(() => api("/api/agents/delete", { profile: x.profile, name: a.name })); } catch { return; }
+    x.agent = null; loadExt();
+  });
+  $("#agcopy") && ($("#agcopy").onclick = async () => {
+    const to = await pickProfile("Copy agent", `<code>${esc(a.name)}.md</code> is copied as it is now (save your changes first).`, x.profile, "Copy");
+    if (to) { try { await run(() => api("/api/agents/copy", { profile: x.profile, name: a.name, to })); } catch {} }
+  });
+  $("#agall") && ($("#agall").onclick = () => applyAll(`Copy ${a.name} to every profile?`,
+    `/api/agents/copy-all/preview?profile=${encodeURIComponent(x.profile)}&name=${encodeURIComponent(a.name)}`,
+    `<code>${esc(a.name)}.md</code> is copied, as it is now, to every profile that does not have an agent with this name. Profiles that share their agents with ${esc(label(x.profile))} already see it.`,
+    "Copy to all", () => api("/api/agents/copy-all", { profile: x.profile, name: a.name })));
+  $("#agraw") && ($("#agraw").onclick = async () => {
+    const r = await api(`/api/agents/file?profile=${x.profile}&name=${encodeURIComponent(a.name)}`);
+    const res = await modal({ title: `${a.name}.md`, sub: "The whole file: frontmatter between <code>---</code> lines, then the instructions. The name must stay the same; rename it from the form.",
+      body: `<textarea id="agrawtext" class="rawtext" spellcheck="false" aria-label="${esc(a.name)}.md">${esc(r.content)}</textarea>`,
+      actions: [{ label: "Save", kind: "primary", value: "ok" }] });
+    if (!res) return;
+    try { await run(() => api("/api/agents/save-raw", { profile: x.profile, name: a.name, content: $("#agrawtext", res.el).value })); } catch { return; }
+    x.agents = await api("/api/agents?profile=" + x.profile);
+    await openAgent(a.name);
+  });
 }
 async function newSkill() {
   const x = S.ext;
@@ -2316,7 +2428,7 @@ function renderCompare() {
     for (const r of P[k].only_b) perms.push(listRows("perm", k, "b", r, ` <code>${k}</code>`, "Add"));
   }
   const nBoth = ["allow", "ask", "deny"].reduce((n, k) => n + P[k].both.length, 0);
-  const sk = d.skills, mc = d.mcp, md = d.claude_md, pl = d.plugins;
+  const sk = d.skills, ag = d.agents, mc = d.mcp, md = d.claude_md, pl = d.plugins;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
     <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
@@ -2329,6 +2441,10 @@ function renderCompare() {
     ${table(["Skill", "Where"], [...sk.only_a.map(n => listRows("skill", "", "a", n)), ...sk.only_b.map(n => listRows("skill", "", "b", n)),
         ...sk.both.filter(x => !x.same).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${mark(false)} <span class="hint">the SKILL.md files are different: edit them in the Skills tab</span></td><td></td></tr>`)],
       "The same skills, with the same SKILL.md. ✓")}
+    <div class="ext-head"><h2>Agents</h2><span class="hint">${ag.shared ? "the two profiles share the same agents folder" : `${plural(ag.both.length, "agent", "agents")} in both`}</span></div>
+    ${table(["Agent", "Where"], [...ag.only_a.map(n => listRows("agent", "", "a", n)), ...ag.only_b.map(n => listRows("agent", "", "b", n)),
+        ...ag.both.filter(x => !x.same).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${mark(false)} <span class="hint">the two files are different: edit them in the Agents tab</span></td><td></td></tr>`)],
+      "The same agents, with the same files. ✓")}
     <div class="ext-head"><h2>MCP servers</h2><span class="hint">for every project · ${plural(mc.both.length, "server", "servers")} in both</span></div>
     ${table(["Server", "Where"], [...mc.only_a.map(m => listRows("mcp", "", "a", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
         ...mc.only_b.map(m => listRows("mcp", "", "b", m.name, ` <span class="hint">${esc(m.type)} · ${esc(m.target)}</span>`)),
@@ -2362,6 +2478,7 @@ function bindCompare() {
       return done(() => api("/api/settings/permissions", { profile: to, rules }));
     }
     if (b.dataset.cmp === "skill") return done(() => api("/api/skills/copy", { profile: from, name: b.dataset.name, to }));
+    if (b.dataset.cmp === "agent") return done(() => api("/api/agents/copy", { profile: from, name: b.dataset.name, to }));
     if (b.dataset.cmp === "mcp") return done(() => api("/api/mcp/copy", { profile: from, scope: "user", name: b.dataset.name, to }));
     if (b.dataset.cmp === "md") {
       if (!(await confirmBox(`Replace ${name(other(side))}'s CLAUDE.md?`, `It gets the content of ${esc(name(side))}'s CLAUDE.md. The current file goes to the backup.`, "Replace"))) return;
@@ -2611,6 +2728,7 @@ function markTab(tab) {
 function layoutTabs() {
   const nav = $("#tabs"), row = $(".tabrow", nav), menu = $("#moremenu"), more = $(".more", nav);
   TAB_BUTTONS.forEach(b => row.appendChild(b));
+  more.hidden = true;  // measured without the More button, which would take room of its own
   more.hidden = row.scrollWidth <= row.clientWidth;
   if (more.hidden) { menu.replaceChildren(); return; }
   const gap = 8, avail = nav.clientWidth - more.offsetWidth - gap, w = b => b.offsetWidth + gap;
@@ -2635,7 +2753,7 @@ document.addEventListener("click", e => { if (!e.target.closest(".more")) showMo
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#moremenu").hidden) { showMore(false); $("#tabs-more").focus(); } });
 new ResizeObserver(() => layoutTabs()).observe($("#tabs"));
 // g then a letter: the tab's initial, or a distinctive letter when the initial is taken
-const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["u", "usage"], ["s", "skills"], ["x", "mcp"], ["l", "plugins"],
+const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["u", "usage"], ["s", "skills"], ["a", "agents"], ["x", "mcp"], ["l", "plugins"],
                  ["r", "profiles"], ["o", "compare"], ["b", "backups"], ["h", "health"], ["t", "settings"]];
 function showKeys() {
   const name = tab => $(`#tabs button[data-tab="${tab}"] .tl`).textContent;
@@ -2715,7 +2833,8 @@ document.addEventListener("click", async e => {
   if (t.dataset.hrelink) { await doRelink(byName(t.dataset.hrelink), t.dataset.prof); return S.tab === "health" && loadHealth(); }
   if (t.dataset.hdel) { await doDelete(byName(t.dataset.hdel), t.dataset.prof); return S.tab === "health" && loadHealth(); }
 });
-const openCard = c => c.dataset.skill ? openSkill(c.dataset.skill) : openMemFile(c.dataset.mfile);
+const openCard = c => c.dataset.agent ? openAgent(c.dataset.agent) : c.dataset.skill ? openSkill(c.dataset.skill)
+  : c.dataset.mfile ? openMemFile(c.dataset.mfile) : null;  // plugin agents are read-only
 document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openCard(c); });
 document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(c); } });
 

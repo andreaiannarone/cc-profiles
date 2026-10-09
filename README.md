@@ -134,6 +134,7 @@ cc-profiles
 - 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches. Each profile also gets its own GitHub account (a GitHub CLI folder named after it) and commit identity, without touching tokens.
 - 🧩 **Skills**: browse, create, edit, copy and delete the skills of each profile, or copy one to every profile at once.
+- 🤖 **Agents**: create, edit, copy (to one profile or to all) and delete subagents, with a form for their model, tools, effort, permissions and instructions; agents from plugins are listed read-only. Claude then uses an agent by itself when its description fits the task, or when you ask for it by name, mention it with `@`, or run `claude --agent <name>`.
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list. Turn claude.ai connectors (Gmail, Google Drive…) off in one profile, one by one or all together, even though they come with the account.
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
 - 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
@@ -144,7 +145,7 @@ cc-profiles
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Old ones are deleted automatically after 90 days (or 15, 30, 60), except those you mark **Keep**.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
-- ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
+- ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
@@ -208,6 +209,24 @@ cc-profiles
         <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available, and the claude.ai connectors with a switch each">
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-light.jpg" alt="The Agents tab: the subagents of a profile as cards, and one open in a form with its model, description, effort, permission mode, max turns, color, tools and instructions">
+      </picture>
+      <p align="center"><b>Agents</b>: subagents with a form for model, tools and instructions</p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-dark.jpg">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-light.jpg" alt="The Backups tab: every change made with cc-profiles, newest first, with Restore, Show changes and Keep">
+      </picture>
+      <p align="center"><b>Backups</b>: every change, ready to be undone</p>
     </td>
   </tr>
   <tr>
@@ -346,6 +365,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 - **[Profiles and sharing](https://cc-profiles.andreaia.com/guides/profiles.html)**: create, edit, delete, share
 - **[Profile by folder](https://cc-profiles.andreaia.com/guides/profile-by-folder.html)**: `claude` starts in the profile of the folder you are in
 - **[Skills and MCP servers](https://cc-profiles.andreaia.com/guides/skills-and-mcp.html)**: create, edit, copy, delete
+- **[Agents](https://cc-profiles.andreaia.com/guides/agents.html)**: create, edit, copy and delete subagents
 - **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and turn them on or off
 - **[Search and compare](https://cc-profiles.andreaia.com/guides/search-and-compare.html)**: search every profile at once, compare two side by side
 - **[Export and import](https://cc-profiles.andreaia.com/guides/export-import.html)**: move a profile to another computer

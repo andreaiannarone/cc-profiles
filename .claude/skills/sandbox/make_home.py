@@ -51,6 +51,14 @@ SKILLS = {
 for name, desc in SKILLS.items():
     home.write(f".claude/skills/{name}/SKILL.md", f"---\nname: {name}\ndescription: {desc}\n---\n# {name}\n\n{desc}.\n")
 home.write(".claude/skills/release-notes/template.md", "## What's new\n")
+# Subagents: two in Default, one of them also in Work with other instructions
+home.write(".claude/agents/code-reviewer.md", "---\nname: code-reviewer\ndescription: Reviews a diff for bugs and missing tests before a commit. Use after writing code.\n"
+           "tools: Read, Grep, Glob, Bash\nmodel: sonnet\neffort: high\ncolor: blue\n---\nYou review code changes. Run git diff, read the changed files, "
+           "and list real bugs first, then missing tests. Be brief.\n")
+home.write(".claude/agents/docs-writer.md", "---\nname: docs-writer\ndescription: Writes and updates documentation pages from the code.\n"
+           "model: inherit\ncolor: green\nmaxTurns: 20\n---\nYou write documentation for people who use the project, in plain words.\n")
+home.write(".claude-work/agents/code-reviewer.md", "---\nname: code-reviewer\ndescription: Reviews a diff against the team's checklist.\n"
+           "tools: Read, Grep, Glob\nmodel: opus\ncolor: purple\n---\nFollow docs/review-checklist.md.\n")
 home.write(".claude-work/skills/oncall/SKILL.md",
            "---\nname: oncall\ndescription: Triage an alert: find the service, recent deploys and the runbook\n---\n")
 
