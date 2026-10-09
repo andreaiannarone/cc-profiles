@@ -145,7 +145,7 @@ cc-profiles
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Old ones are deleted automatically after 90 days (or 15, 30, 60), except those you mark **Keep**.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
-- ⚖️ **Compare two profiles**: settings, permissions, skills, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
+- ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
