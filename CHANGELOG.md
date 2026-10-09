@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
-- **Agents** tab: the subagents of each profile (`agents/<name>.md`) as cards, with their model, tools and color. **New agent…** and a click on a card open a form for the fields Claude Code reads (name, description, model, effort, permission mode, max turns, color, allowed and disallowed tools) and the instructions; other keys of the file are kept, and **Edit file…** edits it whole. **Copy to…**, **Copy to all…** and **Delete**, each with a backup; agents from plugins are listed read-only, and Compare shows the agents only one profile has. Shortcut `g a`.
+- **Agents** tab: the subagents of each profile (`agents/<name>.md`) as cards, with their model, tools and color. **New agent…** and a click on a card open a form for the fields Claude Code reads (name, description, model, effort, permission mode, max turns, color, allowed and disallowed tools) and the instructions; other keys of the file are kept, and **Edit file…** edits it whole. **Copy to…**, **Copy to all…** and **Delete**, each with a backup; agents from plugins are listed read-only, and Compare shows the agents only one profile has. Shortcut `g a`. The new Agents guide also explains how to use an agent in Claude Code: by itself from its description, by name, with `@`, or as a whole session with `claude --agent`.
 
 ### Fixed
 - The **More** menu of the tab bar no longer stays once it has appeared: the tabs are measured without it, so they return to the row as soon as they fit again.

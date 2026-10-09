@@ -9,6 +9,25 @@ The **Agents** tab manages the subagents of one profile at a time: the files in 
 
 Every change goes to a backup first, like any other operation, and applies from the next Claude Code session in that profile.
 
+## Use an agent in Claude Code
+
+Agents work in Claude Code sessions of the profile they belong to. There are four ways to use one:
+
+1. **Claude picks it.** While it works, Claude reads every agent's description and hands it a task when the description fits. The agent runs in a separate context with its own instructions, model and tools, and only its result comes back, so the main conversation stays short. This is why the description should say what the agent does *and when to use it*, for example "Reviews a diff for bugs before a commit. Use after writing code."
+2. **You ask for it by name**, in plain words:
+   ```
+   use the code-reviewer agent on today's changes
+   ```
+   or type `@` and pick it from the list (`@agent-code-reviewer`).
+3. **A whole session as that agent**: `claude --agent code-reviewer` starts a session whose main thread is the agent, with its instructions and its tools from start to end.
+4. **`/agents`** in Claude Code lists the agents of the session, and creates or edits them there too.
+
+Good to know:
+
+- **Each profile has its own agents.** The ones in `~/.claude-work/agents` exist only in sessions started with `claude-work`. To have an agent everywhere, use **Copy to all…**, or share the `agents` folder in the Profiles tab (see [Profiles and sharing](profiles.md#share-items)).
+- **Restart open sessions** after creating or changing an agent: Claude Code reads them when a session starts.
+- **Agents that come with a skill or a plugin** are usually not called by hand: the skill or plugin hands them its own steps.
+
 ## The list
 
 Each card shows the agent's name, with its color, its description, the model, how many tools it may use (*all tools* when the list is empty), **linked** when the file is a link to somewhere else, and **invalid** when Claude Code skips it because the file has no frontmatter or no description. Type in *Filter agents…* to narrow the list.
