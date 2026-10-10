@@ -4,7 +4,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/health-dark.jpg">
-  <img src="../assets/screenshots/health-light.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink and Delete" width="1440" height="789" loading="lazy">
+  <img src="../assets/screenshots/health-light.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink, Merge into and Delete" width="1440" height="789" loading="lazy">
 </picture>
 
 The **Health** tab checks every profile:
@@ -19,7 +19,7 @@ The **Health** tab checks every profile:
 | Memory indexes | `MEMORY.md` lists a missing file (error), or a memory is not listed (warning) |
 | Open session | warning only: a `claude` process is running in the profile, or one of its conversations was written in the last 2 minutes |
 
-Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…** and **Delete**.
+Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…**, **Merge into…** (into another project of the profile) and **Delete**.
 
 Health runs `claude auth status` once per profile, so it takes a few seconds. **Run the checks again** refreshes it.
 

@@ -1052,6 +1052,66 @@ def test_agents_are_managed_and_undoable(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
 
+
+def test_choose_a_folder(home, app_factory):
+    basic_home(home)
+    home.path("code/work/.hidden").mkdir(parents=True)
+    app = app_factory()
+    d = app.get("/api/folders?path=~/code")
+    assert d["path"] == "~/code" and d["parent"] == "~" and d["home"] == "~"
+    assert d["folders"] == ["new-name", "personal", "work"] and d["crumbs"][-1] == {"name": "code", "path": "~/code"}
+    assert app.get("/api/folders?path=~/code/work")["folders"] == ["api"]
+    assert app.get("/api/folders?path=~/code/work&hidden=1")["folders"] == [".hidden", "api"]
+    assert app.get("/api/folders?path=~/code/nope/deeper")["path"] == "~/code"  # the closest folder that exists
+    assert app.get("/api/folders?path=relative")["path"] == "~"
+    # no dialog here: the page browses instead
+    assert app.get("/api/folders/pick?start=~/code") == {"native": False, "start": "~/code"}
+    app.stop()
+
+    # the system's dialog (a fake zenity): its answer, or a cancel
+    zenity = home.write(".local/bin/zenity", '#!/bin/sh\necho "$@" > "$HOME/zenity-args"\n'
+                                              '[ -f "$HOME/cancel" ] && exit 1\necho "$HOME/code/work/api"\n')
+    zenity.chmod(0o755)
+    app = app_factory(CC_PROFILES_PICKER="zenity")
+    r = app.get("/api/folders/pick?start=~/code/work&prompt=New%20folder")
+    assert r == {"native": True, "cancelled": False, "path": "~/code/work/api", "exists": True}
+    assert home.path("zenity-args").read_text().split() == [
+        "--file-selection", "--directory", "--title=New", "folder", f"--filename={home.path('code/work')}/"]
+    home.write("cancel", "")
+    assert app.get("/api/folders/pick") == {"native": True, "cancelled": True}
+
+
+def test_merge_an_orphan_into_another_project(home, app_factory):
+    basic_home(home)
+    old, blog = san(home.path("code/old-name")), san(home.path("code/personal/blog"))
+    home.write(f".claude/projects/{old}/memory/old-notes.md", "---\nname: old-notes\ndescription: d\n---\nold\n")
+    home.write(f".claude/projects/{old}/memory/MEMORY.md", "- [old-notes](old-notes.md) — d\n")
+    home.write(f".claude/projects/{old}/s-blog.jsonl", "{}\n")  # the same conversation file in both
+    before = home.snapshot()
+    app = app_factory()
+
+    pl = app.get(f"/api/projects/merge/preview?project={old}&profile=default&into={blog}")
+    assert pl == {"from": "~/code/old-name", "into": "~/code/personal/blog", "conversations": 2, "memories": 1,
+                  "prompts": 1, "conflicts": ["s-blog.jsonl"]}
+    r = app.post("/api/projects/merge", {"project": old, "profile": "default", "into": blog})
+    assert r["message"].startswith("Merged into ~/code/personal/blog")
+    assert not home.path(f".claude/projects/{old}").exists()
+    target = home.path(f".claude/projects/{blog}")
+    assert (target / "s-old.jsonl").exists() and (target / "memory/old-notes.md").exists()
+    assert "old-notes" in (target / "memory/MEMORY.md").read_text()
+    hist = [json.loads(l)["project"] for l in home.path(".claude/history.jsonl").read_text().splitlines()]
+    assert hist.count(str(home.path("code/personal/blog"))) == 2
+    assert app.get("/api/backups")[0]["title"] == "Merge ~/code/old-name into ~/code/personal/blog (Default)"
+
+    assert "Pick another project" in app.post_error("/api/projects/merge", {"project": blog, "profile": "default", "into": blog})
+    api = san(home.path("code/work/api"))
+    shutil.rmtree(home.path("code/work/api"))
+    assert "not on disk" in app.post_error("/api/projects/merge", {"project": blog, "profile": "default", "into": api})
+    home.path("code/work/api").mkdir()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

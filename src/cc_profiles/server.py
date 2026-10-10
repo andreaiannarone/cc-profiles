@@ -18,6 +18,7 @@ from .info import *  # noqa: F401,F403
 from .extensions import *  # noqa: F401,F403
 from .agents import *  # noqa: F401,F403
 from .github import *  # noqa: F401,F403
+from .folders import *  # noqa: F401,F403
 from .conversations import *  # noqa: F401,F403
 from .usage import *  # noqa: F401,F403
 from .search import *  # noqa: F401,F403

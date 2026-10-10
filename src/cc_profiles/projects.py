@@ -293,7 +293,7 @@ def op_delete(name, pid):
     return {"message": f"Deleted from {prof['label']} (kept in the backup).", "backup": bk.close()}
 
 
-def op_relink(name, pid, new_path):
+def op_relink(name, pid, new_path, title=None):
     prof = profile(pid)
     new_path = expand(new_path.strip()).rstrip("/")
     if not os.path.isdir(new_path):
@@ -303,12 +303,55 @@ def op_relink(name, pid, new_path):
     if new_name == name:
         raise ApiError("The project is already linked to this folder")
     old = path_index().get(name)
-    bk = Backup(f"relink-{pid}", f"Relink {pretty(old) or name} → {pretty(new_path)} ({prof['label']})")
+    bk = Backup(f"relink-{pid}", title or f"Relink {pretty(old) or name} → {pretty(new_path)} ({prof['label']})")
     conv = merge_dir(S, project_dir(prof, new_name, must_exist=False), bk, "project")
     hist = rewrite_history(prof, old, new_path, bk) if old else 0
     cfg = rename_config_entry(prof, old, new_path, bk) if old else False
     return {"message": f"Linked to {pretty(new_path)}: {conv} conversations, {hist} prompts"
                        f"{', settings moved' if cfg else ''}.", "backup": bk.close()}
+
+
+def merge_target(prof, name, target):
+    """The folder of the project to merge into: another project of the same profile, on disk."""
+    if target == name:
+        raise ApiError("Pick another project")
+    project_dir(prof, target)
+    path = path_index().get(target)
+    if not path or not os.path.isdir(path):
+        raise ApiError(f"The folder of {pretty(path) or target} is not on disk: relink that project first")
+    return path
+
+
+def merge_plan(name, pid, target):
+    """What merging a project into another one of the same profile moves, and what collides.
+    Changes nothing."""
+    prof = profile(pid)
+    src, path = project_dir(prof, name), merge_target(prof, name, target)
+    dst = project_dir(prof, target)
+    conv = [e for e in os.listdir(src) if e.endswith(".jsonl")]
+    mem = [m for m in (os.listdir(os.path.join(src, "memory")) if os.path.isdir(os.path.join(src, "memory")) else [])
+           if m != "MEMORY.md"]
+    clash = [e for e in os.listdir(src) if e != "memory" and os.path.exists(os.path.join(dst, e))]
+    clash += [f"memory/{m}" for m in mem if os.path.exists(os.path.join(dst, "memory", m))]
+    old = path_index().get(name)
+    prompts = 0
+    for line in history_lines(prof) if old else []:
+        try:
+            prompts += matches(json.loads(line).get("project"), old)
+        except (ValueError, AttributeError):
+            pass
+    return {"from": pretty(old) or name, "into": pretty(path), "conversations": len(conv), "memories": len(mem),
+            "prompts": prompts, "conflicts": sorted(clash)}
+
+
+def op_merge(name, pid, target):
+    """Merge a project into another one of the same profile: a relink to that project's folder."""
+    prof = profile(pid)
+    path = merge_target(prof, name, target)
+    old = path_index().get(name)
+    r = op_relink(name, pid, path, f"Merge {pretty(old) or name} into {pretty(path)} ({prof['label']})")
+    r["message"] = r["message"].replace("Linked to", "Merged into", 1)
+    return r
 
 
 def op_rule(match, prof_id):

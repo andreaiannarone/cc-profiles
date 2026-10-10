@@ -25,6 +25,7 @@ SRC = ROOT / "src"
 os.environ["CC_PROFILES_AUTO_COMMAND"] = "0"
 os.environ["CC_PROFILES_UPDATE_CHECK"] = "0"
 os.environ["CC_PROFILES_AUTO_GITHUB"] = "0"
+os.environ["CC_PROFILES_PICKER"] = "none"
 REAL_HOME = Path(os.path.expanduser("~"))
 
 
@@ -57,6 +58,7 @@ def child_env(env):
     (COVERAGE_PROCESS_START is set) the process is measured too."""
     env = dict(env)
     env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
+    env.setdefault("CC_PROFILES_PICKER", "none")  # never a real folder dialog on the screen
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
         # data next to the config, never in the process's working folder (often a fake home):

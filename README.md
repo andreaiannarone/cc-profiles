@@ -128,7 +128,7 @@ cc-profiles
 
 ### Key Features
 
-- 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed. Assign projects with simple path rules.
+- 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed, picking the folder in your system's dialog, or merge its history into a project you already have. Assign projects with simple path rules.
 - 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
 - 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
 - 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
@@ -143,7 +143,7 @@ cc-profiles
 - ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution switches. Dropdowns offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
 - 📟 **Status line**: build Claude Code's status line without writing a script. Tick what to show (profile, model, path, git branch, context used, tokens, session cost, 5-hour and weekly limits and more), drag it into order, pick brackets, separator and colors or start from a preset, and check the live preview; one click puts it in every profile. A small `sh` + `jq` script, never your own one overwritten. [How it works](https://cc-profiles.andreaia.com/status-line.html)
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Old ones are deleted automatically after 90 days (or 15, 30, 60), except those you mark **Keep**.
-- 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to.
+- 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to, or a project to merge them into.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
 - ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
@@ -458,7 +458,7 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 | `cc-profiles: command not found` | run `pipx ensurepath` (or `uv tool update-shell`) and open a new terminal |
 | `/cc-profiles` does not appear in Claude Code | start `cc-profiles` once, then restart the session; if it is still missing, run `cc-profiles install-command` |
 | `/cc-profiles` says the command was not found | cc-profiles was moved or reinstalled another way: start `cc-profiles` once and it points the command to the new place |
-| A project shows "folder not found on disk" | click **Relink…** and pick the folder where it lives now |
+| A project shows "folder not found on disk" | click **Relink…** and pick the folder where it lives now, or **Merge into…** if its history belongs to a project you already have |
 | A setting has no effect | the **Settings** tab shows which file the value comes from: `settings.local.json` wins over `settings.json` |
 
 See the **[Troubleshooting guide](https://cc-profiles.andreaia.com/troubleshooting.html)** for more.

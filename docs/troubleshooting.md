@@ -30,7 +30,7 @@ If the profile was created by copying another profile's folder by hand, it share
 
 ## A project shows "folder not found on disk"
 
-You moved or renamed the project folder. Use **Relink…** in the Projects tab, or in Health. If the folder is on an external disk, connect it: the project comes back by itself.
+You moved or renamed the project folder. Use **Relink…** in the Projects tab, or in Health. If you already opened the new folder in Claude Code, use **Merge into…** and pick that project. If the folder is on an external disk, connect it: the project comes back by itself.
 
 ## A project shows "unknown path"
 

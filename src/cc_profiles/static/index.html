@@ -290,6 +290,23 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .bf-rules li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
 .share .txt .bf-try { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .bf-try input.text { flex: 1; min-width: 200px; }
+.ffield { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.mglist { max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 4px; margin-top: 8px; }
+.mgitem { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+.mgitem:hover { background: var(--panel-2); }
+.mgitem .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mgitem[hidden] { display: none; }
+.ffrow { display: flex; gap: 8px; }
+.ffrow input.text { flex: 1; min-width: 0; }
+.fbrowse { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.fbcrumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.fbcrumbs .linkbtn, .fbcrumbs span { font-family: var(--mono); }
+.fbcrumbs .linkbtn { font-weight: 500; color: var(--text); font-size: 12.5px; }
+.fblist { max-height: 240px; overflow-y: auto; padding: 4px; display: grid; }
+.fbitem { text-align: left; background: none; border: 0; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+.fbitem:hover, .fbitem:focus-visible { background: var(--panel-2); }
+.fbfoot { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); }
+.fbfoot .grow { flex: 1; }
 #bf-result { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
 .pcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; cursor: pointer; color: var(--muted); font-weight: 550; min-height: 110px; background: transparent; }
 .pcard.add:hover { color: var(--text); border-color: var(--faint); }
@@ -651,6 +668,7 @@ function renderProjects() {
           ${ids.map(id => { const s = r.in[id]; return `<td class="nums">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
           <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
           <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
+            ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
             <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
       }).join("")}</tbody></table>` : `<div class="empty">${S.filter === "issues" ? "Nothing needs attention. ✓" : "No projects."}</div>`}
     </div>`;
@@ -701,17 +719,98 @@ async function doMove(r, from, to) {
       `<code>${esc(r.pretty)}</code><br>From ${esc(label(from))} to ${esc(label(to))}: ${plural(s.conv, "conversation", "conversations")}, ${plural(s.mem, "memory", "memories")}, the prompt history and the project settings. Anything ${esc(label(to))} already has goes to the backup.${warn}${details}`, "Move"))) return;
   await run(() => api("/api/projects/move", { project: r.name, from, to })); await refresh();
 }
+// ---------- choosing a folder ----------
+// A browser never tells a page the full path of a folder you pick, so Choose… asks the server:
+// it opens the system's folder dialog (macOS, Linux with zenity or kdialog) and returns the path.
+// Where there is no dialog (WSL…), a folder browser opens under the field instead.
+function folderField(id, value, placeholder, label, extra = "") {
+  return `<div class="ffield"><div class="ffrow"><input class="text mono" id="${id}" value="${esc(value)}" placeholder="${esc(placeholder)}" aria-label="${esc(label)}" autocomplete="off" ${extra}>
+    <button type="button" class="btn" data-choose="${id}" data-prompt="${esc(label)}">Choose…</button></div>
+    <div class="fbrowse" id="${id}-browse" hidden></div></div>`;
+}
+const joinPath = (dir, name) => dir.endsWith("/") ? dir + name : dir + "/" + name;
+async function chooseFolder(id, prompt) {
+  const input = $("#" + id), btn = $(`[data-choose="${id}"]`);
+  if (!input) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Choosing…";
+  let r;
+  try { r = await api(`/api/folders/pick?start=${encodeURIComponent(input.value)}&prompt=${encodeURIComponent(prompt || "Choose a folder")}`); }
+  catch (e) { toast(e.message, "", true); return; }
+  finally { btn.disabled = false; btn.textContent = label; }
+  if (!r.native) return browseFolder(id, input.value.trim() || r.start, false);
+  if (r.cancelled) return input.focus();
+  input.value = r.path; input.dispatchEvent(new Event("input", { bubbles: true })); input.focus();
+}
+async function browseFolder(id, path, hidden) {
+  const box = $(`#${id}-browse`), input = $("#" + id);
+  if (!box) return;
+  let d;
+  try { d = await api(`/api/folders?path=${encodeURIComponent(path)}${hidden ? "&hidden=1" : ""}`); }
+  catch (e) { toast(e.message, "", true); return; }
+  box.hidden = false;
+  box.innerHTML = `<div class="fbcrumbs" aria-label="Folder">${d.crumbs.map((c, i) => `${i && d.crumbs[i - 1].name !== "/" ? `<span aria-hidden="true">/</span>` : ""}<button type="button" class="linkbtn" data-fpath="${esc(c.path)}">${esc(c.name)}</button>`).join("")}
+      <button type="button" class="btn small" data-fpath="${esc(d.home)}" style="margin-left:auto">Home</button></div>
+    <div class="fblist" role="list">${d.parent ? `<button type="button" class="fbitem" data-fpath="${esc(d.parent)}" role="listitem">↑ ..</button>` : ""}
+      ${d.folders.map(n => `<button type="button" class="fbitem" data-fpath="${esc(joinPath(d.path, n))}" role="listitem">${esc(n)}</button>`).join("") || `<div class="hint" style="padding:6px 8px">No folders in here.</div>`}
+      ${d.truncated ? `<div class="hint" style="padding:6px 8px">Only the first ${d.folders.length}: type the path instead.</div>` : ""}</div>
+    <div class="fbfoot"><label class="check"><input type="checkbox" class="fbhidden" ${hidden ? "checked" : ""}> Show hidden folders</label><span class="grow"></span>
+      <button type="button" class="btn small" data-fbclose>Cancel</button><button type="button" class="btn small primary" data-fbuse="${esc(d.path)}">Use ${esc(d.crumbs[d.crumbs.length - 1].name)}</button></div>`;
+  box.onclick = e => {
+    const t = /** @type {HTMLElement} */ (e.target);
+    const go = t.closest("[data-fpath]");
+    if (go) return browseFolder(id, go.dataset.fpath, $(".fbhidden", box).checked);
+    if (t.closest("[data-fbclose]")) { box.hidden = true; return input.focus(); }
+    const use = t.closest("[data-fbuse]");
+    if (use) { input.value = use.dataset.fbuse; input.dispatchEvent(new Event("input", { bubbles: true })); box.hidden = true; input.focus(); }
+  };
+  $(".fbhidden", box).onchange = e => browseFolder(id, d.path, e.target.checked);
+  $(".fbitem", box)?.focus();
+}
+document.addEventListener("click", e => { const b = e.target.closest?.("[data-choose]"); if (b) chooseFolder(b.dataset.choose, b.dataset.prompt); });
+
 async function doRelink(r, pid) {
   pid = pid || Object.keys(r.in)[0];
   let cands = [];
   try { cands = r.path ? await api("/api/candidates?name=" + encodeURIComponent(basename(r.path))) : []; } catch {}
   const res = await modal({ title: "Relink to a folder", sub: `<code>${esc(r.pretty)}</code> no longer exists. Tell where the project is now: conversations, memories, history and settings will follow${Object.keys(r.in).length > 1 ? ` (profile ${esc(label(pid))})` : ""}.`,
     body: `${cands.length ? `<div class="hint">Folders with the same name:</div>${cands.map(c => `<button class="btn small" data-pick="${esc(c)}" style="text-align:left;white-space:normal"><code>${esc(c)}</code></button>`).join("")}` : `<div class="hint">No folder with the same name was found.</div>`}
-      <input class="text" placeholder="~/code/…" value="${esc(cands[0] || "")}" aria-label="New folder">`,
+      ${folderField("relink-path", cands[0] || "", "~/code/…", "New folder of the project")}`,
     actions: [{ label: "Relink", kind: "primary", value: "ok" }] });
   if (!res) return;
-  const path = $("input.text", res.el)?.value || "";
+  const path = $("#relink-path", res.el)?.value || "";
   await run(() => api("/api/projects/relink", { project: r.name, profile: pid, path })); await refresh();
+}
+// Merge a project whose folder is gone into another project of the same profile: the same as
+// relinking it to that project's folder, picked from a list instead of the disk.
+async function doMerge(r, pid) {
+  pid = pid || Object.keys(r.in)[0];
+  const base = r.path ? basename(r.path) : "";
+  const targets = S.projects.filter(p => p.name !== r.name && p.exists && p.path && p.in[pid])
+    .sort((a, b) => Number(basename(b.path) === base) - Number(basename(a.path) === base) || a.pretty.localeCompare(b.pretty));
+  if (!targets.length) { toast(`${label(pid)} has no other project on disk to merge into.`, "", true); return; }
+  const resP = modal({ title: "Merge into another project",
+    sub: `<code>${esc(r.pretty)}</code> no longer exists. Its conversations, memories, prompt history and settings go into the project you pick, in ${esc(label(pid))}; nothing is deleted.`,
+    body: `<input class="text" id="mg-q" placeholder="Filter projects…" aria-label="Filter projects" autocomplete="off">
+      <div class="mglist" role="radiogroup" aria-label="Project to merge into">${targets.map((t, i) => `<label class="mgitem" data-mg="${esc(t.pretty.toLowerCase())}">
+        <input type="radio" name="mg" value="${esc(t.name)}" ${i ? "" : "checked"}><span class="mono grow">${esc(t.pretty)}</span>
+        <span class="hint">${t.in[pid].conv} conv · ${t.in[pid].mem} mem${basename(t.path) === base ? " · same name" : ""}</span></label>`).join("")}</div>`,
+    actions: [{ label: "Continue", kind: "primary", value: "ok" }] });
+  $("#mg-q").oninput = e => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll("[data-mg]").forEach(l => { l.hidden = !!q && !l.dataset.mg.includes(q); });
+  };
+  const res = await resP;
+  if (!res) return;
+  const into = $('input[name="mg"]:checked', res.el)?.value;
+  if (!into) return;
+  let pl;
+  try { pl = await api(`/api/projects/merge/preview?project=${encodeURIComponent(r.name)}&profile=${encodeURIComponent(pid)}&into=${encodeURIComponent(into)}`); }
+  catch (e) { toast(e.message, "", true); return; }
+  const clash = pl.conflicts.length ? `<div class="danger-box" style="margin-top:10px">${plural(pl.conflicts.length, "file is", "files are")} already in the target, which keeps its own; the originals go to the backup: ${pl.conflicts.slice(0, 8).map(c => `<code>${esc(c)}</code>`).join(", ")}${pl.conflicts.length > 8 ? "…" : ""}</div>` : "";
+  if (!(await confirmBox(`Merge into ${pl.into}?`, `From <code>${esc(pl.from)}</code> into <code>${esc(pl.into)}</code>: ${plural(pl.conversations, "conversation", "conversations")}, ${plural(pl.memories, "memory", "memories")}${pl.memories ? " (with their MEMORY.md lines)" : ""} and ${plural(pl.prompts, "prompt", "prompts")} of the history, and the project settings. Everything goes to the backup first.${clash}`, "Merge"))) return;
+  try { await run(() => api("/api/projects/merge", { project: r.name, profile: pid, into })); } catch { return; }
+  await refresh();
 }
 async function doDelete(r, pid) {
   const s = r.in[pid];
@@ -913,6 +1012,7 @@ function renderHealth() {
         <div class="hint">${plural(o.conv, "conversation", "conversations")} · ${plural(o.mem, "memory", "memories")}</div>
         <div class="c">${o.candidates.map(c => `<button class="btn small primary" data-hlink="${esc(o.name)}" data-prof="${h.id}" data-path="${esc(c)}">Relink to ${esc(c)}</button>`).join("")}
           <button class="btn small" data-hrelink="${esc(o.name)}" data-prof="${h.id}">Relink…</button>
+          <button class="btn small" data-hmerge="${esc(o.name)}" data-prof="${h.id}">Merge into…</button>
           <button class="btn small danger" data-hdel="${esc(o.name)}" data-prof="${h.id}">Delete</button></div></div>`).join("") || `<div class="hint">None. ✓</div>`}
     </div>`).join("")}</div>`;
   $("#rehealth").onclick = loadHealth;
@@ -1111,7 +1211,7 @@ function byFolderHtml() {
       <div class="share"><div class="txt"><span class="bf-t">Rules: folder → profile</span>
         ${rules ? `<ul class="bf-rules">${rules}</ul>` : `<div>No rules yet: add one from the Projects tab with Assign….</div>`}</div></div>
       <div class="share"><div class="txt"><span class="bf-t">Try a folder</span>
-        <div class="bf-try"><input class="text mono" id="bf-path" list="bf-list" placeholder="~/code/work/api" aria-label="Folder to try">
+        <div class="bf-try">${folderField("bf-path", "", "~/code/work/api", "Folder to try", 'list="bf-list"')}
           <datalist id="bf-list">${x.projects.map(p => `<option value="${esc(p.path)}">`).join("")}</datalist>
           <button class="btn" id="bf-go">Try</button></div>
         <div id="bf-result" role="status"></div></div></div>
@@ -2820,6 +2920,7 @@ document.addEventListener("click", async e => {
     const r = byName(t.dataset.name);
     if (t.dataset.act === "fixmove") { const i = r.issues.find(x => x.kind === "profile"); return doMove(r, i.from, i.to); }
     if (t.dataset.act === "relink") return doRelink(r);
+    if (t.dataset.act === "merge") return doMerge(r);
     if (t.dataset.act === "rule") return doRule(r);
     if (t.dataset.act === "manage") return doManage(r);
   }
@@ -2831,6 +2932,7 @@ document.addEventListener("click", async e => {
     await refresh(); return loadHealth();
   }
   if (t.dataset.hrelink) { await doRelink(byName(t.dataset.hrelink), t.dataset.prof); return S.tab === "health" && loadHealth(); }
+  if (t.dataset.hmerge) { await doMerge(byName(t.dataset.hmerge), t.dataset.prof); return S.tab === "health" && loadHealth(); }
   if (t.dataset.hdel) { await doDelete(byName(t.dataset.hdel), t.dataset.prof); return S.tab === "health" && loadHealth(); }
 });
 const openCard = c => c.dataset.agent ? openAgent(c.dataset.agent) : c.dataset.skill ? openSkill(c.dataset.skill)

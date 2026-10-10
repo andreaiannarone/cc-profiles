@@ -18,6 +18,7 @@ The code is one module per area. Each module imports only from the ones above it
 |---|---|
 | `byfolder.py` | rule matching (`match_rule()`, `san()`), `cc-profiles which` and `shell-init`. Imports nothing from the package, so `which` starts fast on every `claude` launch |
 | `core.py` | paths and constants, `san()`, atomic `write_text()`, `cached_read()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
+| `folders.py` | Choose…: the system's folder dialog (`osascript`, `zenity`, `kdialog`) and the folder listing of the page's own browser (read-only) |
 | `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
 | `projects.py` | list, move (with preview), relink, delete, rules |
 | `memories.py` | list, read, save, move, delete |

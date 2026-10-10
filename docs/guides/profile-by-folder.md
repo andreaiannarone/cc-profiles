@@ -39,7 +39,7 @@ Subfolders count: a rule `code/work` covers `~/code/work/api/src` too, because r
 - you use a profile's own command, such as `claude-work`;
 - cc-profiles is not installed or not in `PATH`: the function runs plain `claude`.
 
-The section also lists your rules as *folder → profile*, and **Try a folder** shows which profile `claude` would pick for any path, without changing anything.
+The section also lists your rules as *folder → profile*, and **Try a folder** shows which profile `claude` would pick for any path, without changing anything: type it, or click **Choose…** to pick it in your system's folder dialog.
 
 ## From the terminal
 

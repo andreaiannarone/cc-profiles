@@ -46,6 +46,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
 | `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv`, `brew` or `source`), for the update, uninstall and reinstall tests |
 | `CC_PROFILES_AUTO_COMMAND` | `0`: at start, do not add or update `/cc-profiles` in the profiles (the tests set it) |
+| `CC_PROFILES_PICKER` | the folder dialog of **Choose…**: `none` turns it off (the page's own folder browser opens instead; the tests set it), `osascript`, `zenity` or `kdialog` picks one |
 | `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
 | `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |

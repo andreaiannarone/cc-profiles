@@ -10,11 +10,11 @@ Open the **Projects** tab. The project is under **Needs attention**, with its ol
 
 ## 2. Relink it
 
-Click **Relink…**. cc-profiles suggests folders with the same name, found by searching your home folder up to 5 levels deep. Pick the right one, or type the new path, and confirm.
+Click **Relink…**. cc-profiles suggests folders with the same name, found by searching your home folder up to 5 levels deep. Pick the right one, type the new path, or click **Choose…** to pick the folder in your system's dialog, and confirm.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/relink-dark.jpg">
-  <img src="../assets/screenshots/relink-light.jpg" alt="The Relink to a folder dialog, with the new path of the project typed in" width="560" height="227" loading="lazy">
+  <img src="../assets/screenshots/relink-light.jpg" alt="The Relink to a folder dialog, with the new path of the project typed in and the Choose button" width="560" height="224" loading="lazy">
 </picture>
 
 Relinking works on one profile at a time. If the project has history in more than one profile, relink it in each: the **Health** tab lists it under every profile concerned. In that profile, relinking:
@@ -27,11 +27,12 @@ Start `claude` in the new folder: `/resume` shows the old conversations again.
 
 ## When the folder is not suggested
 
-The search skips `node_modules`, `Library`, hidden folders and build folders, and looks only under the folders in `search_roots`. If your code lives on another disk, add it there: see [Configuration](../configuration.md#search_roots). Typing the path by hand always works.
+The search skips `node_modules`, `Library`, hidden folders and build folders, and looks only under the folders in `search_roots`. If your code lives on another disk, add it there: see [Configuration](../configuration.md#search_roots). Typing the path by hand, or picking it with **Choose…**, always works.
 
 ## When not to relink
 
 - **The folder is on an external disk** that is not connected: the project looks orphaned until you plug the disk back in. Leave it alone.
+- **You already opened the new folder in Claude Code**, so it is a project of its own: use **Merge into…** next to Relink and pick it. The old history joins it, and the files it already has stay as they are (the old ones go to the backup).
 - **The folder is gone for good**: **Delete** moves the project to the backup instead.
 
 Relinking has a backup like every other change: **Restore** in the **Backups** tab undoes it.
