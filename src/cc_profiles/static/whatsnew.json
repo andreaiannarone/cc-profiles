@@ -1,6 +1,19 @@
 {
  "releases": [
   {
+   "version": "0.5.5",
+   "date": "2026-10-11",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Choose…** next to the folder fields of **Relink…** and **Try a folder**: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux) and fills in the full path, which a browser never gives a web page. Where there is no dialog, such as WSL, a folder browser opens under the field, from `~` down, with hidden folders on request.",
+      "**Merge into…** next to **Relink…** (Projects and Health): merges a project whose folder is gone into another project of the same profile, picked from a list (same folder name first, with a filter). A preview says how many conversations, memories and prompts go in and which files the target already has; the target keeps its own, the originals go to the backup."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.5.4",
    "date": "2026-10-09",
    "sections": [
@@ -181,25 +194,6 @@
       "Accessibility: section titles in the tabs are `h2` (and their groups `h3`) under the page's `h1`, instead of skipping a level; they look the same. The browser test now also fails on axe's `heading-order` rule.",
       "`scripts/release.py`: the last step deletes the release branch on origin only if `git ls-remote` still lists it, and otherwise says GitHub already deleted it, instead of printing a failed push.",
       "The Conversations tab no longer fails on a conversation with a malformed line (a `message` that is not an object)."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.4.5",
-   "date": "2026-10-06",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "The documentation has its own site, https://cc-profiles.andreaia.com, with the app's logo, colors and theme switch; PyPI links to it."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "README: links and images are absolute, so the PyPI page shows the screenshots and opens the guides; the documentation list has every guide, and the status line page is described as the Settings editor it now is.",
-      "Documentation brought up to date with the code: the architecture (a package, not one file), what is read from conversations, the Save changes bar and status line editor in DESIGN.md, the test-only environment variables, and `cc-profiles restart` wherever a restart is needed."
      ]
     }
    ]
