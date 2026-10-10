@@ -50,6 +50,7 @@ from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
+from .folders import list_folders, pick_folder
 from .agents import (agent_all_plan, agent_read, list_agents, op_agent_copy, op_agent_copy_all, op_agent_delete,
                      op_agent_save, op_agent_save_raw)
 from .github import (github_state, op_github_account, op_github_identity, op_github_remove, op_github_save,
@@ -311,6 +312,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/mcp": lambda: list_mcp(q["profile"]),
                 "/api/connectors": lambda: list_connectors(q["profile"]),
                 "/api/github": github_state,
+                "/api/folders": lambda: list_folders(q.get("path", ""), q.get("hidden") == "1"),
+                "/api/folders/pick": lambda: pick_folder(q.get("start", ""), q.get("prompt") or "Choose a folder"),
                 "/api/connectors/check": lambda: connectors_check(q["profile"], q.get("force") == "1"),
                 "/api/mcp/server": lambda: mcp_server(q["profile"], q["scope"], q["name"]),
             }

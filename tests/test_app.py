@@ -1052,6 +1052,34 @@ def test_agents_are_managed_and_undoable(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
 
+
+def test_choose_a_folder(home, app_factory):
+    basic_home(home)
+    home.path("code/work/.hidden").mkdir(parents=True)
+    app = app_factory()
+    d = app.get("/api/folders?path=~/code")
+    assert d["path"] == "~/code" and d["parent"] == "~" and d["home"] == "~"
+    assert d["folders"] == ["new-name", "personal", "work"] and d["crumbs"][-1] == {"name": "code", "path": "~/code"}
+    assert app.get("/api/folders?path=~/code/work")["folders"] == ["api"]
+    assert app.get("/api/folders?path=~/code/work&hidden=1")["folders"] == [".hidden", "api"]
+    assert app.get("/api/folders?path=~/code/nope/deeper")["path"] == "~/code"  # the closest folder that exists
+    assert app.get("/api/folders?path=relative")["path"] == "~"
+    # no dialog here: the page browses instead
+    assert app.get("/api/folders/pick?start=~/code") == {"native": False, "start": "~/code"}
+    app.stop()
+
+    # the system's dialog (a fake zenity): its answer, or a cancel
+    zenity = home.write(".local/bin/zenity", '#!/bin/sh\necho "$@" > "$HOME/zenity-args"\n'
+                                              '[ -f "$HOME/cancel" ] && exit 1\necho "$HOME/code/work/api"\n')
+    zenity.chmod(0o755)
+    app = app_factory(CC_PROFILES_PICKER="zenity")
+    r = app.get("/api/folders/pick?start=~/code/work&prompt=New%20folder")
+    assert r == {"native": True, "cancelled": False, "path": "~/code/work/api", "exists": True}
+    assert home.path("zenity-args").read_text().split() == [
+        "--file-selection", "--directory", "--title=New", "folder", f"--filename={home.path('code/work')}/"]
+    home.write("cancel", "")
+    assert app.get("/api/folders/pick") == {"native": True, "cancelled": True}
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

@@ -37,7 +37,7 @@ If the target profile already has something with the same name, the target's ver
 
 A project is an **orphan** when its folder no longer exists on disk, usually because you moved or renamed it. Claude Code then stops showing its history, because it looks for the folder under its new name.
 
-**Relink…** asks where the project is now. It suggests folders with the same name, found by searching the folders in `search_roots` (your home by default) up to 5 levels deep, skipping `node_modules`, `Library`, hidden folders and build folders. Relinking:
+**Relink…** asks where the project is now. It suggests folders with the same name, found by searching the folders in `search_roots` (your home by default) up to 5 levels deep, skipping `node_modules`, `Library`, hidden folders and build folders. You can also type the path, or click **Choose…** to pick the folder: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux), and where there is none, such as WSL, a folder browser opens under the field. A browser never tells a web page the full path of a folder you pick, so the app's server, which runs on your computer, opens the dialog and fills in the path. Relinking:
 
 1. moves the conversations and memories to the folder name that matches the new path;
 2. rewrites the prompts in `history.jsonl` to the new path, so arrow-up history works there again;

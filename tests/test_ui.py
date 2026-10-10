@@ -342,6 +342,22 @@ def test_agents_tab(page_on_sandbox):
     page.keyboard.press("Escape")
     assert errors == []
 
+
+def test_choose_a_folder_in_relink(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "projects")
+    page.click('button[data-act="relink"]')
+    page.wait_for_selector("#relink-path")
+    page.fill("#relink-path", "~/code")
+    page.click('[data-choose="relink-path"]')  # no dialog in the tests: the browser opens under the field
+    page.wait_for_selector("#relink-path-browse .fbitem")
+    page.click('#relink-path-browse .fbitem:has-text("work")')
+    page.wait_for_selector('#relink-path-browse [data-fbuse$="code/work"]')
+    page.click("#relink-path-browse [data-fbuse]")
+    assert page.input_value("#relink-path").endswith("code/work") and page.is_hidden("#relink-path-browse")
+    page.keyboard.press("Escape")
+    assert errors == []
+
 def test_status_line_section(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")
