@@ -3,6 +3,12 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.5.5] - 2026-10-11
+
+**Added**
+- **Choose…** next to the folder fields of **Relink…** and **Try a folder**: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux) and fills in the full path, which a browser never gives a web page. Where there is no dialog, such as WSL, a folder browser opens under the field, from `~` down, with hidden folders on request.
+- **Merge into…** next to **Relink…** (Projects and Health): merges a project whose folder is gone into another project of the same profile, picked from a list (same folder name first, with a filter). A preview says how many conversations, memories and prompts go in and which files the target already has; the target keeps its own, the originals go to the backup.
+
 ## [0.5.4] - 2026-10-09
 
 **Added**
@@ -260,6 +266,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.5.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.1...v0.5.2
