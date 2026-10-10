@@ -1080,6 +1080,38 @@ def test_choose_a_folder(home, app_factory):
     home.write("cancel", "")
     assert app.get("/api/folders/pick") == {"native": True, "cancelled": True}
 
+
+def test_merge_an_orphan_into_another_project(home, app_factory):
+    basic_home(home)
+    old, blog = san(home.path("code/old-name")), san(home.path("code/personal/blog"))
+    home.write(f".claude/projects/{old}/memory/old-notes.md", "---\nname: old-notes\ndescription: d\n---\nold\n")
+    home.write(f".claude/projects/{old}/memory/MEMORY.md", "- [old-notes](old-notes.md) — d\n")
+    home.write(f".claude/projects/{old}/s-blog.jsonl", "{}\n")  # the same conversation file in both
+    before = home.snapshot()
+    app = app_factory()
+
+    pl = app.get(f"/api/projects/merge/preview?project={old}&profile=default&into={blog}")
+    assert pl == {"from": "~/code/old-name", "into": "~/code/personal/blog", "conversations": 2, "memories": 1,
+                  "prompts": 1, "conflicts": ["s-blog.jsonl"]}
+    r = app.post("/api/projects/merge", {"project": old, "profile": "default", "into": blog})
+    assert r["message"].startswith("Merged into ~/code/personal/blog")
+    assert not home.path(f".claude/projects/{old}").exists()
+    target = home.path(f".claude/projects/{blog}")
+    assert (target / "s-old.jsonl").exists() and (target / "memory/old-notes.md").exists()
+    assert "old-notes" in (target / "memory/MEMORY.md").read_text()
+    hist = [json.loads(l)["project"] for l in home.path(".claude/history.jsonl").read_text().splitlines()]
+    assert hist.count(str(home.path("code/personal/blog"))) == 2
+    assert app.get("/api/backups")[0]["title"] == "Merge ~/code/old-name into ~/code/personal/blog (Default)"
+
+    assert "Pick another project" in app.post_error("/api/projects/merge", {"project": blog, "profile": "default", "into": blog})
+    api = san(home.path("code/work/api"))
+    shutil.rmtree(home.path("code/work/api"))
+    assert "not on disk" in app.post_error("/api/projects/merge", {"project": blog, "profile": "default", "into": api})
+    home.path("code/work/api").mkdir()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
 # --- profiles -----------------------------------------------------------------
 def test_new_profiles_get_the_cc_profiles_command(home, app_factory):
     basic_home(home)

@@ -19,7 +19,7 @@ The **Health** tab checks every profile:
 | Memory indexes | `MEMORY.md` lists a missing file (error), or a memory is not listed (warning) |
 | Open session | warning only: a `claude` process is running in the profile, or one of its conversations was written in the last 2 minutes |
 
-Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…** and **Delete**.
+Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…**, **Merge into…** (into another project of the profile) and **Delete**.
 
 Health runs `claude auth status` once per profile, so it takes a few seconds. **Run the checks again** refreshes it.
 

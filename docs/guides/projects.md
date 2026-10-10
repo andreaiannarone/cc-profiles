@@ -43,6 +43,8 @@ A project is an **orphan** when its folder no longer exists on disk, usually bec
 2. rewrites the prompts in `history.jsonl` to the new path, so arrow-up history works there again;
 3. renames the per-project settings in `.claude.json`.
 
+**Merge into…**, next to Relink, does the same with a project you already have instead of a folder: when the history of an old folder belongs with a project that exists, pick that project from the list (projects of the same profile whose folder is on disk, the ones with the same folder name first; type to filter). A confirmation says how many conversations, memories and prompts go in, and lists the files the target already has: the target keeps its own, and the originals go to the backup. Memories are merged with their `MEMORY.md` lines, and nothing is deleted.
+
 If the folder is gone for good, **Delete** moves the project to the backup.
 
 > A project on an external disk shows as an orphan while the disk is not connected. Leave it alone: it comes back when you plug the disk in.

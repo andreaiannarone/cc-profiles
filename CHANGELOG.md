@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 - **Choose…** next to the folder fields of **Relink…** and **Try a folder**: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux) and fills in the full path, which a browser never gives a web page. Where there is no dialog, such as WSL, a folder browser opens under the field, from `~` down, with hidden folders on request.
+- **Merge into…** next to **Relink…** (Projects and Health): merges a project whose folder is gone into another project of the same profile, picked from a list (same folder name first, with a filter). A preview says how many conversations, memories and prompts go in and which files the target already has; the target keeps its own, the originals go to the backup.
 
 ## [0.5.4] - 2026-10-09
 

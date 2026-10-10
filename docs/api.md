@@ -43,6 +43,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source}], marketplaces, dir, shared}` |
 | `GET /api/profiles/export` | `id`, `projects` (`1` to include conversations) | a `.zip` download (not JSON): `profile/…`, `claude.json`, `home-memory/…`, `cc-profiles-export.json`; never login credentials |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
+| `GET /api/projects/merge/preview` | `project`, `profile`, `into` (another project of the same profile, on disk) | `{from, into, conversations, memories, prompts, conflicts}`: what merging would move, and the files the target already has. Changes nothing |
 | `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
 | `GET /api/profiles/delete/preview` | `id`, `merge_into` (optional) | `{items: [{action, item, from, to}], projects, conversations, memories, prompts, settings, active, folder, config, into}`: what deleting would do; `action` is `move`, `merge`, `conflict`, `stash` (goes to the backup) or `edit` (a line or entry removed from a file). Changes nothing |
 | `GET /api/sharing/preview` | `profile`, `item`, `shared` (`1` to share, `0` to separate) | `{items: [{action, item, from, to}], source, profile, only_own}`; `action` is `create` (made empty in the source), `stash`, `only-here` (only the own copy has it), `link` or `copy`. Changes nothing |
@@ -76,6 +77,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 |---|---|
 | `POST /api/projects/move` | `project`, `from`, `to` |
 | `POST /api/projects/relink` | `project`, `profile`, `path` |
+| `POST /api/projects/merge` | `project`, `profile`, `into`: a relink to the folder of another project of the same profile |
 | `POST /api/projects/delete` | `project`, `profile` |
 | `POST /api/rules` | `match`, `profile` (an id or `shared`) |
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |

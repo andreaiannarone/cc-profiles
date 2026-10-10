@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from . import __version__
 from . import core
 from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups
-from .projects import list_projects, move_plan, op_delete, op_move, op_relink, op_rule
+from .projects import list_projects, merge_plan, move_plan, op_delete, op_merge, op_move, op_relink, op_rule
 from .memories import (
     memory_list,
     memory_projects,
@@ -281,6 +281,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/search": lambda: search(q.get("q", "")),
                 "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
+                "/api/projects/merge/preview": lambda: merge_plan(q["project"], q["profile"], q["into"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
                 "/api/sharing/preview": lambda: share_plan(q["profile"], q["item"], q["shared"] == "1"),
@@ -340,6 +341,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/projects/move": lambda: op_move(b["project"], b["from"], b["to"]),
                 "/api/projects/delete": lambda: op_delete(b["project"], b["profile"]),
                 "/api/projects/relink": lambda: op_relink(b["project"], b["profile"], b["path"]),
+                "/api/projects/merge": lambda: op_merge(b["project"], b["profile"], b["into"]),
                 "/api/rules": lambda: op_rule(b["match"], b["profile"]),
                 "/api/memory/save": lambda: op_memory_save(b["profile"], b["project"], b["file"], b["content"]),
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
