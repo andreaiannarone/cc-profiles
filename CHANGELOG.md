@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-13
+
 ### Changed
 - **A profile's GitHub CLI folder lists only the account it uses**, so a Claude Code session of that profile sees no other account to switch to. When cc-profiles starts, and when you pick another account for a profile, the other accounts leave that profile's folder (with a backup); they stay listed in Default's folder or in `~/.config/gh-accounts`, so you can still pick them. Default's folder (your terminal's) and a folder with a token written in `hosts.yml` are left as they are.
 
@@ -281,7 +283,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...HEAD
+[0.5.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.3...v0.5.4
