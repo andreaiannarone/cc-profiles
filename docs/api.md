@@ -18,7 +18,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 |---|---|---|
 | `GET /api/profiles` | | profiles with label, command, folder, email, `github` (the active GitHub account), counts, `primary`, `active` |
 | `GET /api/projects` | | every project: real path, `exists`, expected profile, per-profile counts, `issues` |
-| `GET /api/candidates` | `name` | up to 10 folders with that name under the search roots |
+| `GET /api/candidates` | `name`, `fresh` (`1` to search again; otherwise the search of the last minute is reused) | up to 10 folders with that name under the search roots |
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
 | `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries |
 | `GET /api/memory/file` | `profile`, `project`, `file` | `{content}` |
@@ -60,7 +60,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/backups/auto` | | `{days, default, choices, last, message, config}`: the automatic cleanup setting (90 days when unset; it cannot be off) and its last run |
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
-| `GET /api/health` | | checks and orphan projects for every profile (runs `claude auth status`) |
+| `GET /api/health` | `fresh` (`1` to search the candidate folders again) | checks and orphan projects for every profile (runs `claude auth status`) |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
 | `GET /api/update/auto` | | the same fields from the last answer, without asking PyPI, plus `enabled` (the automatic daily check) and `checked` (when PyPI was last asked) |

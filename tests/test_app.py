@@ -2054,6 +2054,18 @@ def test_listings_follow_changes_on_disk(home, app_factory):
     assert {r["name"]: r for r in app.get("/api/projects")}[api]["path"] == str(home.path("code/work/api"))
 
 
+def test_a_folder_moved_just_now_is_suggested_when_asked(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    assert app.get("/api/candidates?name=old-name") == []  # the walk is kept for a minute
+    home.path("elsewhere/old-name").mkdir(parents=True)
+    assert app.get("/api/candidates?name=old-name") == []
+    assert app.get("/api/candidates?name=old-name&fresh=1") == ["~/elsewhere/old-name"]  # Relink… asks afresh
+    home.path("other/old-name").mkdir(parents=True)
+    orphans = {p["id"]: p for p in app.get("/api/health?fresh=1")}["default"]["orphans"]  # Run the checks again
+    assert sorted(orphans[0]["candidates"]) == ["~/elsewhere/old-name", "~/other/old-name"]
+
+
 def test_health_reports_problems_and_notices_fixes(home, app_factory):
     basic_home(home)
     home.path("elsewhere/old-name").mkdir(parents=True)  # a folder with the lost project's name

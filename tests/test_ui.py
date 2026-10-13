@@ -3,6 +3,7 @@ errors, Content-Security-Policy violations or a tab stuck loading.
 
 Needs the ui extra and a browser: pip install -e ".[ui]" && python -m playwright install chromium.
 Skipped when Playwright is not installed, so the main suite keeps running without it."""
+import os
 import subprocess
 import sys
 
@@ -356,6 +357,24 @@ def test_choose_a_folder_in_relink(page_on_sandbox):
     page.click("#relink-path-browse [data-fbuse]")
     assert page.input_value("#relink-path").endswith("code/work") and page.is_hidden("#relink-path-browse")
     page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_a_renamed_folder_shows_when_the_page_comes_back(page_on_sandbox, tmp_path):
+    page, errors = page_on_sandbox
+    code = tmp_path / "sandbox" / "code" / "personal"
+    open_tab(page, "projects")
+    page.click('button[data-filter="all"]')
+    row = 'tr:has-text("code/personal/blog")'
+    assert page.locator(f'{row} button[data-act="relink"]').count() == 0
+    os.rename(code / "blog", code / "journal")  # in Finder, say
+    page.evaluate("syncedAt = 0; window.dispatchEvent(new Event('focus'))")
+    page.wait_for_selector(f'{row} button[data-act="relink"]')  # no reload: the project now needs a relink
+    page.click('button[data-tab="health"]')
+    page.wait_for_selector('.orphan:has-text("code/personal/blog")')
+    os.rename(code / "journal", code / "blog")
+    page.evaluate("syncedAt = 0; window.dispatchEvent(new Event('focus'))")
+    page.wait_for_selector('.orphan:has-text("code/personal/blog")', state="detached")
     assert errors == []
 
 

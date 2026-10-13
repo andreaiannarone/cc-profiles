@@ -95,7 +95,7 @@ A large home has tens of thousands of conversation files, so listings keep what 
 | `cwd`s of a conversation, projects of `.claude.json`, history summary (prompts, broken lines, projects), `MEMORY.md`, memory and skill text for search, backup manifests | `core._file_cache` | the file's stat |
 | Size of a closed backup | `core._file_cache` | the backup folder's stat (only its manifest is ever rewritten, by `os.replace`) |
 | Size of a profile folder (About) | `backups._size_cache` | time: 60 s |
-| Folders under the search roots, by name (Health, relink candidates) | `health._cand_cache` | time: 60 s, and the search roots |
+| Folders under the search roots, by name (Health, relink candidates) | `health._cand_cache` | time: 60 s, and the search roots; **Relink…** and **Run the checks again** search afresh (`fresh=1`) |
 | Running `claude` processes | `core._running` | time: 3 s |
 
 Rules that keep this safe:
