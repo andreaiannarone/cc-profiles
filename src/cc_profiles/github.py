@@ -20,7 +20,10 @@ from .settings import save_settings_file, settings_files, shared_note
 # GH_CONFIG_DIR in the "env" of its settings.json, which Claude Code passes to every command it
 # runs; git follows when its credential helper is `gh auth git-credential` (`gh auth setup-git`).
 # Picking an account makes it the active user of the profile's folder: any user signed in in
-# some folder works, because the keychain finds the token by the name. GIT_AUTHOR_* and
+# some folder works, because the keychain finds the token by the name. A profile's folder lists
+# only the account it uses (restrict_folder()), so a session there sees no other account to
+# switch to; the others stay listed in Default's folder (your terminal's: left as it is) or in
+# the accounts folder. GIT_AUTHOR_* and
 # GIT_COMMITTER_* set who the commits are by. cc-profiles never reads a token, and never copies a
 # token line (gh's insecure storage writes them in hosts.yml).
 GH_HOST = "github.com"
@@ -227,12 +230,79 @@ def without_user(lines, user):
     return out
 
 
+def with_user(lines, user):
+    """hosts.yml lines with user signed in on github.com; the active user stays the same, if there is one."""
+    active = parse_users(lines)[0]
+    out = with_active_user(lines, user)
+    return with_active_user(out, active) if active and active != user else out
+
+
+def only_user(lines, user):
+    """hosts.yml lines where user is active and the only one signed in on github.com."""
+    lines = with_active_user(lines, user)
+    for other in [u for u in parse_users(lines)[1] if u != user]:
+        lines = without_user(lines, other)
+    return lines
+
+
+def listed_elsewhere(folder):
+    """The users of every folder cc-profiles manages but this one."""
+    return {u for f, _ in all_folders() if os.path.realpath(f) != os.path.realpath(folder) for u in gh_users(f)[1]}
+
+
+def remember(users, bk):
+    """List users in the accounts folder, so that an account taken off a profile's folder is still
+    one you can pick. No token is involved: they are in the keychain."""
+    folder = accounts_folder()
+    lines = hosts_lines(folder)
+    new = [u for u in users if u not in parse_users(lines)[1]]
+    if not new:
+        return
+    if not os.path.isdir(folder):
+        bk.mkdir(folder)
+        os.chmod(folder, 0o700)
+    path = os.path.join(folder, "hosts.yml")
+    bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
+    for u in new:
+        lines = with_user(lines, u)
+    write_text(path, "\n".join(lines) + "\n")
+    os.chmod(path, 0o600)
+
+
+def restrict_folder(folder, bk):
+    """Leave in a profile's folder only the account it uses, so that a session there sees no other
+    account to switch to. Not a folder with a token written in it: taking a user off would delete
+    the token. Returns the users taken off (kept listed in another folder)."""
+    lines = hosts_lines(folder)
+    active, users, insecure = parse_users(lines)
+    extra = [u for u in users if u != active]
+    if not active or not extra or insecure:
+        return []
+    remember([u for u in extra if u not in listed_elsewhere(folder)], bk)
+    path = os.path.join(folder, "hosts.yml")
+    bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
+    write_text(path, "\n".join(only_user(lines, active)) + "\n")
+    os.chmod(path, 0o600)
+    return extra
+
+
+def restrict(prof, bk):
+    """restrict_folder() for a profile's own folder. Default's is your terminal's too: left as it is."""
+    if is_default(prof) or shares_settings(prof) or not set_up(prof):
+        return []
+    return restrict_folder(own_folder(prof), bk)
+
+
 def copy_folder(src, dst, bk):
-    """A new GitHub CLI folder with src's settings and users, and no token line."""
+    """A new GitHub CLI folder with src's settings and its active user alone, and no token line."""
     bk.mkdir(os.path.dirname(dst))
     bk.created(dst)  # journaled first: restoring removes the folder with what is in it
     os.mkdir(dst, 0o700)
     lines = [l for l in hosts_lines(src) if not TOKEN_LINE.match(l)]
+    active, users, _ = parse_users(lines)
+    if active and len(users) > 1:
+        lines = only_user(lines, active)
+        remember([u for u in users if u != active and u not in listed_elsewhere(dst)], bk)
     if lines:
         write_text(os.path.join(dst, "hosts.yml"), "\n".join(lines) + "\n")
         os.chmod(os.path.join(dst, "hosts.yml"), 0o600)
@@ -285,15 +355,25 @@ def give_own_folder(prof, bk):
     return f"{prof['label']}: {pretty(own)}" + (f", GitHub as {user}" if user else ", not signed in to GitHub")
 
 
+def needs_restricting(prof):
+    if is_default(prof) or shares_settings(prof) or not set_up(prof):
+        return False
+    active, users, insecure = gh_users(own_folder(prof))
+    return bool(active) and len(users) > 1 and not insecure
+
+
 def ensure_gh_folders():
-    """At every start of the server: every profile gets its own GitHub CLI folder.
-    Returns (lines to print, backup path or None)."""
-    todo = [p for p in profiles() if not set_up(p)]
+    """At every start of the server: every profile gets its own GitHub CLI folder, with only the
+    account it uses in it. Returns (lines to print, backup path or None)."""
+    todo = [p for p in profiles() if not set_up(p) or needs_restricting(p)]
     if not todo:
         return [], None
     bk, lines = Backup("github-folders", "A GitHub CLI folder for each profile"), []
     for p in todo:
         line = give_own_folder(p, bk)
+        gone = restrict(p, bk)
+        if gone:
+            line = f"{p['label']}: only {gh_user(own_folder(p))} is left in {pretty(own_folder(p))} (taken off: {', '.join(gone)})"
         if line:
             lines.append(line)
             bk.note(line)
@@ -427,6 +507,7 @@ def apply_account(prof, user, bk):
     bk.copy(path, f"hosts-{os.path.basename(folder)}.yml")
     write_text(path, "\n".join(with_active_user(hosts_lines(folder), user)) + "\n")
     os.chmod(path, 0o600)
+    restrict(prof, bk)  # the account it used until now leaves the folder
     bk.note(f"{prof['label']}: GitHub as {user} ({pretty(folder)})")
     return f"{prof['label']} uses GitHub as {user}" + (" (your terminal too)" if is_default(prof) else "")
 
