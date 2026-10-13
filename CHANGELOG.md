@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- A `config.json` that could not be read for a moment (an editor half way through saving it) or that was not valid JSON was replaced with the defaults, losing the rules and the profile list. cc-profiles now reads it again for half a second, and if it stays broken keeps it as `config.broken-<date>-<time>.json` before starting from the defaults.
+
 ## [0.5.6] - 2026-10-13
 
 ### Fixed

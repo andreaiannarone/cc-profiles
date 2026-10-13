@@ -152,9 +152,30 @@ def detect_profiles():
     return found
 
 
+def unreadable_config():
+    """config.json exists but is not a JSON object. An editor may be half way through saving
+    it: read again for half a second. If it stays broken, keep a copy next to it before the
+    defaults replace it, so the profiles and rules in it are never lost. Returns the config or None."""
+    for _ in range(10):
+        time.sleep(0.05)
+        cfg = read_json(CONFIG_FILE)
+        if isinstance(cfg, dict):
+            return cfg
+    copy_to = os.path.join(DATA_DIR, time.strftime("config.broken-%Y%m%d-%H%M%S.json"))
+    try:
+        shutil.copy2(CONFIG_FILE, copy_to)
+    except OSError as e:
+        raise ApiError(f"{pretty(CONFIG_FILE)} cannot be read ({e.strerror or e}): fix it or move it away, then try again")
+    sys.stderr.write(f"cc-profiles: {pretty(CONFIG_FILE)} is not valid JSON: started again from the defaults; "
+                     f"your file is kept as {pretty(copy_to)}\n")
+    return None
+
+
 def load_config():
     os.makedirs(DATA_DIR, exist_ok=True)
     cfg = cached_read("config", CONFIG_FILE, read_json)
+    if not isinstance(cfg, dict):
+        cfg = unreadable_config() if os.path.lexists(CONFIG_FILE) else None
     if cfg is None:
         cfg = {"profiles": detect_profiles(), "rules": json.loads(json.dumps(DEFAULT_RULES)),
                "search_roots": list(DEFAULT_SEARCH_ROOTS)}

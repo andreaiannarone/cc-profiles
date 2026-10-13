@@ -15,6 +15,7 @@ import socket
 import struct
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -2408,6 +2409,25 @@ def test_backup_changes_notes_and_guards(home, app_factory):
 
 # --- profile by folder (cc-profiles which, shell-init, the rc line) ------------
 SHELL_LINE = 'command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init {})"  # cc-profiles: profile by folder'
+
+
+def test_a_config_that_cannot_be_read_is_never_lost(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    data, file = home.path(".cc-profiles"), home.path(".cc-profiles/config.json")
+    cfg = json.loads(file.read_text())
+    cfg["rules"] = [{"match": "code/mine", "profile": "work"}]
+    file.write_text('{"profiles": [')  # an editor half way through saving: whole again a moment later
+    later = threading.Timer(0.2, lambda: file.write_text(json.dumps(cfg)))
+    later.start()
+    assert app.get("/api/profiles")
+    later.join()
+    assert json.loads(file.read_text()) == cfg and not list(data.glob("config.broken-*"))
+    file.write_text('{"rules": [{"match": "code/mine"')  # broken for good
+    assert app.get("/api/profiles")  # the defaults replace it, and the file is kept next to it
+    assert json.loads(file.read_text())["profiles"]
+    kept = list(data.glob("config.broken-*.json"))
+    assert kept and kept[0].read_text() == '{"rules": [{"match": "code/mine"'
 
 
 def folder_home(home, app_factory, **env):

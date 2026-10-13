@@ -62,6 +62,10 @@ The command appears after cc-profiles has started once: the install script start
 
 Under WSL, cc-profiles opens the Windows browser with `wslview` or Windows' `start`. If neither works, open the address it prints, `http://127.0.0.1:4777`, in your Windows browser yourself. Installing `wslu` (`sudo apt install wslu`) adds `wslview`.
 
+## My rules or profiles are gone
+
+`~/.cc-profiles/config.json` was not valid JSON, for example after an edit by hand, so cc-profiles started again from the defaults. Your file is kept next to it as `config.broken-<date>-<time>.json`: fix it (a missing comma or bracket, usually), stop the app, and put it back as `config.json`. See [Configuration](configuration.md).
+
 ## Something is broken after an update or a reinstall
 
 If cc-profiles does not start, a tab keeps failing or `/cc-profiles` points to the wrong place, install it again from scratch:
