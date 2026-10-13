@@ -3,6 +3,15 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.5.7] - 2026-10-13
+
+**Changed**
+- **A profile's GitHub CLI folder lists only the account it uses**, so a Claude Code session of that profile sees no other account to switch to. When cc-profiles starts, and when you pick another account for a profile, the other accounts leave that profile's folder (with a backup); they stay listed in Default's folder or in `~/.config/gh-accounts`, so you can still pick them. Default's folder (your terminal's) and a folder with a token written in `hosts.yml` are left as they are.
+
+**Fixed**
+- A `config.json` that could not be read for a moment (an editor half way through saving it) or that was not valid JSON was replaced with the defaults, losing the rules and the profile list. cc-profiles now reads it again for half a second, and if it stays broken keeps it as `config.broken-<date>-<time>.json` before starting from the defaults.
+- `scripts/release.py` no longer stops at the merge when GitHub cancels a check it left in the queue: it starts the cancelled checks again, twice at most, and stops with their names if one fails. `release.py resume` finishes a release that stopped half way, skipping the steps already done.
+
 ## [0.5.6] - 2026-10-13
 
 **Fixed**
@@ -272,6 +281,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.5.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.3...v0.5.4
