@@ -1,6 +1,7 @@
 """Tests for scripts/release.py: its pure parts and the dry run (never a real release)."""
 import importlib.util
 import io
+import json
 import subprocess
 import sys
 
@@ -153,8 +154,11 @@ def test_dry_run_prints_every_step_and_changes_nothing(tmp_path):
         "$ gh pr checks '<n>' --json name",
         "$ git commit --allow-empty -m 'Trigger CI'",
         "$ gh pr checks '<n>' --watch --interval 10",
+        "$ gh pr checks '<n>' --json name,bucket,state,link",
+        "$ gh run rerun '<run id>' --failed",
         "$ gh pr merge '<n>' --squash --subject 'Release 0.4.4 (#<n>)' --body ''",
         "$ git pull --ff-only origin main",
+        "$ git ls-remote --tags origin refs/tags/v0.4.4",
         "$ git tag v0.4.4",
         "$ git push origin v0.4.4",
         "$ gh run list --workflow release.yml --branch v0.4.4",
@@ -224,3 +228,71 @@ def test_remote_branch_deleted_only_when_still_there(listed, deletes):
     assert ran[0] == ["git", "ls-remote", "--heads", "origin", "release-0.4.4"]
     assert (["git", "push", "origin", "--delete", "release-0.4.4"] in ran) == deletes
     assert ("already gone from origin" in out.getvalue()) == (listed == "")
+
+
+RUN = "https://github.com/o/r/actions/runs/77/job/1"
+
+
+def scripted(answers):
+    """A Releaser whose commands are answered by `answers(cmd)`; returns it, what ran and its output."""
+    out, ran = io.StringIO(), []
+    rel = release.Releaser(".", False, out)
+
+    def run(cmd, capture=False, readonly=False, check=True):
+        ran.append(" ".join(str(c) for c in cmd))
+        return answers(cmd)
+    rel.run, rel.wait = run, lambda seconds: None
+    return rel, ran, out
+
+
+def test_a_cancelled_check_is_started_again_and_a_failed_one_stops():
+    """GitHub cancels a job it left in the queue, and `gh pr checks --watch` still ends well."""
+    ok = {"name": "tests", "bucket": "pass", "state": "SUCCESS", "link": RUN}
+    cancelled = {"name": "install.sh on macos-latest", "bucket": "cancel", "state": "CANCELLED", "link": RUN}
+    assert release.check_problems([ok, cancelled, {"name": "ui", "bucket": "fail", "state": "FAILURE", "link": RUN}]) \
+        == (["ui"], ["install.sh on macos-latest"], ["77"])
+    listings = [[ok, cancelled], [ok, dict(cancelled, bucket="pass", state="SUCCESS")]]
+    rel, ran, out = scripted(lambda cmd: json.dumps(listings.pop(0)) if "--json" in cmd else "")
+    rel.wait_for_checks(59)
+    assert ran.count("gh run rerun 77 --failed") == 1 and "Cancelled by GitHub" in out.getvalue()
+    rel, ran, _ = scripted(lambda cmd: json.dumps([cancelled]) if "--json" in cmd else "")  # cancelled every time
+    with pytest.raises(release.ReleaseError, match="Cancelled checks on pull request #59"):
+        rel.wait_for_checks(59)
+    assert ran.count("gh run rerun 77 --failed") == release.CHECK_RERUNS
+    rel, ran, _ = scripted(lambda cmd: json.dumps([dict(ok, bucket="fail", state="FAILURE")]) if "--json" in cmd else "")
+    with pytest.raises(release.ReleaseError, match="Failed checks on pull request #59: tests"):
+        rel.wait_for_checks(59)
+    assert not any(c.startswith("gh run rerun") for c in ran)
+
+
+@pytest.mark.parametrize("prs,tagged,expected,missing", [
+    # stopped before the merge: wait for the checks, merge, tag, publish
+    ([{"number": 7, "headRefName": "fix"}, {"number": 59, "headRefName": "release-0.5.6"}], False,
+     ["gh pr checks 59 --watch", "gh pr merge 59 --squash --subject Release 0.5.6 (#59)", "git switch main",
+      "git tag v0.5.6", "git push origin v0.5.6", "gh run watch 5", "git branch -D release-0.5.6"], []),
+    # stopped after the tag: nothing is merged or tagged twice
+    ([], True, ["git show origin/main:src/cc_profiles/__init__.py", "git switch main", "gh run watch 5"],
+     ["gh pr merge", "git tag v0.5.6", "git push origin v0.5.6"]),
+])
+def test_resume_goes_on_from_where_the_release_stopped(prs, tagged, expected, missing):
+    def answers(cmd):
+        line = " ".join(str(c) for c in cmd)
+        if line.startswith("gh pr list"):
+            return json.dumps(prs)
+        if line.startswith("git show"):
+            return '__version__ = "0.5.6"\n'
+        if line.startswith("git ls-remote --tags"):
+            return "abc\trefs/tags/v0.5.6" if tagged else ""
+        if line.startswith("git branch --list"):
+            return "  release-0.5.6"
+        return "[]" if "--json" in cmd else ""
+    rel, ran, out = scripted(answers)
+    rel.release_run, rel.wait_for_pypi, rel.update_tap = lambda tag: 5, lambda new: None, lambda new: None
+    rel.resume()
+    text, pos = "\n".join(ran), 0
+    for line in expected:
+        found = text.find(line, pos)
+        assert found >= 0, f"{line!r} missing (or out of order) in:\n{text}"
+        pos = found
+    assert not [m for m in missing if m in text], text
+    assert ("already on origin" in out.getvalue()) == tagged

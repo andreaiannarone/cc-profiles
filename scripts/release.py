@@ -5,6 +5,7 @@
 
     python scripts/release.py 0.4.4 --dry-run   # print every step, change nothing
     python scripts/release.py 0.4.4
+    python scripts/release.py resume            # finish a release that stopped half way
 
 Checks that main is clean and up to date and that CHANGELOG.md has something under
 ## [Unreleased]; bumps the version in src/cc_profiles/__init__.py and
@@ -14,6 +15,9 @@ site's What's new page (docs/changelog.md) and the app's release notes
 "Release <v>" pull request, waits for its checks and squash-merges it; tags v<v>,
 waits for the Release workflow and for the wheel on PyPI; points the Homebrew formula
 in the tap to the new version; deletes the release branch.
+A check GitHub cancelled (a job it left in the queue until it gave up) is started again;
+a failed one stops the release. After a stop, `resume` goes on from the open release pull
+request, or from the merged one: every step from the merge on skips what is already done.
 Needs git and an authenticated gh. Standard library only.
 """
 
@@ -44,6 +48,8 @@ PR_BODY = "Bump the version to {v}, date the CHANGELOG section and rebuild the r
 CHECKS_APPEAR_TIMEOUT = 60      # seconds before pushing an empty "Trigger CI" commit
 RUN_APPEAR_TIMEOUT = 180        # seconds for the Release workflow run to show up
 PYPI_TIMEOUT = 15 * 60
+CHECK_RERUNS = 2                # times the cancelled checks of a pull request are started again
+RELEASE_BRANCH_RE = re.compile(r"^release-(\d+\.\d+\.\d+)$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -169,10 +175,35 @@ def wheel_listed(html, version):
 
 
 # --- running commands ---------------------------------------------------------
+def check_problems(checks):
+    """From `gh pr checks --json name,bucket,state,link`: (names of the failed checks, names of
+    the cancelled ones, ids of the workflow runs the cancelled ones belong to)."""
+    failed, cancelled, runs = [], [], set()
+    for c in checks:
+        if c.get("bucket") == "cancel" or str(c.get("state", "")).upper() == "CANCELLED":
+            cancelled.append(c.get("name", "?"))
+            m = re.search(r"/actions/runs/(\d+)", c.get("link") or "")
+            if m:
+                runs.add(m.group(1))
+        elif c.get("bucket") == "fail":
+            failed.append(c.get("name", "?"))
+    return sorted(failed), sorted(cancelled), sorted(runs)
+
+
+def open_release(prs):
+    """(number, version) of the open release pull request in `gh pr list --json number,headRefName`, or None."""
+    for pr in prs:
+        m = RELEASE_BRANCH_RE.match(pr.get("headRefName", ""))
+        if m:
+            return pr["number"], m.group(1)
+    return None
+
+
 class Releaser:
     def __init__(self, root, dry_run, out=sys.stdout):
         self.root, self.dry, self.out = root, dry_run, out
         self.force_version = False
+        self.started = False  # the release pull request exists: a stop can be resumed
         self.step_no = 0
 
     def say(self, text=""):
@@ -231,7 +262,7 @@ class Releaser:
 
     # --- the release ------------------------------------------------------------
     def release(self, new, date):
-        branch, tag = f"release-{new}", f"v{new}"
+        branch = f"release-{new}"
         init, plugin, changelog = self.read(INIT), self.read(PLUGIN), self.read(CHANGELOG)
         prev = read_version(init)
 
@@ -274,6 +305,7 @@ class Releaser:
         url = self.run(["gh", "pr", "create", "--base", "main", "--head", branch, "--title", f"Release {new}",
                         "--body", PR_BODY.format(v=new)], capture=True)
         number = pr_number(url) if not self.dry else "<n>"
+        self.started = True
         self.say(f"pull request: {url or '#' + str(number)}")
 
         self.step("Wait for the checks")
@@ -288,16 +320,86 @@ class Releaser:
             self.run(["git", "push"])
             if not self.checks_appear(number) and not self.dry:
                 raise ReleaseError(f"Still no checks on pull request #{number}: look at it on GitHub.")
-        self.run(["gh", "pr", "checks", str(number), "--watch", "--interval", "10"])
+        self.merge(new, number)
+        self.publish(new)
+
+    def resume(self):
+        """Finish a release that stopped half way: from its open pull request (wait for the
+        checks, merge), or from the merged one (the version on origin/main)."""
+        self.step("Find the release to finish")
+        status = self.run(["git", "status", "--porcelain"], capture=True, readonly=True)
+        self.check(status == "", "The working tree has changes: commit or stash them first")
+        self.run(["gh", "auth", "status"], capture=True, readonly=True)
+        self.run(["git", "fetch", "origin", "main"])
+        out = self.run(["gh", "pr", "list", "--state", "open", "--json", "number,headRefName", "--limit", "100"],
+                       capture=True, readonly=True)
+        try:
+            found = open_release(json.loads(out or "[]"))
+        except ValueError:
+            found = None
+        self.started = True
+        if found:
+            number, new = found
+            self.say(f"pull request #{number} (Release {new}) is open: waiting for its checks, then merging it")
+            self.step("Wait for the checks")
+            self.merge(new, number)
+        else:
+            init = self.run(["git", "show", f"origin/main:{INIT.replace(os.sep, '/')}"], capture=True, readonly=True)
+            new = read_version(init) if init else "<version on origin/main>"
+            self.say(f"no release pull request is open: finishing {new}, the version on origin/main")
+            self.run(["git", "switch", "main"])
+            self.run(["git", "pull", "--ff-only", "origin", "main"])
+        self.publish(new)
+
+    def merge(self, new, number):
+        self.wait_for_checks(number)
 
         self.step("Merge the pull request")
         self.run(["gh", "pr", "merge", str(number), "--squash", "--subject", f"Release {new} (#{number})", "--body", ""])
         self.run(["git", "switch", "main"])
         self.run(["git", "pull", "--ff-only", "origin", "main"])
 
+    def wait_for_checks(self, number):
+        """Wait for every check of the pull request. `gh pr checks --watch` also ends well when a
+        check was cancelled, so read them afterwards: the cancelled ones (GitHub gives up on a job
+        left 15 minutes in the queue) are started again, a failed one stops the release."""
+        watch = ["gh", "pr", "checks", str(number), "--watch", "--interval", "10"]
+        listing = ["gh", "pr", "checks", str(number), "--json", "name,bucket,state,link"]
+        if self.dry:
+            self.run(watch)
+            self.run(listing)
+            self.say(f"  (a failed check stops the release; cancelled ones are started again, {CHECK_RERUNS} times at most:)")
+            self.run(["gh", "run", "rerun", "<run id>", "--failed"])
+            return
+        for attempt in range(CHECK_RERUNS + 1):
+            self.run(watch, check=False)
+            try:
+                failed, cancelled, runs = check_problems(json.loads(self.run(listing, capture=True, check=False) or "[]"))
+            except ValueError:
+                raise ReleaseError(f"Could not read the checks of pull request #{number}: look at it on GitHub.")
+            if failed:
+                raise ReleaseError(f"Failed checks on pull request #{number}: {', '.join(failed)}.")
+            if not cancelled:
+                return
+            if attempt == CHECK_RERUNS or not runs:
+                raise ReleaseError(f"Cancelled checks on pull request #{number}: {', '.join(cancelled)}. "
+                                   "Run them again on GitHub.")
+            self.say(f"Cancelled by GitHub: {', '.join(cancelled)}. Starting them again")
+            for run_id in runs:
+                self.run(["gh", "run", "rerun", run_id, "--failed"])
+            self.wait(15)
+
+    def publish(self, new):
+        """From the merged release on main to PyPI and the tap. Skips what is already done."""
+        branch, tag = f"release-{new}", f"v{new}"
         self.step(f"Tag {tag} and publish")
-        self.run(["git", "tag", tag])
-        self.run(["git", "push", "origin", tag])
+        pushed = self.run(["git", "ls-remote", "--tags", "origin", f"refs/tags/{tag}"], capture=True, readonly=True, check=False)
+        if pushed and not self.dry:
+            self.say(f"{tag} is already on origin")
+        else:
+            if self.dry or not self.run(["git", "tag", "--list", tag], capture=True, readonly=True):
+                self.run(["git", "tag", tag])
+            self.run(["git", "push", "origin", tag])
         run_id = self.release_run(tag)
         self.run(["gh", "run", "watch", str(run_id), "--exit-status", "--interval", "15"])
 
@@ -312,7 +414,8 @@ class Releaser:
                      f"> {TAP_FORMULA} in a clone of {TAP}, then commit and push.")
 
         self.step("Delete the release branch")
-        self.run(["git", "branch", "-D", branch])
+        if self.dry or self.run(["git", "branch", "--list", branch], capture=True, readonly=True):
+            self.run(["git", "branch", "-D", branch])
         self.delete_remote_branch(branch)
 
         self.say(f"\ncc-profiles {new} is on PyPI. To upgrade:")
@@ -332,6 +435,14 @@ class Releaser:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import homebrew_formula
         text = homebrew_formula.formula(new)
+        current = self.run(["gh", "api", path, "--jq", ".content"], capture=True, check=False)
+        try:
+            same = base64.b64decode(current or "").decode() == text
+        except ValueError:
+            same = False
+        if same:
+            self.say(f"{TAP_FORMULA} in {TAP} already installs {new}")
+            return
         sha = self.run(["gh", "api", path, "--jq", ".sha"], capture=True)
         with tempfile.NamedTemporaryFile("w", suffix=".b64", delete=False) as f:
             f.write(base64.b64encode(text.encode()).decode())
@@ -416,7 +527,8 @@ class Releaser:
 
 def main(argv=None, out=sys.stdout):
     ap = argparse.ArgumentParser(description="Release a new version of cc-profiles.")
-    ap.add_argument("version", help='the new version, x.y.z, or "next" for the one after the current version')
+    ap.add_argument("version", help='the new version, x.y.z, "next" for the one after the current version, '
+                                    'or "resume" to finish a release that stopped half way')
     ap.add_argument("--force-version", action="store_true", help="allow a version that is not the next one")
     ap.add_argument("--dry-run", action="store_true", help="print every step and command, change nothing")
     ap.add_argument("--root", default=ROOT, help=argparse.SUPPRESS)  # tests: a copy of the release files
@@ -429,6 +541,9 @@ def main(argv=None, out=sys.stdout):
     rel.force_version = args.force_version
     try:
         version = args.version
+        if version == "resume":
+            rel.resume()
+            return 0
         if version == "next":
             version = next_version(read_version(rel.read(INIT)))
             rel.say(f"next version: {version}")
@@ -436,6 +551,8 @@ def main(argv=None, out=sys.stdout):
         rel.release(version, date)
     except ReleaseError as e:
         print(f"\nRelease stopped: {e}", file=sys.stderr)
+        if rel.started:
+            print("When the cause is fixed, finish it with: python scripts/release.py resume", file=sys.stderr)
         return 1
     return 0
 
