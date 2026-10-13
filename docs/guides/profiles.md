@@ -93,9 +93,11 @@ Signing in to GitHub is not part of a Claude Code profile: the GitHub CLI (`gh`)
 
 cc-profiles creates the missing folders when it starts, and a new profile gets its own right away. A new folder starts with the account the profile used until then (`config.yml` and `hosts.yml` are copied without any token line), and `GH_CONFIG_DIR` in the `env` of the profile's `settings.json` points to it: Claude Code passes it to every command it runs, so `gh` in that profile's sessions uses that folder. The profile cards and the About panel show the account: **GitHub as …**.
 
+**A profile's folder lists only the account it uses.** `gh auth status` in a session of that profile shows that account alone, and there is no other one to `gh auth switch` to, so Claude cannot use or pick another account by mistake. cc-profiles keeps it so: when it starts, and when you pick another account for a profile, the other accounts leave that profile's folder (the file goes to the backup first). They stay listed in Default's folder or in `~/.config/gh-accounts`, so you can still pick them here. Two folders are left as they are: Default's `~/.config/gh`, because it is your terminal's too, and a folder with a token written in its `hosts.yml`, where taking an account off would delete its token. This keeps accounts apart, it is not a wall: the tokens are in one system keychain, and a command that sets `GH_CONFIG_DIR` to another folder uses that folder's account.
+
 The **GitHub** section at the bottom of the Profiles tab has a row per profile. As in Settings, what you change there is a draft: changed rows get an orange bar, and **Save changes** in the bar below the table saves them all in one backup (**Cancel** drops them).
 
-- **GitHub account**: pick any account signed in on this computer. It becomes the active account of that profile's folder only, without signing in again: `gh` keeps each account's token in the system keychain under its name. Picking an account for Default changes your terminal's too.
+- **GitHub account**: pick any account signed in on this computer. It becomes the account of that profile's folder only, and the one it used leaves the folder, without signing in again: `gh` keeps each account's token in the system keychain under its name. Picking an account for Default changes your terminal's too.
 - **Another account…** (at the end of the menu) shows the command to sign in with a new account in the profile's folder, ready to copy:
   ```sh
   GH_CONFIG_DIR=~/.config/gh-work gh auth login

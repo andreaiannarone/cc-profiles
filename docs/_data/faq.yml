@@ -17,7 +17,7 @@
 - q: How can I see how many tokens each Claude Code profile uses?
   a: The Usage tab adds up the token usage Claude Code records on every reply, per day, project, model and profile, with an estimated cost at list price and a CSV export.
 - q: Can each Claude Code profile use its own GitHub account?
-  a: Yes. Every profile gets its own GitHub CLI folder (~/.config/gh-<id>), and the GitHub section of the Profiles tab picks which signed-in account each one uses and the name and email of its commits, so gh and git push in a work profile use your work account. Tokens stay in the system keychain.
+  a: Yes. Every profile gets its own GitHub CLI folder (~/.config/gh-<id>), and the GitHub section of the Profiles tab picks which signed-in account each one uses and the name and email of its commits, so gh and git push in a work profile use your work account. A profile's folder lists that account alone, so its sessions have no other one to switch to. Tokens stay in the system keychain.
 - q: How do I create and use subagents in Claude Code?
   a: The Agents tab creates them per profile with a form for their description, model, tools and instructions, and copies them to other profiles. In a session, Claude uses an agent by itself when its description fits the task; you can also ask for it by name, mention it with @, or start a whole session as that agent with claude --agent and its name.
 - q: Can I turn off claude.ai connectors in one profile only?

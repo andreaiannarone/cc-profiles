@@ -155,12 +155,17 @@ It needs `git`, and `gh` logged in to GitHub, and takes 5 to 15 minutes. Step by
 
 1. **Checks**: on `main`, a clean tree, the same commit as `origin/main`, the next version after `__version__`, something under `## [Unreleased]`.
 2. **Bump**: `__version__` in `src/cc_profiles/__init__.py` and `version` in `plugin/.claude-plugin/plugin.json`; in `CHANGELOG.md` a `## [x.y.z] - date` heading goes under `## [Unreleased]` (which stays, empty), and the compare links at the bottom are updated. Older entries are not touched.
-3. **Pull request**: branch `release-x.y.z`, commit `Release x.y.z`, `gh pr create`. If GitHub reports no checks after a minute (it happens), it pushes an empty `Trigger CI` commit. It waits for every check and stops if one fails.
+3. **Pull request**: branch `release-x.y.z`, commit `Release x.y.z`, `gh pr create`. If GitHub reports no checks after a minute (it happens), it pushes an empty `Trigger CI` commit. It waits for every check and stops if one fails. A check GitHub cancelled, which happens when a job waits 15 minutes in the queue for a macOS runner, is started again, twice at most.
 4. **Merge and tag**: squash merge as `Release x.y.z (#n)`, pull `main`, tag `vx.y.z` and push the tag.
 5. **Publish**: it waits for the **Release** workflow (`.github/workflows/release.yml`), which checks that the tag matches `__version__`, runs the tests, builds the package, publishes it on PyPI and creates the GitHub release with the changelog section as notes. Then it waits, up to 15 minutes, until the wheel is in PyPI's download index (`/simple/`), which lags a few minutes behind the JSON API the app's update check reads.
 6. **Clean up**: deletes the release branch, locally and on GitHub, and prints how to upgrade.
 
-If it stops halfway, it says why: carry on by hand from that step. Nothing it writes carries an attribution line.
+If it stops halfway, it says why. Fix the cause, then finish the release with `resume`: it goes on from the open release pull request (checks, merge), or from the merged one, and skips the tag, the tap update and the branch if they are already done:
+
+```sh
+.venv/bin/python scripts/release.py resume
+```
+ Nothing it writes carries an attribution line.
 
 PyPI accepts the upload through *trusted publishing*: no token is stored in the repository. It was set up once on pypi.org for the project `cc-profiles`, owner `andreaiannarone`, repository `cc-profiles`, workflow `release.yml`, environment `pypi`.
 

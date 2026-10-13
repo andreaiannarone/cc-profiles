@@ -15,6 +15,7 @@ import socket
 import struct
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -850,7 +851,9 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     before = home.snapshot()
     app = app_factory(CC_PROFILES_AUTO_GITHUB="1")  # at start, Work gets ~/.config/gh-work
 
-    assert home.path(".config/gh-work/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
+    # with the account it used alone: a session of Work sees no other account to switch to
+    assert home.path(".config/gh-work/hosts.yml").read_text() == \
+        "github.com:\n    git_protocol: https\n    users:\n        me:\n    user: me\n"
     assert home.path(".config/gh-work/config.yml").read_text() == "editor: vim\n"
     assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
         "GH_CONFIG_DIR": str(home.path(".config/gh-work"))}
@@ -863,7 +866,8 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
 
     # picking an account makes it the active user of the profile's own folder only
     app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})
-    assert "user: me-at-work" in home.path(".config/gh-work/hosts.yml").read_text()
+    assert home.path(".config/gh-work/hosts.yml").read_text() == \
+        "github.com:\n    git_protocol: https\n    users:\n        me-at-work:\n    user: me-at-work\n"  # me left it
     assert "user: me\n" in home.path(".config/gh/hosts.yml").read_text()
     assert {p["id"]: p["github"] for p in app.get("/api/profiles")} == {"default": "me", "work": "me-at-work"}
     assert "already uses" in app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})["message"]
@@ -885,6 +889,42 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     app.restore_all()
     assert home.snapshot() == before
 
+
+
+def test_a_profile_folder_lists_only_its_account(home, app_factory):
+    basic_home(home)
+    home.profile("lab")
+    default = "github.com:\n    users:\n        me:\n        other:\n    user: me\n"
+    written = "github.com:\n    users:\n        a:\n            oauth_token: gho_x\n        b:\n    user: a\n"
+    home.write(".config/gh/hosts.yml", default)
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    git_protocol: ssh\n    users:\n        me:\n"
+                                            "        me-at-work:\n        side:\n    user: me-at-work\n")
+    home.write(".config/gh-lab/hosts.yml", written)
+    for pid in ("work", "lab"):
+        home.json(f".claude-{pid}/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(f".config/gh-{pid}"))}})
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_AUTO_GITHUB="1")  # at start, the folders that list more are put right
+
+    work = home.path(".config/gh-work/hosts.yml")
+    assert work.read_text() == "github.com:\n    git_protocol: ssh\n    users:\n        me-at-work:\n    user: me-at-work\n"
+    assert home.path(".config/gh/hosts.yml").read_text() == default  # Default is the terminal's: as it was
+    assert home.path(".config/gh-lab/hosts.yml").read_text() == written  # a token is written there: never touched
+    # side was listed nowhere else: it stays one you can pick, from the accounts folder
+    accounts = home.path(".config/gh-accounts/hosts.yml")
+    assert accounts.read_text() == "github.com:\n    git_protocol: https\n    users:\n        side:\n    user: side\n"
+    assert oct(accounts.stat().st_mode & 0o777) == "0o600"
+    assert sorted(app.get("/api/github")["accounts"]) == ["me", "me-at-work", "other", "side"]
+
+    # picking another account: the one it used leaves the folder, and is still on the list
+    app.post("/api/github/account", {"profile": "work", "user": "side"})
+    assert work.read_text() == "github.com:\n    git_protocol: ssh\n    users:\n        side:\n    user: side\n"
+    assert "        me-at-work:\n" in accounts.read_text() and "    user: side\n" in accounts.read_text()
+    assert "me-at-work" in app.get("/api/github")["accounts"]
+    app.post("/api/github/account", {"profile": "default", "user": "other"})  # Default keeps them all
+    assert home.path(".config/gh/hosts.yml").read_text() == default.replace("user: me", "user: other")
+
+    app.restore_all()
+    assert home.snapshot() == before
 
 
 def test_github_accounts_are_listed_and_removed(home, app_factory):
@@ -954,6 +994,9 @@ def test_with_active_user_keeps_the_rest_of_hosts_yml():
     assert without_user(out, "other") == ["github.example.com:", "    user: corp", "github.com:", "    git_protocol: ssh",
                                           "    users:", "        me:", "    user: me"]
     assert without_user(["github.com:", "    users:", "        me:", "    user: me"], "me") == ["github.com:", "    users:"]
+    from cc_profiles.github import only_user, with_user
+    assert with_user(out, "third")[-4:] == ["        third:", "        other:", "        me:", "    user: other"]
+    assert only_user(out, "me") == without_user(out, "other") and parse_users(only_user([], "me"))[:2] == ("me", ["me"])
 
 
 def test_new_profiles_get_their_own_github_folder(home, app_factory):
@@ -2408,6 +2451,25 @@ def test_backup_changes_notes_and_guards(home, app_factory):
 
 # --- profile by folder (cc-profiles which, shell-init, the rc line) ------------
 SHELL_LINE = 'command -v cc-profiles >/dev/null 2>&1 && eval "$(cc-profiles shell-init {})"  # cc-profiles: profile by folder'
+
+
+def test_a_config_that_cannot_be_read_is_never_lost(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    data, file = home.path(".cc-profiles"), home.path(".cc-profiles/config.json")
+    cfg = json.loads(file.read_text())
+    cfg["rules"] = [{"match": "code/mine", "profile": "work"}]
+    file.write_text('{"profiles": [')  # an editor half way through saving: whole again a moment later
+    later = threading.Timer(0.2, lambda: file.write_text(json.dumps(cfg)))
+    later.start()
+    assert app.get("/api/profiles")
+    later.join()
+    assert json.loads(file.read_text()) == cfg and not list(data.glob("config.broken-*"))
+    file.write_text('{"rules": [{"match": "code/mine"')  # broken for good
+    assert app.get("/api/profiles")  # the defaults replace it, and the file is kept next to it
+    assert json.loads(file.read_text())["profiles"]
+    kept = list(data.glob("config.broken-*.json"))
+    assert kept and kept[0].read_text() == '{"rules": [{"match": "code/mine"'
 
 
 def folder_home(home, app_factory, **env):

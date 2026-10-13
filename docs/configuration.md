@@ -57,6 +57,8 @@ You can also run it as a module: `python3 -m cc_profiles`.
 
 Written on the first run and updated by the UI. You can edit it by hand while the app is stopped.
 
+If the file is not valid JSON, cc-profiles starts again from the defaults (your profiles are detected again, the rules are the default ones) and keeps your file next to it as `config.broken-<date>-<time>.json`, so nothing in it is lost: fix the copy and put it back as `config.json`.
+
 ```json
 {
   "profiles": [
