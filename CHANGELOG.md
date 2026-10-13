@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-10-13
+
 ### Fixed
 - A folder renamed, moved or deleted while the page was open showed only after a reload. The page now reads the profiles and projects again when you come back to its tab or window, and redraws the Projects and Health tabs if something changed.
 - **Relink…** and **Run the checks again** search the folders afresh, so a folder moved in the last minute is suggested right away.
@@ -272,7 +274,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.2...v0.5.3
