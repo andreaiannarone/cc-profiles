@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- A folder renamed, moved or deleted while the page was open showed only after a reload. The page now reads the profiles and projects again when you come back to its tab or window, and redraws the Projects and Health tabs if something changed.
+- **Relink…** and **Run the checks again** search the folders afresh, so a folder moved in the last minute is suggested right away.
+
 ## [0.5.5] - 2026-10-11
 
 ### Added

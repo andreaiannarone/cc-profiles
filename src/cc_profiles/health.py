@@ -50,13 +50,14 @@ def list_profiles():
 _cand_cache = {}
 
 
-def candidate_index():
+def candidate_index(fresh=False):
     """Folder name -> up to 10 folders with that name under the search roots (depth 5).
     One walk serves every orphan; reused for 60 s (suggestions only: relinking
-    checks the chosen folder again)."""
+    checks the chosen folder again). fresh walks again: the user asked, and may
+    have just moved the folder."""
     roots = [expand(r) for r in load_config().get("search_roots", DEFAULT_SEARCH_ROOTS)]
     hit = _cand_cache.get("index")
-    if hit and hit[1] == roots and time.time() - hit[0] < 60:
+    if not fresh and hit and hit[1] == roots and time.time() - hit[0] < 60:
         return hit[2]
     found = {}
     for root in roots:
@@ -74,11 +75,11 @@ def candidate_index():
     return found
 
 
-def candidates(basename):
+def candidates(basename, fresh=False):
     """Folders with the same name under the search roots (depth 5)."""
     if not basename:
         return []
-    return list(candidate_index().get(basename, []))
+    return list(candidate_index(fresh).get(basename, []))
 
 
 def auth_status(p):
@@ -97,8 +98,10 @@ def auth_status(p):
         return None
 
 
-def health():
+def health(fresh=False):
     report = []
+    if fresh:
+        candidate_index(True)
     projects = list_projects()
     profs = profiles()
     with ThreadPoolExecutor(max_workers=8) as pool:  # `claude auth status` takes ~0.5 s each

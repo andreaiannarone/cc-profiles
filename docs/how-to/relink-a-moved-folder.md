@@ -6,7 +6,7 @@ Nothing is lost. Claude Code stores a project's history in a folder named after 
 
 ## 1. Find the orphan project
 
-Open the **Projects** tab. The project is under **Needs attention**, with its old path and the status *folder not found on disk*. The **Health** tab lists the same projects per profile, under *Projects whose folder is gone*.
+Open the **Projects** tab. The project is under **Needs attention**, with its old path and the status *folder not found on disk*. The **Health** tab lists the same projects per profile, under *Projects whose folder is gone*. If the page was already open when you moved the folder, it updates when you come back to it: no reload needed.
 
 ## 2. Relink it
 

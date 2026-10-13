@@ -268,8 +268,8 @@ class Handler(BaseHTTPRequestHandler):
             routes = {
                 "/api/profiles": lambda: list_profiles(),
                 "/api/projects": lambda: list_projects(),
-                "/api/health": lambda: health(),
-                "/api/candidates": lambda: candidates(q.get("name", "")),
+                "/api/health": lambda: health(q.get("fresh") == "1"),
+                "/api/candidates": lambda: candidates(q.get("name", ""), q.get("fresh") == "1"),
                 "/api/memory/projects": lambda: memory_projects(q["profile"]),
                 "/api/memory/list": lambda: memory_list(q["profile"], q["project"]),
                 "/api/memory/file": lambda: memory_read(q["profile"], q["project"], q["file"]),

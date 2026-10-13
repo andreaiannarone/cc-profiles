@@ -635,6 +635,28 @@ async function loadProjects() {
   const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n; syncNav();
 }
 async function refresh() { await Promise.all([loadProfiles(), loadProjects()]); render(); }
+// Folders are renamed and sessions run outside the page: when the tab or the window comes back,
+// read the profiles and the projects again, and redraw only what changed. Never under a dialog.
+let syncedAt = Date.now(), syncing = false;
+async function syncOnReturn() {
+  if (document.hidden || syncing || Date.now() - syncedAt < 2000 || $(".modal-bg")) return;
+  syncing = true;
+  try {
+    const before = JSON.stringify(S.projects);
+    await Promise.all([loadProfiles(), loadProjects()]);
+    if ($(".modal-bg")) return;
+    const changed = JSON.stringify(S.projects) !== before;
+    if (S.tab === "projects" && changed) {
+      const q = document.activeElement?.id === "q" ? $("#q").selectionStart : null;
+      renderProjects();
+      if (q !== null) { $("#q").focus(); $("#q").setSelectionRange(q, q); }
+    }
+    if (S.tab === "health" && S.health) await loadHealth(false, true);
+    else if (changed) S.health = null;  // checked again when the tab opens
+  } catch {} finally { syncing = false; syncedAt = Date.now(); }
+}
+document.addEventListener("visibilitychange", syncOnReturn);
+window.addEventListener("focus", syncOnReturn);
 
 // ---------- projects ----------
 function filtered() {
@@ -772,7 +794,7 @@ document.addEventListener("click", e => { const b = e.target.closest?.("[data-ch
 async function doRelink(r, pid) {
   pid = pid || Object.keys(r.in)[0];
   let cands = [];
-  try { cands = r.path ? await api("/api/candidates?name=" + encodeURIComponent(basename(r.path))) : []; } catch {}
+  try { cands = r.path ? await api("/api/candidates?fresh=1&name=" + encodeURIComponent(basename(r.path))) : []; } catch {}
   const res = await modal({ title: "Relink to a folder", sub: `<code>${esc(r.pretty)}</code> no longer exists. Tell where the project is now: conversations, memories, history and settings will follow${Object.keys(r.in).length > 1 ? ` (profile ${esc(label(pid))})` : ""}.`,
     body: `${cands.length ? `<div class="hint">Folders with the same name:</div>${cands.map(c => `<button class="btn small" data-pick="${esc(c)}" style="text-align:left;white-space:normal"><code>${esc(c)}</code></button>`).join("")}` : `<div class="hint">No folder with the same name was found.</div>`}
       ${folderField("relink-path", cands[0] || "", "~/code/…", "New folder of the project")}`,
@@ -993,9 +1015,11 @@ function renderConversations() {
 }
 
 // ---------- health ----------
-async function loadHealth() {
-  S.health = null; renderHealth();
-  S.health = await api("/api/health");
+async function loadHealth(fresh, quiet) {  // fresh: search the folders again; quiet: no loader, redraw only a change
+  const before = quiet && JSON.stringify(S.health);
+  if (!quiet) { S.health = null; renderHealth(); }
+  S.health = await api("/api/health" + (fresh === true ? "?fresh=1" : ""));
+  if (quiet && JSON.stringify(S.health) === before) return;
   const n = S.health.reduce((a, h) => a + h.checks.filter(c => c.level === "error").length + h.orphans.length, 0);
   const c = $("#cnt-health"); c.hidden = !n; c.textContent = n; syncNav();
   renderHealth();
@@ -1015,7 +1039,7 @@ function renderHealth() {
           <button class="btn small" data-hmerge="${esc(o.name)}" data-prof="${h.id}">Merge into…</button>
           <button class="btn small danger" data-hdel="${esc(o.name)}" data-prof="${h.id}">Delete</button></div></div>`).join("") || `<div class="hint">None. ✓</div>`}
     </div>`).join("")}</div>`;
-  $("#rehealth").onclick = loadHealth;
+  $("#rehealth").onclick = () => loadHealth(true);
 }
 
 // ---------- profiles and sharing ----------

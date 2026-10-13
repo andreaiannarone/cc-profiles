@@ -21,7 +21,7 @@ The **Health** tab checks every profile:
 
 Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…**, **Merge into…** (into another project of the profile) and **Delete**.
 
-Health runs `claude auth status` once per profile, so it takes a few seconds. **Run the checks again** refreshes it.
+Health runs `claude auth status` once per profile, so it takes a few seconds. **Run the checks again** refreshes it. The list of projects whose folder is gone also updates by itself when you come back to the page, for example after renaming a folder.
 
 ## About
 
