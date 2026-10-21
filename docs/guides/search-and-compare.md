@@ -35,6 +35,7 @@ The **Compare** tab puts two profiles side by side: pick them at the top. Rows t
 - **Agents**: the agents only one profile has (**Copy to …** copies the file) and the agents both have with a different file, to edit in the Agents tab.
 - **MCP servers** available in every project: the servers only one profile has (**Copy to …** copies the configuration, never the sign-in) and the ones whose configuration differs.
 - **CLAUDE.md**: whether the two files are the same, and how long they are. **Replace …** gives one profile the other's `CLAUDE.md`, after a confirmation.
+- **Mods**: the [mods](plugins.md#mods) only one profile has (**Copy to …** copies the plugin as in the Plugins tab, and enables it there) and the ones turned on in one profile and off in the other.
 - **Plugins**: installed and enabled plugins, read-only: manage them with `/plugin` in Claude Code.
 
 Every copy goes through the same operation as in the other tabs, so it has its own backup and can be undone from the **Backups** tab.

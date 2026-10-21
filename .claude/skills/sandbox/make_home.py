@@ -38,7 +38,44 @@ for folder, user in ((".config/gh", "me-personal"), (".config/gh-work", "me-at-w
 home.json(".claude-work/.claude.json", {"projects": {}})
 home.json(".claude-client/.claude.json", {"projects": {}})
 home.json(".claude/settings.json", {"model": "sonnet", "timeFormat": "24-hour", "theme": "dark",
-                                    "outputStyle": "Explanatory"})
+                                    "outputStyle": "Explanatory",
+                                    "enabledPlugins": {"tool-glance@team": True, "commit-helper@team": True}})
+
+# Plugins in Default: a mod (a plugin of function hooks) and a plugin of command hooks, from one marketplace.
+PLUGINS = home.path(".claude/plugins")
+GLANCE = "cache/team/tool-glance/0.2.0"
+home.json(f".claude/plugins/{GLANCE}/.claude-plugin/plugin.json",
+          {"name": "tool-glance", "version": "0.2.0", "description": "The last tool calls in a pane"})
+home.json(f".claude/plugins/{GLANCE}/hooks/hooks.json", {"modules": ["./register.tsx"]})
+home.write(f".claude/plugins/{GLANCE}/hooks/register.tsx", """import type { Register } from 'claude-code'
+
+export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({ name: 'tool-calls', description: 'Show the last tool calls' })
+    return next(e)
+  })
+  on('command.run', { command: 'tool-calls' }, async $ => {
+    await $.ui.open({ id: 'calls', title: 'Tool calls' })
+    return { text: 'Opened.' }
+  })
+  on('tool.call', async ($, e, next) => {
+    $.ui.status(e.tool)
+    return next(e)
+  })
+}
+""")
+home.json(".claude/plugins/cache/team/commit-helper/1.4.0/.claude-plugin/plugin.json",
+          {"name": "commit-helper", "version": "1.4.0"})
+home.json(".claude/plugins/cache/team/commit-helper/1.4.0/hooks/hooks.json", {"hooks": {"Stop": []}})
+home.json(".claude/plugins/marketplaces/team/.claude-plugin/marketplace.json", {"name": "team", "plugins": []})
+home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {
+    "tool-glance@team": [{"scope": "user", "installPath": f"{PLUGINS}/{GLANCE}", "version": "0.2.0",
+                          "installedAt": "2026-10-18T09:12:00.000Z"}],
+    "commit-helper@team": [{"scope": "user", "installPath": f"{PLUGINS}/cache/team/commit-helper/1.4.0",
+                            "version": "1.4.0", "installedAt": "2026-09-30T15:40:00.000Z"}]}})
+home.json(".claude/plugins/known_marketplaces.json", {"team": {
+    "source": {"source": "github", "repo": "me/team-plugins"}, "installLocation": f"{PLUGINS}/marketplaces/team",
+    "lastUpdated": "2026-10-18T09:11:00.000Z"}})
 home.write(".claude/CLAUDE.md", "# Global instructions\n\nAnswer briefly.\n")
 SKILLS = {
     "review": "Review a diff for bugs, missing tests and unclear names before it is merged",

@@ -32,13 +32,14 @@ The code is one module per area. Each module imports only from the ones above it
 | `agents.py` | subagents: the frontmatter fields checked against Claude Code's schema (`AGENT_SCHEMA_VERSION`), create, edit (other keys kept), rename, copy to one profile or to all, delete; plugin agents read-only |
 | `conversations.py` | list, view, move one, delete |
 | `usage.py` | tokens and estimated cost per day, project, model, profile and conversation, and the CSV export, from the usage of every reply (read-only); the list-price table |
+| `mods.py` | Claude Code mods recognised among the installed plugins, and what each one does, read from its source (read-only) |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
 | `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
-| `plugins.py` | installed plugins, enable and disable |
+| `plugins.py` | installed plugins, enable and disable, copy to another profile |
 | `editprofile.py` | rename, change command, delete with optional merge, with a preview |
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |

@@ -378,6 +378,30 @@ def test_a_renamed_folder_shows_when_the_page_comes_back(page_on_sandbox, tmp_pa
     assert errors == []
 
 
+def test_a_mod_is_shown_copied_and_compared(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "plugins")
+    row = '.plug-row:has-text("tool-glance")'
+    assert page.inner_text(f"{row} [data-mod]") == "mod"
+    assert "Adds: Pane, Status line, /tool-calls" in page.inner_text(row)
+    assert page.locator('.plug-row:has-text("commit-helper") [data-mod]').count() == 0  # command hooks: not a mod
+    open_tab(page, "compare")
+    page.select_option("#cmp-b", label="Work")
+    page.wait_for_selector('[data-cmp="plugin"][data-name="tool-glance@team"]')
+    page.click('[data-cmp="plugin"][data-name="tool-glance@team"]')  # Copy to Work
+    page.wait_for_selector("text=The same mods, on or off in both. ✓")
+    open_tab(page, "plugins")
+    page.click('[data-plugprof="work"]')
+    page.wait_for_selector(f"{row} [data-mod]")
+    page.click('[data-plugprof="default"]')
+    page.wait_for_selector('.plug-row:has-text("commit-helper") [data-plugcopy]')
+    page.click('.plug-row:has-text("commit-helper") [data-plugcopy]')
+    page.select_option("#pp", label="Client")
+    page.click('.modal button:has-text("Copy")')
+    page.wait_for_selector("text=commit-helper@team copied to Client")
+    assert errors == []
+
+
 def test_merge_into_another_project(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "projects")

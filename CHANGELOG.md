@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Mods** in the Plugins tab: plugins of function hooks, which change Claude Code itself, are marked **mod**, with what they add (pane, band above the prompt, status line, slash commands…), the events they hook, and in orange what they can reach (network, programs, files, model calls), read from their source without running it.
+- **Copy to…** in the Plugins tab copies a plugin installed for every project to another profile as `/plugin` would install it there (files, `installed_plugins.json` entry, marketplace), and enables it, with a backup.
+- **Mods** in Compare: the mods only one profile has, with **Copy to …**, and those turned on in one profile only.
+
 ## [0.5.7] - 2026-10-13
 
 ### Changed
