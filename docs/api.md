@@ -40,7 +40,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/github` | | `{gh, git_uses_gh, accounts, profiles: [{id, label, dir, user, users, set_up, shared, default, name, email}], account_list: [{user, folders, used_by, insecure}], accounts_dir}`: each profile's GitHub CLI folder and active account, its commit identity, and every account signed in on the computer. Only user names are read from `hosts.yml`, never a token |
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
-| `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source}], marketplaces, dir, shared}` |
+| `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source, mod}], marketplaces, dir, shared}`; `mod` is `null` for a plugin that is not a mod, else `{features, commands, events: [{name, label}], reach}` read from its source |
 | `GET /api/profiles/export` | `id`, `projects` (`1` to include conversations) | a `.zip` download (not JSON): `profile/…`, `claude.json`, `home-memory/…`, `cc-profiles-export.json`; never login credentials |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/projects/merge/preview` | `project`, `profile`, `into` (another project of the same profile, on disk) | `{from, into, conversations, memories, prompts, conflicts}`: what merging would move, and the files the target already has. Changes nothing |
@@ -110,6 +110,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/github/remove` | `user`: takes an account no profile uses off every folder; its keychain token stays |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
+| `POST /api/plugins/copy` | `profile`, `plugin`, `to`: copies a plugin installed for every project, with its marketplace, to another profile and enables it there |
 | `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 500 MB), not JSON |
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |

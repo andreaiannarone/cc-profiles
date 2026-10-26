@@ -13,6 +13,7 @@ from .settings import effective, fields_for, settings_files
 from .info import names_in
 from .extensions import mcp_summary
 from .agents import agent_texts
+from .mods import mod_names
 
 # ---------------------------------------------------------------------------
 # Search and compare (read-only)
@@ -216,6 +217,12 @@ def compare(a, b):
     for k, (x, y) in (("installed", (ia, ib)), ("enabled", (ea, eb))):
         oa, ob, both = split3(x, y)
         plugins[k] = {"only_a": oa, "only_b": ob, "both": both}
+    oa, ob, both = split3(mod_names(pa), mod_names(pb))
+    ena, enb = set(ea), set(eb)
+    mods = {"only_a": oa, "only_b": ob, "both": [{"name": n, "a": n in ena, "b": n in enb} for n in both],
+            "shared": os.path.realpath(os.path.join(pa["dir_abs"], "plugins"))
+            == os.path.realpath(os.path.join(pb["dir_abs"], "plugins"))}
     return {"a": {"id": pa["id"], "label": pa["label"]}, "b": {"id": pb["id"], "label": pb["label"]},
             "settings": settings, "permissions": {"a": perms["a"], "b": perms["b"], "diff": perm_diff},
-            "skills": skills, "agents": agents, "mcp": mcp, "claude_md": claude_md, "plugins": plugins}
+            "skills": skills, "agents": agents, "mcp": mcp, "claude_md": claude_md, "plugins": plugins,
+            "mods": mods}

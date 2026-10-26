@@ -137,7 +137,7 @@ cc-profiles
 - 🤖 **Agents**: create, edit, copy (to one profile or to all) and delete subagents, with a form for their model, tools, effort, permissions and instructions; agents from plugins are listed read-only. Claude then uses an agent by itself when its description fits the task, or when you ask for it by name, mention it with `@`, or run `claude --agent <name>`.
 - 🔌 **MCP servers**: add, edit, copy (to one profile or to all) and remove MCP servers, for every project or for one. Tokens in environment variables and headers stay out of the list. Turn claude.ai connectors (Gmail, Google Drive…) off in one profile, one by one or all together, even though they come with the account.
 - 🧳 **Export and import**: move a profile to another computer as a `.zip`, with or without conversations. Login credentials never travel.
-- 🧷 **Plugins**: see the plugins installed in each profile, their version and marketplace, and turn them on or off.
+- 🧷 **Plugins and mods**: see the plugins installed in each profile, their version and marketplace, turn them on or off, and copy one to another profile. Mods (plugins that change Claude Code itself: panes, status line, slash commands, hooks on tool calls) are marked, with what they add, the events they hook and what they can reach.
 - 📁 **Profile by folder**: type `claude` in a work folder and it starts in your Work profile. One switch in the Profiles tab adds one marked line to your `~/.zshrc` (backed up, undoable); the folder rules you already use for projects decide the profile, and a `CLAUDE_CONFIG_DIR` you set yourself still wins.
 - 🔗 **Sharing**: share `skills`, `plugins`, `agents`, `commands`, `CLAUDE.md` or `settings.json` with the source profile through symlinks. Install once, use everywhere. The confirmation previews what the link replaces.
 - ⚙️ **Settings**: every setting of Claude Code's `/config` panel, in groups, plus the commit and pull request attribution switches. Dropdowns offer only the values Claude Code accepts and show which file each value comes from. Apply a value or a permission rule to every profile in one undoable step. Edit `CLAUDE.md`, permissions and the raw JSON, with validation.
@@ -145,7 +145,7 @@ cc-profiles
 - ⏪ **Backups**: every operation is journaled. **Restore** undoes it, and a restore can itself be undone. Old ones are deleted automatically after 90 days (or 15, 30, 60), except those you mark **Keep**.
 - 🩺 **Health**: login status, config validity, broken links, memory indexes, and projects whose folder disappeared, with candidate folders to relink them to, or a project to merge them into.
 - 🔍 **Search everything**: one field searches projects, memories, skills, MCP servers and `CLAUDE.md` in every profile, and opens what you pick.
-- ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md` and plugins side by side, with one-click copies of what differs.
+- ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md`, mods and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
@@ -366,7 +366,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 - **[Profile by folder](https://cc-profiles.andreaia.com/guides/profile-by-folder.html)**: `claude` starts in the profile of the folder you are in
 - **[Skills and MCP servers](https://cc-profiles.andreaia.com/guides/skills-and-mcp.html)**: create, edit, copy, delete
 - **[Agents](https://cc-profiles.andreaia.com/guides/agents.html)**: create, edit, copy and delete subagents
-- **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and turn them on or off
+- **[Plugins](https://cc-profiles.andreaia.com/guides/plugins.html)**: see the installed plugins and mods, turn them on or off, copy them
 - **[Search and compare](https://cc-profiles.andreaia.com/guides/search-and-compare.html)**: search every profile at once, compare two side by side
 - **[Export and import](https://cc-profiles.andreaia.com/guides/export-import.html)**: move a profile to another computer
 - **[Settings](https://cc-profiles.andreaia.com/guides/settings.html)**: the `/config` settings, `CLAUDE.md`, permissions, raw JSON

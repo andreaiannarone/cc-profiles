@@ -1482,6 +1482,97 @@ def test_plugins_are_listed_and_switched(home, app_factory):
     assert home.snapshot() == before
 
 
+MOD_SOURCE = """import type { Register } from 'claude-code'
+import { pretty } from './format'
+
+export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({ name: 'glance', description: 'Open the glance pane' })
+    return next(e)
+  })
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    $.ui.status(pretty(e.command))
+    return next(e)
+  })
+}
+"""
+
+
+def mod_home(home):
+    """basic_home, with a mod (glance) and a plugin of command hooks (fmt) installed in Default."""
+    basic_home(home)
+    d = home.path(".claude/plugins")
+    glance = "cache/team/glance/0.1.0"
+    home.json(f".claude/plugins/{glance}/.claude-plugin/plugin.json", {"name": "glance", "version": "0.1.0"})
+    home.json(f".claude/plugins/{glance}/hooks/hooks.json", {"modules": ["./register.tsx"]})
+    home.write(f".claude/plugins/{glance}/hooks/register.tsx", MOD_SOURCE)
+    home.write(f".claude/plugins/{glance}/hooks/format.ts",
+               "export const pretty = (s: string) => s.slice(0, 40)\n"
+               "export const send = ($: any, s: string) => $.http.fetch({ url: 'https://example.com', body: s })\n")
+    home.json(".claude/plugins/cache/team/fmt/1.0.0/hooks/hooks.json", {"hooks": {"PostToolUse": []}})
+    home.json(".claude/plugins/marketplaces/team/.claude-plugin/marketplace.json", {"name": "team", "plugins": []})
+    home.json(".claude/plugins/installed_plugins.json", {"version": 2, "plugins": {
+        "glance@team": [{"scope": "user", "installPath": f"{d}/{glance}", "version": "0.1.0",
+                         "installedAt": "2026-10-20T10:00:00.000Z"}],
+        "fmt@team": [{"scope": "user", "installPath": f"{d}/cache/team/fmt/1.0.0", "version": "1.0.0"}]}})
+    home.json(".claude/plugins/known_marketplaces.json", {"team": {
+        "source": {"source": "github", "repo": "me/team"}, "installLocation": f"{d}/marketplaces/team"}})
+    home.json(".claude/settings.json", {"enabledPlugins": {"glance@team": True, "fmt@team": True}})
+
+
+def test_mods_are_recognised_copied_and_compared(home, app_factory):
+    mod_home(home)
+    home.json(".claude-work/settings.json", {"model": "opus"})
+    before = home.snapshot()
+    app = app_factory()
+
+    by = {p["name"]: p for p in app.get("/api/plugins?profile=default")["plugins"]}
+    assert by["fmt@team"]["mod"] is None  # hooks.json without modules: a plugin of command hooks
+    assert by["glance@team"]["mod"] == {  # read from the source, imported files included
+        "features": ["Status line"], "commands": ["glance"], "reach": ["Network"],
+        "events": [{"name": "session.start", "label": "Session start"},
+                   {"name": "tool.call", "label": "Tool calls (can block or change them)"}]}
+    mods = app.get("/api/compare?a=default&b=work")["mods"]
+    assert (mods["only_a"], mods["only_b"], mods["both"], mods["shared"]) == (["glance@team"], [], [], False)
+
+    r = app.post("/api/plugins/copy", {"profile": "default", "plugin": "glance@team", "to": "work"})
+    assert r["message"].startswith("glance@team copied to Work and enabled in settings.json")
+    w = home.path(".claude-work/plugins")
+    assert (w / "cache/team/glance/0.1.0/hooks/register.tsx").read_text() == MOD_SOURCE
+    entry = json.loads((w / "installed_plugins.json").read_text())["plugins"]["glance@team"][0]
+    assert entry["installPath"] == str(w / "cache/team/glance/0.1.0") and entry["version"] == "0.1.0"
+    market = json.loads((w / "known_marketplaces.json").read_text())["team"]
+    assert market["installLocation"] == str(w / "marketplaces/team") and (w / "marketplaces/team/.claude-plugin").is_dir()
+    assert json.loads(home.path(".claude-work/settings.json").read_text()) == {
+        "model": "opus", "enabledPlugins": {"glance@team": True}}
+    assert app.get("/api/plugins?profile=work")["plugins"][0]["mod"]["commands"] == ["glance"]
+    assert any("marketplace team added to Work" in l for l in app.get("/api/backups")[0]["log"])
+    both = app.get("/api/compare?a=default&b=work")["mods"]
+    assert both["only_a"] == [] and both["both"] == [{"name": "glance@team", "a": True, "b": True}]
+
+    # the second time the target has it; the marketplace is not added twice
+    assert "Work already has glance@team" in app.post_error(
+        "/api/plugins/copy", {"profile": "default", "plugin": "glance@team", "to": "work"})
+    app.post("/api/plugins/copy", {"profile": "default", "plugin": "fmt@team", "to": "work"})
+    last = max(app.get("/api/backups"), key=lambda b: b["created"])
+    assert last["title"] == "Copy plugin fmt@team: Default → Work" and not any("marketplace" in l for l in last["log"])
+    assert app.request("/api/plugins/copy", {"profile": "default", "plugin": "nope@x", "to": "work"})[0] == 404
+    assert "Pick another profile" in app.post_error(
+        "/api/plugins/copy", {"profile": "default", "plugin": "fmt@team", "to": "default"})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_a_plugin_is_not_copied_where_plugins_are_shared(home, app_factory):
+    mod_home(home)
+    os.symlink("../.claude/plugins", home.path(".claude-work/plugins"))
+    app = app_factory()
+    assert "share their plugins" in app.post_error(
+        "/api/plugins/copy", {"profile": "default", "plugin": "glance@team", "to": "work"})
+    assert app.get("/api/compare?a=default&b=work")["mods"]["shared"] is True
+
+
 # --- command line ---------------------------------------------------------------
 def run_cli(home, *args, **env):
     e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), **env})

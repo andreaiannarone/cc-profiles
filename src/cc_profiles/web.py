@@ -90,7 +90,7 @@ from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
 from .templates import list_templates, op_create_from_template, op_template_delete, op_template_save
-from .plugins import list_plugins, op_plugin_enable
+from .plugins import list_plugins, op_plugin_copy, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
@@ -360,6 +360,7 @@ class Handler(BaseHTTPRequestHandler):
                                                                          b.get("share") or []),
                 "/api/sharing": lambda: op_share(b["profile"], b["item"], bool(b["shared"])),
                 "/api/plugins/enable": lambda: op_plugin_enable(b["profile"], b["plugin"], b.get("enabled")),
+                "/api/plugins/copy": lambda: op_plugin_copy(b["profile"], b["plugin"], b["to"]),
                 "/api/settings/field": lambda: op_setting(b["profile"], b["key"], b.get("value")),
                 "/api/settings/permissions": lambda: op_permissions(b["profile"], b.get("rules") or {}),
                 "/api/settings/field/all": lambda: op_setting_all(b["profile"], b["key"]),

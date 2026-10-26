@@ -125,6 +125,8 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 textarea.rawtext { width: min(760px, 80vw); min-height: 420px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
 @media (max-width: 820px) { .aggrid { grid-template-columns: 1fr 1fr; } }
 .plug-row .m code { font-size: 11.5px; }
+.plug-row .acts { display: flex; align-items: center; gap: 10px; }
+.plug-row .reach { color: var(--warn); }
 .mlist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .ghtable td { vertical-align: middle; }
 .ghtable tr.changed td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
@@ -2360,6 +2362,12 @@ async function loadPlugins(pid) {
   catch (e) { x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server. Stop it and start it again." : e.message; }
   renderPlugins();
 }
+// What a mod does, read from its source by the server: a description, not a guarantee.
+function modLines(m) {
+  const does = [...m.features, ...m.commands.map(c => "/" + c)];
+  return `<div class="m">${does.length ? `Adds: ${esc(does.join(", "))}` : "Adds nothing on screen"}${m.events.length ? ` · hooks: ${esc(m.events.map(e => e.label).join(", "))}` : ""}</div>
+    ${m.reach.length ? `<div class="m reach">Can reach: ${esc(m.reach.join(", "))}</div>` : ""}`;
+}
 function renderPlugins() {
   if (S.tab !== "plugins") return;
   const x = S.plug, d = x.data;
@@ -2370,14 +2378,23 @@ function renderPlugins() {
   else $("#main").innerHTML = `${head}
     <div class="ext-head" style="margin-top:0"><h2>Plugins</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.plugins.length, "plugin", "plugins")}${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span></div>
     <div class="table">${d.plugins.map((g, i) => `<div class="prow plug-row"><div class="txt">
-        <div class="t">${esc(g.plugin)} <span class="badge b-none">${esc(g.marketplace || "no marketplace")}</span>${g.version ? ` <span class="badge b-none">${esc(g.version)}</span>` : ""}${g.is_installed ? "" : ` <span class="badge b-warn">not installed</span>`}</div>
+        <div class="t">${esc(g.plugin)}${g.mod ? ` <span class="badge b-none" data-mod title="A plugin of function hooks: it changes Claude Code itself">mod</span>` : ""} <span class="badge b-none">${esc(g.marketplace || "no marketplace")}</span>${g.version ? ` <span class="badge b-none">${esc(g.version)}</span>` : ""}${g.is_installed ? "" : ` <span class="badge b-warn">not installed</span>`}</div>
         <div class="m">${g.installed ? `installed ${esc(g.installed)}` : ""}${g.scopes.length ? ` · ${esc(g.scopes.join(", "))}` : ""}${g.projects.length ? ` · ${g.projects.map(esc).join(", ")}` : ""}${g.path ? ` · <code>${esc(g.path)}</code>` : ""}</div>
+        ${g.mod ? modLines(g.mod) : ""}
         <div class="m">${g.enabled == null ? "not set in the settings: Claude Code's default" : `${g.enabled ? "enabled" : "disabled"} in ${g.source === "local" ? "settings.local.json" : "settings.json"}`}</div></div>
-      <label class="switch" title="${g.enabled ? "Enabled" : "Disabled"}"><input type="checkbox" data-plugsw="${i}" ${g.enabled ? "checked" : ""} aria-label="Enable ${esc(g.name)}"><span></span></label></div>`).join("")
+      <div class="acts">${g.is_installed && g.scopes.includes("user") && S.profiles.length > 1 ? `<button class="btn small" data-plugcopy="${i}">Copy to…</button>` : ""}
+      <label class="switch" title="${g.enabled ? "Enabled" : "Disabled"}"><input type="checkbox" data-plugsw="${i}" ${g.enabled ? "checked" : ""} aria-label="Enable ${esc(g.name)}"><span></span></label></div></div>`).join("")
       || `<div class="empty">No plugins in this profile. Install them with <code>/plugin</code> in Claude Code.</div>`}</div>
     <div class="ext-head"><h2>Marketplaces</h2><span class="hint">where Claude Code finds plugins to install</span></div>
     <div class="mlist">${d.marketplaces.map(m => `<div><b>${esc(m.name)}</b> · <code>${esc(m.source)}</code>${m.updated ? ` · updated ${esc(m.updated)}` : ""}</div>`).join("") || `<div>None.</div>`}</div>`;
   document.querySelectorAll("[data-plugprof]").forEach(b => b.onclick = () => loadPlugins(b.dataset.plugprof));
+  document.querySelectorAll("[data-plugcopy]").forEach(b => b.onclick = async () => {
+    const g = d.plugins[b.dataset.plugcopy];
+    const to = await pickProfile(`Copy ${g.plugin} to…`, `Its files, its marketplace and its entry in <code>installed_plugins.json</code> are copied as <code>/plugin</code> would install them, and it is enabled there from the next Claude Code session. The files that change go to the backup first.${g.mod?.reach.length ? ` <span class="reach">This mod can reach: ${esc(g.mod.reach.join(", "))}.</span>` : ""}`, x.profile, "Copy");
+    if (!to) return;
+    try { await run(() => api("/api/plugins/copy", { profile: x.profile, plugin: g.name, to })); } catch {}
+    loadPlugins();
+  });
   document.querySelectorAll("[data-plugsw]").forEach(cb => cb.onchange = async () => {
     const g = d.plugins[cb.dataset.plugsw], on = cb.checked;
     if (!(await confirmBox(`${on ? "Enable" : "Disable"} ${g.plugin}?`,
@@ -2552,7 +2569,8 @@ function renderCompare() {
     for (const r of P[k].only_b) perms.push(listRows("perm", k, "b", r, ` <code>${k}</code>`, "Add"));
   }
   const nBoth = ["allow", "ask", "deny"].reduce((n, k) => n + P[k].both.length, 0);
-  const sk = d.skills, ag = d.agents, mc = d.mcp, md = d.claude_md, pl = d.plugins;
+  const sk = d.skills, ag = d.agents, mc = d.mcp, md = d.claude_md, pl = d.plugins, mo = d.mods;
+  const onOff = v => v ? "enabled" : `<span class="hint">disabled</span>`;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
     <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
@@ -2579,6 +2597,10 @@ function renderCompare() {
         <td>${md.a.exists ? plural(md.a.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td>${md.b.exists ? plural(md.b.lines, "line", "lines") : `<span class="hint">not present</span>`}</td>
         <td class="acts">${md.same || md.shared ? "" : (md.a.exists ? btn(`data-cmp="md" data-side="a"`, `Replace ${B}'s with ${A}'s`) : "") + (md.b.exists ? btn(`data-cmp="md" data-side="b"`, `Replace ${A}'s with ${B}'s`) : "")}</td></tr>`], "")}
+    <div class="ext-head"><h2>Mods</h2><span class="hint">${mo.shared ? "the two profiles share the same plugins folder" : `${plural(mo.both.length, "mod", "mods")} in both`}</span></div>
+    ${table(["Mod", "Where"], [...mo.only_a.map(n => listRows("plugin", "", "a", n)), ...mo.only_b.map(n => listRows("plugin", "", "b", n)),
+        ...mo.both.filter(x => x.a !== x.b).map(x => `<tr class="diff"><td class="v">${esc(x.name)}</td><td>${A}: ${onOff(x.a)} · ${B}: ${onOff(x.b)} <span class="hint">turn it on or off in the Plugins tab</span></td><td></td></tr>`)],
+      mo.only_a.length + mo.only_b.length + mo.both.length ? "The same mods, on or off in both. ✓" : "No mods in either profile.")}
     <div class="ext-head"><h2>Plugins</h2><span class="hint">read-only: install and enable plugins with <code>/plugin</code> in Claude Code</span></div>
     ${table(["", ""], [`<tr><td>Installed</td><td>${plug("installed")}</td><td></td></tr>`, `<tr><td>Enabled</td><td>${plug("enabled")}</td><td></td></tr>`], "")}`;
   bindCompare();
@@ -2603,6 +2625,7 @@ function bindCompare() {
     }
     if (b.dataset.cmp === "skill") return done(() => api("/api/skills/copy", { profile: from, name: b.dataset.name, to }));
     if (b.dataset.cmp === "agent") return done(() => api("/api/agents/copy", { profile: from, name: b.dataset.name, to }));
+    if (b.dataset.cmp === "plugin") return done(() => api("/api/plugins/copy", { profile: from, plugin: b.dataset.name, to }));
     if (b.dataset.cmp === "mcp") return done(() => api("/api/mcp/copy", { profile: from, scope: "user", name: b.dataset.name, to }));
     if (b.dataset.cmp === "md") {
       if (!(await confirmBox(`Replace ${name(other(side))}'s CLAUDE.md?`, `It gets the content of ${esc(name(side))}'s CLAUDE.md. The current file goes to the backup.`, "Replace"))) return;
