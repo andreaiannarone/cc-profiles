@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-10-26
+
 ### Added
 - **Mods** in the Plugins tab: plugins of function hooks, which change Claude Code itself, are marked **mod**, with what they add (pane, band above the prompt, status line, slash commands…), the events they hook, and in orange what they can reach (network, programs, files, model calls), read from their source without running it.
 - **Copy to…** in the Plugins tab copies a plugin installed for every project to another profile as `/plugin` would install it there (files, `installed_plugins.json` entry, marketplace), and enables it, with a backup.
@@ -288,7 +290,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...HEAD
+[0.5.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.4...v0.5.5
