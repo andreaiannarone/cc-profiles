@@ -2903,6 +2903,7 @@ def test_open_any_folder_in_a_terminal(home, app_factory):
     one the rules give it, else the one its project is in, else the first profile."""
     basic_home(home)
     home.path("code/notes").mkdir()
+    home.path("Applications/iTerm.app").mkdir(parents=True)  # Linux has no Terminal.app
     app = app_factory(CC_PROFILES_TERMINAL_DRYRUN="1")
     app.post("/api/rules", {"match": "code/work", "profile": "work"})
 
