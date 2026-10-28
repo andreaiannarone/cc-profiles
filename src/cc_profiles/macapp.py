@@ -249,27 +249,36 @@ def icon_png(side):
         d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2) ** 0.5
         return min(1.0, max(0.0, radius - d + 0.5))
 
+    def edge_pixel(x, y, tile):
+        a = coverage(x, y)
+        if a <= 0:
+            return b"\0\0\0\0"
+        inner = coverage(x - 2 * k, y - 2 * k) * coverage(x + 2 * k, y + 2 * k)  # a thin darker rim
+        return bytes(round(e + (c - e) * inner) for c, e in zip(tile, TILE_EDGE)) + bytes([round(255 * a)])
+
+    # Pixel by pixel only near the edge: the rows' middle is the tile's color, the mascots go on top
     rows = []
     for y in range(side):
         t = min(1.0, max(0.0, (y - x0) / size))
         tile = tuple(round(a + (b - a) * t) for a, b in zip(TILE_TOP, TILE_BOTTOM))
-        row = bytearray()
-        in_rows = x0 + 3 <= y <= x0 + size - 4
-        band = x0 + radius <= y <= x0 + size - radius  # rows where only the sides are curved
-        for x in range(side):
-            if in_rows and x0 + 3 <= x <= x0 + size - 4 and (band or x0 + radius <= x <= x0 + size - radius):
-                a, color = 1.0, tile  # well inside: no edge to smooth
-            else:
-                a = coverage(x, y)
-                if a <= 0:
-                    row += b"\0\0\0\0"
-                    continue
-                inner = coverage(x - 2 * k, y - 2 * k) * coverage(x + 2 * k, y + 2 * k)  # a thin darker rim
-                color = tuple(round(e + (c - e) * inner) for c, e in zip(tile, TILE_EDGE))
-            gx, gy = (x - lx) // cell, (y - ly) // cell
-            if 0 <= gy < len(LOGO) and 0 <= gx < len(LOGO[0]) and LOGO[gy][gx] in LOGO_COLORS:
-                color = LOGO_COLORS[LOGO[gy][gx]]
-            row += bytes(color) + bytes([round(255 * a)])
+        row = bytearray((bytes(tile) + b"\xff") * side)
+        if not x0 + 3 <= y <= x0 + size - 4:
+            edges = range(side)  # top and bottom edge: every pixel
+        else:  # elsewhere only the pixels near the curve: transparent before them, the tile after
+            dy = max(0.0, abs(y + 0.5 - min(max(y + 0.5, x0 + radius), x0 + size - radius)))
+            arc = lambda r: x0 + radius - max(0.0, r * r - dy * dy) ** 0.5  # where a circle of radius r crosses
+            left = max(int(arc(radius + 1)) - 1, 0)
+            right = int(arc(radius - 3 * k - 2)) + 2  # past it, the rim is behind too
+            row[:4 * left] = bytes(4 * left)
+            row[4 * (side - left):] = bytes(4 * left)
+            edges = list(range(left, right)) + list(range(side - right, side - left))
+        for x in edges:
+            row[4 * x:4 * x + 4] = edge_pixel(x, y, tile)
+        gy = (y - ly) // cell
+        if y >= ly and gy < len(LOGO):
+            for gx, c in enumerate(LOGO[gy]):
+                if c in LOGO_COLORS:
+                    row[4 * (lx + gx * cell):4 * (lx + (gx + 1) * cell)] = (bytes(LOGO_COLORS[c]) + b"\xff") * cell
         rows.append(b"\0" + bytes(row))
 
     def chunk(kind, data):
