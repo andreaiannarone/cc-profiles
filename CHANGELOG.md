@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-28
+
 ### Added
 - `/cc-profiles` and `cc-profiles open` show cc-profiles in the Mac app when it is installed, instead of a browser tab.
 - Open in Terminal: a button on every project opens its folder in a new terminal window with Claude Code running in the profile you pick. Terminal, iTerm or Ghostty, chosen in the About panel. On macOS, in the app and in the browser.
@@ -315,7 +317,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
 [0.5.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...v0.5.7

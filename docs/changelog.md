@@ -3,6 +3,28 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.6.0] - 2026-10-28
+
+**Added**
+- `/cc-profiles` and `cc-profiles open` show cc-profiles in the Mac app when it is installed, instead of a browser tab.
+- Open in Terminal: a button on every project opens its folder in a new terminal window with Claude Code running in the profile you pick. Terminal, iTerm or Ghostty, chosen in the About panel. On macOS, in the app and in the browser.
+- Mac app: zoom with ⌘+, ⌘− and ⌘0, remembered between launches; ⌘, for Settings, ⌘F to search, ⌘1 to ⌘9 for the tabs.
+- Mac app: a badge on the Dock icon when a new version is out, and one notification per version.
+- Drop a profile's `.zip` on the page to import it. In the Mac app, drop a folder to relink a project to it; both also work on the app's Dock icon.
+- Mac app: an optional menu bar icon with the server's status and your recent projects, each opening in a terminal with Claude Code; Open at Login.
+- Mac app: if the server stops while the app is open, the app starts it again.
+- Mac app: Open in Claude Code in the Finder (right click on a folder → Quick Actions), in the profile the rules give the folder, or one you pick.
+- Mac app: right-click the Dock icon for your recent projects, each opening in a terminal with Claude Code.
+- Mac app: the window opens where it was, at its size, on the tab it was on.
+
+- The Mac app is added by itself on macOS: by `install.sh`, or the first time cc-profiles starts, however it was installed or updated (pipx, uv, Homebrew). An app you delete stays deleted. `install.sh --no-app`, or `cc-profiles install-app --off`, keeps it from being added.
+- `install.sh` installs with Homebrew when there is neither pipx nor uv.
+
+**Changed**
+- `install.sh` updates cc-profiles with the tool that installed it (pipx, uv or Homebrew) instead of adding a second copy with another; with uv it now really updates, and rebuilds an environment broken by a Python update. It restarts cc-profiles if it was running an older version, and says which version it installed or updated from.
+- A new icon for the Mac app: the two mascots on a warm dark square lit from above, with a soft light behind them and a shadow under each, easier to spot in the Dock.
+- The Mac app's title bar takes the page's background, light or dark, and follows the theme you pick, instead of a grey bar above the page. An app added with 0.5.9 gets both at the next start of cc-profiles.
+
 ## [0.5.9] - 2026-10-28
 
 **Added**
@@ -293,6 +315,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
 [0.5.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.6...v0.5.7
