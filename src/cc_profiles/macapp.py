@@ -134,6 +134,14 @@ def info_plist():
             {"CFBundleTypeName": "Folder", "CFBundleTypeRole": "Viewer", "LSHandlerRank": "Alternate",
              "LSItemContentTypes": ["public.folder"]},
         ],
+        # Finder → right click on a folder → Quick Actions (Services): Claude Code in that folder.
+        # NSRequiredContext turns them on without a trip to System Settings
+        "NSServices": [
+            {"NSMenuItem": {"default": title}, "NSMessage": message, "NSPortName": "cc-profiles",
+             "NSSendFileTypes": ["public.folder"], "NSRequiredContext": {}}
+            for title, message in (("Open in Claude Code", "openInClaude"),
+                                   ("Open in Claude Code with Profile…", "openInClaudeWithProfile"))
+        ],
         "NSHumanReadableCopyright": "© 2026 Andrea Iannarone, GPL-3.0-or-later",
         APP_MARK: True,
     }

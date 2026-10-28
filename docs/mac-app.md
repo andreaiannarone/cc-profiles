@@ -16,6 +16,7 @@ Once the app is there, `/cc-profiles` and `cc-profiles open` show cc-profiles in
 - **Closing the window, or ⌘Q,** quits the app (closing the window does not, with the menu bar icon on). If the app started the server, the server stops too, after any change in progress; one it found running stays on.
 - **Links to other sites** (the documentation, GitHub, claude.ai) open in your default browser. **View → Open in Browser** (⇧⌘O) opens the page there too.
 - **Exports** (a profile's `.zip`, the usage CSV) go to your Downloads folder, under a new name if a file with that name is already there.
+- **The window comes back where it was**, with its size, and on the tab it was on.
 - **⌘R** reloads the page. If the server stops while the app is open, the app starts it again by itself; if it stops three times in five minutes, the window says why instead.
 - **A new version** puts a badge on the Dock icon and sends one notification per version. Clicking it opens the About panel, where **Update** installs it.
 
@@ -40,6 +41,10 @@ Drop them on the window or on the app's icon in the Dock. In a browser the page 
 ## Open a project in a terminal
 
 Every project with a folder has an **Open in Terminal** button (on its row, and in **Manage**): it opens the folder in a new terminal window with Claude Code already running in the profile you pick. When Claude Code exits, the shell stays open. With iTerm or Ghostty installed, pick which terminal in the About panel. This works in the browser too, on a Mac.
+
+From the Finder, any folder opens the same way: right-click it, then **Quick Actions** (or **Services**) → **Open in Claude Code**. The profile is the one your [rules](guides/projects.md#assign-projects-with-rules) give the folder, as with [profile by folder](guides/profile-by-folder.md); with no rule, the profile its project is already in, else your first profile. **Open in Claude Code with Profile…** asks which. The app starts if it is not open. If the two items do not show, turn them on in System Settings → Keyboard → Keyboard Shortcuts → Services → Files and Folders.
+
+Right-click the app's icon in the Dock for your ten most recent projects: each opens in a terminal with Claude Code, and one in several profiles asks which.
 
 ## Menu bar and login
 

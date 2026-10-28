@@ -380,6 +380,20 @@ def test_open_a_project_in_a_terminal(page_on_sandbox):
     assert errors == []
 
 
+def test_the_mac_app_reopens_the_last_tab(page_on_sandbox):
+    page, errors = page_on_sandbox
+    app = page.context.browser.new_page(user_agent=page.evaluate("navigator.userAgent") + " cc-profiles-app",
+                                        viewport={"width": 1440, "height": 900})
+    app.goto(page.url)
+    app.wait_for_selector(".pcard")
+    app.click('#tabs button[data-tab="usage"]')
+    app.reload()
+    app.wait_for_selector('#tabs button[data-tab="usage"].on')
+    page.reload()  # a browser tab starts from Projects
+    page.wait_for_selector('#tabs button[data-tab="projects"].on')
+    assert errors == []
+
+
 def test_a_dropped_zip_opens_import(page_on_sandbox):
     page, errors = page_on_sandbox
     page.evaluate("""() => {

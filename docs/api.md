@@ -137,7 +137,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/keep` | `name`, `kept` (bool): keep a backup so no cleanup deletes it (and it cannot be deleted until `kept` is false), or let it go |
 | `POST /api/macapp` | (none): creates the Mac app or brings it up to date, on this server's port; the same fields as `GET /api/macapp`, plus `message` and `backup` |
 | `POST /api/terminal` | `terminal` (one of `choices`): the terminal projects open in (`terminal` in `config.json`), with a backup |
-| `POST /api/terminal/open` | `project`, `profile`: opens the project's folder in the terminal with Claude Code in that profile. Writes a script in `~/.cc-profiles/terminal/` that deletes itself when it runs; nothing the page sends is run as a command. An error when the folder is gone |
+| `POST /api/terminal/open` | `project`, `profile`: opens the project's folder in the terminal with Claude Code in that profile. Or `path` instead of `project`, for any folder (the Mac app's Finder Quick Actions); without `profile`, the one the rules give it, else the one its project is in, else the first. Returns `{message, profile}`. Writes a script in `~/.cc-profiles/terminal/` that deletes itself when it runs; nothing the page sends is run as a command. An error when the folder is gone |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 | `POST /api/shell` | `install` (`true` or `false`): adds the profile by folder line to the shell rc files, or removes it. Without anything to change it returns a `message` and no `backup` |

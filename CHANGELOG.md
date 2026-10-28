@@ -13,6 +13,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Drop a profile's `.zip` on the page to import it. In the Mac app, drop a folder to relink a project to it; both also work on the app's Dock icon.
 - Mac app: an optional menu bar icon with the server's status and your recent projects, each opening in a terminal with Claude Code; Open at Login.
 - Mac app: if the server stops while the app is open, the app starts it again.
+- Mac app: Open in Claude Code in the Finder (right click on a folder → Quick Actions), in the profile the rules give the folder, or one you pick.
+- Mac app: right-click the Dock icon for your recent projects, each opening in a terminal with Claude Code.
+- Mac app: the window opens where it was, at its size, on the tab it was on.
 
 ### Changed
 - A new icon for the Mac app: the two mascots on a warm dark square lit from above, with a soft light behind them and a shadow under each, easier to spot in the Dock.

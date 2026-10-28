@@ -895,6 +895,7 @@ async function doTerminal(r, pid) {
 // A profile .zip opens Import. A folder opens Relink, in the Mac app only: a browser never tells
 // a page where a folder is. The Mac app also passes on what is dropped on its Dock icon.
 const IN_APP = navigator.userAgent.includes("cc-profiles-app");
+const APP_TAB = "cc-profiles.app-tab";
 const draggingFiles = e => [...(e.dataTransfer?.types || [])].includes("Files") && !e.target.closest?.('input[type="file"]');
 document.addEventListener("dragover", e => { if (draggingFiles(e)) e.preventDefault(); });
 document.addEventListener("drop", e => {
@@ -3020,6 +3021,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.tab) {
     S.tab = t.dataset.tab;
     markTab(S.tab);
+    if (IN_APP) try { localStorage.setItem(APP_TAB, S.tab); } catch {}
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "conversations" && !S.conv.profile) { S.conv.profile = S.profiles[0]?.id; await loadConvProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
@@ -3103,7 +3105,11 @@ checkWhatsNew();
 loadUpdateStatus();
 api("/api/terminal").then(t => { S.term = t; if (t.supported && S.tab === "projects" && S.projects) renderProjects(); }).catch(() => {});
 setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
-refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
+refresh().then(() => {  // the Mac app opens on the tab it was closed on; a browser tab on Projects
+  let tab = null;
+  if (IN_APP) try { tab = localStorage.getItem(APP_TAB); } catch {}
+  if (tab && tab !== S.tab) TAB_BUTTONS.find(b => b.dataset.tab === tab)?.click();
+}, e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
 </script>
 </body>
 </html>

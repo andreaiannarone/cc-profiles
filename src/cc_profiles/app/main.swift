@@ -9,7 +9,9 @@
 // window is open it checks the server every few seconds and starts it again if it stopped.
 // Links to other sites open in the default browser, downloads go to ~/Downloads. Folders and
 // profile .zip files dropped on the window or the Dock icon go to the page (Relink, Import).
-// Optional: an icon in the menu bar (recent projects, open in a terminal) and opening at login.
+// Recent projects open in a terminal with Claude Code from the Dock icon's menu and, optionally,
+// from an icon in the menu bar; any folder does from Finder (Quick Actions). Optional: opening
+// at login. The window comes back where it was, on the tab it was on.
 //
 // Built by macapp.build_binary() (scripts/build_app.py): standard library only, no Xcode project.
 
@@ -139,7 +141,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     var pending: [URL] = []      // files opened before the page was there
     var titleWatch: NSKeyValueObservation?
     var statusItem: NSStatusItem?
-    var token: String?
+    var token: String?           // the page's API token: read and written under tokenLock
+    let tokenLock = NSLock()
+    var recent: [[String: Any]] = []     // the recent projects, for the Dock icon's menu
+    var labels: [String: String] = [:]   // profile id → name
     let defaults = UserDefaults.standard
 
     var home: URL { URL(string: "http://127.0.0.1:\(launch?.port ?? 4777)/")! }
@@ -180,12 +185,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         window.contentView = web
         window.center()
         window.setFrameAutosaveName("cc-profiles")
+        window.setFrameUsingName("cc-profiles")  // where it was when it closed
         titleWatch = web.observe(\.title) { [weak self] view, _ in
             if let title = view.title, !title.isEmpty {
                 self?.window.title = title
             }
         }
         UNUserNotificationCenter.current().delegate = self
+        NSApp.servicesProvider = self  // the Finder's Quick Actions
+        NSUpdateDynamicServices()
         buildMenu()
         setMenuBar(inMenuBar)
         if atLogin && inMenuBar {  // at login it waits in the menu bar
@@ -195,6 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
         start()
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkServer() }
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refreshRecent() }
     }
 
     func showWindow() {
@@ -219,7 +228,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             DispatchQueue.main.async {
                 self.starting = false
                 self.failures = 0
-                self.token = nil
+                self.tokenLock.lock()
+                self.token = nil  // a server started again has a new one
+                self.tokenLock.unlock()
                 if status == 0 {
                     self.startedServer = self.startedServer || output.contains("started in the background")
                     self.web.load(URLRequest(url: self.home))
@@ -369,6 +380,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if let url = webView.url, isLocal(url) {
+            refreshRecent()
+        }
         if let url = webView.url, isLocal(url), !pending.isEmpty {
             let urls = pending
             pending = []
@@ -621,6 +635,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     /// GET or POST to the server's API, waiting at most two seconds; the token comes from the page.
+    /// Called from any thread.
     func api(_ path: String, _ body: [String: String]? = nil) -> Any? {
         func call(_ request: URLRequest) -> (Data?, HTTPURLResponse?) {
             var result: (Data?, HTTPURLResponse?) = (nil, nil)
@@ -632,9 +647,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             _ = done.wait(timeout: .now() + 2)
             return result
         }
+        tokenLock.lock()
+        var token = self.token
+        tokenLock.unlock()
         if token == nil, let html = call(URLRequest(url: home, timeoutInterval: 2)).0.map({ String(decoding: $0, as: UTF8.self) }),
            let range = html.range(of: #"const TOKEN = "([^"]+)""#, options: .regularExpression) {
             token = String(html[range].dropFirst(15).dropLast())
+            tokenLock.lock()
+            self.token = token
+            tokenLock.unlock()
         }
         guard let token = token, let url = URL(string: path, relativeTo: home) else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 2)
@@ -645,32 +666,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         }
         let (data, response) = call(request)
-        if response?.statusCode == 403 {
+        if response?.statusCode == 403 {  // the server started again, with a new token
+            tokenLock.lock()
             self.token = nil
+            tokenLock.unlock()
         }
         return data.flatMap { try? JSONSerialization.jsonObject(with: $0) }
     }
 
-    func fillStatusMenu(_ menu: NSMenu) {
-        menu.removeAllItems()
-        let profiles = (api("/api/profiles") as? [[String: Any]]) ?? []
+    /// The ten most recent projects whose folder exists, and the profiles' names (from the server).
+    func fetchRecent() -> (projects: [[String: Any]], labels: [String: String])? {
+        guard let profiles = api("/api/profiles") as? [[String: Any]],
+              let projects = api("/api/projects") as? [[String: Any]] else { return nil }
         let labels = Dictionary(profiles.compactMap { p in (p["id"] as? String).map { ($0, p["label"] as? String ?? $0) } },
                                 uniquingKeysWith: { a, _ in a })
-        let header = NSMenuItem(title: profiles.isEmpty ? "cc-profiles is not running"
-                                : "cc-profiles is running on port \(launch?.port ?? 4777)", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        menu.addItem(NSMenuItem(title: "Open cc-profiles", action: #selector(openFromMenu), keyEquivalent: ""))
-        let projects = ((api("/api/projects") as? [[String: Any]]) ?? [])
-            .filter { ($0["exists"] as? Bool) == true }
+        let recent = projects.filter { ($0["exists"] as? Bool) == true }
             .sorted { ($0["last"] as? Double ?? 0) > ($1["last"] as? Double ?? 0) }
-            .prefix(10)
-        if !projects.isEmpty {
-            menu.addItem(.separator())
-            let title = NSMenuItem(title: "Open in a terminal, with Claude Code", action: nil, keyEquivalent: "")
-            title.isEnabled = false
-            menu.addItem(title)
+        return (Array(recent.prefix(10)), labels)
+    }
+
+    /// The Dock icon's menu cannot wait for the server: it shows what this keeps up to date.
+    func refreshRecent() {
+        DispatchQueue.global(qos: .utility).async {
+            guard let fetched = self.fetchRecent() else { return }
+            DispatchQueue.main.async {
+                self.recent = fetched.projects
+                self.labels = fetched.labels
+            }
         }
+    }
+
+    /// The projects as menu items: one opens in its profile, one in several asks which.
+    func addProjects(to menu: NSMenu, _ projects: [[String: Any]], _ labels: [String: String]) {
+        guard !projects.isEmpty else { return }
+        let title = NSMenuItem(title: "Open in a terminal, with Claude Code", action: nil, keyEquivalent: "")
+        title.isEnabled = false
+        menu.addItem(title)
         for project in projects {
             guard let name = project["name"] as? String, let pretty = project["pretty"] as? String else { continue }
             let ids = ((project["in"] as? [String: Any]) ?? [:]).keys.sorted()
@@ -692,9 +723,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             item.target = self
             menu.addItem(item)
         }
+    }
+
+    func fillStatusMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let fetched = fetchRecent()
+        if let fetched = fetched {
+            recent = fetched.projects
+            labels = fetched.labels
+        }
+        let header = NSMenuItem(title: fetched == nil ? "cc-profiles is not running"
+                                : "cc-profiles is running on port \(launch?.port ?? 4777)", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        let open = NSMenuItem(title: "Open cc-profiles", action: #selector(openFromMenu), keyEquivalent: "")
+        open.target = self
+        menu.addItem(open)
+        if let fetched = fetched, !fetched.projects.isEmpty {
+            menu.addItem(.separator())
+            addProjects(to: menu, fetched.projects, fetched.labels)
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit cc-profiles", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
-        menu.items.filter { $0.action == #selector(openFromMenu) }.forEach { $0.target = self }
+    }
+
+    // MARK: the Dock icon's menu: the same recent projects (macOS adds its own items below)
+
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        refreshRecent()
+        let menu = NSMenu()
+        addProjects(to: menu, recent, labels)
+        return menu.items.isEmpty ? nil : menu
     }
 
     @objc func openFromMenu() {
@@ -703,11 +762,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc func openTerminal(_ sender: NSMenuItem) {
         guard let pair = sender.representedObject as? [String], pair.count == 2 else { return }
-        let reply = api("/api/terminal/open", ["project": pair[0], "profile": pair[1]]) as? [String: Any]
-        if let error = reply?["error"] as? String {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let reply = self.api("/api/terminal/open", ["project": pair[0], "profile": pair[1]]) as? [String: Any]
+            if let error = reply?["error"] as? String ?? (reply == nil ? "cc-profiles did not answer." : nil) {
+                self.alert("Could not open the project", error)
+            }
+        }
+    }
+
+    // MARK: Finder → Quick Actions: a folder in a terminal with Claude Code, in the profile the
+    // rules give it (as profile by folder does) or in one picked here
+
+    @objc func openInClaude(_ pboard: NSPasteboard, userData: String?, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+        openFolders(pboard, pick: false)
+    }
+
+    @objc func openInClaudeWithProfile(_ pboard: NSPasteboard, userData: String?,
+                                       error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+        openFolders(pboard, pick: true)
+    }
+
+    func openFolders(_ pboard: NSPasteboard, pick: Bool) {
+        let urls = pboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        let folders = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }.map { $0.path }
+        guard !folders.isEmpty else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            // the Quick Action may have just launched the app: give the server time to start
+            var profiles: [[String: Any]]?
+            for _ in 0..<20 {
+                profiles = self.api("/api/profiles") as? [[String: Any]]
+                if profiles != nil { break }
+                Thread.sleep(forTimeInterval: 1)
+            }
+            guard let all = profiles else {
+                return self.alert("Could not open the folder", "cc-profiles is not answering. Open the app and try again.")
+            }
+            DispatchQueue.main.async {
+                var pid: String?
+                if pick {
+                    guard let chosen = self.askProfile(all, folders) else { return }
+                    pid = chosen
+                }
+                DispatchQueue.global(qos: .userInitiated).async {
+                    for folder in folders {
+                        var body = ["path": folder]
+                        body["profile"] = pid
+                        let reply = self.api("/api/terminal/open", body) as? [String: Any]
+                        if let error = reply?["error"] as? String ?? (reply == nil ? "cc-profiles did not answer." : nil) {
+                            self.alert("Could not open \((folder as NSString).lastPathComponent)", error)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The profile to open folders in, or nil when cancelled.
+    func askProfile(_ profiles: [[String: Any]], _ folders: [String]) -> String? {
+        let ids = profiles.compactMap { $0["id"] as? String }
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        popup.addItems(withTitles: profiles.map { ($0["label"] as? String) ?? ($0["id"] as? String ?? "") })
+        let alert = NSAlert()
+        alert.messageText = "Open in Claude Code"
+        alert.informativeText = "Claude Code starts in \(folders.map { ($0 as NSString).abbreviatingWithTildeInPath }.joined(separator: ", ")), in the profile you pick."
+        alert.accessoryView = popup
+        alert.addButton(withTitle: "Open")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn, popup.indexOfSelectedItem < ids.count else { return nil }
+        return ids[popup.indexOfSelectedItem]
+    }
+
+    /// An error, from any thread.
+    func alert(_ title: String, _ detail: String) {
+        DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "Could not open the project"
-            alert.informativeText = error
+            alert.messageText = title
+            alert.informativeText = detail
+            NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
         }
     }

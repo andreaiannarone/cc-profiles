@@ -8,8 +8,9 @@ import subprocess
 import sys
 import time
 
-from .core import (CONFIG_FILE, DATA_DIR, HOME, ApiError, Backup, load_config, pretty, profile, write_json,
-                   write_text)
+from .byfolder import pick
+from .core import (CONFIG_FILE, DATA_DIR, HOME, ApiError, Backup, load_config, pretty, profile, profiles,
+                   write_json, write_text)
 from .projects import list_projects
 
 # ---------------------------------------------------------------------------
@@ -81,16 +82,37 @@ def launch_script(folder, prof):
             f"exec {shell} -lic 'command claude; exec {shell} -l'\n")
 
 
-def op_open_terminal(project, pid):
-    """POST /api/terminal/open: the project's folder in the chosen terminal, Claude Code in pid."""
+def folder_profile(path, row=None):
+    """The profile a folder opens in when none is picked: the one the rules give it (as with
+    profile by folder), else the one its project is in, else the first (the source profile)."""
+    pid = pick(load_config(), path)[0]
+    ids = [p["id"] for p in profiles()]
+    if pid in ids:
+        return pid
+    known = [i for i in ids if i in ((row or {}).get("in") or {})]
+    return (known or ids or ["default"])[0]
+
+
+def op_open_terminal(project, pid, path=None):
+    """POST /api/terminal/open: a project's folder, or any folder (`path`, from the Mac app's
+    Finder menu), in the chosen terminal with Claude Code in pid (picked as folder_profile()
+    does when empty)."""
     if not supported():
         raise ApiError("Opening a terminal works on macOS only")
-    prof = profile(pid)
-    row = next((r for r in list_projects() if r["name"] == project), None)
-    if not row or not row.get("path"):
-        raise ApiError(f"Project not found: {project}", 404)
-    if not os.path.isdir(row["path"]):
-        raise ApiError(f"Folder does not exist: {pretty(row['path'])}. Relink the project first")
+    projects = list_projects()
+    if path:
+        folder = os.path.realpath(os.path.expanduser(path))
+        if not os.path.isdir(folder):
+            raise ApiError(f"Folder does not exist: {pretty(folder)}")
+        row = next((r for r in projects if r.get("path") == folder), None)
+    else:
+        row = next((r for r in projects if r["name"] == project), None)
+        if not row or not row.get("path"):
+            raise ApiError(f"Project not found: {project}", 404)
+        folder = row["path"]
+        if not os.path.isdir(folder):
+            raise ApiError(f"Folder does not exist: {pretty(folder)}. Relink the project first")
+    prof = profile(pid or folder_profile(folder, row))
     apps = terminal_apps()
     name = chosen_terminal(apps)
     if not name:
@@ -101,14 +123,14 @@ def op_open_terminal(project, pid):
         if os.path.getmtime(p) < time.time() - 86400:
             os.unlink(p)
     script = os.path.join(SCRIPT_DIR, f"claude-{prof['id']}-{int(time.time() * 1000)}.command")
-    write_text(script, launch_script(row["path"], prof))
+    write_text(script, launch_script(folder, prof))
     os.chmod(script, 0o700)
     cmd = (["/usr/bin/open", "-na", apps[name], "--args", "-e", script] if name == "Ghostty"
            else ["/usr/bin/open", "-a", apps[name], script])
-    msg = f"Opening {pretty(row['path'])} in {name}, with Claude Code in {prof['label']}."
+    msg = f"Opening {pretty(folder)} in {name}, with Claude Code in {prof['label']}."
     if os.environ.get("CC_PROFILES_TERMINAL_DRYRUN"):  # tests: the script is written, nothing opens
-        return {"message": msg, "command": cmd, "script": script}
+        return {"message": msg, "command": cmd, "script": script, "profile": prof["id"]}
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode:
         raise ApiError(f"{name} did not open: {(r.stderr or r.stdout).strip()}")
-    return {"message": msg}
+    return {"message": msg, "profile": prof["id"]}

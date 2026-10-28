@@ -380,7 +380,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/update": lambda: op_update(),
                 "/api/macapp": lambda: op_install_app(),
                 "/api/terminal": lambda: op_set_terminal(b.get("terminal", "")),
-                "/api/terminal/open": lambda: op_open_terminal(b["project"], b["profile"]),
+                "/api/terminal/open": lambda: op_open_terminal(b.get("project"), b.get("profile"), b.get("path")),
                 "/api/update/auto": lambda: op_update_check(b.get("enabled")),
                 "/api/skills/save": lambda: op_skill_save(b["profile"], b["name"], b["content"]),
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),

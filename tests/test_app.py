@@ -1873,6 +1873,7 @@ def test_install_app_puts_together_the_mac_app(home, app_factory):
     info = read_plist(contents / "Info.plist")
     assert info["CCProfilesManaged"] is True and info["CFBundleExecutable"] == "cc-profiles"
     assert info["CFBundleShortVersionString"] == __version__
+    assert [x["NSMessage"] for x in info["NSServices"]] == ["openInClaude", "openInClaudeWithProfile"]
     launch = json.loads((contents / "Resources" / "launch.json").read_text())
     assert launch == {"command": [sys.executable, "-m", "cc_profiles"], "port": 4790}
     icns = (contents / "Resources" / "AppIcon.icns").read_bytes()
@@ -2895,6 +2896,28 @@ def test_open_in_terminal_writes_a_script_for_the_profile(home, app_factory):
     shutil.rmtree(home.path(".cc-profiles/terminal"))  # scripts a terminal would run and delete
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_open_any_folder_in_a_terminal(home, app_factory):
+    """From the Finder (the Mac app's Quick Actions): any folder, in the profile picked, else the
+    one the rules give it, else the one its project is in, else the first profile."""
+    basic_home(home)
+    home.path("code/notes").mkdir()
+    app = app_factory(CC_PROFILES_TERMINAL_DRYRUN="1")
+    app.post("/api/rules", {"match": "code/work", "profile": "work"})
+
+    def opened(path, profile=None):
+        r = app.post("/api/terminal/open", {"path": path, "profile": profile})
+        return r["profile"], open(r["command"][-1]).read()
+
+    pid, script = opened(str(home.path("code/work/api")))
+    assert pid == "work" and f"cd {home.path('code/work/api')} " in script
+    assert opened("~/code/personal/blog")[0] == "default"  # no rule: its project's profile
+    assert opened(str(home.path("code/notes")))[0] == "default"  # not a project: the first profile
+    assert opened(str(home.path("code/notes")), "work")[0] == "work"
+    assert "Folder does not exist" in app.post_error("/api/terminal/open", {"path": str(home.path("code/gone"))})
+    assert "Unknown profile" in app.post_error("/api/terminal/open", {"path": str(home.path("code/notes")),
+                                                                      "profile": "nope"})
 
 
 def test_the_cli_shows_the_mac_app_when_it_is_installed(home):

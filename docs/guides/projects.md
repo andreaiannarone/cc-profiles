@@ -53,7 +53,7 @@ In the [Mac app](../mac-app.md) you can also drop the project's new folder on th
 
 ## Open a project in a terminal
 
-On macOS, **Open in Terminal** (on the row, and in **Manage**) opens the project's folder in a new terminal window with Claude Code running in the profile you pick, as if you had typed its command there. When Claude Code exits, the shell stays open. Terminal, iTerm and Ghostty work; with more than one installed, pick it in the About panel (ⓘ). The button names the terminal, and shows only for projects whose folder exists.
+On macOS, **Open in Terminal** (on the row, and in **Manage**) opens the project's folder in a new terminal window with Claude Code running in the profile you pick, as if you had typed its command there. When Claude Code exits, the shell stays open. Terminal, iTerm and Ghostty work; with more than one installed, pick it in the About panel (ⓘ). The button names the terminal, and shows only for projects whose folder exists. The [Mac app](../mac-app.md) also opens any folder this way from the Finder's Quick Actions, and your recent projects from its Dock icon.
 
 ## Assign projects with rules
 
