@@ -1985,7 +1985,7 @@ def test_install_script_options():
     assert subprocess.run(["sh", "-n", script]).returncode == 0
     with open(script) as f:  # piped, as with curl | sh
         r = subprocess.run(["sh", "-s", "--", "--help"], stdin=f, capture_output=True, text=True)
-    assert r.returncode == 0 and "--no-command" in r.stdout
+    assert r.returncode == 0 and "--no-command" in r.stdout and "--no-app" in r.stdout
     assert subprocess.run(["sh", script, "--nope"], capture_output=True).returncode == 2
 
 

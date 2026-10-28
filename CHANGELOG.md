@@ -17,7 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mac app: right-click the Dock icon for your recent projects, each opening in a terminal with Claude Code.
 - Mac app: the window opens where it was, at its size, on the tab it was on.
 
+- `install.sh` adds the Mac app on macOS (`--no-app` skips it), and installs with Homebrew when there is neither pipx nor uv.
+
 ### Changed
+- `install.sh` updates cc-profiles with the tool that installed it (pipx, uv or Homebrew) instead of adding a second copy with another; with uv it now really updates, and rebuilds an environment broken by a Python update. It restarts cc-profiles if it was running an older version, and says which version it installed or updated from.
 - A new icon for the Mac app: the two mascots on a warm dark square lit from above, with a soft light behind them and a shadow under each, easier to spot in the Dock.
 - The Mac app's title bar takes the page's background, light or dark, and follows the theme you pick, instead of a grey bar above the page. An app added with 0.5.9 gets both at the next start of cc-profiles.
 

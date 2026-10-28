@@ -39,7 +39,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 
 | Variable | Effect |
 |---|---|
-| `CC_PROFILES_PORT` | default port |
+| `CC_PROFILES_PORT` | default port; `install.sh` also restarts a cc-profiles running on it after an update |
 | `CC_PROFILES_HOME` | data folder instead of `~/.cc-profiles` |
 | `CC_PROFILES_QUIET` | if set, do not log HTTP requests to the terminal |
 | `CC_PROFILES_INSTALL_DRYRUN` | **for tests**: the Claude Code installer runs `echo` instead of installing |
