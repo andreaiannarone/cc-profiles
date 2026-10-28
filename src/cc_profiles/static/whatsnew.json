@@ -1,6 +1,18 @@
 {
  "releases": [
   {
+   "version": "0.5.9",
+   "date": "2026-10-28",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Mac app**: `cc-profiles install-app` adds `~/Applications/cc-profiles.app`, cc-profiles in a window of its own with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser and exports go to Downloads. The app is put together on your Mac from a small Swift program shipped with cc-profiles, so macOS opens it without asking for an Apple signature. The About panel (ⓘ) says whether the app is installed and adds or updates it with **Add Mac app**. cc-profiles keeps it up to date after an update, and `cc-profiles uninstall` removes it."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.5.8",
    "date": "2026-10-26",
    "sections": [
@@ -162,19 +174,6 @@
      "title": "Changed",
      "items": [
       "README: the status line editor has its own line in Key Features."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.4.9",
-   "date": "2026-10-06",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "Documentation site, search engines and AI assistants: a meta description per page, canonical URLs, link previews (Open Graph, Twitter), structured data (the app, each page, breadcrumbs, the FAQ), `sitemap.xml`, `robots.txt` that welcomes AI crawlers, `llms.txt` and `llms-full.txt`, a 404 page, and a new **FAQ** page.",
-      "Documentation site: a copy icon on every code block copies the command with one click (a check mark confirms it); an **On this page** column on the right lists the page's sections and highlights the one you are reading, and scrolls smoothly to the one you click (unless the system asks for reduced motion); an **Install** button in the header opens the install instructions."
      ]
     }
    ]
