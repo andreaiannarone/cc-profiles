@@ -6,7 +6,7 @@ On macOS, cc-profiles can live in Applications as an app of its own: a window wi
 cc-profiles install-app
 ```
 
-It creates `~/Applications/cc-profiles.app`. Open it like any other app, and keep it in the Dock if you like. It is the same cc-profiles: the window shows the page you know, and the browser keeps working too.
+Or click **Add Mac app** in the About panel (ⓘ), which also says whether the app is there and up to date. Either way it creates `~/Applications/cc-profiles.app`. Open it like any other app, and keep it in the Dock if you like. It is the same cc-profiles: the window shows the page you know, and the browser keeps working too.
 
 ## How it works
 

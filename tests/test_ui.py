@@ -19,7 +19,9 @@ def page_on_sandbox(tmp_path):
     root = tmp_path / "sandbox"
     subprocess.run([sys.executable, str(ROOT / ".claude" / "skills" / "sandbox" / "make_home.py"), str(root)],
                    check=True, capture_output=True)
-    app = App(FakeHome(root))
+    fake_app = tmp_path / "cc-profiles-app"  # the Mac app's program, only copied (About → Add Mac app)
+    fake_app.write_text("#!/bin/sh\n")
+    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app)})
     errors = []
     with sync_api.sync_playwright() as p:
         try:
@@ -62,6 +64,12 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
     assert "cc-profiles" in page.inner_text(".drawer")
+    page.wait_for_selector("#mac-app-add")
+    assert "a window of its own" in page.inner_text("#mac-app")
+    page.click("#mac-app-add")  # Add Mac app
+    page.wait_for_selector("#mac-app .okmark")
+    assert "~/Applications/cc-profiles.app" in page.inner_text("#mac-app")
+    assert page.query_selector("#mac-app-add") is None
     link = page.locator('.drawer a[href="https://andreaiannarone.com"]')
     assert link.inner_text() == "Andrea Iannarone" and link.get_attribute("rel") == "noopener"
     assert link.get_attribute("target") == "_blank" and "© 2026" in page.inner_text(".drawer")

@@ -182,6 +182,24 @@ def install_app(port):
     return [f"{verb} {pretty(APP_PATH)}: open cc-profiles from Spotlight, Launchpad or Applications in Finder."], bk.close()
 
 
+def app_status():
+    """GET /api/macapp, for the About panel. "outdated" also when the app uses another port
+    than this server: installing it again moves it to this one."""
+    if not supported():
+        return {"supported": False}
+    state = app_state()
+    port = (app_launch() or {}).get("port")
+    if state == "current" and port != core.PORT:
+        state = "outdated"
+    return {"supported": True, "state": state, "path": pretty(APP_PATH), "port": port}
+
+
+def op_install_app():
+    """POST /api/macapp: what install-app does, on this server's port."""
+    lines, backup = install_app(core.PORT)
+    return dict(app_status(), message=lines[0], backup=backup)
+
+
 def ensure_app():
     """At every start of the server: an app cc-profiles made, from an older version or with a
     command that moved (installed another way), is rewritten, keeping its port. An app that is

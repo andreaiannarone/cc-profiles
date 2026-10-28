@@ -2169,6 +2169,7 @@ function renderAbout(dr, a) {
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
       <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
       <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
+      <div class="upd" id="mac-app" hidden></div>
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
@@ -2180,6 +2181,31 @@ function renderAbout(dr, a) {
   };
   $("#ab-news", dr).onclick = () => showWhatsNew();
   $("#ab-report", dr).onclick = () => reportProblem(a);
+  loadMacApp(dr);
+}
+// The Mac app (macOS only): added or brought up to date with a click, like an update
+async function loadMacApp(dr, m) {
+  const box = $("#mac-app", dr);
+  if (!box) return;
+  try { m = m || await api("/api/macapp"); } catch { return; }
+  if (!m.supported) return;
+  const how = `<a href="https://cc-profiles.andreaia.com/mac-app.html" target="_blank" rel="noopener">How it works</a>`;
+  const text = {
+    missing: `cc-profiles in a window of its own, in Applications, with its icon in the Dock. ${how}`,
+    outdated: `<code>${esc(m.path)}</code> is from another version${m.port && m.port !== Number(location.port) ? ` or uses port ${esc(m.port)}` : ""}. ${how}`,
+    current: `<span class="okmark">✓ Mac app in <code>${esc(m.path)}</code></span>: open it from Spotlight, Launchpad or Applications. ${how}`,
+    foreign: `<code>${esc(m.path)}</code> exists and was not created by cc-profiles: move it away to add the Mac app. ${how}`,
+  }[m.state] || "";
+  const label = { missing: "Add Mac app", outdated: "Update Mac app" }[m.state];
+  box.innerHTML = `${label ? `<button class="btn small" id="mac-app-add">${label}</button>` : ""}<span class="hint">${text}</span>`;
+  box.hidden = false;
+  const btn = $("#mac-app-add", box);
+  if (btn) btn.onclick = async () => {
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${label}`;
+    let r;
+    try { r = await run(() => api("/api/macapp", {})); } catch { btn.disabled = false; btn.textContent = label; return; }
+    loadMacApp(dr, r);
+  };
 }
 async function checkUpdate(dr) {
   const st = $("#upd-status", dr), btn = $("#upd-check", dr);

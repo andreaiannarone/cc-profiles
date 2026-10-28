@@ -1944,6 +1944,28 @@ def test_the_mac_app_starts_the_server(home):
         run_cli(home, "stop", "--port", str(port))
 
 
+def test_the_about_panel_adds_and_updates_the_mac_app(home, app_factory):
+    """GET /api/macapp says whether the app is there; POST adds it or brings it up to date,
+    on the server's port, with a backup."""
+    basic_home(home)
+    binary = fake_app_binary(home)
+    app = app_factory(CC_PROFILES_APP_BINARY=binary)
+    before = home.snapshot()
+    assert app.get("/api/macapp") == {"supported": True, "state": "missing", "path": "~/Applications/cc-profiles.app",
+                                      "port": None}
+    r = app.post("/api/macapp", {})
+    assert r["state"] == "current" and r["port"] == app.port and r["backup"]
+    assert r["message"].startswith("Created ~/Applications/cc-profiles.app")
+    assert run_cli(home, "install-app", "--port", "4790", CC_PROFILES_APP_BINARY=binary).returncode == 0
+    assert app.get("/api/macapp")["state"] == "outdated"  # another port than this server's
+    assert app.post("/api/macapp", {})["port"] == app.port
+    for b in app.get("/api/backups")[:3]:
+        app.post("/api/backups/restore", {"name": b["name"]})
+    assert home.snapshot() == before
+    if sys.platform != "darwin":
+        assert app_factory().get("/api/macapp") == {"supported": False}
+
+
 def test_install_app_is_for_macos(home):
     if sys.platform == "darwin":
         pytest.skip("macOS builds the app")
