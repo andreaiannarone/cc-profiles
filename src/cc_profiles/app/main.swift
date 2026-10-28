@@ -5,12 +5,17 @@
 // program in ~/Applications/cc-profiles.app with Resources/launch.json, which names the
 // cc-profiles command to run and the port. At launch the app runs `<command> open --no-browser`
 // (the server starts in the background unless it is running) and shows http://127.0.0.1:<port>
-// in a WKWebView; on quit it stops the server, if it was the one that started it.
-// Links to other sites open in the default browser, downloads go to ~/Downloads.
+// in a WKWebView; on quit it stops the server, if it was the one that started it. While the
+// window is open it checks the server every few seconds and starts it again if it stopped.
+// Links to other sites open in the default browser, downloads go to ~/Downloads. Folders and
+// profile .zip files dropped on the window or the Dock icon go to the page (Relink, Import).
+// Optional: an icon in the menu bar (recent projects, open in a terminal) and opening at login.
 //
 // Built by macapp.build_binary() (scripts/build_app.py): standard library only, no Xcode project.
 
 import AppKit
+import ServiceManagement
+import UserNotifications
 import WebKit
 
 struct Launch: Decodable {
@@ -53,22 +58,33 @@ let brokenHint = """
     """
 let retryScheme = "cc-profiles-app"
 
-// Tells the app the page's background color, now and whenever the theme changes (the theme
-// button sets data-theme on <html>; "system" follows macOS), so the title bar can wear it.
-// It runs in its own world: the page's scripts do not see it, and its CSP does not apply.
-let backgroundWatch = """
+// Tells the app the page's background color (for the title bar) and whether a new version of
+// cc-profiles is out (the ⓘ button gets the has-update class, its title names the version),
+// now and whenever they change. It runs in its own world: the page's scripts do not see it,
+// and its CSP does not apply.
+let pageWatch = """
     (() => {
-      let last = "";
+      let color = "", update = null;
       const send = () => {
-        const color = getComputedStyle(document.body || document.documentElement).backgroundColor;
-        if (color && color !== last) { last = color; webkit.messageHandlers.background.postMessage(color); }
+        const c = getComputedStyle(document.body || document.documentElement).backgroundColor;
+        if (c && c !== color) { color = c; webkit.messageHandlers.background.postMessage(c); }
+        const b = document.querySelector("#about-btn");
+        const u = b && b.classList.contains("has-update") ? ((b.title.match(/cc-profiles (\\S+) is available/) || [])[1] || "") : null;
+        if (b && u !== update) { update = u; webkit.messageHandlers.update.postMessage(u === null ? "-" : u); }
       };
       const soon = () => { send(); setTimeout(send, 400); };  // after a background transition, too
-      new MutationObserver(soon).observe(document.documentElement, { attributes: true });
+      new MutationObserver(soon).observe(document.documentElement,
+        { attributes: true, subtree: true, attributeFilter: ["class", "title", "data-theme"] });
       matchMedia("(prefers-color-scheme: dark)").addEventListener("change", soon);
       soon();
     })();
     """
+
+// The page's tabs, in order: ⌘1 to ⌘9 go to the first nine
+let tabs: [(String, String)] = [("projects", "Projects"), ("memories", "Memories"), ("conversations", "Conversations"),
+                                ("usage", "Usage"), ("skills", "Skills"), ("agents", "Agents"), ("mcp", "MCP"),
+                                ("plugins", "Plugins"), ("profiles", "Profiles"), ("compare", "Compare"),
+                                ("backups", "Backups"), ("health", "Health"), ("settings", "Settings")]
 
 /// "rgb(22, 21, 19)" or "rgba(…)" as a color, or nil.
 func parseColor(_ css: String) -> NSColor? {
@@ -77,25 +93,75 @@ func parseColor(_ css: String) -> NSColor? {
     return NSColor(srgbRed: parts[0] / 255, green: parts[1] / 255, blue: parts[2] / 255, alpha: 1)
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate,
-                         WKScriptMessageHandler {
+/// The mascot of the favicon, as a menu bar icon (a template: macOS colors it).
+func mascotImage() -> NSImage {
+    let grid = ["......#.....", ".....#......", "..########..", ".##########.", ".##.####.##.", ".##.####.##.",
+                ".##########.", ".##########.", ".##########.", "..##....##.."]
+    let cell: CGFloat = 1.5
+    let image = NSImage(size: NSSize(width: 12 * cell, height: CGFloat(grid.count) * cell + 2), flipped: true) { _ in
+        NSColor.black.setFill()
+        for (y, row) in grid.enumerated() {
+            for (x, c) in row.enumerated() where c == "#" {
+                NSRect(x: CGFloat(x) * cell, y: CGFloat(y) * cell + 1, width: cell, height: cell).fill()
+            }
+        }
+        return true
+    }
+    image.isTemplate = true
+    return image
+}
+
+/// A WKWebView that hands folders dropped on it to the app (the page cannot learn their path).
+final class WebView: WKWebView {
+    var onFolders: (([URL]) -> Void)?
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self],
+                                                         options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        let folders = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        if !folders.isEmpty, let handle = onFolders {
+            handle(folders)
+            return true
+        }
+        return super.performDragOperation(sender)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate, WKNavigationDelegate,
+                         WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, UNUserNotificationCenterDelegate {
     var window: NSWindow!
-    var web: WKWebView!
+    var web: WebView!
     var launch: Launch?
     var startedServer = false
+    var starting = false
+    var failures = 0             // server checks in a row that got no answer
+    var restarts: [Date] = []    // when the app started the server again by itself
+    var pending: [URL] = []      // files opened before the page was there
     var titleWatch: NSKeyValueObservation?
+    var statusItem: NSStatusItem?
+    var token: String?
+    let defaults = UserDefaults.standard
 
     var home: URL { URL(string: "http://127.0.0.1:\(launch?.port ?? 4777)/")! }
+    var inMenuBar: Bool { defaults.bool(forKey: "menuBar") }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        let atLogin = event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()  // the page's own settings (theme, last tab) are kept
-        config.userContentController.addUserScript(WKUserScript(source: backgroundWatch, injectionTime: .atDocumentEnd,
+        config.applicationNameForUserAgent = "cc-profiles-app"  // the page shows the app's shortcuts
+        config.userContentController.addUserScript(WKUserScript(source: pageWatch, injectionTime: .atDocumentEnd,
                                                                 forMainFrameOnly: true, in: .defaultClient))
-        config.userContentController.add(self, contentWorld: .defaultClient, name: "background")
-        web = WKWebView(frame: .zero, configuration: config)
+        for name in ["background", "update"] {
+            config.userContentController.add(self, contentWorld: .defaultClient, name: name)
+        }
+        web = WebView(frame: .zero, configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
+        web.onFolders = { [weak self] in self?.dropped($0) }
+        web.pageZoom = CGFloat(defaults.object(forKey: "zoom") as? Double ?? 1)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 860),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
@@ -109,6 +175,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
         window.tabbingMode = .disallowed
         window.minSize = NSSize(width: 720, height: 480)
+        window.isReleasedWhenClosed = false  // closed to the menu bar, it opens again
+        window.delegate = self
         window.contentView = web
         window.center()
         window.setFrameAutosaveName("cc-profiles")
@@ -117,10 +185,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 self?.window.title = title
             }
         }
+        UNUserNotificationCenter.current().delegate = self
         buildMenu()
+        setMenuBar(inMenuBar)
+        if atLogin && inMenuBar {  // at login it waits in the menu bar
+            NSApp.setActivationPolicy(.accessory)
+        } else {
+            showWindow()
+        }
+        start()
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkServer() }
+    }
+
+    func showWindow() {
+        NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        start()
     }
 
     /// Start the server unless it is running, then show the page.
@@ -132,10 +212,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return
         }
         self.launch = launch
+        starting = true
         show("Starting cc-profiles…", "", retry: false)
         DispatchQueue.global(qos: .userInitiated).async {
             let (status, output) = runCommand(launch, ["open", "--no-browser", "--port", String(launch.port)])
             DispatchQueue.main.async {
+                self.starting = false
+                self.failures = 0
+                self.token = nil
                 if status == 0 {
                     self.startedServer = self.startedServer || output.contains("started in the background")
                     self.web.load(URLRequest(url: self.home))
@@ -145,6 +229,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 }
             }
         }
+    }
+
+    /// Every few seconds while the page is shown: no answer twice in a row (it was stopped, or
+    /// it crashed) starts the server again, up to three times in five minutes.
+    func checkServer() {
+        guard !starting, let url = web.url, isLocal(url) else { return }
+        var request = URLRequest(url: home, timeoutInterval: 2)
+        request.httpMethod = "GET"
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            let alive = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Server")?.hasPrefix("cc-profiles/") == true
+            DispatchQueue.main.async {
+                guard !self.starting else { return }
+                self.failures = alive ? 0 : self.failures + 1
+                guard self.failures >= 2 else { return }
+                self.restarts = self.restarts.filter { $0.timeIntervalSinceNow > -300 }
+                if self.restarts.count >= 3 {
+                    self.show("cc-profiles keeps stopping", "It was started again three times in the last five "
+                              + "minutes. See ~/.cc-profiles/server.log.", retry: true)
+                } else {
+                    self.restarts.append(Date())
+                    self.start()
+                }
+            }
+        }.resume()
     }
 
     /// A message in the window, in the page's colors, with a Try again button.
@@ -170,13 +278,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         url.scheme == "http" && url.host == "127.0.0.1" && url.port == launch?.port
     }
 
-    // The title bar takes the page's background, and a light or dark look to match it
+    /// Run a statement in the page (its own world: the page's functions are there).
+    func page(_ js: String, _ args: [String: Any] = [:]) {
+        web.callAsyncJavaScript(js, arguments: args, in: nil, in: .page, completionHandler: nil)
+    }
+
+    // MARK: messages from the page: its background for the title bar, a new version for the Dock
+
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "background", let css = message.body as? String, let color = parseColor(css),
-              let rgb = color.usingColorSpace(.sRGB) else { return }
-        window.backgroundColor = color
-        let light = 0.2126 * rgb.redComponent + 0.7152 * rgb.greenComponent + 0.0722 * rgb.blueComponent > 0.5
-        window.appearance = NSAppearance(named: light ? .aqua : .darkAqua)
+        guard let body = message.body as? String else { return }
+        if message.name == "background", let color = parseColor(body), let rgb = color.usingColorSpace(.sRGB) {
+            window.backgroundColor = color
+            let light = 0.2126 * rgb.redComponent + 0.7152 * rgb.greenComponent + 0.0722 * rgb.blueComponent > 0.5
+            window.appearance = NSAppearance(named: light ? .aqua : .darkAqua)
+        } else if message.name == "update" {
+            updateAvailable(body == "-" ? nil : body)
+        }
+    }
+
+    /// A badge on the Dock icon while a new version is out, and a notification once per version.
+    func updateAvailable(_ version: String?) {
+        NSApp.dockTile.badgeLabel = version == nil ? nil : "1"
+        guard let version = version, !version.isEmpty, defaults.string(forKey: "notifiedVersion") != version else { return }
+        defaults.set(version, forKey: "notifiedVersion")
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "cc-profiles \(version) is available"
+            content.body = "Click to see what changed and update."
+            center.add(UNNotificationRequest(identifier: "update-\(version)", content: content, trigger: nil))
+        }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler done: @escaping () -> Void) {
+        showWindow()
+        page("document.querySelector('#about-btn')?.click()")
+        done()
+    }
+
+    // MARK: files: folders to Relink, profile .zip files to Import, from the window or the Dock icon
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        showWindow()
+        if let url = web.url, isLocal(url), !starting {
+            dropped(urls)
+        } else {
+            pending += urls
+        }
+    }
+
+    func dropped(_ urls: [URL]) {
+        for url in urls {
+            if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                page("window.ccDropFolder?.(path)", ["path": url.path])
+            } else if url.pathExtension.lowercased() == "zip",
+                      let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 500 << 20,
+                      let data = try? Data(contentsOf: url) {
+                page("window.ccDropZip?.(name, data)", ["name": url.lastPathComponent, "data": data.base64EncodedString()])
+            }
+        }
     }
 
     // MARK: navigation: the app's own pages here, every other site in the default browser
@@ -189,6 +351,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
         if scheme == retryScheme {
             decisionHandler(.cancel)
+            restarts = []
             start()
         } else if action.shouldPerformDownload {
             decisionHandler(.download)
@@ -203,6 +366,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse,
                  decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         decisionHandler(response.canShowMIMEType ? .allow : .download)
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if let url = webView.url, isLocal(url), !pending.isEmpty {
+            let urls = pending
+            pending = []
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.dropped(urls) }  // once the page has its data
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -307,20 +478,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             return m
         }
         func item(_ title: String, _ action: Selector?, _ key: String = "",
-                  _ mods: NSEvent.ModifierFlags = .command) -> NSMenuItem {
+                  _ mods: NSEvent.ModifierFlags = .command, tag: Int = 0) -> NSMenuItem {
             let i = NSMenuItem(title: title, action: action, keyEquivalent: key)
             i.keyEquivalentModifierMask = mods
+            i.tag = tag
             return i
         }
-        _ = menu("cc-profiles", [
-            item("About cc-profiles", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
-            .separator(),
-            item("Hide cc-profiles", #selector(NSApplication.hide(_:)), "h"),
-            item("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]),
-            item("Show All", #selector(NSApplication.unhideAllApplications(_:))),
-            .separator(),
-            item("Quit cc-profiles", #selector(NSApplication.terminate(_:)), "q"),
-        ])
+        let zoomIn = item("Zoom In", #selector(zoom(_:)), "=", tag: 1)  // ⌘= on keyboards without a + key
+        zoomIn.isHidden = true
+        zoomIn.allowsKeyEquivalentWhenHidden = true
+        var appItems = [item("About cc-profiles", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
+                        .separator(),
+                        item("Settings…", #selector(goTab(_:)), ",", tag: tabs.count - 1),
+                        .separator(),
+                        item("Show in Menu Bar", #selector(toggleMenuBar))]
+        if #available(macOS 13, *) {
+            appItems.append(item("Open at Login", #selector(toggleLogin)))
+        }
+        appItems += [.separator(),
+                     item("Hide cc-profiles", #selector(NSApplication.hide(_:)), "h"),
+                     item("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]),
+                     item("Show All", #selector(NSApplication.unhideAllApplications(_:))),
+                     .separator(),
+                     item("Quit cc-profiles", #selector(NSApplication.terminate(_:)), "q")]
+        menu("cc-profiles", appItems).delegate = self
         _ = menu("Edit", [
             item("Undo", Selector(("undo:")), "z"),
             item("Redo", Selector(("redo:")), "z", [.command, .shift]),
@@ -329,11 +510,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             item("Copy", #selector(NSText.copy(_:)), "c"),
             item("Paste", #selector(NSText.paste(_:)), "v"),
             item("Select All", #selector(NSText.selectAll(_:)), "a"),
+            .separator(),
+            item("Search Everything", #selector(search), "f"),
         ])
         _ = menu("View", [
             item("Reload", #selector(reload), "r"),
             item("Open in Browser", #selector(openInBrowser), "o", [.command, .shift]),
+            .separator(),
+            item("Actual Size", #selector(zoom(_:)), "0", tag: 0),
+            item("Zoom In", #selector(zoom(_:)), "+", tag: 1),
+            zoomIn,
+            item("Zoom Out", #selector(zoom(_:)), "-", tag: -1),
         ])
+        _ = menu("Go", tabs.enumerated().map { i, tab in
+            item(tab.1, #selector(goTab(_:)), i < 9 ? String(i + 1) : "", tag: i)
+        })
         let windows = menu("Window", [
             item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"),
             item("Zoom", #selector(NSWindow.performZoom(_:))),
@@ -341,6 +532,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         ])
         NSApp.mainMenu = bar
         NSApp.windowsMenu = windows
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu === statusItem?.menu {
+            fillStatusMenu(menu)
+            return
+        }
+        for item in menu.items {  // the app menu: the switches show their state
+            if item.action == #selector(toggleMenuBar) {
+                item.state = inMenuBar ? .on : .off
+            }
+            if #available(macOS 13, *), item.action == #selector(toggleLogin) {
+                item.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            }
+        }
+    }
+
+    @objc func goTab(_ sender: NSMenuItem) {
+        showWindow()
+        page("document.querySelector(`#tabs button[data-tab=\"${tab}\"]`)?.click()", ["tab": tabs[sender.tag].0])
+    }
+
+    @objc func search() {
+        page("const s = document.querySelector('#gsearch'); s?.focus(); s?.select()")
+    }
+
+    @objc func zoom(_ sender: NSMenuItem) {
+        let steps: [CGFloat] = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+        let now = web.pageZoom
+        let next = sender.tag == 0 ? 1 : sender.tag > 0 ? (steps.first { $0 > now + 0.001 } ?? 3)
+            : (steps.last { $0 < now - 0.001 } ?? 0.5)
+        web.pageZoom = next
+        defaults.set(Double(next), forKey: "zoom")
     }
 
     @objc func reload() {
@@ -355,10 +579,157 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         NSWorkspace.shared.open(web.url.flatMap { isLocal($0) ? $0 : nil } ?? home)
     }
 
-    // MARK: quitting: closing the window quits; the server goes too if the app started it
+    @objc func toggleLogin() {
+        guard #available(macOS 13, *) else { return }
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled {
+                try service.unregister()
+            } else {
+                try service.register()
+            }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Could not change Open at Login"
+            alert.informativeText = "\(error.localizedDescription)\n\nAdd cc-profiles in System Settings → General → Login Items."
+            alert.beginSheetModal(for: window)
+        }
+    }
+
+    // MARK: the menu bar icon: recent projects, each opens in a terminal with Claude Code
+
+    @objc func toggleMenuBar() {
+        defaults.set(!inMenuBar, forKey: "menuBar")
+        setMenuBar(inMenuBar)
+    }
+
+    func setMenuBar(_ on: Bool) {
+        if on, statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            statusItem?.button?.image = mascotImage()
+            statusItem?.button?.toolTip = "cc-profiles"
+            let menu = NSMenu()
+            menu.delegate = self
+            statusItem?.menu = menu
+        } else if !on, let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+            if !window.isVisible {
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
+    /// GET or POST to the server's API, waiting at most two seconds; the token comes from the page.
+    func api(_ path: String, _ body: [String: String]? = nil) -> Any? {
+        func call(_ request: URLRequest) -> (Data?, HTTPURLResponse?) {
+            var result: (Data?, HTTPURLResponse?) = (nil, nil)
+            let done = DispatchSemaphore(value: 0)
+            URLSession.shared.dataTask(with: request) { data, response, _ in
+                result = (data, response as? HTTPURLResponse)
+                done.signal()
+            }.resume()
+            _ = done.wait(timeout: .now() + 2)
+            return result
+        }
+        if token == nil, let html = call(URLRequest(url: home, timeoutInterval: 2)).0.map({ String(decoding: $0, as: UTF8.self) }),
+           let range = html.range(of: #"const TOKEN = "([^"]+)""#, options: .regularExpression) {
+            token = String(html[range].dropFirst(15).dropLast())
+        }
+        guard let token = token, let url = URL(string: path, relativeTo: home) else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 2)
+        request.setValue(token, forHTTPHeaderField: "X-Token")
+        if let body = body {
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        let (data, response) = call(request)
+        if response?.statusCode == 403 {
+            self.token = nil
+        }
+        return data.flatMap { try? JSONSerialization.jsonObject(with: $0) }
+    }
+
+    func fillStatusMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let profiles = (api("/api/profiles") as? [[String: Any]]) ?? []
+        let labels = Dictionary(profiles.compactMap { p in (p["id"] as? String).map { ($0, p["label"] as? String ?? $0) } },
+                                uniquingKeysWith: { a, _ in a })
+        let header = NSMenuItem(title: profiles.isEmpty ? "cc-profiles is not running"
+                                : "cc-profiles is running on port \(launch?.port ?? 4777)", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        menu.addItem(NSMenuItem(title: "Open cc-profiles", action: #selector(openFromMenu), keyEquivalent: ""))
+        let projects = ((api("/api/projects") as? [[String: Any]]) ?? [])
+            .filter { ($0["exists"] as? Bool) == true }
+            .sorted { ($0["last"] as? Double ?? 0) > ($1["last"] as? Double ?? 0) }
+            .prefix(10)
+        if !projects.isEmpty {
+            menu.addItem(.separator())
+            let title = NSMenuItem(title: "Open in a terminal, with Claude Code", action: nil, keyEquivalent: "")
+            title.isEnabled = false
+            menu.addItem(title)
+        }
+        for project in projects {
+            guard let name = project["name"] as? String, let pretty = project["pretty"] as? String else { continue }
+            let ids = ((project["in"] as? [String: Any]) ?? [:]).keys.sorted()
+            let item = NSMenuItem(title: pretty, action: nil, keyEquivalent: "")
+            if ids.count == 1 {
+                item.action = #selector(openTerminal(_:))
+                item.representedObject = [name, ids[0]]
+                item.toolTip = "In \(labels[ids[0]] ?? ids[0])"
+            } else {
+                let sub = NSMenu()
+                for id in ids {
+                    let choice = NSMenuItem(title: "In \(labels[id] ?? id)", action: #selector(openTerminal(_:)), keyEquivalent: "")
+                    choice.representedObject = [name, id]
+                    choice.target = self
+                    sub.addItem(choice)
+                }
+                item.submenu = sub
+            }
+            item.target = self
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit cc-profiles", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+        menu.items.filter { $0.action == #selector(openFromMenu) }.forEach { $0.target = self }
+    }
+
+    @objc func openFromMenu() {
+        showWindow()
+    }
+
+    @objc func openTerminal(_ sender: NSMenuItem) {
+        guard let pair = sender.representedObject as? [String], pair.count == 2 else { return }
+        let reply = api("/api/terminal/open", ["project": pair[0], "profile": pair[1]]) as? [String: Any]
+        if let error = reply?["error"] as? String {
+            let alert = NSAlert()
+            alert.messageText = "Could not open the project"
+            alert.informativeText = error
+            alert.runModal()
+        }
+    }
+
+    // MARK: closing: the window goes to the menu bar if the icon is there, else the app quits;
+    // the server stops with the app if the app started it
+
+    func windowWillClose(_ notification: Notification) {
+        if inMenuBar {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        !inMenuBar
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showWindow()
+        }
+        return true
     }
 
     func applicationWillTerminate(_ notification: Notification) {

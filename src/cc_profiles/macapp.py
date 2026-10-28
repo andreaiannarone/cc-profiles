@@ -126,6 +126,14 @@ def info_plist():
         "LSApplicationCategoryType": "public.app-category.developer-tools",
         "NSHighResolutionCapable": True,
         "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True},  # http://127.0.0.1
+        # what can be dropped on the Dock icon: a profile .zip (Import), a folder (Relink);
+        # "Alternate", so the app never becomes what opens these by default
+        "CFBundleDocumentTypes": [
+            {"CFBundleTypeName": "Exported profile", "CFBundleTypeRole": "Viewer", "LSHandlerRank": "Alternate",
+             "LSItemContentTypes": ["public.zip-archive"]},
+            {"CFBundleTypeName": "Folder", "CFBundleTypeRole": "Viewer", "LSHandlerRank": "Alternate",
+             "LSItemContentTypes": ["public.folder"]},
+        ],
         "NSHumanReadableCopyright": "© 2026 Andrea Iannarone, GPL-3.0-or-later",
         APP_MARK: True,
     }
@@ -198,6 +206,14 @@ def op_install_app():
     """POST /api/macapp: what install-app does, on this server's port."""
     lines, backup = install_app(core.PORT)
     return dict(app_status(), message=lines[0], backup=backup)
+
+
+def app_for(port):
+    """The Mac app to show cc-profiles in, instead of the browser: one cc-profiles made, on
+    this port, on macOS. None otherwise (the browser opens)."""
+    if sys.platform != "darwin" or not is_our_app():
+        return None
+    return APP_PATH if (app_launch() or {}).get("port") == port else None
 
 
 def ensure_app():

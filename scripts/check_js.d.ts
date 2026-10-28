@@ -8,3 +8,8 @@ interface ParentNode {
 }
 interface Element { closest(selectors: string): any; }
 interface EventTarget { closest(selectors: string): any; }
+// What the Mac app hands to the page: a .zip (base64) or a folder dropped on it or on its Dock icon
+interface Window {
+  ccDropZip(name: string, b64: string): void;
+  ccDropFolder(path: string): Promise<void>;
+}

@@ -66,7 +66,7 @@ Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, whic
 
 | In Claude Code | Runs | Does |
 |---|---|---|
-| `/cc-profiles` | `cc-profiles open` | starts the server if needed and opens the browser |
+| `/cc-profiles` | `cc-profiles open` | starts the server if needed and opens the browser, or the [Mac app](mac-app.md) when it is installed |
 | `/cc-profiles restart` | `cc-profiles open restart` | stops the server and starts it again, e.g. after an update; then reload the page |
 | `/cc-profiles stop` | `cc-profiles open stop` | stops the server |
 

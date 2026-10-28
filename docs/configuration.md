@@ -43,6 +43,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_HOME` | data folder instead of `~/.cc-profiles` |
 | `CC_PROFILES_QUIET` | if set, do not log HTTP requests to the terminal |
 | `CC_PROFILES_INSTALL_DRYRUN` | **for tests**: the Claude Code installer runs `echo` instead of installing |
+| `CC_PROFILES_TERMINAL_DRYRUN` | **for tests**: Open in Terminal writes its script and returns the command instead of opening a terminal; it also turns the feature on outside macOS |
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
@@ -126,3 +127,7 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 | `~/.local/bin/<command>` | creating, editing or deleting a profile (launcher scripts). Only files containing `# managed by cc-profiles` are ever rewritten or removed |
 | `~/.config/gh`, `~/.config/gh-<id>`, `~/.config/gh-accounts` | GitHub CLI folders. At start, each profile without one gets `~/.config/gh-<id>` (a copy of `config.yml` and of `hosts.yml` without any token line), and `GH_CONFIG_DIR` in the `env` of its `settings.json`; picking an account rewrites the `user:` line of its `hosts.yml`, removing an account its entry. Tokens in the system keychain are never read or written. See [A GitHub account per profile](guides/profiles.md#a-github-account-per-profile) |
 | `~/.zshrc`, `~/.bashrc`, `~/.bash_profile` | only to rename or remove a profile alias that was already there, together with the `# Claude Code:` comment line above it; and to add or remove the one line ending in `# cc-profiles: profile by folder` when you turn [profile by folder](guides/profile-by-folder.md) on or off |
+
+### `terminal`
+
+macOS: the terminal **Open in Terminal** uses, `"Terminal"`, `"iTerm"` or `"Ghostty"`. Set from the About panel when more than one is installed; when unset, or set to one that is gone, the first installed in that order.

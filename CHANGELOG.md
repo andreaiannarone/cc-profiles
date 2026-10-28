@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- `/cc-profiles` and `cc-profiles open` show cc-profiles in the Mac app when it is installed, instead of a browser tab.
+- Open in Terminal: a button on every project opens its folder in a new terminal window with Claude Code running in the profile you pick. Terminal, iTerm or Ghostty, chosen in the About panel. On macOS, in the app and in the browser.
+- Mac app: zoom with ⌘+, ⌘− and ⌘0, remembered between launches; ⌘, for Settings, ⌘F to search, ⌘1 to ⌘9 for the tabs.
+- Mac app: a badge on the Dock icon when a new version is out, and one notification per version.
+- Drop a profile's `.zip` on the page to import it. In the Mac app, drop a folder to relink a project to it; both also work on the app's Dock icon.
+- Mac app: an optional menu bar icon with the server's status and your recent projects, each opening in a terminal with Claude Code; Open at Login.
+- Mac app: if the server stops while the app is open, the app starts it again.
+
 ### Changed
 - A new icon for the Mac app: the two mascots on a warm dark square lit from above, with a soft light behind them and a shadow under each, easier to spot in the Dock.
 - The Mac app's title bar takes the page's background, light or dark, and follows the theme you pick, instead of a grey bar above the page. An app added with 0.5.9 gets both at the next start of cc-profiles.

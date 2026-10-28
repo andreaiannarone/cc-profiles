@@ -19,7 +19,7 @@ from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
 from .github import ensure_gh_folders
-from .macapp import ensure_app, install_app
+from .macapp import app_for, ensure_app, install_app
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
@@ -44,6 +44,21 @@ def open_url(url):
                 except OSError:
                     continue
     webbrowser.open(url)
+
+
+def show_app(port):
+    """Show cc-profiles: in the Mac app when there is one for this port (it starts, or comes to
+    the front), else in the browser."""
+    url = f"http://127.0.0.1:{port}"
+    app = app_for(port)
+    if app:
+        try:
+            subprocess.Popen(["/usr/bin/open", app], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"Showing it in the Mac app ({pretty(app)}).")
+            return
+        except OSError:
+            pass
+    open_url(url)
 
 
 def current_label():
@@ -138,15 +153,15 @@ def serve(port, open_browser):
         srv = Server(("127.0.0.1", port), Handler)
     except OSError:
         if is_running(port):  # started earlier, e.g. by /cc-profiles: just show it
-            print(f"cc-profiles is already running on {url}" + (": opening it in your browser." if open_browser else ""))
+            print(f"cc-profiles is already running on {url}")
             if open_browser:
-                open_url(url)
+                show_app(port)
             sys.exit(0)
         print(f"Port {port} is busy with another program. Use another one: cc-profiles --port {port + 1}")
         sys.exit(1)
     print(f"cc-profiles {__version__} on {url}  (ctrl+C to stop)")
     if open_browser:
-        threading.Timer(0.6, lambda: open_url(url)).start()
+        threading.Timer(0.6, lambda: show_app(port)).start()
     threading.Thread(target=warm_caches, daemon=True).start()
     try:
         srv.serve_forever()
@@ -232,7 +247,7 @@ def open_app(port, open_browser):
             sys.exit(1)
         print(f"cc-profiles started in the background on {url} (pid {proc.pid}). Stop it with: cc-profiles stop{port_arg}")
     if open_browser:
-        open_url(url)
+        show_app(port)
 
 
 def confirm(question, yes):
