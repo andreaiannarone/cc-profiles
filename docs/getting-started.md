@@ -58,6 +58,8 @@ On the very first run, cc-profiles writes `~/.cc-profiles/config.json` with:
 
 Rename profiles from the **Profiles** tab. The first profile in the list is the [source profile](concepts.md#the-source-profile).
 
+On macOS, `cc-profiles install-app` adds it to Applications as an app with its own window: see [Mac app](mac-app.md).
+
 ## Open it from Claude Code
 
 Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, which starts the server in the background if it is not running yet, opens your browser and returns, so the session goes on.

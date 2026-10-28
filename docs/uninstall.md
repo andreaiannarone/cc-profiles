@@ -9,7 +9,7 @@ cc-profiles uninstall            # keeps ~/.cc-profiles (settings, templates, ba
 cc-profiles uninstall --purge    # deletes it too
 ```
 
-It lists what it is going to do and asks first (`--yes` skips the question). Then it stops the server, stops adding `/cc-profiles` and removes the copies it wrote (a copy you wrote yourself stays), removes the profile by folder line from your shell files, and uninstalls the app with the tool you installed it with: pipx, uv, Homebrew or pip. The command and the shell line go to a backup in `~/.cc-profiles`, unless you delete that folder with `--purge`.
+It lists what it is going to do and asks first (`--yes` skips the question). Then it stops the server, stops adding `/cc-profiles` and removes the copies it wrote (a copy you wrote yourself stays), removes the profile by folder line from your shell files and the [Mac app](mac-app.md), and uninstalls the app with the tool you installed it with: pipx, uv, Homebrew or pip. The command, the shell line and the Mac app go to a backup in `~/.cc-profiles`, unless you delete that folder with `--purge`.
 
 If something is broken and you want to keep using cc-profiles, `cc-profiles reinstall` installs it again from scratch instead, keeping your settings and backups.
 
@@ -43,10 +43,11 @@ If you installed the plugin instead, in Claude Code:
 
 ### 3. Uninstall the app
 
-With the tool you installed it with:
+With the tool you installed it with, after removing the [Mac app](mac-app.md) if you added it:
 
 ```sh
 cc-profiles stop              # stop the server if it is running
+rm -rf ~/Applications/cc-profiles.app
 pipx uninstall cc-profiles    # or: uv tool uninstall cc-profiles, brew uninstall cc-profiles
 ```
 

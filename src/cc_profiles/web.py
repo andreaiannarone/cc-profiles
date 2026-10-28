@@ -94,6 +94,7 @@ from .plugins import list_plugins, op_plugin_copy, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
+from .macapp import app_status, op_install_app
 from .updater import check_update, op_update, op_update_check, update_status, whats_new
 
 # ---------------------------------------------------------------------------
@@ -303,6 +304,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/shell/which": lambda: shell_which(q.get("path", "")),
                 "/api/claude/status": lambda: claude_status(),
                 "/api/update": lambda: check_update(),
+                "/api/macapp": lambda: app_status(),
                 "/api/update/auto": lambda: update_status(),
                 "/api/whatsnew": lambda: whats_new(),
                 "/api/skills": lambda: list_skills(q["profile"]),
@@ -374,6 +376,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/claude/install": lambda: op_install(b.get("method", "")),
                 "/api/shell": lambda: op_shell(bool(b["install"])),
                 "/api/update": lambda: op_update(),
+                "/api/macapp": lambda: op_install_app(),
                 "/api/update/auto": lambda: op_update_check(b.get("enabled")),
                 "/api/skills/save": lambda: op_skill_save(b["profile"], b["name"], b["content"]),
                 "/api/skills/create": lambda: op_skill_create(b["profile"], b["name"], b.get("description", "")),

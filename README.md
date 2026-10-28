@@ -296,6 +296,7 @@ cc-profiles --port 4800       # another port
 cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
 cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
+cc-profiles install-app       # macOS: adds cc-profiles to Applications, with its own window and Dock icon
 cc-profiles install-command   # adds /cc-profiles again (the app does it by itself); --off: never add it
 cc-profiles reinstall         # installs it again from scratch if something is broken; settings and backups stay
 cc-profiles uninstall         # removes /cc-profiles, the profile by folder line and the app; --purge: its data too
@@ -305,6 +306,10 @@ cc-profiles label             # prints the name of the active profile, for statu
 ### Open it from Claude Code
 
 Type `/cc-profiles` in any Claude Code session: the app starts in the background, your browser opens on it, and the session goes on. `/cc-profiles restart` and `/cc-profiles stop` restart or stop the app. The command is a small file, `commands/cc-profiles.md`: cc-profiles writes it in every profile the first time it starts, rewrites it after an update, and adds it to the profiles you create from the app. A copy you delete stays deleted. Profiles that share `commands` with the source profile get it through the link.
+
+### Mac app
+
+On macOS, `cc-profiles install-app` creates `~/Applications/cc-profiles.app`: cc-profiles in a window of its own, with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser. The app is put together on your Mac, so macOS opens it without asking for an Apple signature. See [Mac app](https://cc-profiles.andreaia.com/mac-app.html).
 
 ### Commands for each profile
 

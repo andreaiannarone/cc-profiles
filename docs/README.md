@@ -17,7 +17,7 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
 ## Using cc-profiles
 
 1. [Why cc-profiles](why.md): what it adds to `CLAUDE_CONFIG_DIR` and shell aliases
-2. [Getting started](getting-started.md): install, first run, launcher commands, [keyboard shortcuts](getting-started.md#keyboard-shortcuts)
+2. [Getting started](getting-started.md): install, first run, launcher commands, [keyboard shortcuts](getting-started.md#keyboard-shortcuts); on macOS, the [Mac app](mac-app.md)
 3. [Concepts](concepts.md): profiles, the source profile, projects, rules, sharing, backups
 4. [FAQ](faq.md): several accounts, a profile per project, credentials, safety, undo
 5. How-to, step by step:

@@ -9,6 +9,7 @@ import sys
 
 from .core import DATA_DIR, Backup, find_tool, load_config, pretty, profiles, tool_env, write_json, CONFIG_FILE
 from .command import COMMAND_NAME, is_our_command
+from .macapp import APP_PATH, is_our_app
 from .launchers import RC_FILES, has_shell_line, remove_shell_line
 from .updater import install_kind
 
@@ -56,7 +57,8 @@ def package_command(table):
 def uninstall_plan():
     kind, cmd, why = package_command(UNINSTALL_COMMANDS)
     return {"kind": kind, "command": cmd, "why": why, "commands": our_commands(),
-            "shell": [rc for rc in RC_FILES if has_shell_line(rc)], "data": DATA_DIR}
+            "shell": [rc for rc in RC_FILES if has_shell_line(rc)], "data": DATA_DIR,
+            "app": APP_PATH if is_our_app() else None}
 
 
 def remove_traces():
@@ -64,10 +66,10 @@ def remove_traces():
     in one backup (kept in ~/.cc-profiles unless that is removed too). Returns (lines, backup)."""
     plan, lines, backup = uninstall_plan(), [], None
     cfg = load_config()
-    if cfg.get("slash_command") is False and not plan["commands"]:
+    if cfg.get("slash_command") is False and not plan["commands"] and not plan["app"]:
         bk = None
     else:
-        bk = Backup("uninstall", "Uninstall cc-profiles: the /cc-profiles command")
+        bk = Backup("uninstall", "Uninstall cc-profiles: the /cc-profiles command" + (" and the Mac app" if plan["app"] else ""))
     if bk and cfg.get("slash_command") is not False:
         bk.copy(CONFIG_FILE, "config.json")
         cfg["slash_command"] = False
@@ -75,6 +77,9 @@ def remove_traces():
     for path in plan["commands"]:
         bk.stash(path)
         lines.append(f"removed {pretty(path)}")
+    if plan["app"]:
+        bk.stash(plan["app"], "cc-profiles.app")
+        lines.append(f"removed {pretty(plan['app'])}")
     if bk:
         backup = bk.close()
     if plan["shell"]:

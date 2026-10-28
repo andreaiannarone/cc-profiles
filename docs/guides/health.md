@@ -34,6 +34,8 @@ The ⓘ button at the top right opens a panel with:
   - contents: skills, plugins, subagents, slash commands, output styles, MCP servers, hooks, `CLAUDE.md`, shared items.
 - **cc-profiles**: version, code and data locations, number and size of backups, address, Python version and system.
 
+On macOS the cc-profiles card also says whether the [Mac app](../mac-app.md) is in Applications: **Add Mac app** creates it, and **Update Mac app** shows when it is from another version or uses another port than this server. Both make a backup.
+
 Below them, **What's new** shows the release notes of the last versions, and **Report a problem…** opens a bug report on GitHub with the versions of cc-profiles, Claude Code, Python and your system already filled in. Nothing is sent until you submit the form, and you can read and change every field first.
 
 ## What's new after an update
