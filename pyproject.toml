@@ -46,7 +46,7 @@ version = { attr = "cc_profiles.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-cc_profiles = ["static/*"]
+cc_profiles = ["static/*", "app/*"]  # app/cc-profiles-app: built by scripts/build_app.py
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

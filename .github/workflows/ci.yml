@@ -97,6 +97,23 @@ jobs:
           grep -q "managed by cc-profiles" "$SB/.claude/commands/cc-profiles.md"
           grep -q "managed by cc-profiles" "$SB/.claude-work/commands/cc-profiles.md"
 
+  mac-app:
+    name: Mac app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Compile it for Intel and Apple Silicon
+        run: python scripts/build_app.py
+      - name: Put it together and open it on a fake home
+        env:
+          CC_PROFILES_APP_SMOKE: "1"
+        run: |
+          python -m pip install -e ".[test]"
+          python -m pytest -v tests/test_app.py -k "app"
+
   package:
     name: Build the package
     runs-on: ubuntu-latest

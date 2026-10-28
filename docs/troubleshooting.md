@@ -83,6 +83,10 @@ uv tool install --force --reinstall cc-profiles    # installed with uv
 
 `pipx reinstall-all` does the same for every program installed with pipx, which a Python update breaks in the same way. Your profiles and `~/.cc-profiles` (settings, templates, backups) are not touched, and you get the latest version. Then run `cc-profiles` once, or `/cc-profiles restart` if the old server is still running.
 
+## The Mac app says "cc-profiles did not start"
+
+The [Mac app](mac-app.md) runs the `cc-profiles` you installed, and shows its output when it fails. `bad interpreter` or `could not start` means the command itself no longer runs: see the section above. A busy port means another program uses it: `cc-profiles install-app --port 4800` gives the app another one. After fixing it, **Try again** in the window starts it.
+
 ## Something is broken after an update or a reinstall
 
 If cc-profiles does not start, a tab keeps failing or `/cc-profiles` points to the wrong place, install it again from scratch:

@@ -3,6 +3,8 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+# the Mac app, compiled by scripts/build_app.py when the package is built
+src/cc_profiles/app/cc-profiles-app
 .venv/
 venv/
 .pytest_cache/

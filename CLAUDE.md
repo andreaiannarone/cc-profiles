@@ -13,6 +13,7 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | Path | Role |
 |---|---|
 | `src/cc_profiles/` | the server, one module per area (`core`, `projects`, `memories`, `extensions`, `backups`, …, `web` for HTTP, `cli`); see the table in `docs/architecture.md`. `server.py` only re-exports them; the version is in `__init__.py` |
+| `src/cc_profiles/app/main.swift` | the Mac app (`cc-profiles install-app`, `macapp.py`): a WKWebView window around the page, AppKit only. Compiled by `scripts/build_app.py` into `app/cc-profiles-app` (git-ignored, shipped in the package; the release workflow builds it on macOS). A checkout without it compiles it with `swiftc` at `install-app` |
 | `src/cc_profiles/static/index.html` | the whole UI: one file, inline CSS and vanilla JS, no build step |
 | `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
 | `tests/test_app.py` | end-to-end tests of the API on a fake home; `test_ui.py` drives the page in Chromium (with axe); `test_tooling.py`, `test_docs.py`, `test_release.py`, `test_check_schema.py` cover the hook, plugin, docs site, links and scripts |
@@ -23,7 +24,7 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command` (or `--off` with `--no-command`; the server also adds the command at its first start, see `ensure_command()`). POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
 | `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon); the README screenshots and demo GIFs (made by `scripts/make_screenshots.py`, never by hand), the social preview, and `site.css` for the docs site |
 | `docs/` site | published by GitHub Pages at https://cc-profiles.andreaia.com (`CNAME`) with Jekyll: `_config.yml`, `_layouts/default.html` (the app's header, colors and theme switch), `_includes/logo.svg`, `_data/nav.yml` (the sidebar; every page must be in it). Pages must not contain `{{` or `{%`, and must link files outside `docs/` by their full GitHub URL |
-| `scripts/` | `release.py next` (the whole release; versions move one step, only the last number up to 9; `release.py resume` finishes one that stopped), `make_screenshots.py`, `check_js.py` (tsc --checkJs on the UI), `check_settings_schema.py` (used by the skill and the weekly workflow), `homebrew_formula.py` (no tap published yet) |
+| `scripts/` | `release.py next` (the whole release; versions move one step, only the last number up to 9; `release.py resume` finishes one that stopped), `build_app.py` (the Mac app, both architectures), `make_screenshots.py`, `check_js.py` (tsc --checkJs on the UI), `check_settings_schema.py` (used by the skill and the weekly workflow), `homebrew_formula.py` (no tap published yet) |
 | `.github/workflows/` | `ci.yml` (tests, UI, install.sh, package, JS check), `release.yml` (tag → PyPI), `codeql.yml`, `claude-code-schema.yml` (weekly check against the latest Claude Code, opens an issue) |
 
 User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
@@ -78,6 +79,7 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 - A `projects/` folder may hold only memories and no conversation: "no conversations" does not mean "empty".
 - `settings.local.json` and `plugins/installed_plugins.json` contain absolute paths to the profile folder. When copying a profile, rewrite them unless that part is shared.
 - External programs (`claude`, `brew`, `npm`, `node`) are looked up with `find_tool()`, which adds `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` to `PATH`. The app may have been started from a terminal that does not have them yet.
+- The Mac app (`~/Applications/cc-profiles.app`) is ours only with `CCProfilesManaged` in its Info.plist (`APP_MARK`): never rewrite or remove another one. Tests use a fake program (`CC_PROFILES_APP_BINARY`); never open the real app on the real home.
 - New profiles get a launcher in `~/.local/bin` marked with `LAUNCHER_MARK`. Only files with that mark may be rewritten or removed. The same goes for `commands/cc-profiles.md` and `COMMAND_MARK`. Aliases from older setups in `~/.zshrc`, `~/.bashrc` and `~/.bash_profile` are handled by `rewrite_alias()`, which touches only the alias line and the `# Claude Code:` comment above it.
 
 - Listings reuse file contents through `cached_read()`, keyed on each file's stat (see `docs/architecture.md`, Caches). Before a write, read afresh (`history_lines()`, `memory_files(d, fresh=True)`, `read_json()`): never decide a write on a time-keyed cache.

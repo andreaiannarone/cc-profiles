@@ -35,6 +35,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `mods.py` | Claude Code mods recognised among the installed plugins, and what each one does, read from its source (read-only) |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
+| `macapp.py` | `cc-profiles install-app`: the Mac app in `~/Applications`, put together from `app/main.swift` (compiled into the package by `scripts/build_app.py`), its Info.plist, launch.json and icon (drawn in Python); kept up to date at every start |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
@@ -45,7 +46,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `updater.py` | check for updates on PyPI, update and restart |
 | `selfinstall.py` | `cc-profiles uninstall` and `reinstall`: what cc-profiles added to Claude Code, and the fixed package commands per install kind |
 | `web.py` | routing, error handling, the security guard, the Content-Security-Policy |
-| `cli.py` | `serve` (with the automatic backup cleanup at start and daily, and `/cc-profiles` added or updated at start), `open`, `stop`, `restart`, `install-command`, `label`, argument parsing |
+| `cli.py` | `serve` (with the automatic backup cleanup at start and daily, and `/cc-profiles` added or updated at start), `open`, `stop`, `restart`, `install-command`, `install-app` (and the Mac app updated at start), `label`, argument parsing |
 | `entry.py` | the console script: `which` and `shell-init` go to `byfolder.py` without loading the server, everything else to `cli.main` |
 
 `server.py` re-exports every public name, so `from cc_profiles import server` keeps working; the `cc-profiles` console script is `entry.main`. The version lives in `__init__.py`. `PORT` and `ALLOWED_HOSTS` are set when the server starts: other modules read them as `core.PORT` and `core.ALLOWED_HOSTS`, never as names imported at load time.

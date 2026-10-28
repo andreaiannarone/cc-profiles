@@ -1843,6 +1843,113 @@ def test_reinstall(home, app_factory):
     r = run_cli(home, "uninstall", "--yes", "--port", port, CC_PROFILES_INSTALL_KIND="uv")
     assert r.returncode == 1 and "uv is not installed" in r.stdout
 
+
+def fake_app_binary(home):
+    """Stands in for the compiled Mac app (src/cc_profiles/app/cc-profiles-app): only copied."""
+    return str(home.write("build/cc-profiles-app", "#!/bin/sh\n"))
+
+
+def read_plist(path):
+    import plistlib
+    return plistlib.loads(path.read_bytes())
+
+
+def test_install_app_puts_together_the_mac_app(home, app_factory):
+    """install-app: ~/Applications/cc-profiles.app with the program, its Info.plist (marked), the
+    icon and launch.json (the command and port); undone from its backup; a foreign app is left alone."""
+    basic_home(home)
+    sys.path.insert(0, str(SRC))
+    from cc_profiles import __version__
+    app = app_factory()
+    binary = fake_app_binary(home)
+    before = home.snapshot()
+
+    r = run_cli(home, "install-app", "--port", "4790", CC_PROFILES_APP_BINARY=binary)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Created ~/Applications/cc-profiles.app" in r.stdout and "Backup:" in r.stdout
+    contents = home.path("Applications/cc-profiles.app/Contents")
+    exe = contents / "MacOS" / "cc-profiles"
+    assert exe.read_text() == "#!/bin/sh\n" and os.access(exe, os.X_OK)
+    info = read_plist(contents / "Info.plist")
+    assert info["CCProfilesManaged"] is True and info["CFBundleExecutable"] == "cc-profiles"
+    assert info["CFBundleShortVersionString"] == __version__
+    launch = json.loads((contents / "Resources" / "launch.json").read_text())
+    assert launch == {"command": [sys.executable, "-m", "cc_profiles"], "port": 4790}
+    icns = (contents / "Resources" / "AppIcon.icns").read_bytes()
+    assert icns[:4] == b"icns" and struct.unpack(">I", icns[4:8])[0] == len(icns) and b"ic10" in icns
+
+    again = run_cli(home, "install-app", "--port", "4790", CC_PROFILES_APP_BINARY=binary)
+    assert "already up to date" in again.stdout and "Backup:" not in again.stdout
+    moved = run_cli(home, "install-app", "--port", "4791", CC_PROFILES_APP_BINARY=binary)
+    assert "Updated ~/Applications/cc-profiles.app" in moved.stdout
+    assert json.loads((contents / "Resources" / "launch.json").read_text())["port"] == 4791
+
+    for b in app.get("/api/backups")[:2]:  # newest first: the update, then the first install
+        app.post("/api/backups/restore", {"name": b["name"]})
+    assert home.snapshot() == before
+
+    home.write("Applications/cc-profiles.app/Contents/Info.plist", "not ours\n")
+    r = run_cli(home, "install-app", CC_PROFILES_APP_BINARY=binary)
+    assert r.returncode == 1 and "was not created by cc-profiles" in r.stdout
+    assert home.path("Applications/cc-profiles.app/Contents/Info.plist").read_text() == "not ours\n"
+
+
+def test_the_server_keeps_the_mac_app_up_to_date_and_uninstall_removes_it(home, app_factory):
+    """An app from an older version is rewritten when the server starts, keeping its port;
+    cc-profiles uninstall removes it with the /cc-profiles command."""
+    basic_home(home)
+    binary = fake_app_binary(home)
+    assert run_cli(home, "install-app", "--port", "4790", CC_PROFILES_APP_BINARY=binary).returncode == 0
+    plist = home.path("Applications/cc-profiles.app/Contents/Info.plist")
+    current = read_plist(plist)["CFBundleShortVersionString"]
+    import plistlib
+    plist.write_bytes(plistlib.dumps(dict(read_plist(plist), CFBundleShortVersionString="0.0.1")))
+
+    app = app_factory(CC_PROFILES_APP_BINARY=binary)
+    assert read_plist(plist)["CFBundleShortVersionString"] == current
+    launch = json.loads(home.path("Applications/cc-profiles.app/Contents/Resources/launch.json").read_text())
+    assert launch["port"] == 4790
+    assert app.get("/api/backups")[0]["title"] == "Update the Mac app"
+    app.stop()
+
+    fake_pipx(home)
+    r = run_cli(home, "uninstall", "--yes", "--port", str(free_port()), CC_PROFILES_INSTALL_KIND="pipx",
+                CC_PROFILES_APP_BINARY=binary)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "removes the Mac app" in r.stdout and not home.path("Applications/cc-profiles.app").exists()
+
+
+@pytest.mark.skipif(not os.environ.get("CC_PROFILES_APP_SMOKE"), reason="opens a window: CI's Mac app job only")
+def test_the_mac_app_starts_the_server(home):
+    """The compiled app (scripts/build_app.py), opened on a fake home, starts the server on its port."""
+    basic_home(home)
+    port = free_port()
+    assert run_cli(home, "install-app", "--port", str(port)).returncode == 0
+    exe = home.path("Applications/cc-profiles.app/Contents/MacOS/cc-profiles")
+    env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC),
+                     "CC_PROFILES_AUTO_COMMAND": "0", "CC_PROFILES_AUTO_GITHUB": "0"})
+    proc = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    server = None
+    try:
+        deadline = time.time() + 60
+        while time.time() < deadline and not server:
+            try:
+                server = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).headers["Server"]
+            except OSError:
+                time.sleep(0.5)
+        assert server and server.startswith("cc-profiles/"), "the app did not start the server"
+        assert proc.poll() is None, "the app quit"
+    finally:
+        proc.terminate()
+        run_cli(home, "stop", "--port", str(port))
+
+
+def test_install_app_is_for_macos(home):
+    if sys.platform == "darwin":
+        pytest.skip("macOS builds the app")
+    r = run_cli(home, "install-app")
+    assert r.returncode == 1 and "macOS only" in r.stdout
+
 def test_plugin_command_matches_installed_command():
     sys.path.insert(0, str(SRC))
     from cc_profiles import server

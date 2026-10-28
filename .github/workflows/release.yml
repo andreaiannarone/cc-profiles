@@ -10,8 +10,24 @@ permissions:
   contents: read
 
 jobs:
+  mac-app:
+    name: Compile the Mac app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Compile it for Intel and Apple Silicon
+        run: python scripts/build_app.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mac-app
+          path: src/cc_profiles/app/cc-profiles-app
+
   build:
     name: Build and check
+    needs: mac-app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -26,11 +42,25 @@ jobs:
         run: |
           python -m pip install -e ".[test]"
           python -m pytest -q
+      - uses: actions/download-artifact@v8
+        with:
+          name: mac-app
+          path: src/cc_profiles/app/
       - name: Build sdist and wheel
         run: |
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
+      - name: Both contain the Mac app
+        run: |
+          python - <<'PY'
+          import glob, tarfile, zipfile
+          wheel = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          sdist = tarfile.open(glob.glob("dist/*.tar.gz")[0]).getnames()
+          for names in (wheel, sdist):
+              assert any(n.endswith("cc_profiles/app/cc-profiles-app") for n in names), names
+              assert any(n.endswith("cc_profiles/app/main.swift") for n in names), names
+          PY
       - uses: actions/upload-artifact@v7
         with:
           name: dist

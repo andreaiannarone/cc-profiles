@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Mac app**: `cc-profiles install-app` adds `~/Applications/cc-profiles.app`, cc-profiles in a window of its own with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser and exports go to Downloads. The app is put together on your Mac from a small Swift program shipped with cc-profiles, so macOS opens it without asking for an Apple signature. cc-profiles keeps it up to date after an update, and `cc-profiles uninstall` removes it.
+
 ## [0.5.8] - 2026-10-26
 
 ### Added

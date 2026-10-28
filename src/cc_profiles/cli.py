@@ -19,6 +19,7 @@ from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
 from .github import ensure_gh_folders
+from .macapp import ensure_app, install_app
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
@@ -121,6 +122,13 @@ def serve(port, open_browser):
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
         print(f"Could not give every profile its GitHub CLI folder: {e}")
+    try:  # the Mac app, if there is one, follows the version and the place of cc-profiles
+        lines, backup = ensure_app()
+        if lines:
+            print("Mac app: " + "; ".join(lines) + f" (backup {pretty(backup)})")
+    except Exception as e:  # never a reason not to start
+        core.abort_open_backups(str(e))
+        print(f"Could not update the Mac app: {e}. Run: cc-profiles install-app")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     threading.Thread(target=update_daily, daemon=True).start()
@@ -244,6 +252,8 @@ def uninstall_app(port, yes, purge):
     print("- stops the server, if it is running")
     print(f"- removes the /cc-profiles command from Claude Code ({len(plan['commands'])} "
           f"{'file' if len(plan['commands']) == 1 else 'files'}) and stops adding it")
+    if plan["app"]:
+        print(f"- removes the Mac app, {pretty(plan['app'])}")
     if plan["shell"]:
         print(f"- removes the profile by folder line from {', '.join(pretty(rc) for rc in plan['shell'])}")
     print(f"- uninstalls the app: {' '.join(plan['command'])}" if plan["command"] else f"- cannot uninstall the app: {plan['why']}")
@@ -307,6 +317,9 @@ def main(argv=None):
     ic = sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile "
                         "(cc-profiles does it by itself the first time it starts)")
     ic.add_argument("--off", action="store_true", help="stop adding and updating /cc-profiles in your profiles")
+    ia = sub.add_parser("install-app", help="add cc-profiles to Applications as a Mac app, "
+                        "with its own window (macOS only)")
+    ia.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port the app's server listens on")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
     op.add_argument("action", nargs="?", default="", metavar="restart|stop",
@@ -348,6 +361,16 @@ def main(argv=None):
         if backup:
             print(f"Backup: {backup} (undo it from the Backups tab)")
         print("Restart Claude Code sessions that are already open to see /cc-profiles.")
+        return
+    if args.cmd == "install-app":
+        try:
+            lines, backup = install_app(args.port)
+        except core.ApiError as e:
+            print(e)
+            sys.exit(1)
+        print("\n".join(lines))
+        if backup:
+            print(f"Backup: {backup} (undo it from the Backups tab)")
         return
     if args.cmd == "uninstall":
         uninstall_app(args.port, args.yes, args.purge)

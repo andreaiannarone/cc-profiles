@@ -8,6 +8,7 @@
     - { title: Overview, url: README.md, description: "cc-profiles is a free local web UI to manage multiple Claude Code profiles and accounts: move projects, memories and settings, with a backup for every change." }
     - { title: Why cc-profiles, url: why.md, description: "What cc-profiles adds to CLAUDE_CONFIG_DIR and shell aliases: moving and relinking projects, sharing, one view of every profile, and undo." }
     - { title: Getting started, url: getting-started.md, description: "Install cc-profiles with one command (pipx or uv), open it, and start Claude Code in the right profile with claude-<profile> launchers or /cc-profiles." }
+    - { title: Mac app, url: mac-app.md, description: "Put cc-profiles in Applications on macOS with one command: its own window, Dock icon and menus, opened without Gatekeeper warnings." }
     - { title: Concepts, url: concepts.md, description: "How Claude Code profiles work with CLAUDE_CONFIG_DIR, and what cc-profiles means by source profile, projects, rules, sharing and backups." }
     - { title: FAQ, url: faq.md, description: "Answers to common questions: using several Claude Code accounts, switching profile per project, credentials, safety, and how to undo a change." }
 - title: How-to

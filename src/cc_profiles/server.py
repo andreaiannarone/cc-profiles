@@ -24,6 +24,7 @@ from .conversations import *  # noqa: F401,F403
 from .usage import *  # noqa: F401,F403
 from .search import *  # noqa: F401,F403
 from .command import *  # noqa: F401,F403
+from .macapp import *  # noqa: F401,F403
 from .launchers import *  # noqa: F401,F403
 from .newprofile import *  # noqa: F401,F403
 from .transfer import *  # noqa: F401,F403
