@@ -261,9 +261,10 @@ def ensure_app():
     app the user deleted stays deleted. An app cc-profiles made, from an older version or with
     a command that moved (installed another way), is rewritten, keeping its port.
     Returns (lines to print, backup path or None)."""
-    if not supported():
+    state = app_state() if supported() else None
+    if state not in ("missing", "outdated"):
         return [], None
-    state, wanted = app_state(), load_config().get("mac_app")
+    wanted = load_config().get("mac_app")
     auto = os.environ.get("CC_PROFILES_AUTO_APP") != "0"  # tests: off unless they test it
     if state == "missing" and wanted is None and auto and prebuilt():
         bk = Backup("mac-app", "Add the Mac app")
