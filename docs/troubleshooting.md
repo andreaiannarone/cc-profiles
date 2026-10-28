@@ -66,6 +66,23 @@ Under WSL, cc-profiles opens the Windows browser with `wslview` or Windows' `sta
 
 `~/.cc-profiles/config.json` was not valid JSON, for example after an edit by hand, so cc-profiles started again from the defaults. Your file is kept next to it as `config.broken-<date>-<time>.json`: fix it (a missing comma or bracket, usually), stop the app, and put it back as `config.json`. See [Configuration](configuration.md).
 
+## `bad interpreter: … no such file or directory` after a Python update
+
+cc-profiles, `/cc-profiles` included, stops with an error like this one:
+
+```
+bad interpreter: /Users/you/.local/pipx/venvs/cc-profiles/bin/python: no such file or directory
+```
+
+pipx and uv install cc-profiles in its own environment, built on the Python that was installed then. When Homebrew moves to a new Python version (3.14 to 3.15, for example), it removes the old one, and the environment points to a Python that is gone. `cc-profiles reinstall` cannot run either, because it needs that same Python. Build the environment again on the current Python:
+
+```sh
+pipx reinstall cc-profiles                         # installed with pipx or the install script
+uv tool install --force --reinstall cc-profiles    # installed with uv
+```
+
+`pipx reinstall-all` does the same for every program installed with pipx, which a Python update breaks in the same way. Your profiles and `~/.cc-profiles` (settings, templates, backups) are not touched, and you get the latest version. Then run `cc-profiles` once, or `/cc-profiles restart` if the old server is still running.
+
 ## Something is broken after an update or a reinstall
 
 If cc-profiles does not start, a tab keeps failing or `/cc-profiles` points to the wrong place, install it again from scratch:
