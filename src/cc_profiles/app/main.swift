@@ -53,7 +53,32 @@ let brokenHint = """
     """
 let retryScheme = "cc-profiles-app"
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+// Tells the app the page's background color, now and whenever the theme changes (the theme
+// button sets data-theme on <html>; "system" follows macOS), so the title bar can wear it.
+// It runs in its own world: the page's scripts do not see it, and its CSP does not apply.
+let backgroundWatch = """
+    (() => {
+      let last = "";
+      const send = () => {
+        const color = getComputedStyle(document.body || document.documentElement).backgroundColor;
+        if (color && color !== last) { last = color; webkit.messageHandlers.background.postMessage(color); }
+      };
+      const soon = () => { send(); setTimeout(send, 400); };  // after a background transition, too
+      new MutationObserver(soon).observe(document.documentElement, { attributes: true });
+      matchMedia("(prefers-color-scheme: dark)").addEventListener("change", soon);
+      soon();
+    })();
+    """
+
+/// "rgb(22, 21, 19)" or "rgba(…)" as a color, or nil.
+func parseColor(_ css: String) -> NSColor? {
+    let parts = css.split(whereSeparator: { !"0123456789.".contains($0) }).compactMap { Double($0) }
+    guard parts.count >= 3 else { return nil }
+    return NSColor(srgbRed: parts[0] / 255, green: parts[1] / 255, blue: parts[2] / 255, alpha: 1)
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate,
+                         WKScriptMessageHandler {
     var window: NSWindow!
     var web: WKWebView!
     var launch: Launch?
@@ -65,6 +90,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()  // the page's own settings (theme, last tab) are kept
+        config.userContentController.addUserScript(WKUserScript(source: backgroundWatch, injectionTime: .atDocumentEnd,
+                                                                forMainFrameOnly: true, in: .defaultClient))
+        config.userContentController.add(self, contentWorld: .defaultClient, name: "background")
         web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
@@ -72,6 +100,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
         window.title = "cc-profiles"
+        window.titleVisibility = .hidden  // the page shows the name; the title bar is the page's color
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = NSColor(name: nil) { appearance in  // until the page tells its own
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(srgbRed: 0x16 / 255, green: 0x15 / 255, blue: 0x13 / 255, alpha: 1)
+                : NSColor(srgbRed: 0xf6 / 255, green: 0xf5 / 255, blue: 0xf2 / 255, alpha: 1)
+        }
         window.tabbingMode = .disallowed
         window.minSize = NSSize(width: 720, height: 480)
         window.contentView = web
@@ -133,6 +168,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     func isLocal(_ url: URL) -> Bool {
         url.scheme == "http" && url.host == "127.0.0.1" && url.port == launch?.port
+    }
+
+    // The title bar takes the page's background, and a light or dark look to match it
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "background", let css = message.body as? String, let color = parseColor(css),
+              let rgb = color.usingColorSpace(.sRGB) else { return }
+        window.backgroundColor = color
+        let light = 0.2126 * rgb.redComponent + 0.7152 * rgb.greenComponent + 0.0722 * rgb.blueComponent > 0.5
+        window.appearance = NSAppearance(named: light ? .aqua : .darkAqua)
     }
 
     // MARK: navigation: the app's own pages here, every other site in the default browser
