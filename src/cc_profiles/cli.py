@@ -19,7 +19,7 @@ from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
 from .github import ensure_gh_folders
-from .macapp import app_for, ensure_app, install_app
+from .macapp import app_for, ensure_app, install_app, set_app_off
 from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
@@ -137,13 +137,13 @@ def serve(port, open_browser):
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
         print(f"Could not give every profile its GitHub CLI folder: {e}")
-    try:  # the Mac app, if there is one, follows the version and the place of cc-profiles
+    try:  # the Mac app the first time on macOS, then it follows the version and the place of cc-profiles
         lines, backup = ensure_app()
         if lines:
             print("Mac app: " + "; ".join(lines) + f" (backup {pretty(backup)})")
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
-        print(f"Could not update the Mac app: {e}. Run: cc-profiles install-app")
+        print(f"Could not add or update the Mac app: {e}. Run: cc-profiles install-app")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     threading.Thread(target=update_daily, daemon=True).start()
@@ -335,6 +335,8 @@ def main(argv=None):
     ia = sub.add_parser("install-app", help="add cc-profiles to Applications as a Mac app, "
                         "with its own window (macOS only)")
     ia.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port the app's server listens on")
+    ia.add_argument("--off", action="store_true", help="never add the app by itself (cc-profiles does it the "
+                    "first time it starts on macOS)")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
     op.add_argument("action", nargs="?", default="", metavar="restart|stop",
@@ -376,6 +378,13 @@ def main(argv=None):
         if backup:
             print(f"Backup: {backup} (undo it from the Backups tab)")
         print("Restart Claude Code sessions that are already open to see /cc-profiles.")
+        return
+    if args.cmd == "install-app" and args.off:
+        backup = set_app_off()
+        print("cc-profiles will not add the Mac app by itself. One already there stays: "
+              "move it to the Trash to remove it, or add it any time with cc-profiles install-app.")
+        if backup:
+            print(f"Backup: {backup} (undo it from the Backups tab)")
         return
     if args.cmd == "install-app":
         try:

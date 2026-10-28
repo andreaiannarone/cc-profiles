@@ -120,10 +120,15 @@ else
     "$BIN" install-command --off >/dev/null || say "Note: could not record --no-command; the app may add /cc-profiles when it starts."
 fi
 
-if [ "$ADD_APP" = 1 ] && [ "$(uname -s)" = Darwin ]; then
-    say ""
-    say "Adding the Mac app…"
-    "$BIN" install-app || say "Note: the Mac app was not added. Try again later with: cc-profiles install-app"
+if [ "$(uname -s)" = Darwin ]; then
+    if [ "$ADD_APP" = 1 ]; then
+        say ""
+        say "Adding the Mac app…"
+        "$BIN" install-app || say "Note: the Mac app was not added. Try again later with: cc-profiles install-app"
+    else
+        # remembered in ~/.cc-profiles/config.json, or the app would be added the first time it starts
+        "$BIN" install-app --off >/dev/null || say "Note: could not record --no-app; cc-profiles may add the Mac app when it starts."
+    fi
 fi
 
 NEW="$(version)"

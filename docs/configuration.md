@@ -25,7 +25,7 @@ cc-profiles --version
 | `stop` | | stop the server running on the port. A write in progress finishes first; another program on the port is left alone |
 | `restart` | | `stop`, then `open` without the browser: use it after an update, then reload the page |
 | `install-command` | | add the `/cc-profiles` command to Claude Code: writes `commands/cc-profiles.md` in every profile that does not share `commands`, with a backup. Never overwrites a file it did not create, and does nothing if the command is up to date. The server does the same the first time it starts, and later only rewrites outdated copies; you need this command only to add it back where you deleted it. With `--off`, cc-profiles stops adding and updating it (`"slash_command": false` in `config.json`) |
-| `install-app` | | macOS: put cc-profiles in `~/Applications/cc-profiles.app`, an app with its own window, Dock icon and menus (see [Mac app](mac-app.md)). With `--port`, the app uses that port. Never overwrites an app it did not create, and does nothing if the app is up to date. The server rewrites the app at start when cc-profiles was updated or moved |
+| `install-app` | | macOS: put cc-profiles in `~/Applications/cc-profiles.app`, an app with its own window, Dock icon and menus (see [Mac app](mac-app.md)). With `--port`, the app uses that port. Never overwrites an app it did not create, and does nothing if the app is up to date. The server does the same the first time it starts on macOS; later it only rewrites the app when cc-profiles was updated or moved, so an app you delete stays deleted. With `--off`, the server never adds it (`"mac_app": false` in `config.json`) |
 | `reinstall` | | install cc-profiles again from scratch with the tool it was installed with (`pipx install --force`, `uv tool install --force --reinstall`, `brew reinstall` or `pip install --force-reinstall`), for when something is broken. Stops the server first and starts it again afterwards if it was running. `~/.cc-profiles` (settings, templates, backups) and the profiles are kept. Asks before doing anything; `--yes` skips the question. A source checkout cannot reinstall itself |
 | `uninstall` | | remove cc-profiles: stops the server, stops adding `/cc-profiles` and removes the copies it wrote (with a backup), removes the [profile by folder](guides/profile-by-folder.md) line and the [Mac app](mac-app.md), then uninstalls the app with the tool it was installed with. Keeps `~/.cc-profiles` unless `--purge`. Never touches the profiles. Asks before doing anything; `--yes` skips the question. See [Uninstall](uninstall.md) for what stays |
 | `label` | | print the active profile's name and exit (see [Status line](status-line.md)) |
@@ -51,6 +51,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv`, `brew` or `source`), for the update, uninstall and reinstall tests |
 | `CC_PROFILES_AUTO_COMMAND` | `0`: at start, do not add or update `/cc-profiles` in the profiles (the tests set it) |
 | `CC_PROFILES_PICKER` | the folder dialog of **Choose…**: `none` turns it off (the page's own folder browser opens instead; the tests set it), `osascript`, `zenity` or `kdialog` picks one |
+| `CC_PROFILES_AUTO_APP` | `0`: at start, do not add the Mac app (the tests set it); one already there is still kept up to date |
 | `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
 | `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
@@ -110,6 +111,10 @@ Folders searched (5 levels deep) for candidate folders when relinking an [orphan
 ### `backup_keep_days`
 
 Optional, `15`, `30`, `60` or `90` (`180` and `365`, offered by 0.4.0 and 0.4.1, still work); absent means `90`. The backups older than that many days are deleted automatically when cc-profiles starts and once a day while it runs, except kept backups and incomplete backups not restored yet. The cleanup cannot be turned off: mark the backups you want to keep with **Keep**. Set it from the [Backups tab](guides/backups.md#automatic-cleanup).
+
+### `mac_app`
+
+macOS. Absent until the first start, which adds the [Mac app](mac-app.md) and sets it to `true`; after that the app is never added again by itself, so one you delete stays deleted. `false` (`cc-profiles install-app --off`, or `install.sh --no-app`) means it is never added; **Add Mac app** or `cc-profiles install-app` sets it back to `true`.
 
 ### `update_check`
 

@@ -296,7 +296,7 @@ cc-profiles --port 4800       # another port
 cc-profiles --no-browser      # just the server
 cc-profiles open              # starts it in the background if needed, opens the browser and returns
 cc-profiles restart           # stops it and starts it again, e.g. after an update (cc-profiles stop only stops it)
-cc-profiles install-app       # macOS: adds cc-profiles to Applications, with its own window and Dock icon
+cc-profiles install-app       # macOS: adds cc-profiles to Applications again, with its own window and Dock icon
 cc-profiles install-command   # adds /cc-profiles again (the app does it by itself); --off: never add it
 cc-profiles reinstall         # installs it again from scratch if something is broken; settings and backups stay
 cc-profiles uninstall         # removes /cc-profiles, the profile by folder line and the app; --purge: its data too
@@ -309,7 +309,7 @@ Type `/cc-profiles` in any Claude Code session: the app starts in the background
 
 ### Mac app
 
-On macOS, `cc-profiles install-app` creates `~/Applications/cc-profiles.app`: cc-profiles in a window of its own, with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser. It adds zoom and keyboard shortcuts, a badge when an update is out, files dropped on it (a profile's `.zip` to import, a folder to relink), recent projects in the Dock icon's menu and in an optional menu bar icon, Open in Claude Code on any folder in the Finder, and Open at Login; `/cc-profiles` then opens it instead of a browser tab. On macOS every project can also open in Terminal, iTerm or Ghostty with Claude Code running in its profile. The app is put together on your Mac, so macOS opens it without asking for an Apple signature. See [Mac app](https://cc-profiles.andreaia.com/mac-app.html).
+On macOS, cc-profiles adds `~/Applications/cc-profiles.app` the first time it starts (or run `cc-profiles install-app`): cc-profiles in a window of its own, with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser. It adds zoom and keyboard shortcuts, a badge when an update is out, files dropped on it (a profile's `.zip` to import, a folder to relink), recent projects in the Dock icon's menu and in an optional menu bar icon, Open in Claude Code on any folder in the Finder, and Open at Login; `/cc-profiles` then opens it instead of a browser tab. On macOS every project can also open in Terminal, iTerm or Ghostty with Claude Code running in its profile. The app is put together on your Mac, so macOS opens it without asking for an Apple signature. See [Mac app](https://cc-profiles.andreaia.com/mac-app.html).
 
 ### Commands for each profile
 

@@ -17,7 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mac app: right-click the Dock icon for your recent projects, each opening in a terminal with Claude Code.
 - Mac app: the window opens where it was, at its size, on the tab it was on.
 
-- `install.sh` adds the Mac app on macOS (`--no-app` skips it), and installs with Homebrew when there is neither pipx nor uv.
+- The Mac app is added by itself on macOS: by `install.sh`, or the first time cc-profiles starts, however it was installed or updated (pipx, uv, Homebrew). An app you delete stays deleted. `install.sh --no-app`, or `cc-profiles install-app --off`, keeps it from being added.
+- `install.sh` installs with Homebrew when there is neither pipx nor uv.
 
 ### Changed
 - `install.sh` updates cc-profiles with the tool that installed it (pipx, uv or Homebrew) instead of adding a second copy with another; with uv it now really updates, and rebuilds an environment broken by a Python update. It restarts cc-profiles if it was running an older version, and says which version it installed or updated from.

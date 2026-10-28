@@ -1967,6 +1967,38 @@ def test_the_about_panel_adds_and_updates_the_mac_app(home, app_factory):
         assert app_factory().get("/api/macapp") == {"supported": False}
 
 
+def test_the_server_adds_the_mac_app_once(home, app_factory):
+    """The first start on macOS adds the app, as /cc-profiles is added; a deleted app stays
+    deleted, and install-app --off (install.sh --no-app) keeps it from being added at all."""
+    basic_home(home)
+    binary = fake_app_binary(home)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    contents = home.path("Applications/cc-profiles.app/Contents")
+    assert read_plist(contents / "Info.plist")["CCProfilesManaged"] is True
+    assert json.loads((contents / "Resources" / "launch.json").read_text())["port"] == app.port
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is True
+    app.stop()
+
+    shutil.rmtree(home.path("Applications/cc-profiles.app"))  # moved to the Trash
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    assert not home.path("Applications/cc-profiles.app").exists()
+    app.stop()
+
+    shutil.rmtree(home.path(".cc-profiles"))  # from the start, with --no-app
+    shutil.rmtree(home.path("Applications"))
+    r = run_cli(home, "install-app", "--off", CC_PROFILES_APP_BINARY=binary)
+    assert "will not add the Mac app" in r.stdout and "Backup:" in r.stdout
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    assert not home.path("Applications/cc-profiles.app").exists()
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is False
+    r = run_cli(home, "install-app", "--port", str(app.port), CC_PROFILES_APP_BINARY=binary)  # changed their mind
+    assert "Created" in r.stdout and json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is True
+    app.restore_all()
+    shutil.rmtree(home.path(".cc-profiles"))
+    assert home.snapshot() == before
+
+
 def test_install_app_is_for_macos(home):
     if sys.platform == "darwin":
         pytest.skip("macOS builds the app")

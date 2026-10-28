@@ -1,12 +1,14 @@
 # Mac app
 
-On macOS, cc-profiles can live in Applications as an app of its own: a window with its icon in the Dock, found in Spotlight and Launchpad, instead of a tab in your browser.
+On macOS, cc-profiles lives in Applications as an app of its own: a window with its icon in the Dock, found in Spotlight and Launchpad, instead of a tab in your browser.
+
+It is added by itself: by the install script, or the first time cc-profiles starts on a Mac, however you installed it (pipx, uv, Homebrew) or updated it. That creates `~/Applications/cc-profiles.app`, with a backup. If you delete it, it stays deleted; to add it back, click **Add Mac app** in the About panel (ⓘ), which also says whether the app is there and up to date, or run:
 
 ```sh
 cc-profiles install-app
 ```
 
-Or click **Add Mac app** in the About panel (ⓘ), which also says whether the app is there and up to date. Either way it creates `~/Applications/cc-profiles.app`. Open it like any other app, and keep it in the Dock if you like. It is the same cc-profiles: the window shows the page you know, and the browser keeps working too.
+To keep it from being added at all, install with `install.sh --no-app`, or run `cc-profiles install-app --off` before the first start (`"mac_app": false` in `config.json`). Open it like any other app, and keep it in the Dock if you like. It is the same cc-profiles: the window shows the page you know, and the browser keeps working too.
 
 Once the app is there, `/cc-profiles` and `cc-profiles open` show cc-profiles in it instead of a browser tab.
 

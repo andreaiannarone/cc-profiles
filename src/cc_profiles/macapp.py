@@ -13,7 +13,7 @@ import tempfile
 import zlib
 
 from . import __version__, core
-from .core import HOME, ApiError, Backup, find_tool, pretty, write_json
+from .core import CONFIG_FILE, HOME, ApiError, Backup, find_tool, load_config, pretty, write_json
 
 # ---------------------------------------------------------------------------
 # The Mac app
@@ -69,13 +69,19 @@ def build_binary(out, archs=None):
     return out
 
 
-def app_binary(tmp):
-    """The compiled app: CC_PROFILES_APP_BINARY (tests), the one shipped in the package,
-    or one compiled now into tmp."""
+def prebuilt():
+    """The compiled app, when there is one without compiling: CC_PROFILES_APP_BINARY (tests)
+    or the one shipped in the package. None in a source checkout that never built it."""
     for path in (os.environ.get("CC_PROFILES_APP_BINARY"), APP_BINARY):
         if path and os.path.isfile(path):
             return path
-    return build_binary(os.path.join(tmp, "cc-profiles-app"))
+    return None
+
+
+def app_binary(tmp):
+    """The compiled app: CC_PROFILES_APP_BINARY (tests), the one shipped in the package,
+    or one compiled now into tmp."""
+    return prebuilt() or build_binary(os.path.join(tmp, "cc-profiles-app"))
 
 
 def app_info(path=APP_PATH):
@@ -182,6 +188,16 @@ def write_app(port, bk):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def remember_app(on, bk):
+    """Record in config.json that the app is wanted ("mac_app": true) or not (false), so the
+    server adds it only once and never against the user's choice."""
+    cfg = load_config()
+    if cfg.get("mac_app") is not on:
+        bk.copy(CONFIG_FILE, "config.json")
+        cfg["mac_app"] = on
+        write_json(CONFIG_FILE, cfg)
+
+
 def install_app(port):
     """cc-profiles install-app: create or update the app. Returns (lines to print, backup path)."""
     if not supported():
@@ -190,8 +206,13 @@ def install_app(port):
     if state == "foreign":
         raise ApiError(f"{pretty(APP_PATH)} exists and was not created by cc-profiles: move it away first")
     if state == "current" and (app_launch() or {}).get("port") == port:
+        if load_config().get("mac_app") is not True:
+            bk = Backup("mac-app", "Keep the Mac app")
+            remember_app(True, bk)
+            return [f"{pretty(APP_PATH)} is already up to date."], bk.close()
         return [f"{pretty(APP_PATH)} is already up to date."], None
     bk = Backup("mac-app", "Update the Mac app" if state != "missing" else "Add the Mac app")
+    remember_app(True, bk)
     write_app(port, bk)
     bk.note(f"Mac app: {pretty(APP_PATH)}, port {port}")
     verb = "Updated" if state != "missing" else "Created"
@@ -224,15 +245,39 @@ def app_for(port):
     return APP_PATH if (app_launch() or {}).get("port") == port else None
 
 
+def set_app_off():
+    """`cc-profiles install-app --off` (install.sh --no-app): the server never adds the app.
+    One already there stays, and is still kept up to date. Returns the backup path or None."""
+    if load_config().get("mac_app") is False:
+        return None
+    bk = Backup("mac-app-off", "Stop adding the Mac app")
+    remember_app(False, bk)
+    return bk.close()
+
+
 def ensure_app():
-    """At every start of the server: an app cc-profiles made, from an older version or with a
-    command that moved (installed another way), is rewritten, keeping its port. An app that is
-    not there is not added. Returns (lines to print, backup path or None)."""
-    if not supported() or app_state() != "outdated":
+    """At every start of the server, on macOS. The first time ("mac_app" not in config.json
+    yet), the app is added, as install-app does, if the package has it compiled; after that an
+    app the user deleted stays deleted. An app cc-profiles made, from an older version or with
+    a command that moved (installed another way), is rewritten, keeping its port.
+    Returns (lines to print, backup path or None)."""
+    if not supported():
+        return [], None
+    state, wanted = app_state(), load_config().get("mac_app")
+    auto = os.environ.get("CC_PROFILES_AUTO_APP") != "0"  # tests: off unless they test it
+    if state == "missing" and wanted is None and auto and prebuilt():
+        bk = Backup("mac-app", "Add the Mac app")
+        remember_app(True, bk)
+        write_app(core.PORT, bk)
+        bk.note(f"Mac app: {pretty(APP_PATH)}, port {core.PORT}")
+        return [f"added {pretty(APP_PATH)}: open cc-profiles from Spotlight, Launchpad or Applications"], bk.close()
+    if state != "outdated":
         return [], None
     port = (app_launch() or {}).get("port")
     port = port if isinstance(port, int) else core.PORT
     bk = Backup("mac-app", "Update the Mac app")
+    if wanted is None:
+        remember_app(True, bk)
     write_app(port, bk)
     return [f"updated {pretty(APP_PATH)}"], bk.close()
 
