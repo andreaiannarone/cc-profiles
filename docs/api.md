@@ -64,6 +64,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
 | `GET /api/macapp` | | the [Mac app](mac-app.md): `{supported: false}` outside macOS, else `{supported, state, path, port}`, `state` being `missing`, `current`, `outdated` (another version, or another port than this server) or `foreign` (an app cc-profiles did not create) |
+| `GET /api/terminal` | | Open in Terminal: `{supported: false}` outside macOS, else `{supported, terminal, choices}`, `terminal` being the one projects open in and `choices` the ones installed |
 | `GET /api/update/auto` | | the same fields from the last answer, without asking PyPI, plus `enabled` (the automatic daily check) and `checked` (when PyPI was last asked) |
 | `POST /api/update/auto` | `{enabled}` | turn the automatic daily check on or off (`update_check` in `config.json`), with a backup |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |
@@ -135,6 +136,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/backups/auto` | `days` (`15`, `30`, `60` or `90`): the automatic cleanup; it also prunes at once |
 | `POST /api/backups/keep` | `name`, `kept` (bool): keep a backup so no cleanup deletes it (and it cannot be deleted until `kept` is false), or let it go |
 | `POST /api/macapp` | (none): creates the Mac app or brings it up to date, on this server's port; the same fields as `GET /api/macapp`, plus `message` and `backup` |
+| `POST /api/terminal` | `terminal` (one of `choices`): the terminal projects open in (`terminal` in `config.json`), with a backup |
+| `POST /api/terminal/open` | `project`, `profile`: opens the project's folder in the terminal with Claude Code in that profile. Or `path` instead of `project`, for any folder (the Mac app's Finder Quick Actions); without `profile`, the one the rules give it, else the one its project is in, else the first. Returns `{message, profile}`. Writes a script in `~/.cc-profiles/terminal/` that deletes itself when it runs; nothing the page sends is run as a command. An error when the folder is gone |
 | `POST /api/update` | (none): runs the update for this install, then restarts the server; `{message, restarting}` |
 | `POST /api/claude/install` | `method` (`native`, `brew`, `brew-latest`, `npm`) |
 | `POST /api/shell` | `install` (`true` or `false`): adds the profile by folder line to the shell rc files, or removes it. Without anything to change it returns a `message` and no `backup` |

@@ -47,7 +47,13 @@ A project is an **orphan** when its folder no longer exists on disk, usually bec
 
 If the folder is gone for good, **Delete** moves the project to the backup.
 
+In the [Mac app](../mac-app.md) you can also drop the project's new folder on the window or on the Dock icon: it asks which orphan project lives there now, then relinks it.
+
 > A project on an external disk shows as an orphan while the disk is not connected. Leave it alone: it comes back when you plug the disk in.
+
+## Open a project in a terminal
+
+On macOS, **Open in Terminal** (on the row, and in **Manage**) opens the project's folder in a new terminal window with Claude Code running in the profile you pick, as if you had typed its command there. When Claude Code exits, the shell stays open. Terminal, iTerm and Ghostty work; with more than one installed, pick it in the About panel (ⓘ). The button names the terminal, and shows only for projects whose folder exists. The [Mac app](../mac-app.md) also opens any folder this way from the Finder's Quick Actions, and your recent projects from its Dock icon.
 
 ## Assign projects with rules
 

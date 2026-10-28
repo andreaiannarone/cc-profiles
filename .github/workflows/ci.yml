@@ -96,6 +96,9 @@ jobs:
           test -x "$SB/.local/bin/cc-profiles"
           grep -q "managed by cc-profiles" "$SB/.claude/commands/cc-profiles.md"
           grep -q "managed by cc-profiles" "$SB/.claude-work/commands/cc-profiles.md"
+          if [ "$RUNNER_OS" = macOS ]; then grep -q CCProfilesManaged "$SB/Applications/cc-profiles.app/Contents/Info.plist"; fi
+          # again: an update with the same tool, nothing to restart
+          HOME="$SB" CC_PROFILES_SOURCE="$PWD" sh install.sh --no-app | grep -q "is up to date"
 
   mac-app:
     name: Mac app

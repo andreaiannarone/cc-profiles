@@ -8,6 +8,7 @@ import csv
 import io
 import json
 import os
+import plistlib
 import re
 import shutil
 import signal
@@ -1850,7 +1851,6 @@ def fake_app_binary(home):
 
 
 def read_plist(path):
-    import plistlib
     return plistlib.loads(path.read_bytes())
 
 
@@ -1873,6 +1873,7 @@ def test_install_app_puts_together_the_mac_app(home, app_factory):
     info = read_plist(contents / "Info.plist")
     assert info["CCProfilesManaged"] is True and info["CFBundleExecutable"] == "cc-profiles"
     assert info["CFBundleShortVersionString"] == __version__
+    assert [x["NSMessage"] for x in info["NSServices"]] == ["openInClaude", "openInClaudeWithProfile"]
     launch = json.loads((contents / "Resources" / "launch.json").read_text())
     assert launch == {"command": [sys.executable, "-m", "cc_profiles"], "port": 4790}
     icns = (contents / "Resources" / "AppIcon.icns").read_bytes()
@@ -1902,7 +1903,6 @@ def test_the_server_keeps_the_mac_app_up_to_date_and_uninstall_removes_it(home, 
     assert run_cli(home, "install-app", "--port", "4790", CC_PROFILES_APP_BINARY=binary).returncode == 0
     plist = home.path("Applications/cc-profiles.app/Contents/Info.plist")
     current = read_plist(plist)["CFBundleShortVersionString"]
-    import plistlib
     plist.write_bytes(plistlib.dumps(dict(read_plist(plist), CFBundleShortVersionString="0.0.1")))
 
     app = app_factory(CC_PROFILES_APP_BINARY=binary)
@@ -1926,7 +1926,8 @@ def test_the_mac_app_starts_the_server(home):
     port = free_port()
     assert run_cli(home, "install-app", "--port", str(port)).returncode == 0
     exe = home.path("Applications/cc-profiles.app/Contents/MacOS/cc-profiles")
-    env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC),
+    env = child_env({"HOME": str(home.root), "CFFIXED_USER_HOME": str(home.root),  # its settings, WebKit data
+                     "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC),
                      "CC_PROFILES_AUTO_COMMAND": "0", "CC_PROFILES_AUTO_GITHUB": "0"})
     proc = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     server = None
@@ -1966,6 +1967,38 @@ def test_the_about_panel_adds_and_updates_the_mac_app(home, app_factory):
         assert app_factory().get("/api/macapp") == {"supported": False}
 
 
+def test_the_server_adds_the_mac_app_once(home, app_factory):
+    """The first start on macOS adds the app, as /cc-profiles is added; a deleted app stays
+    deleted, and install-app --off (install.sh --no-app) keeps it from being added at all."""
+    basic_home(home)
+    binary = fake_app_binary(home)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    contents = home.path("Applications/cc-profiles.app/Contents")
+    assert read_plist(contents / "Info.plist")["CCProfilesManaged"] is True
+    assert json.loads((contents / "Resources" / "launch.json").read_text())["port"] == app.port
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is True
+    app.stop()
+
+    shutil.rmtree(home.path("Applications/cc-profiles.app"))  # moved to the Trash
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    assert not home.path("Applications/cc-profiles.app").exists()
+    app.stop()
+
+    shutil.rmtree(home.path(".cc-profiles"))  # from the start, with --no-app
+    shutil.rmtree(home.path("Applications"))
+    r = run_cli(home, "install-app", "--off", CC_PROFILES_APP_BINARY=binary)
+    assert "will not add the Mac app" in r.stdout and "Backup:" in r.stdout
+    app = app_factory(CC_PROFILES_APP_BINARY=binary, CC_PROFILES_AUTO_APP="1")
+    assert not home.path("Applications/cc-profiles.app").exists()
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is False
+    r = run_cli(home, "install-app", "--port", str(app.port), CC_PROFILES_APP_BINARY=binary)  # changed their mind
+    assert "Created" in r.stdout and json.loads(home.path(".cc-profiles/config.json").read_text())["mac_app"] is True
+    app.restore_all()
+    shutil.rmtree(home.path(".cc-profiles"))
+    assert home.snapshot() == before
+
+
 def test_install_app_is_for_macos(home):
     if sys.platform == "darwin":
         pytest.skip("macOS builds the app")
@@ -1984,7 +2017,7 @@ def test_install_script_options():
     assert subprocess.run(["sh", "-n", script]).returncode == 0
     with open(script) as f:  # piped, as with curl | sh
         r = subprocess.run(["sh", "-s", "--", "--help"], stdin=f, capture_output=True, text=True)
-    assert r.returncode == 0 and "--no-command" in r.stdout
+    assert r.returncode == 0 and "--no-command" in r.stdout and "--no-app" in r.stdout
     assert subprocess.run(["sh", script, "--nope"], capture_output=True).returncode == 2
 
 
@@ -2854,3 +2887,84 @@ def test_shell_line_creates_a_missing_zshrc_and_refuses_other_shells(home, app_f
     app.restore_all()
     assert home.snapshot() == before  # Restore removes the file it created
     assert "not zsh or bash" in app_factory(SHELL="/usr/bin/fish").post_error("/api/shell", {"install": True})
+
+
+# --- open in terminal ---------------------------------------------------------
+def test_open_in_terminal_writes_a_script_for_the_profile(home, app_factory):
+    """Open in Terminal: a .command script that goes into the folder and starts Claude Code in the
+    profile (CLAUDE_CONFIG_DIR unset for ~/.claude); the terminal chosen is saved with a backup."""
+    basic_home(home)
+    home.path("Applications/iTerm.app").mkdir(parents=True)
+    home.path("Applications/Ghostty.app").mkdir()
+    app = app_factory(CC_PROFILES_TERMINAL_DRYRUN="1")
+    before = home.snapshot()
+
+    st = app.get("/api/terminal")
+    assert st["supported"] and {"iTerm", "Ghostty"} <= set(st["choices"]) and st["terminal"] in st["choices"]
+    assert "not installed" in app.post_error("/api/terminal", {"terminal": "Hyper"})
+    assert app.post("/api/terminal", {"terminal": "iTerm"})["backup"]
+    assert app.get("/api/terminal")["terminal"] == "iTerm"
+    assert json.loads(home.path(".cc-profiles/config.json").read_text())["terminal"] == "iTerm"
+
+    api = str(home.path("code/work/api"))
+    name = next(p["name"] for p in app.get("/api/projects") if p.get("path") == api)
+    r = app.post("/api/terminal/open", {"project": name, "profile": "work"})
+    assert r["command"][:3] == ["/usr/bin/open", "-a", str(home.path("Applications/iTerm.app"))]
+    script = r["command"][-1]
+    assert script.endswith(".command") and os.access(script, os.X_OK)
+    text = open(script).read()
+    assert f"cd {api} " in text and "rm -f \"$0\"" in text and "command claude" in text
+    assert f"export CLAUDE_CONFIG_DIR={home.path('.claude-work')}" in text
+
+    app.post("/api/terminal", {"terminal": "Ghostty"})
+    r = app.post("/api/terminal/open", {"project": name, "profile": "default"})
+    assert r["command"][:5] == ["/usr/bin/open", "-na", str(home.path("Applications/Ghostty.app")), "--args", "-e"]
+    assert "unset CLAUDE_CONFIG_DIR" in open(r["command"][-1]).read()
+
+    moved = next(p["name"] for p in app.get("/api/projects") if p.get("path") == str(home.path("code/old-name")))
+    assert "Relink the project first" in app.post_error("/api/terminal/open", {"project": moved, "profile": "default"})
+    assert "not found" in app.post_error("/api/terminal/open", {"project": "-nope", "profile": "default"})
+
+    shutil.rmtree(home.path(".cc-profiles/terminal"))  # scripts a terminal would run and delete
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_open_any_folder_in_a_terminal(home, app_factory):
+    """From the Finder (the Mac app's Quick Actions): any folder, in the profile picked, else the
+    one the rules give it, else the one its project is in, else the first profile."""
+    basic_home(home)
+    home.path("code/notes").mkdir()
+    home.path("Applications/iTerm.app").mkdir(parents=True)  # Linux has no Terminal.app
+    app = app_factory(CC_PROFILES_TERMINAL_DRYRUN="1")
+    app.post("/api/rules", {"match": "code/work", "profile": "work"})
+
+    def opened(path, profile=None):
+        r = app.post("/api/terminal/open", {"path": path, "profile": profile})
+        return r["profile"], open(r["command"][-1]).read()
+
+    pid, script = opened(str(home.path("code/work/api")))
+    assert pid == "work" and f"cd {home.path('code/work/api')} " in script
+    assert opened("~/code/personal/blog")[0] == "default"  # no rule: its project's profile
+    assert opened(str(home.path("code/notes")))[0] == "default"  # not a project: the first profile
+    assert opened(str(home.path("code/notes")), "work")[0] == "work"
+    assert "Folder does not exist" in app.post_error("/api/terminal/open", {"path": str(home.path("code/gone"))})
+    assert "Unknown profile" in app.post_error("/api/terminal/open", {"path": str(home.path("code/notes")),
+                                                                      "profile": "nope"})
+
+
+def test_the_cli_shows_the_mac_app_when_it_is_installed(home):
+    """app_for(): `cc-profiles open` shows the Mac app only when it is ours and on the same port."""
+    res = home.path("Applications/cc-profiles.app/Contents/Resources")
+    res.mkdir(parents=True)
+    (res / "launch.json").write_text(json.dumps({"command": ["x"], "port": 4777}))
+
+    def app_for(port):
+        code = f"import sys; sys.platform = 'darwin'; from cc_profiles import macapp; print(macapp.app_for({port}))"
+        env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
+        return subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True).stdout.strip()
+
+    (res.parent / "Info.plist").write_bytes(plistlib.dumps({"CCProfilesManaged": True}))
+    assert app_for(4777) == str(res.parent.parent) and app_for(4778) == "None"
+    (res.parent / "Info.plist").write_bytes(plistlib.dumps({}))  # another app with the same name
+    assert app_for(4777) == "None"

@@ -23,6 +23,7 @@ SRC = ROOT / "src"
 # Some tests call cc_profiles code in this process, where its paths point to the real home:
 # nothing they start may write there on its own (the /cc-profiles command, the update check).
 os.environ["CC_PROFILES_AUTO_COMMAND"] = "0"
+os.environ["CC_PROFILES_AUTO_APP"] = "0"
 os.environ["CC_PROFILES_UPDATE_CHECK"] = "0"
 os.environ["CC_PROFILES_AUTO_GITHUB"] = "0"
 os.environ["CC_PROFILES_PICKER"] = "none"
@@ -59,6 +60,7 @@ def child_env(env):
     env = dict(env)
     env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
     env.setdefault("CC_PROFILES_PICKER", "none")  # never a real folder dialog on the screen
+    env.setdefault("CC_PROFILES_AUTO_APP", "0")  # no Mac app added at start: tests compare the fake home
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
         # data next to the config, never in the process's working folder (often a fake home):

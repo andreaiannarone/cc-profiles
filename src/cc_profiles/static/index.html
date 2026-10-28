@@ -693,6 +693,7 @@ function renderProjects() {
           <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
           <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
             ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
+            ${S.term?.supported && r.exists ? `<button class="btn small" data-act="term" data-name="${esc(r.name)}" title="Claude Code in this folder">Open in ${esc(S.term.terminal)}</button>` : ""}
             <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
       }).join("")}</tbody></table>` : `<div class="empty">${S.filter === "issues" ? "Nothing needs attention. ✓" : "No projects."}</div>`}
     </div>`;
@@ -858,6 +859,7 @@ async function doManage(r) {
     const s = r.in[pid];
     for (const to of ids.filter(x => x !== pid)) opts.push({ label: `Move from ${label(pid)} to ${label(to)}`, info: `${s.conv} conv · ${s.mem} mem`, v: ["move", pid, to] });
     if (!r.exists) opts.push({ label: `Relink to a folder (${label(pid)})`, info: "", v: ["relink", pid] });
+    if (r.exists && S.term?.supported) opts.push({ label: `Open in ${S.term.terminal} with Claude Code in ${label(pid)}`, info: "", v: ["term", pid] });
     opts.push({ label: `Delete from ${label(pid)}`, info: "goes to the backup", v: ["delete", pid], danger: true });
   }
   opts.push({ label: "Assign to a profile (rule)", info: r.expected ? "now: " + label(r.expected) : "unassigned", v: ["rule"] });
@@ -871,7 +873,55 @@ async function doManage(r) {
   if (a === "relink") return doRelink(r, p1);
   if (a === "delete") return doDelete(r, p1);
   if (a === "rule") return doRule(r);
+  if (a === "term") return doTerminal(r, p1);
 }
+
+// ---------- open a project in a terminal (macOS) ----------
+// The server writes a small script and the terminal opens it: Claude Code starts in the project's
+// folder, in the profile picked here. The terminal is chosen in the About panel.
+async function doTerminal(r, pid) {
+  const ids = Object.keys(r.in);
+  if (!pid && ids.length > 1) {
+    const res = await modal({ title: `Open in ${S.term.terminal}`, sub: `<code>${esc(r.pretty)}</code><br>Claude Code starts in this folder, in the profile you pick.`,
+      body: `<select id="tp" aria-label="Profile">${ids.map(id => `<option value="${esc(id)}">${esc(label(id))}</option>`).join("")}</select>`,
+      actions: [{ label: "Open", kind: "primary", value: "ok" }] });
+    if (!res) return;
+    pid = $("#tp", res.el).value;
+  }
+  try { await run(() => api("/api/terminal/open", { project: r.name, profile: pid || ids[0] })); } catch {}
+}
+
+// ---------- files dropped on the page ----------
+// A profile .zip opens Import. A folder opens Relink, in the Mac app only: a browser never tells
+// a page where a folder is. The Mac app also passes on what is dropped on its Dock icon.
+const IN_APP = navigator.userAgent.includes("cc-profiles-app");
+const APP_TAB = "cc-profiles.app-tab";
+const draggingFiles = e => [...(e.dataTransfer?.types || [])].includes("Files") && !e.target.closest?.('input[type="file"]');
+document.addEventListener("dragover", e => { if (draggingFiles(e)) e.preventDefault(); });
+document.addEventListener("drop", e => {
+  if (!draggingFiles(e)) return;
+  e.preventDefault();
+  const zip = [...e.dataTransfer.files].find(f => /\.zip$/i.test(f.name));
+  if (zip) importProfile(zip);
+  else toast("Drop the .zip of an exported profile to import it", IN_APP ? "or a project's new folder to relink it" : "", true);
+});
+window.ccDropZip = (name, b64) => importProfile(new File([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], name, { type: "application/zip" }));
+window.ccDropFolder = async path => {
+  const lost = S.projects.filter(r => !r.exists);
+  if (!lost.length) return toast("No project needs relinking", `every project's folder is where it was: ${path}`);
+  const base = basename(path);
+  lost.sort((a, b) => Number(basename(b.path) === base) - Number(basename(a.path) === base) || a.pretty.localeCompare(b.pretty));
+  const res = await modal({ title: "Relink a project to this folder",
+    sub: `<code>${esc(path)}</code><br>Pick the project that now lives here: its conversations, memories, history and settings follow.`,
+    body: `<div class="mglist" role="radiogroup" aria-label="Project to relink">${lost.map((r, i) => `<label class="mgitem">
+      <input type="radio" name="rl" value="${esc(r.name)}" ${i ? "" : "checked"}><span class="mono grow">${esc(r.pretty)}</span>
+      <span class="hint">${basename(r.path) === base ? "same name" : ""}</span></label>`).join("")}</div>`,
+    actions: [{ label: "Relink", kind: "primary", value: "ok" }] });
+  if (!res) return;
+  const r = byName(res.el.querySelector('input[name="rl"]:checked')?.value);
+  if (!r) return;
+  await run(() => api("/api/projects/relink", { project: r.name, profile: Object.keys(r.in)[0], path })); await refresh();
+};
 
 // ---------- memories ----------
 async function loadMemProjects() {
@@ -2170,6 +2220,7 @@ function renderAbout(dr, a) {
       <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
       <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
       <div class="upd" id="mac-app" hidden></div>
+      ${S.term?.choices?.length > 1 ? `<label class="upd"><span>Open projects in</span><select id="term-pick">${S.term.choices.map(c => `<option${c === S.term.terminal ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
@@ -2182,6 +2233,11 @@ function renderAbout(dr, a) {
   $("#ab-news", dr).onclick = () => showWhatsNew();
   $("#ab-report", dr).onclick = () => reportProblem(a);
   loadMacApp(dr);
+  const tp = $("#term-pick", dr);
+  if (tp) tp.onchange = async () => {
+    try { await run(() => api("/api/terminal", { terminal: tp.value })); S.term = await api("/api/terminal"); } catch { tp.value = S.term.terminal; return; }
+    if (S.tab === "projects") renderProjects();
+  };
 }
 // The Mac app (macOS only): added or brought up to date with a click, like an update
 async function loadMacApp(dr, m) {
@@ -2349,7 +2405,7 @@ async function download(path, fallback) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   return name;
 }
-async function importProfile() {
+async function importProfile(dropped) {
   const resP = modal({ title: "Import profile",
     sub: "Creates a new profile from a .zip exported by cc-profiles. It is not logged in: run its command and log in with /login.",
     body: `<div class="form"><label class="f">Exported file<input type="file" id="im-file" accept=".zip,application/zip"></label>
@@ -2364,6 +2420,9 @@ async function importProfile() {
     if (m && !I.value) { I.value = m[1]; L.value = m[1].replace(/-/g, " ").replace(/^./, c => c.toUpperCase()); upd(); }
   };
   I.oninput = upd;
+  if (dropped) {  // a .zip dropped on the page or on the Mac app's icon
+    const dt = new DataTransfer(); dt.items.add(dropped); F.files = dt.files; F.onchange(new Event("change"));
+  }
   const res = await resP;
   if (!res) return;
   const file = $("#im-file", res.el).files[0];
@@ -2934,7 +2993,9 @@ function showKeys() {
   modal({ title: "Keyboard shortcuts", cancel: "Close",
     sub: "They work anywhere except while you type in a field or a dialog is open.",
     body: `<dl class="keys">${row("<kbd>/</kbd>", "Search everything")}${row("<kbd>Esc</kbd>", "Close the search, a dialog or a panel")}${row("<kbd>?</kbd>", "Show this list")}
-      ${GO_KEYS.map(([k, tab]) => row(`<kbd>g</kbd> <kbd>${k}</kbd>`, "Go to " + esc(name(tab)))).join("")}</dl>` });
+      ${GO_KEYS.map(([k, tab]) => row(`<kbd>g</kbd> <kbd>${k}</kbd>`, "Go to " + esc(name(tab)))).join("")}
+      ${IN_APP ? `${row("<kbd>⌘</kbd> <kbd>1</kbd>…<kbd>9</kbd>", "Go to the first nine tabs")}${row("<kbd>⌘</kbd> <kbd>,</kbd>", "Settings")}
+        ${row("<kbd>⌘</kbd> <kbd>F</kbd>", "Search everything")}${row("<kbd>⌘</kbd> <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>", "Zoom in, out, actual size")}` : ""}</dl>` });
 }
 let goPending = 0;
 document.addEventListener("keydown", e => {
@@ -2960,6 +3021,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.tab) {
     S.tab = t.dataset.tab;
     markTab(S.tab);
+    if (IN_APP) try { localStorage.setItem(APP_TAB, S.tab); } catch {}
     if (S.tab === "memories" && !S.mem.profile) { S.mem.profile = S.profiles[0]?.id; await loadMemProjects(); }
     if (S.tab === "conversations" && !S.conv.profile) { S.conv.profile = S.profiles[0]?.id; await loadConvProjects(); }
     if (S.tab === "health" && !S.health) return loadHealth();
@@ -2996,6 +3058,7 @@ document.addEventListener("click", async e => {
     if (t.dataset.act === "merge") return doMerge(r);
     if (t.dataset.act === "rule") return doRule(r);
     if (t.dataset.act === "manage") return doManage(r);
+    if (t.dataset.act === "term") return doTerminal(r);
   }
   if (t.dataset.mprof) { S.mem.profile = t.dataset.mprof; S.mem.project = null; S.mem.file = null; await loadMemProjects(); return renderMemories(); }
   if (t.dataset.mproj) return openMemProject(t.dataset.mproj);
@@ -3040,8 +3103,13 @@ $("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
 checkWhatsNew();
 loadUpdateStatus();
+api("/api/terminal").then(t => { S.term = t; if (t.supported && S.tab === "projects" && S.projects) renderProjects(); }).catch(() => {});
 setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
-refresh().catch(e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
+refresh().then(() => {  // the Mac app opens on the tab it was closed on; a browser tab on Projects
+  let tab = null;
+  if (IN_APP) try { tab = localStorage.getItem(APP_TAB); } catch {}
+  if (tab && tab !== S.tab) TAB_BUTTONS.find(b => b.dataset.tab === tab)?.click();
+}, e => { $("#main").innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; });
 </script>
 </body>
 </html>

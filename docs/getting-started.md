@@ -13,7 +13,16 @@
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 ```
 
-The script installs cc-profiles with `pipx` or `uv`, whichever you have, then adds the `/cc-profiles` command to Claude Code (see [Open it from Claude Code](#open-it-from-claude-code)). Run it again to update. To install the app only, end the command with `sh -s -- --no-command`.
+The script installs cc-profiles with `pipx` or `uv`, whichever you have, or with Homebrew when you have neither (uv and Homebrew bring their own Python; pipx needs Python 3.9 or later). Then it adds the `/cc-profiles` command to Claude Code (see [Open it from Claude Code](#open-it-from-claude-code)) and, on macOS, the [Mac app](mac-app.md).
+
+Run it again to update. It updates with the tool that installed cc-profiles, so you never end up with two copies, rebuilds an environment broken by a Python update, and restarts cc-profiles if it is running (then reload the page). It never uses `sudo`.
+
+| Option | Effect |
+|---|---|
+| `--no-command` | do not add `/cc-profiles`, and do not let cc-profiles add it later |
+| `--no-app` | macOS: do not add the Mac app |
+
+Add them at the end: `curl -fsSL …/install.sh | sh -s -- --no-app`.
 
 Or install it by hand:
 
@@ -58,7 +67,7 @@ On the very first run, cc-profiles writes `~/.cc-profiles/config.json` with:
 
 Rename profiles from the **Profiles** tab. The first profile in the list is the [source profile](concepts.md#the-source-profile).
 
-On macOS, `cc-profiles install-app` adds it to Applications as an app with its own window: see [Mac app](mac-app.md).
+On macOS, cc-profiles also adds itself to Applications, the first time it starts, as an app with its own window: see [Mac app](mac-app.md).
 
 ## Open it from Claude Code
 
@@ -66,7 +75,7 @@ Type `/cc-profiles` in any Claude Code session. It runs `cc-profiles open`, whic
 
 | In Claude Code | Runs | Does |
 |---|---|---|
-| `/cc-profiles` | `cc-profiles open` | starts the server if needed and opens the browser |
+| `/cc-profiles` | `cc-profiles open` | starts the server if needed and opens the browser, or the [Mac app](mac-app.md) when it is installed |
 | `/cc-profiles restart` | `cc-profiles open restart` | stops the server and starts it again, e.g. after an update; then reload the page |
 | `/cc-profiles stop` | `cc-profiles open stop` | stops the server |
 

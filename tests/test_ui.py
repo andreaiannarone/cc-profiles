@@ -21,7 +21,8 @@ def page_on_sandbox(tmp_path):
                    check=True, capture_output=True)
     fake_app = tmp_path / "cc-profiles-app"  # the Mac app's program, only copied (About → Add Mac app)
     fake_app.write_text("#!/bin/sh\n")
-    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app)})
+    (root / "Applications" / "iTerm.app").mkdir(parents=True)  # Open in iTerm, without opening it
+    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1"})
     errors = []
     with sync_api.sync_playwright() as p:
         try:
@@ -364,6 +365,44 @@ def test_choose_a_folder_in_relink(page_on_sandbox):
     page.wait_for_selector('#relink-path-browse [data-fbuse$="code/work"]')
     page.click("#relink-path-browse [data-fbuse]")
     assert page.input_value("#relink-path").endswith("code/work") and page.is_hidden("#relink-path-browse")
+    page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_open_a_project_in_a_terminal(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate("api('/api/terminal', {terminal: 'iTerm'}).then(() => api('/api/terminal')).then(t => S.term = t)")
+    page.wait_for_function("() => S.term.terminal === 'iTerm'")
+    open_tab(page, "projects")
+    page.click('button[data-filter="all"]')
+    page.click('tr:has-text("code/personal/blog") button[data-act="term"]')
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('in iTerm'))")
+    assert errors == []
+
+
+def test_the_mac_app_reopens_the_last_tab(page_on_sandbox):
+    page, errors = page_on_sandbox
+    app = page.context.browser.new_page(user_agent=page.evaluate("navigator.userAgent") + " cc-profiles-app",
+                                        viewport={"width": 1440, "height": 900})
+    app.goto(page.url)
+    app.wait_for_selector(".pcard")
+    app.click('#tabs button[data-tab="usage"]')
+    app.reload()
+    app.wait_for_selector('#tabs button[data-tab="usage"].on')
+    page.reload()  # a browser tab starts from Projects
+    page.wait_for_selector('#tabs button[data-tab="projects"].on')
+    assert errors == []
+
+
+def test_a_dropped_zip_opens_import(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate("""() => {
+      const dt = new DataTransfer();
+      dt.items.add(new File(["zip"], "cc-profiles-side-2026-10-28.zip", { type: "application/zip" }));
+      document.querySelector("#main").dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true }));
+    }""")
+    page.wait_for_selector("#im-file")
+    assert page.input_value("#im-id") == "side" and page.input_value("#im-label") == "Side"
     page.keyboard.press("Escape")
     assert errors == []
 
