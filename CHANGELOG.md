@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- A new icon for the Mac app: the two mascots on a warm dark square lit from above, with a soft light behind them and a shadow under each, easier to spot in the Dock. An app added with 0.5.9 gets it at the next start of cc-profiles.
+
 ## [0.5.9] - 2026-10-28
 
 ### Added
