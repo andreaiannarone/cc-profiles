@@ -1,6 +1,32 @@
 {
  "releases": [
   {
+   "version": "0.6.1",
+   "date": "2026-10-30",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Open in Terminal** on Linux, in a graphical session: GNOME Terminal, Konsole, Xfce Terminal, kitty, Alacritty, WezTerm, Ghostty or the system's default terminal, picked in the About panel when more than one is installed.",
+      "Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314."
+     ]
+    },
+    {
+     "title": "Changed",
+     "items": [
+      "The page runs only its own scripts: the Content-Security-Policy no longer allows inline scripts except two with a nonce that changes at every load, so text slipping through unescaped could not run as code. The UI is now `index.html`, `app.css` and a script file per area, still with no build step."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "On a busy Mac some of the page's requests could fail with a reset connection: the server now queues up to 64 connections instead of 5.",
+      "The weekly settings schema check reported Theme and four other /config items as gone after Claude Code 2.1.310, which builds them just before the panel's list: it now looks there too."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.6.0",
    "date": "2026-10-28",
    "sections": [
@@ -167,32 +193,6 @@
      "title": "Fixed",
      "items": [
       "Tests never write into the real home: a test started the server in its own process, which with the automatic `/cc-profiles` command wrote into the real profiles; a check now fails the run if the real `~/.cc-profiles/config.json` or a profile's command changes. The usage CSV test also passes right after midnight."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.5.1",
-   "date": "2026-10-07",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**What's new** after an update: the next time you open cc-profiles, a window shows what changed since the version you used before (once; nothing is fetched from the internet, the notes come with the app). Open it any time from the About panel.",
-      "**Report a problem…** in the About panel opens a GitHub bug report with the versions of cc-profiles, Claude Code, Python and your system filled in. The About panel also shows the system.",
-      "**Homebrew**: `brew install andreaiannarone/cc-profiles/cc-profiles`, and **Update to …** in the app runs `brew upgrade cc-profiles` for a Homebrew install. The release script updates the tap at every release.",
-      "**Windows through WSL 2**: under WSL the app opens in the Windows browser (`wslview`, or Windows' `start`), and the About panel and bug reports say WSL. The documentation explains how to install it there.",
-      "Documentation: new pages Why cc-profiles, Uninstall, Glossary and What's new (the changelog, rebuilt by the release script). Search finds sections, not only pages, and opens the page at that section. Screenshots open full size on click, are cropped to the content, and the How-to guides show the dialogs they talk about (move, relink, new profile, copy to all). The page-not-found page suggests the pages closest to the address you typed. Each page ends with a link to open an issue about it.",
-      "Documentation: four How-to guides (separate work and personal, move a project, relink a moved folder, share skills between profiles), worked examples in Memories, Conversations and Plugins, and a screenshot of the tab in each guide, in light or dark like the site. Each page ends with links to the previous and next page and shows the date it was last updated; section titles have a # link to share them.",
-      "A test checks the images and HTML links of the documentation, and anchors with an underscore (`#search_roots`) are now checked like the site builds them."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "Screenshots and demo GIFs regenerated: the light ones showed a \"Claude Code is not installed\" notice that came from the screenshot sandbox. `make_screenshots.py` also captures Projects, Profiles, Backups and Health.",
-      "Documentation site: the sidebar looks like On this page (a thin line on the left, the current page in orange with its bar). Each sidebar group has an icon, like On this page. Each page shows its group above the title. On tablets and phones, a bar under the header shows where you are (Guides › Settings) and opens the menu as a drawer from the left (closes with Esc, a tap outside or a link). Responsive: from 561 to 860 px wide the page now switches to one column with the Menu (the sidebar was hidden there); on phones, tables are more compact and show a shadow where they continue sideways. Less empty space at the bottom of the page. The sidebar and On this page show their scrollbar only while the pointer is over them, fading in and out.",
-      "Documentation site: the page uses the full width of the window, aligned with the header; long commands no longer slide under the copy icon; thinner scrollbars. README images regenerated."
      ]
     }
    ]

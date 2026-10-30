@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-30
+
 ### Added
 - **Open in Terminal** on Linux, in a graphical session: GNOME Terminal, Konsole, Xfce Terminal, kitty, Alacritty, WezTerm, Ghostty or the system's default terminal, picked in the About panel when more than one is installed.
 - Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314.
@@ -328,7 +330,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
 [0.5.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...v0.5.8
