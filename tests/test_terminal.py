@@ -6,6 +6,9 @@ usually end by restoring every backup and comparing the fake home with how it st
 import json
 import os
 import shutil
+import time
+
+import pytest
 
 from helpers import basic_home
 
@@ -123,3 +126,32 @@ def test_open_in_terminal_needs_a_graphical_session_on_linux(home, app_factory):
     app = app_factory(CC_PROFILES_TERMINAL_PLATFORM="linux", DISPLAY="", WAYLAND_DISPLAY="")
     assert app.get("/api/terminal") == {"supported": False}
     assert "graphical session" in app.post_error("/api/terminal/open", {"path": str(home.path("code"))})
+
+
+# Real terminals, on a Linux desktop or under Xvfb in CI: CC_PROFILES_REAL_TERMINALS names them
+# ("Default terminal,Xfce Terminal"); without it the test is skipped.
+REAL_TERMINALS = [t for t in os.environ.get("CC_PROFILES_REAL_TERMINALS", "").split(",") if t]
+
+
+@pytest.mark.skipif(not REAL_TERMINALS, reason="CC_PROFILES_REAL_TERMINALS names no terminal to open")
+@pytest.mark.parametrize("terminal", REAL_TERMINALS)
+def test_a_real_terminal_opens_and_starts_claude_in_the_profile(home, app_factory, terminal):
+    """The window opens, the script goes into the folder and starts `claude` (a fake one here,
+    which records where it runs and with which profile, then closes the window)."""
+    basic_home(home)
+    seen = home.path("claude.seen")
+    claude = home.write(".local/bin/claude", f'#!/bin/sh\necho "$PWD $CLAUDE_CONFIG_DIR" > {seen}\nkill -KILL $PPID\n')
+    claude.chmod(0o755)
+    passed = {k: os.environ[k] for k in ("DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR")
+              if k in os.environ}
+    app = app_factory(SHELL="/bin/bash", **passed)
+    app.post("/api/terminal", {"terminal": terminal})
+    api = str(home.path("code/work/api"))
+    r = app.post("/api/terminal/open", {"path": api, "profile": "work"})
+    assert r["message"].startswith(f"Opening ~/code/work/api in {terminal}")
+    for _ in range(150):
+        if seen.exists() and seen.read_text().strip():
+            break
+        time.sleep(0.1)
+    assert seen.read_text().split() == [os.path.realpath(api), str(home.path(".claude-work"))]
+    assert os.listdir(home.path(".cc-profiles/terminal")) == []  # the script deleted itself
