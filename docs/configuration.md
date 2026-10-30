@@ -48,6 +48,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
+| `CC_PROFILES_STDLIB_DIR` | **for tests**: the folder whose disappearance means Python was updated under the running server (the standard library's folder by default) |
 | `CC_PROFILES_APP_BINARY` | **for tests**: the program `install-app` puts in the Mac app, instead of the one compiled into the package; it also lets the tests build the app on Linux |
 | `CC_PROFILES_INSTALL_KIND` | **for tests**: how cc-profiles thinks it was installed (`pipx`, `uv`, `brew` or `source`), for the update, uninstall and reinstall tests |
 | `CC_PROFILES_AUTO_COMMAND` | `0`: at start, do not add or update `/cc-profiles` in the profiles (the tests set it) |

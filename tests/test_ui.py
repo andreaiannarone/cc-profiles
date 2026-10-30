@@ -3,6 +3,7 @@ errors, Content-Security-Policy violations or a tab stuck loading.
 
 Needs the ui extra and a browser: pip install -e ".[ui]" && python -m playwright install chromium.
 Skipped when Playwright is not installed, so the main suite keeps running without it."""
+import json
 import os
 import subprocess
 import sys
@@ -601,3 +602,22 @@ def test_keep_a_backup(page_on_sandbox):
     assert page.is_enabled("[data-bdel]")
     assert errors == []
 
+
+
+def test_the_page_waits_for_a_restart_after_a_python_update(page_on_sandbox):
+    """The server answers that Python was updated under it and that it is starting again:
+    the page shows the restart dialog instead of only the error, then reloads."""
+    page, errors = page_on_sandbox
+    page.click("#about-btn")
+    page.wait_for_selector("#upd-check", timeout=15000)
+    page.route("**/api/update", lambda route: route.fulfill(status=500, content_type="application/json", body=json.dumps(
+        {"error": "Python was updated after cc-profiles started", "restarting": True})))
+    page.evaluate("window.notReloaded = true")
+    page.click("#upd-check")
+    page.wait_for_selector('.modal[aria-label="Restarting"]')
+    assert "Python was updated" in page.inner_text('.modal[aria-label="Restarting"]')
+    page.wait_for_function("() => !window.notReloaded")  # the server answers: the page reloads
+    page.wait_for_selector(".pcard")
+    # on purpose: the answer above, and the check that the server is back, cut short by the reload
+    errors[:] = [e for e in errors if "500" not in e and not e.endswith("/ net::ERR_ABORTED")]
+    assert errors == []

@@ -115,16 +115,7 @@ async function runUpdate(u, dr) {
   }
   if (r.message) toast(r.message);
   if (st && !r.restarting) st.textContent = r.message || "";
-  if (!r.restarting) return;
-  const bg = document.createElement("div"); bg.className = "modal-bg";
-  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2>${LOADER} Restarting cc-profiles…</h2><div class="hint">The page reloads as soon as the new version answers.</div></div>`;
-  document.body.append(bg);
-  await new Promise(res => setTimeout(res, 1500));
-  for (let i = 0; i < 60; i++) {  // up to a minute
-    try { if ((await fetch("/", { cache: "no-store" })).ok) return location.reload(); } catch {}
-    await new Promise(res => setTimeout(res, 1000));
-  }
-  bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
+  if (r.restarting) await waitForRestart("The page reloads as soon as the new version answers.");
 }
 
 // ---------- automatic update check ----------

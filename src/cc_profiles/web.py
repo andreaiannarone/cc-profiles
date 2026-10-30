@@ -93,7 +93,7 @@ from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
 from .macapp import app_status, op_install_app
 from .terminal import op_open_terminal, op_set_terminal, terminal_status
-from .updater import check_update, op_update, op_update_check, update_status, whats_new
+from .updater import check_update, op_update, op_update_check, unexpected_error, update_status, whats_new
 
 # ---------------------------------------------------------------------------
 # HTTP
@@ -350,7 +350,7 @@ class Handler(BaseHTTPRequestHandler):
         except KeyError as e:
             self._json(400, {"error": f"Missing parameter: {e}"})
         except Exception as e:  # noqa: BLE001 - the error is shown in the UI
-            self._json(500, {"error": f"{type(e).__name__}: {e}"})
+            self._json(500, unexpected_error(e))
 
     def do_POST(self):
         if not self._guard():
@@ -442,7 +442,8 @@ class Handler(BaseHTTPRequestHandler):
         except KeyError as e:
             self._json(400, {"error": self._failed(f"Missing parameter: {e}")})
         except Exception as e:  # noqa: BLE001
-            self._json(500, {"error": self._failed(f"{type(e).__name__}: {e}")})
+            answer = unexpected_error(e)
+            self._json(500, {**answer, "error": self._failed(answer["error"])})
 
     def _failed(self, error):
         if abort_open_backups(error):

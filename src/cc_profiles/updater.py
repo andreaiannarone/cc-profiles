@@ -107,14 +107,50 @@ def index_lag(returncode, output, latest):
     return False
 
 
+# The standard library this process started from. Homebrew deletes the old Python's folder when it
+# updates Python: a server started before then fails at its next first import (a LookupError for
+# "idna" on the first HTTPS request) until it is started again with the new one.
+STDLIB_DIR = os.environ.get("CC_PROFILES_STDLIB_DIR") or os.path.dirname(os.__file__)  # tests: a folder they delete
+
+
+def python_replaced():
+    return not os.path.isdir(STDLIB_DIR)
+
+
+def interpreter():
+    """A Python to start again with: this one, else the one of its environment (a venv's
+    bin/python points to Homebrew's stable opt/ link, which follows the update)."""
+    for exe in (sys.executable, os.path.join(sys.prefix, "bin", "python3"), os.path.join(sys.prefix, "bin", "python")):
+        if exe and os.access(exe, os.X_OK):
+            return exe
+    return None
+
+
 def restart_soon():
     """Replace this process with a fresh one on the same port, after the response is sent:
-    the new process loads the code that was just installed."""
+    the new process loads the code that was just installed. False when no Python is left."""
+    exe = interpreter()
+    if not exe:
+        return False
+
     def go():
         time.sleep(0.7)
-        args = [sys.executable, "-m", "cc_profiles", "--port", str(core.PORT), "--no-browser"]
-        os.execv(sys.executable, args)  # listening socket: not inherited (PEP 446), so the port is free
+        args = [exe, "-m", "cc_profiles", "--port", str(core.PORT), "--no-browser"]
+        os.execv(exe, args)  # listening socket: not inherited (PEP 446), so the port is free
     threading.Thread(target=go, daemon=True).start()
+    return True
+
+
+def unexpected_error(e):
+    """The answer to an error no handler expected: when Python was updated under this server,
+    it restarts with the new one (the page waits and reloads) instead of failing again and again."""
+    if not python_replaced():
+        return {"error": f"{type(e).__name__}: {e}"}
+    if restart_soon():
+        return {"error": "Python was updated after cc-profiles started, so it could not finish this. "
+                         "Restarting with the new Python: try again when the page reloads.", "restarting": True}
+    return {"error": f"Python was updated after cc-profiles started ({type(e).__name__}: {e}). "
+                     "Start it again with cc-profiles restart"}
 
 
 def op_update():
