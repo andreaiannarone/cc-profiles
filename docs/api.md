@@ -1,6 +1,6 @@
 # HTTP API
 
-The UI talks to the server through a small JSON API. It is an internal API, made for `index.html`, and may change between versions. It is documented to make contributing easier.
+The UI talks to the server through a small JSON API. It is an internal API, made for the page, and may change between versions. It is documented to make contributing easier.
 
 ## Conventions
 

@@ -137,4 +137,4 @@ jobs:
           python -m build
           python -m twine check dist/*
       - name: The wheel contains the UI
-        run: python -c "import zipfile,glob; names=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert 'cc_profiles/static/index.html' in names, names"
+        run: python -c "import zipfile,glob; names=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert {'cc_profiles/static/index.html', 'cc_profiles/static/app.css', 'cc_profiles/static/core.js', 'cc_profiles/static/main.js'} <= set(names), names"

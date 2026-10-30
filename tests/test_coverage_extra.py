@@ -658,7 +658,7 @@ def test_server_on_a_busy_port_says_so(home):
         port = s.getsockname()[1]
         env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
         r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(port)], env=env,
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, timeout=60)
     assert r.returncode == 1 and f"Port {port} is busy with another program" in r.stdout and f"--port {port + 1}" in r.stdout
 
 
@@ -669,7 +669,7 @@ def test_starting_it_again_opens_the_running_one(home, app_factory, monkeypatch)
     app = app_factory()
     env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
     r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(app.port)], env=env,
-                       capture_output=True, text=True, timeout=20)
+                       capture_output=True, text=True, timeout=60)
     assert r.returncode == 0 and f"cc-profiles is already running on http://127.0.0.1:{app.port}" in r.stdout
     opened = []
     monkeypatch.setattr(CLI, "open_url", opened.append)

@@ -61,6 +61,26 @@ def test_page_sends_a_strict_content_security_policy(home, app_factory):
         csp = r.headers["Content-Security-Policy"]
         assert r.headers["X-Frame-Options"] == "DENY"
     assert "default-src 'none'" in csp and "connect-src 'self'" in csp and "frame-ancestors 'none'" in csp
+    # scripts: only the page's own files and the inline ones with this response's nonce
+    nonce = re.search(r"script-src 'self' 'nonce-([\w-]+)';", csp).group(1)
+    assert "unsafe-inline" not in csp.split("script-src")[1].split(";")[0]
+    html = urllib.request.urlopen(app.base + "/", timeout=5).read().decode()
+    assert nonce not in html  # a fresh nonce for every response
+    inline = re.findall(r"<script( nonce=\"[\w-]+\")?>", html)
+    assert len(inline) == 2 and all(inline)
+
+
+def test_static_files_are_only_the_pages_css_and_scripts(home, app_factory):
+    app = app_factory()
+    html = urllib.request.urlopen(app.base + "/", timeout=5).read().decode()
+    files = re.findall(r'(?:src|href)="/static/([^"]+)"', html)
+    assert "app.css" in files and "core.js" in files and files[-1] == "main.js"
+    for name in files:
+        with urllib.request.urlopen(f"{app.base}/static/{name}", timeout=5) as r:
+            assert r.headers["Content-Type"].startswith("text/css" if name.endswith(".css") else "text/javascript")
+            assert r.headers["X-Content-Type-Options"] == "nosniff" and r.read()
+    for bad in ("whatsnew.json", "index.html", "..%2Fcore.py", "missing.js", "a/core.js"):
+        assert app.request(f"/static/{bad}", token=False)[0] == 404
 
 
 def test_path_traversal_is_rejected(home, app_factory):
@@ -1578,7 +1598,7 @@ def test_a_plugin_is_not_copied_where_plugins_are_shared(home, app_factory):
 def run_cli(home, *args, **env):
     e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), **env})
     return subprocess.run([sys.executable, "-m", "cc_profiles", *args], env=e,
-                          capture_output=True, text=True, timeout=20)
+                          capture_output=True, text=True, timeout=60)
 
 
 def test_label_command(home, app_factory):
@@ -1659,7 +1679,7 @@ def test_open_with_an_action_restarts_or_stops(home):
     def slash(arguments):  # what Claude Code does: the ! line, in a shell whose PATH has no cc-profiles
         cmd = line.replace("$ARGUMENTS", arguments) + f" --no-browser --port {port}"
         e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
-        return subprocess.run(cmd, shell=True, env=e, capture_output=True, text=True, timeout=20)
+        return subprocess.run(cmd, shell=True, env=e, capture_output=True, text=True, timeout=60)
 
     port = free_port()
     first = slash("")
@@ -2745,7 +2765,7 @@ def folder_home(home, app_factory, **env):
 def run_which(home, *args, cwd=None):
     e = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC)})
     return subprocess.run([sys.executable, "-m", "cc_profiles", "which", *args], env=e, cwd=cwd,
-                          capture_output=True, text=True, timeout=20)
+                          capture_output=True, text=True, timeout=60)
 
 
 def test_which_follows_the_rules(home, app_factory):

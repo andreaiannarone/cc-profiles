@@ -10,7 +10,7 @@ browser ──HTTP (token)──► cc_profiles ──reads/writes──► ~/.c
 
 ## The server: `src/cc_profiles/`
 
-A `ThreadingHTTPServer` from the standard library, bound to `127.0.0.1`. `GET /` serves `static/index.html` with a fresh token inside. Everything else is a JSON API under `/api/` (see [API](api.md)).
+A `ThreadingHTTPServer` from the standard library, bound to `127.0.0.1`. `GET /` serves `static/index.html` with a fresh token inside, and `GET /static/<name>` its stylesheet and scripts (only `[a-z]+.css` and `.js` files of that folder). Everything else is a JSON API under `/api/` (see [API](api.md)).
 
 The code is one module per area. Each module imports only from the ones above it in this table, so there are no import cycles:
 
@@ -109,9 +109,22 @@ Rules that keep this safe:
 
 `tests/bench_home.py` times every tab on a large fake home (see CONTRIBUTING).
 
-## The UI: `src/cc_profiles/static/index.html`
+## The UI: `src/cc_profiles/static/`
 
-One file: CSS custom properties for both themes, semantic HTML, and vanilla JavaScript.
+Semantic HTML in `index.html`, CSS custom properties for both themes in `app.css`, and vanilla JavaScript, with no build step. The JavaScript is split by area into classic scripts that `index.html` loads in order at the end of the body. They share one global scope, as if they were one file: a function or `const` of one file is visible to the others. Only code that runs while the files load (listeners added by name, `const X = f()`) needs what it uses to be in the same file or an earlier one.
+
+| File | Holds |
+|---|---|
+| `core.js` | the state `S`, `$()`, `esc()`, `api()`, `run()`, `modal()`, data loading. First |
+| `projects.js` | Projects, Choose…, Open in Terminal, dropped files, Memories, Conversations, Health |
+| `profiles.js` | profiles and sharing, the GitHub account per profile, profile by folder |
+| `extensions.js` | Skills, MCP servers and claude.ai connectors, Agents |
+| `settings.js` | Settings, status line, theme |
+| `about.js` | About, the update check, what's new, export, import and plugins, installing Claude Code |
+| `tools.js` | Search, Compare, Usage, Backups |
+| `main.js` | navigation, keyboard shortcuts, the delegated click handler, and the start of the page. Last |
+
+The token (`const TOKEN = "…"`) and the theme set before the first paint stay inline in `index.html`, with a nonce that changes at every response: the Content-Security-Policy runs only those and the files of `static/`, so markup injected by an escaping mistake cannot run.
 
 - A single state object `S` holds the current tab, data and filters.
 - Each tab has a `load…()` function, which fetches, and a `render…()` function, which writes `#main.innerHTML` from `S`.
@@ -129,7 +142,8 @@ The threat is another program or website reaching the local server, not the user
 - binding to `127.0.0.1` only;
 - an exact `Host` check, because DNS rebinding can make a remote name resolve to `127.0.0.1`;
 - a per-run token that only the served page knows. No CORS headers are sent, so another origin cannot read the page to steal it;
-- strict validation of every name coming from the client, and installer methods chosen from a fixed list.
+- strict validation of every name coming from the client, and installer methods chosen from a fixed list;
+- a Content-Security-Policy that runs only the page's own scripts (`static/*.js` and two inline ones with a per-response nonce) and lets it connect only to this server.
 
 ## Tests
 

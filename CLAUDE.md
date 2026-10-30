@@ -14,10 +14,10 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 |---|---|
 | `src/cc_profiles/` | the server, one module per area (`core`, `projects`, `memories`, `extensions`, `backups`, …, `web` for HTTP, `cli`); see the table in `docs/architecture.md`. `server.py` only re-exports them; the version is in `__init__.py` |
 | `src/cc_profiles/app/main.swift` | the Mac app (`cc-profiles install-app`, `macapp.py`): a WKWebView window around the page, AppKit only. Compiled by `scripts/build_app.py` into `app/cc-profiles-app` (git-ignored, shipped in the package; the release workflow builds it on macOS). A checkout without it compiles it with `swiftc` at `install-app` |
-| `src/cc_profiles/static/index.html` | the whole UI: one file, inline CSS and vanilla JS, no build step |
+| `src/cc_profiles/static/` | the UI, vanilla JS, no build step: `index.html` (the markup, plus two inline scripts with the token and the theme, allowed by a per-response CSP nonce), `app.css`, and classic scripts loaded in order that share one global scope: `core.js` (state `S`, helpers, `api()`, `modal()`) first, one file per area (`projects.js`, `profiles.js`, `extensions.js`, `settings.js`, `about.js`, `tools.js`), `main.js` (navigation, the click handler, start) last. A new file goes in `index.html`'s list; served by `static_file()` in `web.py` |
 | `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
 | `tests/test_app.py` | end-to-end tests of the API on a fake home; `test_ui.py` drives the page in Chromium (with axe); `test_tooling.py`, `test_docs.py`, `test_release.py`, `test_check_schema.py` cover the hook, plugin, docs site, links and scripts |
-| `DESIGN.md` | the UI's visual system: read it before touching `index.html` |
+| `DESIGN.md` | the UI's visual system: read it before touching the UI |
 | `.claude-plugin/marketplace.json` | makes the repo a Claude Code plugin marketplace |
 | `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `command.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
 | `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |

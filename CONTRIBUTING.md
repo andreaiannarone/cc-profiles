@@ -96,7 +96,7 @@ HOME="$SANDBOX" PATH=/usr/bin:/bin CC_PROFILES_INSTALL_DRYRUN=1 .venv/bin/cc-pro
 
 ```
 src/cc_profiles/                 the server: one module per area (see docs/architecture.md)
-src/cc_profiles/static/index.html the whole UI: one file, inline CSS and vanilla JS
+src/cc_profiles/static/          the UI: index.html, app.css and vanilla JS files loaded in order, no build step
 tests/                           end-to-end tests on a fake home, plus documentation link checks
 docs/                            user guide and developer reference, published at cc-profiles.andreaia.com
 scripts/                         release, README images, JavaScript and settings-schema checks, Homebrew formula
