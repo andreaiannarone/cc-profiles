@@ -218,7 +218,7 @@ async function doManage(r) {
   if (a === "term") return doTerminal(r, p1);
 }
 
-// ---------- open a project in a terminal (macOS) ----------
+// ---------- open a project in a terminal (macOS and Linux) ----------
 // The server writes a small script and the terminal opens it: Claude Code starts in the project's
 // folder, in the profile picked here. The terminal is chosen in the About panel.
 async function doTerminal(r, pid) {

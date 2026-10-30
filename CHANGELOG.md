@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Open in Terminal** on Linux, in a graphical session: GNOME Terminal, Konsole, Xfce Terminal, kitty, Alacritty, WezTerm, Ghostty or the system's default terminal, picked in the About panel when more than one is installed.
 - Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314.
 
 ### Changed

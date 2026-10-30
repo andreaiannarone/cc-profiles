@@ -22,7 +22,8 @@ def page_on_sandbox(tmp_path):
     fake_app = tmp_path / "cc-profiles-app"  # the Mac app's program, only copied (About → Add Mac app)
     fake_app.write_text("#!/bin/sh\n")
     (root / "Applications" / "iTerm.app").mkdir(parents=True)  # Open in iTerm, without opening it
-    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1"})
+    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1",
+                               "CC_PROFILES_TERMINAL_PLATFORM": "darwin"})
     errors = []
     with sync_api.sync_playwright() as p:
         try:

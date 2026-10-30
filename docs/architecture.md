@@ -37,7 +37,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
 | `macapp.py` | `cc-profiles install-app`: the Mac app in `~/Applications`, put together from `app/main.swift` (compiled into the package by `scripts/build_app.py`), its Info.plist, launch.json and icon (drawn in Python); kept up to date at every start |
-| `terminal.py` | Open in Terminal (macOS): a project's folder in Terminal, iTerm or Ghostty with Claude Code in a profile, through a script that deletes itself |
+| `terminal.py` | Open in Terminal: a project's folder in a new terminal window with Claude Code in a profile, through a script that deletes itself. Terminal, iTerm or Ghostty on macOS; on Linux, in a graphical session, a fixed list of terminal programs found on the `PATH` (`LINUX_TERMINALS`) |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
