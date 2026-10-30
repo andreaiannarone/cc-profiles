@@ -83,6 +83,10 @@ uv tool install --force --reinstall cc-profiles    # installed with uv
 
 `pipx reinstall-all` does the same for every program installed with pipx, which a Python update breaks in the same way. Your profiles and `~/.cc-profiles` (settings, templates, backups) are not touched, and you get the latest version. Then run `cc-profiles` once, or `/cc-profiles restart` if the old server is still running.
 
+## `LookupError: unknown encoding: idna` or a similar error after a Python update
+
+A cc-profiles started before Homebrew updated Python keeps running, but the old Python's files are gone: the first thing it has not loaded yet, such as the code *Check for updates* needs to reach PyPI, fails with an error like this one. Since 0.6.2 the server notices, starts again with the new Python and the page reloads by itself; try the button again then. An older version, or one that cannot find a Python to start again with, says so: run `cc-profiles restart`, or `/cc-profiles restart` in Claude Code.
+
 ## The Mac app says "cc-profiles did not start"
 
 The [Mac app](mac-app.md) runs the `cc-profiles` you installed, and shows its output when it fails. `bad interpreter` or `could not start` means the command itself no longer runs: see the section above. A busy port means another program uses it: `cc-profiles install-app --port 4800` gives the app another one. After fixing it, **Try again** in the window starts it.

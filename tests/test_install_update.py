@@ -4,9 +4,12 @@ Like every end-to-end test here, they run against a real server on a fake home a
 usually end by restoring every backup and comparing the fake home with how it started.
 """
 import json
+import re
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 import pytest
 
@@ -202,9 +205,60 @@ def test_restart_soon_reexecutes_on_the_same_port(monkeypatch):
     monkeypatch.setattr(U.time, "sleep", lambda s: calls.append(("sleep", s)))
     monkeypatch.setattr(U.os, "execv", lambda exe, args: calls.append(("execv", exe, args)))
     monkeypatch.setattr(U.core, "PORT", 4791)
-    U.restart_soon()
+    assert U.restart_soon()
     assert calls == [("sleep", 0.7), ("execv", sys.executable,
                                       [sys.executable, "-m", "cc_profiles", "--port", "4791", "--no-browser"])]
+
+
+def test_restart_after_a_python_update_uses_the_environments_python(monkeypatch, tmp_path):
+    """Homebrew deleted the Python this process runs on: start again with the venv's bin/python3
+    (a link that follows the update); with none left, say how to start it by hand."""
+    (tmp_path / "bin").mkdir()
+    venv_python = tmp_path / "bin" / "python3"
+    venv_python.write_text("#!/bin/sh\n")
+    venv_python.chmod(0o755)
+    monkeypatch.setattr(U.sys, "executable", str(tmp_path / "Cellar" / "3.15.0" / "python3.15"))  # deleted by Homebrew
+    monkeypatch.setattr(U.sys, "prefix", str(tmp_path))
+    assert U.interpreter() == str(venv_python)
+
+    monkeypatch.setattr(U, "STDLIB_DIR", str(tmp_path / "lib"))  # gone
+    monkeypatch.setattr(U, "restart_soon", lambda: False)
+    assert U.unexpected_error(LookupError("unknown encoding: idna")) == {
+        "error": "Python was updated after cc-profiles started (LookupError: unknown encoding: idna). "
+                 "Start it again with cc-profiles restart"}
+    monkeypatch.setattr(U, "STDLIB_DIR", str(tmp_path))  # still there: an ordinary error
+    assert U.unexpected_error(LookupError("x")) == {"error": "LookupError: x"}
+    monkeypatch.undo()
+    monkeypatch.setattr(U.sys, "executable", "")
+    monkeypatch.setattr(U.sys, "prefix", str(tmp_path / "nowhere"))
+    assert U.interpreter() is None and U.restart_soon() is False
+
+
+def test_the_server_restarts_itself_when_python_was_updated_under_it(home, app_factory, tmp_path):
+    """An error after Homebrew replaced Python: the answer says so and asks the page to wait,
+    and the server starts again (a new token proves it) instead of failing on every request."""
+    basic_home(home)
+    stdlib = tmp_path / "stdlib"
+    stdlib.mkdir()
+    app = app_factory(CC_PROFILES_STDLIB_DIR=str(stdlib), CC_PROFILES_FAULT="create-profile-after-copy")
+    status, body = app.request("/api/profiles/create", {"label": "Half", "id": "half", "base": "default", "share": []})
+    assert status == 500 and body["error"].startswith("RuntimeError: fault injected") and "restarting" not in body
+    stdlib.rmdir()
+    old = app.token
+    status, body = app.request("/api/profiles/create", {"label": "Half", "id": "half2", "base": "default", "share": []})
+    assert status == 500 and body["restarting"] is True
+    assert body["error"].startswith("Python was updated after cc-profiles started")
+    for _ in range(300):
+        try:
+            html = urllib.request.urlopen(app.base + "/", timeout=1).read().decode()
+            app.token = re.search(r'const TOKEN = "([a-f0-9]+)"', html).group(1)
+            if app.token != old:
+                break
+        except (urllib.error.URLError, ConnectionError):
+            pass
+        time.sleep(0.1)
+    assert app.token != old, "the server did not start again"
+    assert app.get("/api/profiles")
 
 
 @pytest.mark.parametrize("kind", ["pipx", "uv", "brew"])

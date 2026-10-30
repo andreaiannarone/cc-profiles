@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- After Homebrew updated Python under a running cc-profiles, buttons such as **Check for updates** failed with errors like `LookupError: unknown encoding: idna`, because the old Python's files were gone. The server now notices, starts again with the new Python, and the page reloads by itself.
+
 ## [0.6.1] - 2026-10-30
 
 ### Added

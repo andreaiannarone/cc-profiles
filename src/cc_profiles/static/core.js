@@ -28,8 +28,25 @@ async function api(path, body) {
     headers: { "X-Token": TOKEN, ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({ error: "Invalid response from the server" }));
+  // Python was updated under the server: it restarts with the new one, the page reloads
+  if (!r.ok && j.restarting) waitForRestart("Python was updated after cc-profiles started. The page reloads as soon as it answers again.");
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
+}
+// The server is starting again (after an update, or with a new Python): wait for it, then reload
+let restartShown = false;
+async function waitForRestart(hint) {
+  if (restartShown) return;
+  restartShown = true;
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Restarting"><h2>${LOADER} Restarting cc-profiles…</h2><div class="hint">${esc(hint)}</div></div>`;
+  document.body.append(bg);
+  await new Promise(res => setTimeout(res, 1500));
+  for (let i = 0; i < 60; i++) {  // up to a minute
+    try { if ((await fetch("/", { cache: "no-store" })).ok) return location.reload(); } catch {}
+    await new Promise(res => setTimeout(res, 1000));
+  }
+  bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
 }
 function toast(msg, sub, err) {
   const t = document.createElement("div");
