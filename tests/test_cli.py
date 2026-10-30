@@ -87,8 +87,6 @@ def test_stop_and_restart_commands(home):
 def test_open_with_an_action_restarts_or_stops(home):
     """/cc-profiles restart and /cc-profiles stop: Claude Code puts the arguments in
     place of $ARGUMENTS in the command's ! line, which then runs cc-profiles open <action>."""
-    sys.path.insert(0, str(SRC))
-    from cc_profiles import server
     basic_home(home)
     run_cli(home, "install-command")
     text = home.path(".claude/commands/cc-profiles.md").read_text()
@@ -184,8 +182,6 @@ def test_install_command_updates_an_older_command(home):
 def test_server_adds_the_command_the_first_time_then_only_updates_it(home, app_factory):
     """No need for `cc-profiles install-command`: the first start adds /cc-profiles everywhere,
     later starts rewrite only the copies an older version wrote, and a deleted one stays deleted."""
-    sys.path.insert(0, str(SRC))
-    from cc_profiles import server
     basic_home(home)
     app = app_factory(CC_PROFILES_AUTO_COMMAND="")
     for d in (".claude", ".claude-work"):

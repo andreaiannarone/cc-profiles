@@ -125,10 +125,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: No undefined names (pyflakes)
+      - name: No undefined names or unused imports (pyflakes)
         run: |
           python -m pip install pyflakes
-          python -m pyflakes $(ls src/cc_profiles/*.py | grep -v server.py)
+          python -m pyflakes $(ls src/cc_profiles/*.py | grep -v server.py) tests scripts .claude/hooks
       - name: Type-check the UI's JavaScript
         run: python scripts/check_js.py
       - name: Build sdist and wheel
