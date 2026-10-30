@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-30
+
 ### Fixed
 - After Homebrew updated Python under a running cc-profiles, buttons such as **Check for updates** failed with errors like `LookupError: unknown encoding: idna`, because the old Python's files were gone. The server now notices, starts again with the new Python, and the page reloads by itself.
 
@@ -333,7 +335,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
 [0.5.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...v0.5.9
