@@ -80,7 +80,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth dbus-x11 xterm xfce4-terminal
           python -m pip install -e ".[test]"
-      # xterm is the system's x-terminal-emulator ("Default terminal"); a session bus for xfce4-terminal
+      # "Default terminal" is x-terminal-emulator, whichever the system picked; a session bus for xfce4-terminal
       - name: Open real terminals on a virtual display
         env:
           CC_PROFILES_REAL_TERMINALS: Default terminal,Xfce Terminal

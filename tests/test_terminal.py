@@ -142,7 +142,7 @@ def test_a_real_terminal_opens_and_starts_claude_in_the_profile(home, app_factor
     seen = home.path("claude.seen")
     claude = home.write(".local/bin/claude", f'#!/bin/sh\necho "$PWD $CLAUDE_CONFIG_DIR" > {seen}\nkill -KILL $PPID\n')
     claude.chmod(0o755)
-    passed = {k: os.environ[k] for k in ("DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR")
+    passed = {k: os.environ[k] for k in ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR")
               if k in os.environ}
     app = app_factory(SHELL="/bin/bash", **passed)
     app.post("/api/terminal", {"terminal": terminal})
