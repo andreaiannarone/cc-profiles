@@ -28,6 +28,8 @@ python3 -m venv .venv
 
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
 
+Open in Terminal is tested with fake terminal programs. On a Linux desktop, `CC_PROFILES_REAL_TERMINALS="Default terminal,Xfce Terminal"` also opens those real terminals (the names are the ones in `LINUX_TERMINALS`, `terminal.py`); CI does it on a virtual display (the *Open in Terminal on Linux* job).
+
 ### Coverage
 
 Most of the code runs inside the servers the tests start, so coverage has to follow them into those processes. `COVERAGE_PROCESS_START` does that: with it set, the tests put `tests/coverage_startup/` on the servers' `PYTHONPATH`, and its `sitecustomize.py` starts coverage in each one. The settings are in `pyproject.toml` (`[tool.coverage.*]`).
