@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314.
 
 ### Fixed
+- On a busy Mac some of the page's requests could fail with a reset connection: the server now queues up to 64 connections instead of 5.
 - The weekly settings schema check reported Theme and four other /config items as gone after Claude Code 2.1.310, which builds them just before the panel's list: it now looks there too.
 
 ## [0.6.0] - 2026-10-28

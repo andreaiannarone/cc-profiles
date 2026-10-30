@@ -102,6 +102,10 @@ from .updater import check_update, op_update, op_update_check, update_status, wh
 # HTTP
 # ---------------------------------------------------------------------------
 class Server(ThreadingHTTPServer):
+    # The page asks for many things at once; macOS resets connections beyond the listen
+    # queue (5 by default), which a busy machine reaches.
+    request_queue_size = 64
+
     def server_bind(self):
         # HTTPServer.server_bind also calls socket.getfqdn(), a reverse DNS lookup
         # that can take 30 s on some Macs. The name is never used: skip it.

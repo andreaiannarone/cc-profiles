@@ -21,8 +21,10 @@ python3 -m venv .venv
 ## Run the tests
 
 ```sh
-.venv/bin/python -m pytest
+.venv/bin/python -m pytest -n auto
 ```
+
+`-n auto` (pytest-xdist, in the `test` extra) runs the tests on every core: about 30 seconds instead of two or three minutes. Each test has its own fake home and port, so they never share state; leave `-n` out to debug one test with `-x` or `pdb`, and for coverage (below).
 
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
 
@@ -134,7 +136,7 @@ The social preview, `docs/assets/social-preview.png`, is rendered from `docs/ass
 2. Keep each PR focused on one change.
 3. Add or update tests. A new operation needs a test that runs it and then restores it.
 4. Update `CHANGELOG.md` under **Unreleased**, and the relevant page in `docs/` if behavior changes.
-5. Make sure `python -m pytest` passes.
+5. Make sure `python -m pytest -n auto` passes.
 
 ## Commit messages
 

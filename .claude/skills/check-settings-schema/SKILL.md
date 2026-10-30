@@ -62,5 +62,5 @@ List, per field: unchanged, new values, removed values, changed type, or missing
 
 - Edit `options` in `SETTING_FIELDS`. Give new values a short label in sentence case (see DESIGN.md). Never drop the user's current value: `field_options()` already keeps a current value that is not in the list, so removing an option from the list is safe.
 - Set `SCHEMA_VERSION` to the checked version, and update the same version in README.md (section *Limitations*).
-- Run `.venv/bin/python -m pytest`.
+- Run `.venv/bin/python -m pytest -n auto`.
 - If a dropdown changed, look at it on the `/sandbox` skill's fake home before calling it done.
