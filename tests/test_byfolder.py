@@ -203,3 +203,15 @@ def test_shell_line_creates_a_missing_zshrc_and_refuses_other_shells(home, app_f
     app.restore_all()
     assert home.snapshot() == before  # Restore removes the file it created
     assert "not zsh or bash" in app_factory(SHELL="/usr/bin/fish").post_error("/api/shell", {"install": True})
+
+
+# --- rules ------------------------------------------------------------------------
+def test_rules_are_checked_and_stored_relative_to_home(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    assert "Invalid profile" in app.post_error("/api/rules", {"match": "code", "profile": "nobody"})
+    assert "Empty rule" in app.post_error("/api/rules", {"match": "  ", "profile": "work"})
+    assert "“code/work” → Work" in app.post("/api/rules", {"match": str(home.path("code/work")), "profile": "work"})["message"]
+    assert "“~” → " in app.post("/api/rules", {"match": str(home.root), "profile": "shared"})["message"]
+    rows = {r["pretty"]: r for r in app.get("/api/projects")}
+    assert rows["~/code/work/api"]["expected"] == "work"

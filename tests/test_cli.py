@@ -285,3 +285,73 @@ def test_install_script_options():
 def test_version_command(home):
     out = run_cli(home, "--version").stdout
     assert out.startswith("cc-profiles ")
+
+
+# --- WSL, labels without a profile, busy ports ------------------------------------
+def test_wsl_and_system_name(monkeypatch, tmp_path):
+    import cc_profiles.core as C
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(C.platform, "system", lambda: "Linux")
+    version = tmp_path / "version"
+    real_open = open
+    for text, wsl in (("Linux version 5.15.153.1-microsoft-standard-WSL2", True), ("Linux version 6.8.0-45-generic", False)):
+        version.write_text(text)
+        monkeypatch.setattr("builtins.open", lambda f, *a, **k: real_open(version if f == "/proc/version" else f, *a, **k))
+        assert C.is_wsl() is wsl
+        assert C.system_name().endswith(" · WSL") is wsl and C.system_name().startswith("Linux ")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert not C.is_wsl() and C.system_name().startswith("macOS ")
+
+
+def test_open_url_uses_windows_under_wsl(monkeypatch):
+    import cc_profiles.cli as CLI
+    calls = []
+    monkeypatch.setattr(CLI.core, "is_wsl", lambda: True)
+    monkeypatch.setattr(CLI, "find_tool", lambda name: None if name == "wslview" else "/mnt/c/Windows/System32/cmd.exe")
+    monkeypatch.setattr(CLI.subprocess, "Popen", lambda args, **k: calls.append(args))
+    monkeypatch.setattr(CLI.webbrowser, "open", lambda url: calls.append(["webbrowser", url]))
+    CLI.open_url("http://127.0.0.1:4777")
+    assert calls == [["/mnt/c/Windows/System32/cmd.exe", "/c", "start", "", "http://127.0.0.1:4777"]]
+    monkeypatch.setattr(CLI.core, "is_wsl", lambda: False)
+    CLI.open_url("http://127.0.0.1:4777")
+    assert calls[-1] == ["webbrowser", "http://127.0.0.1:4777"]
+
+
+def test_label_without_a_matching_profile_in_the_config(home):
+    home.profile("")
+    assert run_cli(home, "label", CLAUDE_CONFIG_DIR=str(home.path(".claude-later"))).stdout.strip() == "later"
+    assert run_cli(home, "label", CLAUDE_CONFIG_DIR=str(home.path("elsewhere"))).stdout.strip() == "default"
+
+
+def test_server_on_a_busy_port_says_so(home):
+    home.profile("")
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+        env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
+        r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(port)], env=env,
+                           capture_output=True, text=True, timeout=60)
+    assert r.returncode == 1 and f"Port {port} is busy with another program" in r.stdout and f"--port {port + 1}" in r.stdout
+
+
+def test_starting_it_again_opens_the_running_one(home, app_factory, monkeypatch):
+    """`cc-profiles` while it already runs (e.g. started by /cc-profiles): the browser opens on
+    it, instead of an error about the port."""
+    import cc_profiles.cli as CLI
+    app = app_factory()
+    env = child_env({"HOME": str(home.root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(SRC), "CC_PROFILES_QUIET": "1"})
+    r = subprocess.run([sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(app.port)], env=env,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0 and f"cc-profiles is already running on http://127.0.0.1:{app.port}" in r.stdout
+    opened = []
+    monkeypatch.setattr(CLI, "open_url", opened.append)
+    monkeypatch.setattr(CLI, "load_config", lambda: {})
+    monkeypatch.setattr(CLI, "cleanup_backups", lambda: None)
+    monkeypatch.setattr(CLI, "ensure_command", lambda: ([], None))  # this process's paths are the real home's
+    monkeypatch.setattr(CLI, "ensure_app", lambda: ([], None))
+    monkeypatch.setattr(CLI.threading, "Thread", lambda *a, **k: type("T", (), {"start": lambda self: None})())
+    monkeypatch.setattr(CLI.signal, "signal", lambda *a: None)
+    with pytest.raises(SystemExit) as e:
+        CLI.serve(app.port, True)
+    assert e.value.code == 0 and opened == [f"http://127.0.0.1:{app.port}"]

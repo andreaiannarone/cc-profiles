@@ -348,3 +348,89 @@ def test_about_counts_each_profile(home, app_factory):
     assert usage["default"]["Saved conversations"] == 3 and usage["default"]["Prompts in history"] == 3
     assert usage["work"]["Prompts in history"] == 1 and usage["default"]["Disk usage"] > 0
     assert about["app"]["Backups"].startswith("0 ·")
+
+
+# --- memories, relink and move: merging -------------------------------------------
+def test_memory_read_move_and_delete(home, app_factory):
+    basic_home(home)
+    home.conversation("work", "code/personal/blog", "s-blog-work", {"api-notes.md": "same name"})
+    before = home.snapshot()
+    app = app_factory()
+    api, blog = san(home.path("code/work/api")), san(home.path("code/personal/blog"))
+    F = "/api/memory/file?profile=default&project=" + api + "&file="
+
+    assert "the api uses postgres" in app.get(F + "api-notes.md")["content"]
+    status, body = app.request(F + "nope.md")
+    assert status == 404 and body["error"] == "Memory not found"
+    assert "Memory not found" in app.post_error("/api/memory/move", {"profile": "default", "project": api, "file": "nope.md",
+                                                                     "to_profile": "work", "to_project": blog})
+    assert "already has a memory" in app.post_error("/api/memory/move", {"profile": "default", "project": api,
+                                                                         "file": "api-notes.md", "to_profile": "work",
+                                                                         "to_project": blog})
+    r = app.post("/api/memory/delete", {"profile": "default", "project": api, "file": "api-notes.md"})
+    assert r["message"].startswith("Memory deleted")
+    assert not home.path(f".claude/projects/{api}/memory/api-notes.md").exists()
+    assert "api-notes" not in home.path(f".claude/projects/{api}/memory/MEMORY.md").read_text()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_relink_into_an_existing_project_merges_and_keeps_conflicts(home, app_factory):
+    basic_home(home)
+    old_path, new_path = home.path("code/old-name"), home.path("code/new-name")
+    old_rel = f".claude/projects/{san(old_path)}"
+    home.conversation("", "code/new-name", "s-new", {"dup.md": "the target's"})
+    home.write(f"{old_rel}/s-new.jsonl", "{}\n")  # the same conversation in both
+    home.write(f"{old_rel}/memory/dup.md", "---\nname: dup\n---\nthe source's\n")
+    home.write(f"{old_rel}/memory/solo.md", "---\nname: solo\n---\nonly here\n")
+    home.write(f"{old_rel}/memory/MEMORY.md", "# index\n- [dup](dup.md) — about dup.md\n- [solo](solo.md) — only here\n")
+    with open(home.path(".claude/history.jsonl"), "a") as f:
+        f.write("not json\n")
+    cfg = json.loads(home.path(".claude.json").read_text())
+    cfg["projects"][str(old_path)] = {"allowedTools": ["Read"]}
+    home.json(".claude.json", cfg)
+    before = home.snapshot()
+    app = app_factory()
+    old_name, new_name = san(old_path), san(new_path)
+    R = "/api/projects/relink"
+
+    assert "Folder does not exist: ~/code/nowhere" in app.post_error(
+        R, {"project": old_name, "profile": "default", "path": "~/code/nowhere"})
+    assert "already linked" in app.post_error(R, {"project": new_name, "profile": "default", "path": str(new_path) + "/"})
+    r = app.post(R, {"project": old_name, "profile": "default", "path": "~/code/new-name"})
+    assert r["message"] == "Linked to ~/code/new-name: 1 conversations, 1 prompts, settings moved."
+    new_d = home.path(f".claude/projects/{new_name}")
+    assert not home.path(old_rel).exists()
+    assert (new_d / "s-old.jsonl").exists() and (new_d / "memory/solo.md").exists()
+    assert "the target's" in (new_d / "memory/dup.md").read_text()  # the source's copy is in the backup
+    index = (new_d / "memory/MEMORY.md").read_text()
+    assert index.count("(dup.md)") == 1 and index.count("(solo.md)") == 1
+    assert "not json" in home.path(".claude/history.jsonl").read_text()
+    projects = json.loads(home.path(".claude.json").read_text())["projects"]
+    assert str(old_path) not in projects and str(new_path) in projects
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_move_merges_history_without_duplicates(home, app_factory):
+    basic_home(home)
+    api = home.path("code/work/api")
+    lines = [json.dumps({"display": "work prompt", "timestamp": 4, "project": str(api)}),  # Default has it too
+             json.dumps({"display": "another", "timestamp": 5, "project": str(api)}), "garbage"]
+    home.write(".claude-work/history.jsonl", "\n".join(lines) + "\n")
+    with open(home.path(".claude/history.jsonl"), "a") as f:
+        f.write(lines[0] + "\nbroken\n")
+    before = home.snapshot()
+    app = app_factory()
+
+    assert "same profile" in app.post_error("/api/projects/move", {"project": san(api), "from": "work", "to": "work"})
+    r = app.post("/api/projects/move", {"project": san(api), "from": "work", "to": "default"})
+    assert "2 prompts" in r["message"]
+    hist = home.path(".claude/history.jsonl").read_text().splitlines()
+    assert hist.count(lines[0]) == 1 and lines[1] in hist and "broken" in hist
+    assert home.path(".claude-work/history.jsonl").read_text() == "garbage\n"
+
+    app.restore_all()
+    assert home.snapshot() == before

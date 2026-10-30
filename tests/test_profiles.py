@@ -412,3 +412,16 @@ def test_template_items_can_be_shared_at_creation(home, app_factory):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+# --- about ------------------------------------------------------------------------
+def test_about_lists_profile_contents(home, app_factory):
+    basic_home(home)
+    home.write(".claude/skills/hello/SKILL.md", "x")
+    home.write(".claude/skills/loose-file", "x")  # not a skill folder
+    home.write(".claude/agents/reviewer.md", "x")
+    home.write(".claude/agents/.hidden.md", "x")
+    home.write(".claude/agents/notes.txt", "x")
+    contents = app_factory().get("/api/about")["profiles"][0]["contents"]
+    assert contents["Skills"] == ["hello"] and contents["Subagents"] == ["reviewer"]
+    assert contents["Slash commands"] == []
