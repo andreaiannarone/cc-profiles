@@ -32,7 +32,7 @@ from .core import (
 # Dropdown options come from the settings schema inside the Claude Code binary
 # (version SCHEMA_VERSION): where the schema only accepts some values there is a
 # dropdown, where it accepts any string a free text field.
-SCHEMA_VERSION = "2.1.289"
+SCHEMA_VERSION = "2.1.314"
 # Built-in output styles and their descriptions, as in the Claude Code binary. "default"
 # is left out: it is the same as no value ("— default —" in the UI); field_options()
 # still lists it when a profile has it set explicitly.
@@ -67,6 +67,8 @@ SETTING_FIELDS = [
          help="Compact the conversation when the context fills up"),
     dict(_ON, group="Replies", key="precomputeCompactionEnabled", label="Precompute compaction",
          help="Prepare the compaction in advance, so it takes less time"),
+    dict(_ON, group="Replies", key="idleCompaction", label="Idle compaction",
+         help="Compact a long conversation while the session is idle"),
     dict(_ON, **_GLOBAL, group="Replies", key="fileCheckpointingEnabled", label="Rewind code (checkpoints)",
          help="Keep snapshots of the files Claude edits, to undo them with /rewind"),
     {"group": "Replies", "key": "permissions.defaultMode", "type": "select", "default": "default", "label": "Default permission mode",

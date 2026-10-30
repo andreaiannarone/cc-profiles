@@ -445,7 +445,7 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 
 ## Limitations
 
-- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.289; the **About** panel shows which version you have.
+- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.314; the **About** panel shows which version you have.
 - "Session open" means a `claude` process is running in the profile (read from the process list on macOS and from `/proc` on Linux), or a conversation was written in the last 2 minutes.
 - Claude Code keeps `.claude.json` in memory while it runs: restart open sessions after changing their MCP servers.
 - Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it, nor its GitHub CLI folder.
