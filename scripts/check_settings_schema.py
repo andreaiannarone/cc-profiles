@@ -59,6 +59,7 @@ CONFIG_IDS = {
     "showStatusInTerminalTab": None,
     "turnDuration": "showTurnDuration",
     "precomputeCompactionEnabled": "precomputeCompactionEnabled",
+    "idleCompaction": "idleCompaction",
     "timestamps": None,
     "timeFormat": "timeFormat",
     "permissionMode": "permissions.defaultMode",
@@ -94,6 +95,7 @@ CONFIG_IDS = {
     "crossSessionInbound": None,
     "showExternalIncludesDialog": None,
     "apiKey": None,
+    "remoteControl": None,
 }
 # Values the schema accepts that the Settings tab leaves out on purpose: not reported as new.
 LEFT_OUT = {
@@ -104,6 +106,8 @@ LEFT_OUT = {
 REFERENCE_KEYS = {"enum": "effortLevel", "string": "language", "bool": "prefersReducedMotion",
                   "number": "cleanupPeriodDays"}
 PANEL_START = b'{id:"autoCompact",label:"Auto-compact"'
+# Some items are built just before the panel's list (in variables, or a helper like theme's): look back this far.
+PANEL_LOOKBEHIND = 30000
 MODIFIERS = ("optional", "describe", "catch", "default", "nullable", "transform", "refine", "superRefine")
 IDENT = rb"[A-Za-z_$][\w$]*"
 
@@ -323,7 +327,8 @@ def panel_items(data, expect=None):
         raise SchemaError("The /config panel was not found (no `{id:\"autoCompact\",label:\"Auto-compact\"`).")
     open_at = data.rfind(b"[", 0, start)
     _, full = scan_expr(data, open_at + 1, limit=400000, commas=False)
-    region = data[open_at:open_at + 1 + len(full)]
+    region_at = max(0, open_at - PANEL_LOOKBEHIND)
+    region = data[region_at:open_at + 1 + len(full)]
     items = {}
     item_re = re.compile(rb'\{id:"([^"]+)",(?:\w+:[^,{}()]*,){0,4}label:')
     found = list(item_re.finditer(region))
@@ -338,7 +343,7 @@ def panel_items(data, expect=None):
         opts = re.search(rb"options:(\[[^\]]*\]|" + IDENT + rb"(?:\.\w+)*\([^)]*\)|" + IDENT + rb")", text)
         values, dynamic = [], False
         if opts and (expect or {}).get(iid):  # only the lists of the items this project edits
-            values, dynamic = parse_values(data, opts.group(1).decode("utf-8", "replace"), open_at + m.start(),
+            values, dynamic = parse_values(data, opts.group(1).decode("utf-8", "replace"), region_at + m.start(),
                                            expect[iid])
         items[iid] = {"label": label.group(1).decode() if label else "", "type": typ.group(1).decode() if typ else "",
                       "values": values, "dynamic": dynamic, "has_options": bool(opts)}

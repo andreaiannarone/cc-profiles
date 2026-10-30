@@ -29,7 +29,7 @@ If the version equals `SCHEMA_VERSION`, say so and stop, unless the user asked f
 
 ## 2. Look up every field
 
-Fields with `"file": "global"` live in `.claude.json`, not in the settings schema: check them against the `/config` panel instead (search the binary for `{id:"<id>",label:` and read its `options` and the `W(`/`B(` call that writes it). To see whether `/config` gained or lost items, list every `{id:"…",label:` after `Pe=[{id:"autoCompact"`.
+Fields with `"file": "global"` live in `.claude.json`, not in the settings schema: check them against the `/config` panel instead (search the binary for `{id:"<id>",label:` and read its `options` and the `W(`/`B(` call that writes it). To see whether `/config` gained or lost items, list every `{id:"…",label:` around `{id:"autoCompact",label:"Auto-compact"`: the list that starts there, and the items built just before it (theme, notifications, agents view, Remote Control live in variables or helpers a few KB earlier).
 
 For each entry in `SETTING_FIELDS`, find its schema with:
 
@@ -62,5 +62,5 @@ List, per field: unchanged, new values, removed values, changed type, or missing
 
 - Edit `options` in `SETTING_FIELDS`. Give new values a short label in sentence case (see DESIGN.md). Never drop the user's current value: `field_options()` already keeps a current value that is not in the list, so removing an option from the list is safe.
 - Set `SCHEMA_VERSION` to the checked version, and update the same version in README.md (section *Limitations*).
-- Run `.venv/bin/python -m pytest`.
+- Run `.venv/bin/python -m pytest -n auto`.
 - If a dropdown changed, look at it on the `/sandbox` skill's fake home before calling it done.

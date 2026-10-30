@@ -278,7 +278,7 @@ cc-profiles does all of this for you, from a page in your browser.
 **Core components:**
 
 1. **Local server**: a small Python package, standard library only, one module per area. It listens on `127.0.0.1`, checks the `Host` header against DNS rebinding and a random token against requests from other websites.
-2. **Single-page UI**: one HTML file with inline CSS and vanilla JavaScript, no build step and nothing loaded from the internet. Light and dark themes, or the system's.
+2. **Single-page UI**: one HTML page, a stylesheet and vanilla JavaScript files, no build step and nothing loaded from the internet. Light and dark themes, or the system's.
 3. **Backups with a journal**: before any change, the files it touches are copied to `~/.cc-profiles/backups/<date>_<operation>/`, and every step (copy, move, new folder, new link) is written to a `manifest.json`. **Restore** replays the journal backwards.
 4. **Atomic writes**: every file is written to a temporary file in the same folder and then renamed, so a running Claude Code never reads a half-written file. Writes follow symlinks, so shared files stay shared.
 5. **Path recovery**: Claude Code's project folder names cannot be turned back into paths. cc-profiles rebuilds them from config files, prompt history and the `cwd` of conversations, and walks the disk when nothing mentions them.
@@ -309,7 +309,7 @@ Type `/cc-profiles` in any Claude Code session: the app starts in the background
 
 ### Mac app
 
-On macOS, cc-profiles adds `~/Applications/cc-profiles.app` the first time it starts (or run `cc-profiles install-app`): cc-profiles in a window of its own, with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser. It adds zoom and keyboard shortcuts, a badge when an update is out, files dropped on it (a profile's `.zip` to import, a folder to relink), recent projects in the Dock icon's menu and in an optional menu bar icon, Open in Claude Code on any folder in the Finder, and Open at Login; `/cc-profiles` then opens it instead of a browser tab. On macOS every project can also open in Terminal, iTerm or Ghostty with Claude Code running in its profile. The app is put together on your Mac, so macOS opens it without asking for an Apple signature. See [Mac app](https://cc-profiles.andreaia.com/mac-app.html).
+On macOS, cc-profiles adds `~/Applications/cc-profiles.app` the first time it starts (or run `cc-profiles install-app`): cc-profiles in a window of its own, with its icon in the Dock, found in Spotlight and Launchpad. It starts the server when it opens and stops it when it quits, if it started it; links to other sites open in your browser. It adds zoom and keyboard shortcuts, a badge when an update is out, files dropped on it (a profile's `.zip` to import, a folder to relink), recent projects in the Dock icon's menu and in an optional menu bar icon, Open in Claude Code on any folder in the Finder, and Open at Login; `/cc-profiles` then opens it instead of a browser tab. On macOS every project can also open in Terminal, iTerm or Ghostty with Claude Code running in its profile (on Linux too, in GNOME Terminal, Konsole, kitty and others). The app is put together on your Mac, so macOS opens it without asking for an Apple signature. See [Mac app](https://cc-profiles.andreaia.com/mac-app.html).
 
 ### Commands for each profile
 
@@ -445,7 +445,7 @@ See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECUR
 
 ## Limitations
 
-- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.289; the **About** panel shows which version you have.
+- Claude Code's file formats are not a public API. Settings dropdowns were checked against Claude Code 2.1.314; the **About** panel shows which version you have.
 - "Session open" means a `claude` process is running in the profile (read from the process list on macOS and from `/proc` on Linux), or a conversation was written in the last 2 minutes.
 - Claude Code keeps `.claude.json` in memory while it runs: restart open sessions after changing their MCP servers.
 - Deleting a profile does not remove credentials that Claude Code may have stored in the macOS Keychain for it, nor its GitHub CLI folder.

@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Open in Terminal** on Linux, in a graphical session: GNOME Terminal, Konsole, Xfce Terminal, kitty, Alacritty, WezTerm, Ghostty or the system's default terminal, picked in the About panel when more than one is installed.
+- Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314.
+
+### Changed
+- The page runs only its own scripts: the Content-Security-Policy no longer allows inline scripts except two with a nonce that changes at every load, so text slipping through unescaped could not run as code. The UI is now `index.html`, `app.css` and a script file per area, still with no build step.
+
+### Fixed
+- On a busy Mac some of the page's requests could fail with a reset connection: the server now queues up to 64 connections instead of 5.
+- The weekly settings schema check reported Theme and four other /config items as gone after Claude Code 2.1.310, which builds them just before the panel's list: it now looks there too.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

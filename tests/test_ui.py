@@ -22,7 +22,8 @@ def page_on_sandbox(tmp_path):
     fake_app = tmp_path / "cc-profiles-app"  # the Mac app's program, only copied (About → Add Mac app)
     fake_app.write_text("#!/bin/sh\n")
     (root / "Applications" / "iTerm.app").mkdir(parents=True)  # Open in iTerm, without opening it
-    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1"})
+    app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1",
+                               "CC_PROFILES_TERMINAL_PLATFORM": "darwin"})
     errors = []
     with sync_api.sync_playwright() as p:
         try:
@@ -33,11 +34,14 @@ def page_on_sandbox(tmp_path):
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.on("pageerror", lambda e: errors.append(f"page error: {e}"))
         page.on("console", lambda m: m.type == "error" and errors.append(f"console: {m.text}"))
+        # a request the server dropped (a reset under load) shows here instead of as a bare timeout
+        page.on("requestfailed", lambda r: errors.append(f"request failed: {r.url} {r.failure}"))
         page.goto(app.base + "/")
         page.wait_for_selector(".pcard")
         try:
             yield page, errors
         finally:
+            print(*errors, sep="\n")  # shown when the test fails, even by a timeout before its assert
             browser.close()
             app.stop()
 

@@ -26,7 +26,7 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-test = ["pytest>=7", "coverage[toml]>=7.4"]
+test = ["pytest>=7", "pytest-xdist>=3", "coverage[toml]>=7.4"]
 # the browser smoke test (tests/test_ui.py), run in CI; locally also needs: python -m playwright install chromium
 ui = ["pytest>=7", "playwright>=1.40", "axe-playwright-python>=0.1.4"]
 

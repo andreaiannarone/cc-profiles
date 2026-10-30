@@ -70,7 +70,7 @@ def fake_binary(path, schema=None, drop=(), panel_extra=(), panel_drop=(), panel
     by_key = {fd["key"]: fd for fd in SETTING_FIELDS}
     theme_vals = values(by_key["theme"])
     parts.append(f'let seo={js_list(theme_vals[1:])},ktt=["{theme_vals[0]}",...seo];'.encode())
-    items = []
+    items, before = [], []
     for iid, key in list(chk.CONFIG_IDS.items()) + [(i, None) for i in panel_extra]:
         if iid in panel_drop:
             continue
@@ -83,8 +83,15 @@ def fake_binary(path, schema=None, drop=(), panel_extra=(), panel_drop=(), panel
         else:
             body = 'type:"boolean"'
         item = f'{{id:"{iid}",label:"{label}",value:s.x,{body},onChange(e){{W("x",e),w((o)=>({{...o,x:e}}))}}}}'
-        items.append(f'...k("flag")?[{item}]:[]' if iid == "verbose" else item)
-    parts.append(("let Oe=1,Pe=[" + ",".join(items) + "];return Pe}").encode())
+        if iid == "theme":  # built by a helper defined before the panel, as in 2.1.314
+            before.append(f"var z0r=(n)=>({item});function So(n){{return n}}")
+            items.append("z0r(n)")
+        elif iid in ("inputNeededNotifEnabled", "agentPushNotifEnabled"):  # in a variable spread into the panel
+            before.append(f"let Ue{len(before)}=[{item}];")
+            items.append(f"...Ue{len(before) - 1}")
+        else:
+            items.append(f'...k("flag")?[{item}]:[]' if iid == "verbose" else item)
+    parts.append(("".join(before) + "let Oe=1,Pe=[" + ",".join(items) + "];return Pe}").encode())
     parts.append(b"\x00trailing junk [ ( {")
     path.write_bytes(b"".join(parts))
     return path

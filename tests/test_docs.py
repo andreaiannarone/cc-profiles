@@ -103,5 +103,5 @@ def test_copyright_links_to_the_author():
     line = '© 2026 <a href="https://andreaiannarone.com">Andrea Iannarone</a>'
     assert line in (ROOT / "README.md").read_text(), "README footer: absolute link, it is shown on PyPI too"
     assert line in (ROOT / "docs" / "_layouts" / "default.html").read_text()
-    ui = (ROOT / "src" / "cc_profiles" / "static" / "index.html").read_text()
+    ui = "".join(f.read_text() for f in sorted((ROOT / "src" / "cc_profiles" / "static").glob("*.[hj][ts]*")))
     assert '© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a>' in ui

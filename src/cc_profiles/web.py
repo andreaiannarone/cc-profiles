@@ -4,6 +4,7 @@
 
 import json
 import os
+import secrets
 import shutil
 import socketserver
 import struct
@@ -30,7 +31,6 @@ from .memories import (
 from .sharing import list_sharing, op_share, share_plan
 from .settings import (
     get_settings,
-    get_statusline,
     op_claude_md,
     op_global,
     op_permission_all,
@@ -39,13 +39,10 @@ from .settings import (
     op_setting_all,
     op_settings_many,
     op_settings_raw,
-    op_statusline,
-    op_statusline_all,
     permission_all_plan,
     setting_all_plan,
-    statusline_all_plan,
-    statusline_preview,
 )
+from .statusline import get_statusline, op_statusline, op_statusline_all, statusline_all_plan, statusline_preview
 from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
@@ -101,7 +98,25 @@ from .updater import check_update, op_update, op_update_check, update_status, wh
 # ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
+STATIC_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
+
+
+def static_file(name):
+    """(bytes, content type) of the page's stylesheet or one of its scripts: only plain names
+    of .css and .js files in static/, so nothing else can be read."""
+    # the name read from the folder, never the one from the request
+    found = [n for n in os.listdir(STATIC_DIR) if n == name and os.path.splitext(n)[1] in STATIC_TYPES]
+    if not found or not os.path.isfile(os.path.join(STATIC_DIR, found[0])):
+        raise ApiError("Not found", 404)
+    with open(os.path.join(STATIC_DIR, found[0]), "rb") as f:
+        return f.read(), STATIC_TYPES[os.path.splitext(found[0])[1]]
+
+
 class Server(ThreadingHTTPServer):
+    # The page asks for many things at once; macOS resets connections beyond the listen
+    # queue (5 by default), which a busy machine reaches.
+    request_queue_size = 64
+
     def server_bind(self):
         # HTTPServer.server_bind also calls socket.getfqdn(), a reverse DNS lookup
         # that can take 30 s on some Macs. The name is never used: skip it.
@@ -170,18 +185,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         sys.stderr.write("  " + (fmt % args) + "\n")
 
-    # The page may run only its own inline code and talk only to this server: an escaping
-    # mistake cannot load code from elsewhere or send data out. Inline <script>/<style>
-    # are allowed because the whole UI is one file.
-    CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
-           "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+    # The page may run only its own scripts (static/*.js, and the two inline ones carrying
+    # this response's nonce) and talk only to this server: an escaping mistake cannot run
+    # injected code, load code from elsewhere or send data out. Inline styles stay allowed:
+    # the page builds style="" attributes.
+    CSP = ("default-src 'none'; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; "
+           "img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 
-    def _send(self, status, body, ctype="application/json; charset=utf-8"):
+    def _send(self, status, body, ctype="application/json; charset=utf-8", nonce=""):
         data = body if isinstance(body, bytes) else body.encode()
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         if ctype.startswith("text/html"):
-            self.send_header("Content-Security-Policy", self.CSP)
+            self.send_header("Content-Security-Policy", self.CSP.format(nonce=nonce))
             self.send_header("X-Frame-Options", "DENY")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
@@ -258,8 +274,12 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if u.path in ("/", "/index.html"):
-                html = open(os.path.join(STATIC_DIR, "index.html")).read().replace("__TOKEN__", TOKEN)
-                return self._send(200, html, "text/html; charset=utf-8")
+                nonce = secrets.token_urlsafe(16)
+                html = open(os.path.join(STATIC_DIR, "index.html")).read()
+                html = html.replace("__TOKEN__", TOKEN).replace("__NONCE__", nonce)
+                return self._send(200, html, "text/html; charset=utf-8", nonce)
+            if u.path.startswith("/static/"):
+                return self._send(200, *static_file(u.path[len("/static/"):]))
             if u.path in ICONS:
                 return self._send(200, *ICONS[u.path]())
             if u.path == "/api/profiles/export":

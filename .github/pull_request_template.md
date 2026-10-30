@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] `python -m pytest` passes
+- [ ] `python -m pytest -n auto` passes
 - [ ] New or changed operations go through `Backup` and have a test that restores them
 - [ ] No new dependencies, still compatible with Python 3.9
 - [ ] UI changes follow `DESIGN.md` (sentence case, buttons named after the action, contrast checked)

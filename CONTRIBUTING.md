@@ -21,10 +21,14 @@ python3 -m venv .venv
 ## Run the tests
 
 ```sh
-.venv/bin/python -m pytest
+.venv/bin/python -m pytest -n auto
 ```
 
+`-n auto` (pytest-xdist, in the `test` extra) runs the tests on every core: about 30 seconds instead of two or three minutes. Each test has its own fake home and port, so they never share state; leave `-n` out to debug one test with `-x` or `pdb`, and for coverage (below).
+
 Each test starts a real server on a temporary fake home with fake profiles, calls the API like the browser does, and in most cases ends by restoring every backup and checking that the fake home is byte-for-byte identical to how it started.
+
+Open in Terminal is tested with fake terminal programs. On a Linux desktop, `CC_PROFILES_REAL_TERMINALS="Default terminal,Xfce Terminal"` also opens those real terminals (the names are the ones in `LINUX_TERMINALS`, `terminal.py`); CI does it on a virtual display (the *Open in Terminal on Linux* job).
 
 ### Coverage
 
@@ -39,7 +43,7 @@ COVERAGE_PROCESS_START=pyproject.toml .venv/bin/python -m coverage run -m pytest
 
 The server stops on SIGTERM with `os._exit()`, which skips coverage's own save: `sitecustomize.py` saves the data just before it, so keep that hook if you change how the server exits.
 
-CI does the same on Python 3.12, shows the table in the run's summary and **fails when the total is below 92%** (`coverage report --fail-under=92` in `.github/workflows/ci.yml`; the suite reached 93.7% without the browser smoke test, which that job does not run). New code comes with tests that keep the total above it. When the total rises well above the threshold, raise the threshold to a point or two below the new total. Do not lower it to make a change pass. `tests/test_coverage_extra.py` covers helpers and error paths that the end-to-end tests in `test_app.py` do not reach.
+CI does the same on Python 3.12, shows the table in the run's summary and **fails when the total is below 92%** (`coverage report --fail-under=92` in `.github/workflows/ci.yml`; the suite reached 93.7% without the browser smoke test, which that job does not run). New code comes with tests that keep the total above it. When the total rises well above the threshold, raise the threshold to a point or two below the new total. Do not lower it to make a change pass. Helpers and error paths that the end-to-end tests do not reach are tested directly, in the `tests/test_<area>.py` file of their area.
 
 ### How fast it is on a big home
 
@@ -94,7 +98,7 @@ HOME="$SANDBOX" PATH=/usr/bin:/bin CC_PROFILES_INSTALL_DRYRUN=1 .venv/bin/cc-pro
 
 ```
 src/cc_profiles/                 the server: one module per area (see docs/architecture.md)
-src/cc_profiles/static/index.html the whole UI: one file, inline CSS and vanilla JS
+src/cc_profiles/static/          the UI: index.html, app.css and vanilla JS files loaded in order, no build step
 tests/                           end-to-end tests on a fake home, plus documentation link checks
 docs/                            user guide and developer reference, published at cc-profiles.andreaia.com
 scripts/                         release, README images, JavaScript and settings-schema checks, Homebrew formula
@@ -134,7 +138,7 @@ The social preview, `docs/assets/social-preview.png`, is rendered from `docs/ass
 2. Keep each PR focused on one change.
 3. Add or update tests. A new operation needs a test that runs it and then restores it.
 4. Update `CHANGELOG.md` under **Unreleased**, and the relevant page in `docs/` if behavior changes.
-5. Make sure `python -m pytest` passes.
+5. Make sure `python -m pytest -n auto` passes.
 
 ## Commit messages
 

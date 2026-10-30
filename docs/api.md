@@ -1,6 +1,6 @@
 # HTTP API
 
-The UI talks to the server through a small JSON API. It is an internal API, made for `index.html`, and may change between versions. It is documented to make contributing easier.
+The UI talks to the server through a small JSON API. It is an internal API, made for the page, and may change between versions. It is documented to make contributing easier.
 
 ## Conventions
 
@@ -64,7 +64,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
 | `GET /api/macapp` | | the [Mac app](mac-app.md): `{supported: false}` outside macOS, else `{supported, state, path, port}`, `state` being `missing`, `current`, `outdated` (another version, or another port than this server) or `foreign` (an app cc-profiles did not create) |
-| `GET /api/terminal` | | Open in Terminal: `{supported: false}` outside macOS, else `{supported, terminal, choices}`, `terminal` being the one projects open in and `choices` the ones installed |
+| `GET /api/terminal` | | Open in Terminal: `{supported: false}` outside macOS and a Linux graphical session, else `{supported, terminal, choices}`, `terminal` being the one projects open in and `choices` the ones installed |
 | `GET /api/update/auto` | | the same fields from the last answer, without asking PyPI, plus `enabled` (the automatic daily check) and `checked` (when PyPI was last asked) |
 | `POST /api/update/auto` | `{enabled}` | turn the automatic daily check on or off (`update_check` in `config.json`), with a backup |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |

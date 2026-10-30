@@ -41,7 +41,7 @@ jobs:
       - name: Tests
         run: |
           python -m pip install -e ".[test]"
-          python -m pytest -q
+          python -m pytest -q -n auto
       - uses: actions/download-artifact@v8
         with:
           name: mac-app

@@ -44,6 +44,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_QUIET` | if set, do not log HTTP requests to the terminal |
 | `CC_PROFILES_INSTALL_DRYRUN` | **for tests**: the Claude Code installer runs `echo` instead of installing |
 | `CC_PROFILES_TERMINAL_DRYRUN` | **for tests**: Open in Terminal writes its script and returns the command instead of opening a terminal; it also turns the feature on outside macOS |
+| `CC_PROFILES_TERMINAL_PLATFORM` | **for tests**: `darwin` or `linux`, the terminals Open in Terminal looks for, whatever the system |
 | `CC_PROFILES_INSTALL_DRYRUN_CODE` | **for tests**: exit code of the dry-run installer (simulates failures) |
 | `CC_PROFILES_PYPI_URL` | **for tests**: where *Check for updates* reads the latest version (a `file://` URL), instead of pypi.org |
 | `CC_PROFILES_UPDATE_DRYRUN` | **for tests**: *Update* says what it would run instead of updating and restarting |
@@ -135,4 +136,4 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 
 ### `terminal`
 
-macOS: the terminal **Open in Terminal** uses, `"Terminal"`, `"iTerm"` or `"Ghostty"`. Set from the About panel when more than one is installed; when unset, or set to one that is gone, the first installed in that order.
+The terminal **Open in Terminal** uses. On macOS `"Terminal"`, `"iTerm"` or `"Ghostty"`; on Linux `"GNOME Terminal"`, `"Konsole"`, `"Xfce Terminal"`, `"kitty"`, `"Alacritty"`, `"WezTerm"`, `"Ghostty"` or `"Default terminal"` (`x-terminal-emulator`). Set from the About panel when more than one is installed; when unset, or set to one that is gone, the first installed in that order.

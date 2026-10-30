@@ -23,6 +23,7 @@ The same settings as the `/config` panel of Claude Code, in five groups, with co
 | Session recap | `awaySummaryEnabled` | on/off, on by default |
 | Auto-compact | `autoCompactEnabled` ¹ | on/off, on by default |
 | Precompute compaction | `precomputeCompactionEnabled` | on/off, on by default |
+| Idle compaction | `idleCompaction` | on/off, on by default |
 | Rewind code (checkpoints) | `fileCheckpointingEnabled` ¹ | on/off, on by default |
 | Default permission mode | `permissions.defaultMode` | `default`, `plan`, `acceptEdits`, `auto`, `dontAsk` |
 | Use auto mode during plan | `useAutoModeDuringPlan` | on/off, on by default |

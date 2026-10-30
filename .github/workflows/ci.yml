@@ -29,7 +29,7 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: Test
         if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.python == '3.12') }}
-        run: python -m pytest -v
+        run: python -m pytest -v -n auto
       # One version also measures coverage, including the servers the tests start
       - name: Test with coverage
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
@@ -66,6 +66,25 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Open every tab in Chromium
         run: python -m pytest -v tests/test_ui.py
+
+  terminal:
+    name: Open in Terminal on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth dbus-x11 xterm xfce4-terminal
+          python -m pip install -e ".[test]"
+      # "Default terminal" is x-terminal-emulator, whichever the system picked; a session bus for xfce4-terminal
+      - name: Open real terminals on a virtual display
+        env:
+          CC_PROFILES_REAL_TERMINALS: Default terminal,Xfce Terminal
+        run: dbus-run-session -- xvfb-run -a python -m pytest -v tests/test_terminal.py
 
   install-script:
     name: install.sh on ${{ matrix.os }}
@@ -115,7 +134,7 @@ jobs:
           CC_PROFILES_APP_SMOKE: "1"
         run: |
           python -m pip install -e ".[test]"
-          python -m pytest -v tests/test_app.py -k "app"
+          python -m pytest -v tests/test_mac_app.py
 
   package:
     name: Build the package
@@ -125,10 +144,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: No undefined names (pyflakes)
+      - name: No undefined names or unused imports (pyflakes)
         run: |
           python -m pip install pyflakes
-          python -m pyflakes $(ls src/cc_profiles/*.py | grep -v server.py)
+          python -m pyflakes $(ls src/cc_profiles/*.py | grep -v server.py) tests scripts .claude/hooks
       - name: Type-check the UI's JavaScript
         run: python scripts/check_js.py
       - name: Build sdist and wheel
@@ -137,4 +156,4 @@ jobs:
           python -m build
           python -m twine check dist/*
       - name: The wheel contains the UI
-        run: python -c "import zipfile,glob; names=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert 'cc_profiles/static/index.html' in names, names"
+        run: python -c "import zipfile,glob; names=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); assert {'cc_profiles/static/index.html', 'cc_profiles/static/app.css', 'cc_profiles/static/core.js', 'cc_profiles/static/main.js'} <= set(names), names"

@@ -12,6 +12,7 @@ from .projects import *  # noqa: F401,F403
 from .memories import *  # noqa: F401,F403
 from .sharing import *  # noqa: F401,F403
 from .settings import *  # noqa: F401,F403
+from .statusline import *  # noqa: F401,F403
 from .health import *  # noqa: F401,F403
 from .backups import *  # noqa: F401,F403
 from .info import *  # noqa: F401,F403

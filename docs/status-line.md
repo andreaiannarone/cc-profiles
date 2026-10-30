@@ -23,7 +23,7 @@ Claude Code can run a script to draw a [status line](https://code.claude.com/doc
     | Usage | model, tokens, cost, 5-hour and weekly limits | none | `\|` | left |
     | Like a hand-made one | path, branch, profile, email, model, output style, tokens, context, 5-hour and weekly limits, terminal | each piece's own | space | left |
 
-    All of them use colors. They are defined in `STATUS_PRESETS` (`settings.py`).
+    All of them use colors. They are defined in `STATUS_PRESETS` (`statusline.py`).
 - **Your command**: any command; cc-profiles saves it and never runs it.
 - **Off**: removes `statusLine` (the script cc-profiles wrote goes to the backup).
 

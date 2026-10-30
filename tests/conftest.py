@@ -169,14 +169,17 @@ class App:
             [sys.executable, "-m", "cc_profiles", "--no-browser", "--port", str(self.port)],
             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.base = f"http://127.0.0.1:{self.port}"
-        for _ in range(100):
+        deadline = time.monotonic() + 30  # generous: with pytest -n the machine is busy
+        while True:
             try:
                 html = urllib.request.urlopen(self.base + "/", timeout=1).read().decode()
                 self.token = re.search(r'const TOKEN = "([a-f0-9]+)"', html).group(1)
                 break
             except (urllib.error.URLError, ConnectionError):
+                if time.monotonic() > deadline or self.proc.poll() is not None:
+                    break
                 time.sleep(0.05)
-        else:
+        if not getattr(self, "token", None):
             self.stop()
             raise RuntimeError("server did not start: " + self.proc.stdout.read().decode())
 

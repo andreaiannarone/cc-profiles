@@ -1,6 +1,6 @@
 # DESIGN.md
 
-The visual system of the cc-profiles UI (`src/cc_profiles/static/index.html`). Read it before adding or changing anything in the interface.
+The visual system of the cc-profiles UI (`src/cc_profiles/static/`: `index.html`, `app.css` and the scripts). Read it before adding or changing anything in the interface.
 
 ## Principles
 
