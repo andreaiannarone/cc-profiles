@@ -19,6 +19,7 @@ from helpers import basic_home, fake_tool, pypi, run_cli
 
 sys.path.insert(0, str(SRC))
 from cc_profiles import settings as S  # noqa: E402
+from cc_profiles import statusline as SL  # noqa: E402
 from cc_profiles import updater as U  # noqa: E402
 from cc_profiles.core import ApiError  # noqa: E402
 
@@ -159,43 +160,43 @@ def test_show_value(tmp_path):
 
 
 def test_status_parts_and_style():
-    assert S.status_parts(["model", "nope", "model:round", "context:square", ""]) == [("model", "square"), ("context", "square")]
+    assert SL.status_parts(["model", "nope", "model:round", "context:square", ""]) == [("model", "square"), ("context", "square")]
     with pytest.raises(ApiError, match="Unknown brackets"):
-        S.status_parts(["model:zigzag"])
-    assert S.status_style("bar", 1) == ("bar", True, "used")
+        SL.status_parts(["model:zigzag"])
+    assert SL.status_style("bar", 1) == ("bar", True, "used")
     with pytest.raises(ApiError, match="Unknown separator"):
-        S.status_style("tab", True)
+        SL.status_style("tab", True)
     with pytest.raises(ApiError, match="used or left"):
-        S.status_style("dot", True, "both")
+        SL.status_style("dot", True, "both")
 
 
 @pytest.mark.parametrize("text,expected", [
     (None, None),  # no file
     ("#!/bin/sh\n", None),  # too short
     ("#!/bin/sh\n# some other script\n# parts: model\n", None),
-    ("#!/bin/sh\n" + S.STATUS_MARK + "\necho hi\n", None),  # no parts line
-    ("#!/bin/sh\n" + S.STATUS_MARK + "\n# parts: model:zigzag\n", None),  # brackets it does not know
+    ("#!/bin/sh\n" + SL.STATUS_MARK + "\necho hi\n", None),  # no parts line
+    ("#!/bin/sh\n" + SL.STATUS_MARK + "\n# parts: model:zigzag\n", None),  # brackets it does not know
     # before per-piece brackets: bare ids, no brackets; before the style line: dot, no colors
-    ("#!/bin/sh\n" + S.STATUS_MARK + "\n# parts: model context\n",
+    ("#!/bin/sh\n" + SL.STATUS_MARK + "\n# parts: model context\n",
      {"parts": [("model", "none"), ("context", "none")], "separator": "dot", "colors": False, "limits": "used"}),
-    ("#!/bin/sh\n" + S.STATUS_MARK + "\n# parts: model:round\n# style: separator=bar colors=1 limits=left\n",
+    ("#!/bin/sh\n" + SL.STATUS_MARK + "\n# parts: model:round\n# style: separator=bar colors=1 limits=left\n",
      {"parts": [("model", "round")], "separator": "bar", "colors": True, "limits": "left"}),
     # values it does not know fall back, stray words are ignored
-    ("#!/bin/sh\n" + S.STATUS_MARK + "\n# parts: model:round\n# style: separator=tab junk colors=yes limits=both\n",
+    ("#!/bin/sh\n" + SL.STATUS_MARK + "\n# parts: model:round\n# style: separator=tab junk colors=yes limits=both\n",
      {"parts": [("model", "round")], "separator": "dot", "colors": False, "limits": "used"}),
 ])
 def test_status_script_info_reads_only_its_own_headers(tmp_path, text, expected):
     path = tmp_path / "statusline.sh"
     if text is not None:
         path.write_text(text)
-    assert S.status_script_info(str(path)) == expected
+    assert SL.status_script_info(str(path)) == expected
 
 
 def test_status_script_info_reads_back_what_it_writes(tmp_path):
     path = tmp_path / "statusline.sh"
-    parts = S.status_parts(["path", "branch:square", "week"])
-    path.write_text(S.status_script(parts, "arrow", False, "left"))
-    assert S.status_script_info(str(path)) == {"parts": parts, "separator": "arrow", "colors": False, "limits": "left"}
+    parts = SL.status_parts(["path", "branch:square", "week"])
+    path.write_text(SL.status_script(parts, "arrow", False, "left"))
+    assert SL.status_script_info(str(path)) == {"parts": parts, "separator": "arrow", "colors": False, "limits": "left"}
 
 
 # --- updater helpers ----------------------------------------------------------------

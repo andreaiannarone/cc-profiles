@@ -32,7 +32,6 @@ from .memories import (
 from .sharing import list_sharing, op_share, share_plan
 from .settings import (
     get_settings,
-    get_statusline,
     op_claude_md,
     op_global,
     op_permission_all,
@@ -41,13 +40,10 @@ from .settings import (
     op_setting_all,
     op_settings_many,
     op_settings_raw,
-    op_statusline,
-    op_statusline_all,
     permission_all_plan,
     setting_all_plan,
-    statusline_all_plan,
-    statusline_preview,
 )
+from .statusline import get_statusline, op_statusline, op_statusline_all, statusline_all_plan, statusline_preview
 from .health import candidates, health, list_profiles
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)

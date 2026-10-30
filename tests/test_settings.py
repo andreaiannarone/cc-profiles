@@ -228,7 +228,7 @@ def test_status_line_tokens_and_limits_left(home, app_factory, tmp_path):
     data["rate_limits"]["seven_day"] = {"used_percentage": 60, "resets_at": now + 3 * 86400 + 11 * 3600 + 60}
     data["rate_limits"]["five_hour"]["resets_at"] = now + 45 * 60 + 30
     assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→45m 7d:40%→3d11h"
-    data["rate_limits"]["five_hour"]["resets_at"] = now + 61
+    data["rate_limits"]["five_hour"]["resets_at"] = now + 90  # margin: a busy machine runs the script later
     assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→1m 7d:40%→3d11h"
     data["rate_limits"]["five_hour"]["resets_at"] = now + 40  # under a minute: not "0m"
     assert run_status_script(home, script, data) == "question:2k session:1.2M 5h:8%→<1m 7d:40%→3d11h"

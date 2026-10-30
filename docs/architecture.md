@@ -24,6 +24,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `memories.py` | list, read, save, move, delete |
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
+| `statusline.py` | the status line cc-profiles writes for a profile (a `sh` script reading Claude Code's JSON with `jq`), its presets and preview, applied to one profile or to all |
 | `github.py` | a GitHub account per profile: GitHub CLI folders and their user, `GH_CONFIG_DIR` and the commit identity in the profile's `env`, and a folder of its own for each new profile |
 | `health.py` | profile summaries, candidate folders, health checks |
 | `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`, 90 days by default), kept backups |
