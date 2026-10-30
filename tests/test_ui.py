@@ -34,11 +34,14 @@ def page_on_sandbox(tmp_path):
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.on("pageerror", lambda e: errors.append(f"page error: {e}"))
         page.on("console", lambda m: m.type == "error" and errors.append(f"console: {m.text}"))
+        # a request the server dropped (a reset under load) shows here instead of as a bare timeout
+        page.on("requestfailed", lambda r: errors.append(f"request failed: {r.url} {r.failure}"))
         page.goto(app.base + "/")
         page.wait_for_selector(".pcard")
         try:
             yield page, errors
         finally:
+            print(*errors, sep="\n")  # shown when the test fails, even by a timeout before its assert
             browser.close()
             app.stop()
 
