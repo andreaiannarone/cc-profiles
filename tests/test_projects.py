@@ -38,7 +38,7 @@ def test_page_sends_a_strict_content_security_policy(home, app_factory):
     assert "unsafe-inline" not in csp.split("script-src")[1].split(";")[0]
     html = urllib.request.urlopen(app.base + "/", timeout=5).read().decode()
     assert nonce not in html  # a fresh nonce for every response
-    inline = re.findall(r"<script( nonce=\"[\w-]+\")?>", html)
+    inline = re.findall(r"<script( nonce=\"[\w-]+\")?>", html, re.IGNORECASE)
     assert len(inline) == 2 and all(inline)
 
 

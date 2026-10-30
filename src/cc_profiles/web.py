@@ -4,7 +4,6 @@
 
 import json
 import os
-import re
 import secrets
 import shutil
 import socketserver
@@ -105,11 +104,12 @@ STATIC_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; char
 def static_file(name):
     """(bytes, content type) of the page's stylesheet or one of its scripts: only plain names
     of .css and .js files in static/, so nothing else can be read."""
-    path = os.path.join(STATIC_DIR, name)
-    if not re.fullmatch(r"[a-z]+\.(css|js)", name) or not os.path.isfile(path):
+    # the name read from the folder, never the one from the request
+    found = [n for n in os.listdir(STATIC_DIR) if n == name and os.path.splitext(n)[1] in STATIC_TYPES]
+    if not found or not os.path.isfile(os.path.join(STATIC_DIR, found[0])):
         raise ApiError("Not found", 404)
-    with open(path, "rb") as f:
-        return f.read(), STATIC_TYPES[os.path.splitext(name)[1]]
+    with open(os.path.join(STATIC_DIR, found[0]), "rb") as f:
+        return f.read(), STATIC_TYPES[os.path.splitext(found[0])[1]]
 
 
 class Server(ThreadingHTTPServer):
