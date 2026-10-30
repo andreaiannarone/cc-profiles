@@ -3,6 +3,19 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.6.1] - 2026-10-30
+
+**Added**
+- **Open in Terminal** on Linux, in a graphical session: GNOME Terminal, Konsole, Xfce Terminal, kitty, Alacritty, WezTerm, Ghostty or the system's default terminal, picked in the About panel when more than one is installed.
+- Settings: **Idle compaction** (`idleCompaction`), new in Claude Code's /config: compact a long conversation while the session is idle. Settings checked against Claude Code 2.1.314.
+
+**Changed**
+- The page runs only its own scripts: the Content-Security-Policy no longer allows inline scripts except two with a nonce that changes at every load, so text slipping through unescaped could not run as code. The UI is now `index.html`, `app.css` and a script file per area, still with no build step.
+
+**Fixed**
+- On a busy Mac some of the page's requests could fail with a reset connection: the server now queues up to 64 connections instead of 5.
+- The weekly settings schema check reported Theme and four other /config items as gone after Claude Code 2.1.310, which builds them just before the panel's list: it now looks there too.
+
 ## [0.6.0] - 2026-10-28
 
 **Added**
@@ -315,6 +328,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
 [0.5.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.7...v0.5.8
