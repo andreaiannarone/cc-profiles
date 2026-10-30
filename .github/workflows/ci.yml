@@ -115,7 +115,7 @@ jobs:
           CC_PROFILES_APP_SMOKE: "1"
         run: |
           python -m pip install -e ".[test]"
-          python -m pytest -v tests/test_app.py -k "app"
+          python -m pytest -v tests/test_mac_app.py
 
   package:
     name: Build the package

@@ -3,7 +3,7 @@ status line (helpers and their error paths), the Claude Code installer, memories
 sharing and the command line.
 
 Pure helpers are tested directly; everything that writes goes through a real server on
-a fake home and ends, like test_app.py, by restoring every backup and comparing the
+a fake home and ends, like the end-to-end tests, by restoring every backup and comparing the
 home with how it started.
 """
 import json
@@ -15,7 +15,7 @@ import sys
 import pytest
 
 from conftest import SRC, child_env, san
-from test_app import basic_home, fake_tool, pypi, run_cli
+from helpers import basic_home, fake_tool, pypi, run_cli
 
 sys.path.insert(0, str(SRC))
 from cc_profiles import settings as S  # noqa: E402
