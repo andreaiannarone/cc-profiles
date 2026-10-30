@@ -217,7 +217,7 @@ def test_restart_after_a_python_update_uses_the_environments_python(monkeypatch,
     venv_python = tmp_path / "bin" / "python3"
     venv_python.write_text("#!/bin/sh\n")
     venv_python.chmod(0o755)
-    monkeypatch.setattr(U.sys, "executable", "/opt/homebrew/Cellar/python@3.15/3.15.0/bin/python3.15")
+    monkeypatch.setattr(U.sys, "executable", str(tmp_path / "Cellar" / "3.15.0" / "python3.15"))  # deleted by Homebrew
     monkeypatch.setattr(U.sys, "prefix", str(tmp_path))
     assert U.interpreter() == str(venv_python)
 
