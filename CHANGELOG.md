@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-10-31
+
 ### Changed
 - The dialog to delete a profile is clearer: a red **Delete profile** button, one choice between deleting everything and moving its conversations, memories and history to a profile picked from a list, and **Delete it anyway** when a session is still open in it.
 
@@ -353,7 +355,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1

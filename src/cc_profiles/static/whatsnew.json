@@ -1,6 +1,25 @@
 {
  "releases": [
   {
+   "version": "0.6.4",
+   "date": "2026-10-31",
+   "sections": [
+    {
+     "title": "Changed",
+     "items": [
+      "The dialog to delete a profile is clearer: a red **Delete profile** button, one choice between deleting everything and moving its conversations, memories and history to a profile picked from a list, and **Delete it anyway** when a session is still open in it."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "**Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.",
+      "Memories: closing **Move memory…** right after picking another profile no longer causes a page error."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.6.3",
    "date": "2026-10-31",
    "sections": [
@@ -160,24 +179,6 @@
      "items": [
       "**Choose…** next to the folder fields of **Relink…** and **Try a folder**: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux) and fills in the full path, which a browser never gives a web page. Where there is no dialog, such as WSL, a folder browser opens under the field, from `~` down, with hidden folders on request.",
       "**Merge into…** next to **Relink…** (Projects and Health): merges a project whose folder is gone into another project of the same profile, picked from a list (same folder name first, with a filter). A preview says how many conversations, memories and prompts go in and which files the target already has; the target keeps its own, the originals go to the backup."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.5.4",
-   "date": "2026-10-09",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**Agents** tab: the subagents of each profile (`agents/<name>.md`) as cards, with their model, tools and color. **New agent…** and a click on a card open a form for the fields Claude Code reads (name, description, model, effort, permission mode, max turns, color, allowed and disallowed tools) and the instructions; other keys of the file are kept, and **Edit file…** edits it whole. **Copy to…**, **Copy to all…** and **Delete**, each with a backup; agents from plugins are listed read-only, and Compare shows the agents only one profile has. Shortcut `g a`. The new Agents guide also explains how to use an agent in Claude Code: by itself from its description, by name, with `@`, or as a whole session with `claude --agent`."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "The **More** menu of the tab bar no longer stays once it has appeared: the tabs are measured without it, so they return to the row as soon as they fit again."
      ]
     }
    ]
