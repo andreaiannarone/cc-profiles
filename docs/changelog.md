@@ -3,6 +3,15 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.6.4] - 2026-10-31
+
+**Changed**
+- The dialog to delete a profile is clearer: a red **Delete profile** button, one choice between deleting everything and moving its conversations, memories and history to a profile picked from a list, and **Delete it anyway** when a session is still open in it.
+
+**Fixed**
+- **Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.
+- Memories: closing **Move memory…** right after picking another profile no longer causes a page error.
+
 ## [0.6.3] - 2026-10-31
 
 **Added**
@@ -344,6 +353,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.6.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
