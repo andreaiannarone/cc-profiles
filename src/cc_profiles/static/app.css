@@ -41,7 +41,7 @@
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
 button, input, select, textarea { font: inherit; color: inherit; }
-.wrap { padding: 24px 28px 80px; }
+.wrap { padding: calc(24px + var(--titlebar, 0px)) 28px 80px; }  /* --titlebar: set by the Mac app */
 header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
 .logo { width: 45px; height: 30px; flex: none; }
@@ -401,7 +401,7 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .btn.update-on:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
-.drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
+.drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: calc(16px + var(--titlebar, 0px)) 20px 16px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
 .drawer .dh h2 { margin: 0; font-size: 16px; flex: 1; }
 .drawer .db { padding: 16px 20px 40px; display: grid; gap: 14px; }
 .drawer .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }

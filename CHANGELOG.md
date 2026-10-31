@@ -11,6 +11,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 - The theme (System, Light, Dark) is picked in the About panel (ⓘ), with the other cc-profiles settings, instead of a button in the header.
 
+### Fixed
+- Mac app: the About panel and the dialogs dim the whole window and reach its top edge, instead of leaving the title bar as a band in the page's color above them. The page now runs under the title bar and leaves room for the window's buttons.
+
 ## [0.6.2] - 2026-10-30
 
 ### Fixed

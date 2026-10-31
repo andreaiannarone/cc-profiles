@@ -159,6 +159,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         config.applicationNameForUserAgent = "cc-profiles-app"  // the page shows the app's shortcuts
         config.userContentController.addUserScript(WKUserScript(source: pageWatch, injectionTime: .atDocumentEnd,
                                                                 forMainFrameOnly: true, in: .defaultClient))
+        // The page runs under the transparent title bar, so its overlays and the About panel reach
+        // the top of the window: --titlebar tells it how much room to leave for the window's buttons.
+        let titlebar = NSWindow.frameRect(forContentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                                          styleMask: [.titled]).height - 100
+        config.userContentController.addUserScript(WKUserScript(
+            source: "document.documentElement.style.setProperty('--titlebar', '\(Int(titlebar))px')",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
         for name in ["background", "update"] {
             config.userContentController.add(self, contentWorld: .defaultClient, name: name)
         }
@@ -168,7 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         web.onFolders = { [weak self] in self?.dropped($0) }
         web.pageZoom = CGFloat(defaults.object(forKey: "zoom") as? Double ?? 1)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 860),
-                          styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         window.title = "cc-profiles"
         window.titleVisibility = .hidden  // the page shows the name; the title bar is the page's color
