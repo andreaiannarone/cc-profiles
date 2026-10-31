@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The dialog to delete a profile is clearer: a red **Delete profile** button, one choice between deleting everything and moving its conversations, memories and history to a profile picked from a list, and **Delete it anyway** when a session is still open in it.
+
 ### Fixed
 - **Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.
 - Memories: closing **Move memory…** right after picking another profile no longer causes a page error.

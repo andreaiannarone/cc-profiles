@@ -341,38 +341,45 @@ async function deleteProfile(id) {
   const resP = modal({ title: `Delete ${p.label}?`,
     sub: `<code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}`,
     body: `<div class="form">
-      ${p.active ? `<div class="danger-box">A session is open in this profile. Close it first: a running Claude Code would keep writing to a folder that is gone.</div>` : ""}
-      <div class="radio">
-        <label><input type="radio" name="pd" value="" checked> Delete everything <span class="hint">(the folder goes to the backup)</span></label>
-        ${others.map(o => `<label><input type="radio" name="pd" value="${o.id}"> First move conversations, memories and history to ${esc(o.label)}</label>`).join("")}
+      ${p.active ? `<div class="danger-box">A session is open in ${esc(p.label)}: a running Claude Code would keep writing to a folder that is gone. Close it first.
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="pd-force"> Delete it anyway</label></div>` : ""}
+      <div class="radio" role="radiogroup" aria-label="What happens to its conversations and memories">
+        <label><input type="radio" name="pd" value="" checked> Delete everything</label>
+        ${others.length ? `<label><input type="radio" name="pd" value="merge"> Move its conversations, memories and history to
+          <select id="pd-into" aria-label="Profile to move them to">${others.map(o => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label>` : ""}
       </div>
-      <div class="hint">The profile is also removed from the configuration, together with its <code>${esc(p.command)}</code> command. Everything can be undone from the Backups tab.</div>
       <div class="hint" id="pd-plan" aria-live="polite"></div>
-      <label class="f">Type <b>${esc(p.label)}</b> to confirm<input class="text" id="pd-confirm" autocomplete="off"></label>
+      <div class="hint">The profile and its <code>${esc(p.command)}</code> command are removed too. Everything can be undone from the Backups tab.</div>
+      <label class="f"><span>Type <b>${esc(p.label)}</b> to confirm</span><input class="text" id="pd-confirm" autocomplete="off"></label>
     </div>`,
-    actions: [{ label: "Delete profile", kind: "primary", value: "ok" }] });
+    actions: [{ label: "Delete profile", kind: "danger", value: "ok" }] });
   const btn = document.querySelector('.modal [data-i="0"]'), inp = $("#pd-confirm"), box = $("#pd-plan");
-  btn.disabled = true;
-  inp.oninput = () => { btn.disabled = inp.value.trim() !== p.label; };
+  const force = $("#pd-force"), sel = $("#pd-into");
+  const into = () => document.querySelector('input[name="pd"]:checked')?.value === "merge" ? sel.value : "";
+  const ready = () => { btn.disabled = inp.value.trim() !== p.label || (force && !force.checked); };
+  inp.oninput = ready;
+  if (force) force.onchange = ready;
+  ready();
   let asked = 0;
   const showPlan = async () => {
-    const into = document.querySelector('input[name="pd"]:checked')?.value || "", n = ++asked;
+    const to_id = into(), n = ++asked;
     box.innerHTML = `<span class="spinner"></span>`;
     let plan;
-    try { plan = await api(`/api/profiles/delete/preview?id=${encodeURIComponent(id)}${into ? "&merge_into=" + encodeURIComponent(into) : ""}`); }
+    try { plan = await api(`/api/profiles/delete/preview?id=${encodeURIComponent(id)}${to_id ? "&merge_into=" + encodeURIComponent(to_id) : ""}`); }
     catch (e) { if (n === asked) box.textContent = e.message; return; }
-    if (n !== asked) return;
+    if (n !== asked || !box.isConnected) return;
     const to = esc(plan.into || "");
     box.innerHTML = (plan.into
       ? `Moves to ${to}: ${plural(plan.projects, "project", "projects")}, ${plural(plan.conversations, "conversation", "conversations")}, ${plural(plan.memories, "memory", "memories")}, ${plural(plan.prompts, "prompt", "prompts")}${plan.settings ? `, the settings of ${plural(plan.settings, "project", "projects")}` : ""}. Then the folder goes to the backup.`
       : `Nothing is moved: the whole folder <code>${esc(plan.folder)}</code> goes to the backup.`) + planDetails(plan.items, to);
   };
   document.querySelectorAll('input[name="pd"]').forEach(r => r.onchange = showPlan);
+  if (sel) sel.onchange = () => { document.querySelector('input[name="pd"][value="merge"]').checked = true; showPlan(); };
   showPlan();
   const res = await resP;
   if (!res) return;
-  const merge_into = res.el.querySelector('input[name="pd"]:checked').value;
-  try { await run(() => api("/api/profiles/delete", { id, merge_into })); } catch { return; }
+  const merge_into = res.el.querySelector('input[name="pd"]:checked').value === "merge" ? $("#pd-into", res.el).value : "";
+  try { await run(() => api("/api/profiles/delete", { id, merge_into, force: !!$("#pd-force", res.el)?.checked })); } catch { return; }
   if (S.mem.profile === id) { S.mem.profile = null; S.mem.project = null; }
   await refresh(); loadSharing();
 }
