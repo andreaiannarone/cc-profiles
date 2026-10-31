@@ -20,8 +20,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/projects` | | every project: real path, `exists`, expected profile, per-profile counts, `issues` |
 | `GET /api/candidates` | `name`, `fresh` (`1` to search again; otherwise the search of the last minute is reused) | up to 10 folders with that name under the search roots |
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
-| `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries |
+| `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries; `sharing`: `from` (the profile whose memory this one uses), `with` (the profiles using this one's), `others` |
 | `GET /api/memory/file` | `profile`, `project`, `file` | `{content}` |
+| `GET /api/memory/share-plan` | `profile`, `project`, `from` | what sharing `from`'s memory with `profile` does to its own memories: `join`, `conflicts` |
 | `GET /api/conversations/projects` | `profile` | the profile's projects that have conversations, with `count` |
 | `GET /api/conversations` | `profile`, `project` | `{conversations: [{session, title, prompts, replies, first, last, mtime, size, snapshots}], path}`, newest first |
 | `GET /api/conversations/view` | `profile`, `project`, `session` | `{messages: [{role, time, text}], truncated, total}`: prompts, replies and one line per tool call; the last 300 |
@@ -85,6 +86,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |
 | `POST /api/memory/move` | `profile`, `project`, `file`, `to_profile`, `to_project` |
 | `POST /api/memory/delete` | `profile`, `project`, `file` |
+| `POST /api/memory/share` | `profile`, `project`, `from`, `shared` (`false` separates: `from` not needed) |
 | `POST /api/conversations/move` | `profile`, `project`, `session`, `to`: one conversation and its file snapshots |
 | `POST /api/conversations/delete` | `profile`, `project`, `session` |
 | `POST /api/skills/create` | `profile`, `name`, `description` |

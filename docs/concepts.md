@@ -56,6 +56,7 @@ Notes:
 - Writing a shared file (from the Settings tab, for example) writes the source file and keeps the link intact.
 - Plugin *files* are shared, but which plugins are *enabled* lives in `settings.json`. Share `settings.json` as well if you want the same plugins enabled everywhere.
 - Unsharing gives the profile its own independent copy.
+- A project's **memory** can be shared too, between any two profiles: see [Memories](guides/memories.md#share-with-another-profile).
 
 ## Backups
 

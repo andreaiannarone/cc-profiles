@@ -129,7 +129,7 @@ cc-profiles
 ### Key Features
 
 - 🗂️ **Projects**: see which profile each project belongs to and what it holds in each one. Move a project to another profile with its conversations, memories, file snapshots, prompt history and per-project settings, after a preview of every file it touches. Relink a project whose folder you moved or renamed, picking the folder in your system's dialog, or merge its history into a project you already have. Assign projects with simple path rules.
-- 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync.
+- 🧠 **Memories**: browse, edit, move and delete the memories of every project, with the `MEMORY.md` indexes kept in sync. Share a project's memory between profiles, so what Claude learns about it with one account the other knows too.
 - 💬 **Conversations**: read the conversations of every project, and move a single one to another profile, with its file snapshots, or delete it.
 - 📊 **Usage**: tokens per day, per project, per model and per profile, with an estimated cost at list price (subscription plans are not billed per token), read from the conversations Claude Code saves.
 - 👤 **Profiles**: see the account each profile is signed in with. Create a profile, empty, copied from another one or from a template you saved (settings, permissions, skills, MCP servers; never conversations or credentials); rename it, change its command, or delete it, optionally merging its content into another profile first, after a preview of everything it touches. Each profile also gets its own GitHub account (a GitHub CLI folder named after it) and commit identity, without touching tokens.
@@ -148,7 +148,7 @@ cc-profiles
 - ⚖️ **Compare two profiles**: settings, permissions, skills, agents, MCP servers, `CLAUDE.md`, mods and plugins side by side, with one-click copies of what differs.
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
-- 🌓 **Light and dark**: the theme button in the header picks System, Light or Dark; System follows your operating system.
+- 🌓 **Light and dark**: the About panel (ⓘ) picks System, Light or Dark; System follows your operating system.
 - 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
 - 🔄 **Updates from the app**: cc-profiles checks PyPI once a day (or when you click **Check for updates** in the (i) panel) and shows a dot when a new version is out; one click updates and restarts it (pipx, uv or Homebrew), then it shows what's new. **Report a problem…** opens a bug report with the versions filled in.
 

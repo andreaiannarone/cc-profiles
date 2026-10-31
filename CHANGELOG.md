@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Shared memory**: a project's memory can be shared between profiles from the Memories tab (**Share with…**), so what Claude learns about the project with one account the other knows too. The other profile's own memories of it join the shared ones, after a preview; **Separate** gives it its own copy again. Conversations, history and settings stay per profile.
+
+### Changed
+- The theme (System, Light, Dark) is picked in the About panel (ⓘ), with the other cc-profiles settings, instead of a button in the header.
+
+### Fixed
+- Mac app: the About panel and the dialogs dim the whole window and reach its top edge, instead of leaving the title bar as a band in the page's color above them. The page now runs under the title bar and leaves room for the window's buttons.
+
 ## [0.6.2] - 2026-10-30
 
 ### Fixed

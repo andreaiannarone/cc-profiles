@@ -41,7 +41,7 @@
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
 button, input, select, textarea { font: inherit; color: inherit; }
-.wrap { padding: 24px 28px 80px; }
+.wrap { padding: calc(24px + var(--titlebar, 0px)) 28px 80px; }  /* --titlebar: set by the Mac app */
 header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
 .logo { width: 45px; height: 30px; flex: none; }
@@ -209,6 +209,9 @@ td.acts .btn + .btn { margin-left: 6px; }
 .seg { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .seg button { flex: 1; border: 0; border-radius: 7px; background: transparent; padding: 5px 14px; white-space: nowrap; cursor: pointer; }
 .seg button:hover { background: var(--panel-2); }
+/* as tall as a .btn.small next to it (the theme picker in About) */
+.seg.small { flex: none; padding: 2px; border-radius: 8px; }
+.seg.small button { flex: none; padding: 1px 9px; font-size: 12.5px; border-radius: 6px; }
 .seg button.on { background: var(--text); color: var(--bg); }
 .plist { max-height: 62vh; overflow: auto; }
 .plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
@@ -216,6 +219,7 @@ td.acts .btn + .btn { margin-left: 6px; }
 .plist button.on { background: var(--accent-soft); }
 .plist .p { flex: 1; word-break: break-all; font-family: var(--mono); font-size: 12px; }
 .plist .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.memshare { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
 .cards { display: grid; gap: 10px; }
 .mcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; }
@@ -389,9 +393,6 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); align-self: center; }
 #gsearch { margin-left: auto; min-width: 220px; }
 .iconbtn:hover { color: var(--text); border-color: var(--faint); }
-.popover { position: fixed; z-index: 15; width: 260px; display: grid; gap: 8px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
-.popover h2 { margin: 0 0 2px; font-size: 15px; }
-.popover .seg button { padding: 6px 4px; }
 .iconbtn svg { width: 18px; height: 18px; }
 .iconbtn.has-update { position: relative; }
 .iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--logo); border: 2px solid var(--bg); }
@@ -400,7 +401,7 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .btn.update-on:hover { background: color-mix(in srgb, var(--logo) 80%, white); border-color: color-mix(in srgb, var(--logo) 80%, white); }
 .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100vw); background: var(--bg); border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(0,0,0,.2); overflow-y: auto; z-index: 16; }
-.drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
+.drawer .dh { position: sticky; top: 0; display: flex; align-items: center; gap: 10px; padding: calc(16px + var(--titlebar, 0px)) 20px 16px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 1; }
 .drawer .dh h2 { margin: 0; font-size: 16px; flex: 1; }
 .drawer .db { padding: 16px 20px 40px; display: grid; gap: 14px; }
 .drawer .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }

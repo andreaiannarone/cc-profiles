@@ -37,12 +37,14 @@ function renderAbout(dr, a) {
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
+      <div class="upd"><span id="ab-theme-l">Theme</span><div class="seg small" id="ab-theme" role="group" aria-labelledby="ab-theme-l">${themeButtons()}</div></div>
       <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
       <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
       <div class="upd" id="mac-app" hidden></div>
       ${S.term?.choices?.length > 1 ? `<label class="upd"><span>Open projects in</span><select id="term-pick">${S.term.choices.map(c => `<option${c === S.term.terminal ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
       <div class="upd"><button class="btn small" id="ab-news">What's new</button><button class="btn small" id="ab-report">Report a problem…</button></div></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
+  bindTheme($("#ab-theme", dr));
   $("#upd-check", dr).onclick = () => checkUpdate(dr);
   if (S.upd?.newer) showUpdate(dr, S.upd);
   $("#upd-auto", dr).onchange = async e => {

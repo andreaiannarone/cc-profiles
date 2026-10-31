@@ -11,7 +11,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/`: `index.html`
 
 ## Color
 
-All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme button in the header (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
+All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme picker in the About panel (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
 
 | Property | Light | Dark | Use |
 |---|---|---|---|
@@ -57,7 +57,7 @@ Rules:
 |---|---|---|
 | Profile card | `.pcard` | name and badge, monospace meta line, three big numbers; `.live` for "session open". `.pcard.add` is the dashed "+ New profile" variant |
 | Navigation | `nav.tabs#tabs` > `.tabrow`, `.more` | an underline nav like GitHub's, under the profile cards: each tab is a 16px stroke icon (`.ti`) plus its name, muted until hovered (a `--panel-2` rounded background) or active (full text color and a 2px orange underline on the nav's bottom line). Tabs that do not fit move, in order, into the **More** menu (`#moremenu`); the active tab always stays in the row, More is underlined when the active tab is in it, and a red dot marks it when a tab inside has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
-| Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal, drawer or popover open. The header button is hidden on touch screens (`hover: none`) |
+| Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal or drawer open. The header button is hidden on touch screens (`hover: none`) |
 | Filters | `.chip` / `.chip.on` | the active chip is inverted (background `--text`) |
 | Buttons | `.btn` | `.primary` (the logo's orange `--logo` with `--logo-eye` text in both themes, at most one per row or modal), `.danger` (red text), `.small` |
 | Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-default`, `.b-warn`, `.b-err` | always short text, never an icon alone; `.b-default` (outlined) marks a setting left at its default. Never fade a badge with `opacity`: it breaks contrast |
@@ -76,6 +76,7 @@ Rules:
 | Drawer | `.drawer` | right side panel for the About information; sticky header with Refresh and Close |
 | Setting row | `.srow` | three columns: name and help · input with a badge for the file it comes from (`settings.local.json` in amber, because it wins) and × · the other profiles' values with *copy*. A changed row gets `.changed` (an orange bar on the left); nothing is saved until the bar below |
 | Save bar | `.savebar#gen-bar` | sticky at the bottom of Settings → General while there are unsaved changes: "N unsaved changes" with **Cancel** and **Save changes**, which saves them all in one backup |
+| Small segmented control | `.seg.small` | as tall as a `.btn.small`, for a choice that sits among small buttons (the theme in About) |
 | Status line editor | `.slpresets`, `.slgrid`, `.slparts`, `.slpreview`, `.slopts`, `.slsep` | a row of preset `.chip`s (the one matching the draft is `.on`; a click fills the draft, never saves); a list of pieces (grip, checkbox, brackets select, sample, ↑↓) in line order, ticked ones first; side controls as `.seg` (separator, brackets for all, rate limits); a terminal-like preview rendering the script's ANSI colors; *Save status line* enabled only with changes |
 | Section | `.sec` | header with title, explanation and `.shared-note` if the file is shared |
 | Usage chart | `.uchart`, `usageChart(daily)` | inline SVG bars, one `g.day` per day with a `<title>` tooltip and an `aria-label` summary on the `svg`; segments use `--p1` (output), `--p3` (input and cache write) and `--faint` (cache read), with a legend, never the accent. Summary numbers are `.ucard`s |

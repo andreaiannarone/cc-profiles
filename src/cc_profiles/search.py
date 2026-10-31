@@ -77,7 +77,7 @@ def search(q):
 
     idx = path_index()
     profs = profiles()
-    projects, seen_skills, seen_md = {}, {}, set()
+    projects, seen_skills, seen_memories, seen_md = {}, {}, {}, set()
     for p in profs:
         if late():
             break
@@ -93,13 +93,19 @@ def search(q):
                     projects[name] = {"kind": "project", "profile": p["id"], "profiles": [p["id"]], "title": path,
                                       "snippet": m, "open": {"project": name, "path": path}}
             for f in memory_files(d):
+                real = os.path.realpath(os.path.join(d, "memory", f))
+                if real in seen_memories:  # a shared memory: one result, every profile that sees it
+                    seen_memories[real]["profiles"].append(p["id"])
+                    continue
                 text = cached_read("head", os.path.join(d, "memory", f), read_head)
                 meta = parse_memory(text)
                 title = meta.get("name") or f[:-3]
                 m = snippet(title, ql) or snippet(meta.get("description", ""), ql) or snippet(text, ql)
+                item = {"kind": "memory", "profile": p["id"], "profiles": [p["id"]], "title": title, "where": path,
+                        "snippet": m, "open": {"project": name, "file": f}}
+                seen_memories[real] = item
                 if m:
-                    add("memories", {"kind": "memory", "profile": p["id"], "title": title, "where": path,
-                                     "snippet": m, "open": {"project": name, "file": f}})
+                    add("memories", item)
             if late():
                 break
         sk = os.path.join(root, "skills")

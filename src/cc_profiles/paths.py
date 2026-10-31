@@ -196,3 +196,26 @@ def memory_files(d, fresh=False):
     if not os.path.isdir(md):
         return []
     return list(_memory_names(md) if fresh else cached_read("memories", md, _memory_names))
+
+
+# Shared memory: a project's memory/ in one profile can be a relative link to the same project's
+# memory/ in another profile (the holder, whose folder is real), so both see the same memories.
+# Links always point to a real folder: a link is never made to a link.
+def memory_holder(prof, name, profs=None):
+    """The profile whose memory a project's memory/ links to, or None (its own, or none)."""
+    md = os.path.join(prof["dir_abs"], "projects", name, "memory")
+    if not os.path.islink(md):
+        return None
+    real = os.path.realpath(md)
+    for p in profs or profiles():
+        other = os.path.join(p["dir_abs"], "projects", name, "memory")
+        if p["id"] != prof["id"] and not os.path.islink(other) and os.path.realpath(other) == real:
+            return p
+    return None
+
+
+def memory_sharers(prof, name, profs=None):
+    """The profiles whose memory/ of the project links to this profile's."""
+    profs = profs or profiles()
+    return [p for p in profs if p["id"] != prof["id"]
+            and (memory_holder(p, name, profs) or {}).get("id") == prof["id"]]

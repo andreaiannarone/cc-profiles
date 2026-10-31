@@ -25,7 +25,7 @@ from .core import (
     write_json,
     write_text,
 )
-from .paths import classify, history_lines, memory_files, path_index, project_folders
+from .paths import classify, history_lines, memory_files, memory_holder, memory_sharers, path_index, project_folders
 
 # ---------------------------------------------------------------------------
 # Projects
@@ -44,6 +44,9 @@ def list_projects():
                     pass
             row = rows.setdefault(name, {"name": name, "in": {}})
             row["in"][p["id"]] = {"conv": len(convs), "mem": len(memory_files(d)), "mtime": mtime}
+            holder = memory_holder(p, name, profs)
+            if holder:
+                row["in"][p["id"]]["mem_from"] = holder["id"]
     ids = [p["id"] for p in profs]
     rules = load_config()["rules"]
     labels = {p["id"]: p["label"] for p in profs}
@@ -57,7 +60,7 @@ def list_projects():
             issues.append({"kind": "orphan", "text": "folder not found on disk" if path else "unknown path"})
         if expected in ids:
             for pid, st in row["in"].items():
-                if pid != expected and (st["conv"] or st["mem"]):
+                if pid != expected and (st["conv"] or (st["mem"] and not st.get("mem_from"))):
                     issues.append({"kind": "profile", "from": pid, "to": expected,
                                    "text": f"also in {labels[pid]}, but belongs to {labels[expected]}"})
         if expected is None:
@@ -70,33 +73,59 @@ def list_projects():
     return out
 
 
+def merge_memory(s, d, bk, label):
+    """Merge the memory folder s into d, with its index; conflicts go to the backup."""
+    bk.mkdir(d)
+    for m in os.listdir(s):
+        ms, mdst = os.path.join(s, m), os.path.join(d, m)
+        if m == "MEMORY.md":
+            with open(ms) as f:
+                extra = [l for l in f.read().splitlines() if l.startswith("- [")]
+            old = open(mdst).read() if os.path.exists(mdst) else ""
+            add = [l for l in extra if l not in old]
+            if add:
+                bk.copy(mdst, f"{label}-MEMORY-target.md")
+                write_text(mdst, old.rstrip("\n") + ("\n" if old else "") + "\n".join(add) + "\n")
+            bk.stash(ms, f"{label}-MEMORY-source.md")
+        elif os.path.exists(mdst):
+            bk.stash(ms, f"{label}-conflict-{m}")
+            bk.note(f"memory already present, original kept in the backup: {m}")
+        else:
+            shutil.move(ms, mdst)
+            bk.moved(ms, mdst)
+    if not os.listdir(s):
+        os.rmdir(s)
+
+
+def carry_memory_link(s, d, bk):
+    """A shared memory's link s, for the project folder d is about to join: d links to the same
+    memory when it is the same project in another profile; under another name (a relink) it gets
+    its own copy; when d already has memories, the link alone goes to the backup."""
+    real = os.path.realpath(s)
+    bk.stash(s, "memory-link")
+    if os.path.lexists(d):
+        if os.path.realpath(d) != real:
+            bk.note("the shared memory was not kept: the target has memories of its own")
+        return
+    if os.path.basename(os.path.dirname(real)) == os.path.basename(os.path.dirname(d)):
+        os.symlink(os.path.relpath(real, os.path.dirname(d)), d)
+        bk.created(d)
+    elif os.path.isdir(real):
+        shutil.copytree(real, d, symlinks=True)
+        bk.created(d)
+        bk.note("the shared memory is now a copy of its own")
+
+
 def merge_dir(src, dst, bk, label):
     """Merge src into dst. Memories are merged with their index; conflicts go to the backup."""
     bk.mkdir(dst)
     moved = 0
     for e in os.listdir(src):
         s, d = os.path.join(src, e), os.path.join(dst, e)
-        if e == "memory" and os.path.isdir(s):
-            bk.mkdir(d)
-            for m in os.listdir(s):
-                ms, mdst = os.path.join(s, m), os.path.join(d, m)
-                if m == "MEMORY.md":
-                    with open(ms) as f:
-                        extra = [l for l in f.read().splitlines() if l.startswith("- [")]
-                    old = open(mdst).read() if os.path.exists(mdst) else ""
-                    add = [l for l in extra if l not in old]
-                    if add:
-                        bk.copy(mdst, f"{label}-MEMORY-target.md")
-                        write_text(mdst, old.rstrip("\n") + ("\n" if old else "") + "\n".join(add) + "\n")
-                    bk.stash(ms, f"{label}-MEMORY-source.md")
-                elif os.path.exists(mdst):
-                    bk.stash(ms, f"{label}-conflict-{m}")
-                    bk.note(f"memory already present, original kept in the backup: {m}")
-                else:
-                    shutil.move(ms, mdst)
-                    bk.moved(ms, mdst)
-            if not os.listdir(s):
-                os.rmdir(s)
+        if e == "memory" and os.path.islink(s):
+            carry_memory_link(s, d, bk)
+        elif e == "memory" and os.path.isdir(s):
+            merge_memory(s, d, bk, label)
         elif os.path.exists(d):
             bk.stash(s, f"{label}-conflict-{e}")
             bk.note(f"already present in the target, original kept in the backup: {e}")
@@ -107,6 +136,15 @@ def merge_dir(src, dst, bk, label):
     if not os.listdir(src):
         os.rmdir(src)
     return moved
+
+
+def check_memory_users(prof, name, doing):
+    """Refuse to take away a project whose memory other profiles use (their links would break)."""
+    users = memory_sharers(prof, name)
+    if users:
+        raise ApiError(f"Cannot {doing} this project: {' and '.join(p['label'] for p in users)} "
+                       f"{'uses' if len(users) == 1 else 'use'} its memory (shared memory). "
+                       "Separate the memory in the Memories tab first")
 
 
 def matches(project, path):
@@ -211,6 +249,7 @@ def op_move(name, src_id, dst_id):
     if src_id == dst_id:
         raise ApiError("Source and target are the same profile")
     project_dir(src, name)
+    check_memory_users(src, name, "move")
     path = path_index().get(name)
     bk = Backup(f"move-{src_id}-{dst_id}", f"Move {pretty(path) or name}: {src['label']} → {dst['label']}")
     conv, fh, hist, cfg = move_project_into(name, src, dst, bk, path)
@@ -241,7 +280,9 @@ def move_plan(name, src_id, dst_id, idx=None):
 
     for e in sorted(os.listdir(S)):
         s, d = os.path.join(S, e), os.path.join(D, e)
-        if e == "memory" and os.path.isdir(s):
+        if e == "memory" and os.path.islink(s):  # shared: only the link moves (carry_memory_link)
+            add("link" if not os.path.lexists(d) else "stash", s, os.path.realpath(s) if not os.path.lexists(d) else "backup")
+        elif e == "memory" and os.path.isdir(s):
             for m in sorted(os.listdir(s)):
                 ms, md = os.path.join(s, m), os.path.join(d, m)
                 if m == "MEMORY.md":
@@ -286,6 +327,7 @@ def move_project_into(name, src, dst, bk, path):
 def op_delete(name, pid):
     prof = profile(pid)
     S = project_dir(prof, name)
+    check_memory_users(prof, name, "delete")
     bk = Backup(f"delete-{pid}", f"Delete {pretty(path_index().get(name)) or name} from {prof['label']}")
     for sid in sessions_of(S):
         bk.stash(os.path.join(prof["dir_abs"], "file-history", sid), f"file-history-{sid}")
@@ -302,6 +344,7 @@ def op_relink(name, pid, new_path, title=None):
     new_name = san(new_path)
     if new_name == name:
         raise ApiError("The project is already linked to this folder")
+    check_memory_users(prof, name, "relink")
     old = path_index().get(name)
     bk = Backup(f"relink-{pid}", title or f"Relink {pretty(old) or name} → {pretty(new_path)} ({prof['label']})")
     conv = merge_dir(S, project_dir(prof, new_name, must_exist=False), bk, "project")
@@ -329,8 +372,8 @@ def merge_plan(name, pid, target):
     src, path = project_dir(prof, name), merge_target(prof, name, target)
     dst = project_dir(prof, target)
     conv = [e for e in os.listdir(src) if e.endswith(".jsonl")]
-    mem = [m for m in (os.listdir(os.path.join(src, "memory")) if os.path.isdir(os.path.join(src, "memory")) else [])
-           if m != "MEMORY.md"]
+    own = os.path.isdir(os.path.join(src, "memory")) and not os.path.islink(os.path.join(src, "memory"))
+    mem = [m for m in (os.listdir(os.path.join(src, "memory")) if own else []) if m != "MEMORY.md"]
     clash = [e for e in os.listdir(src) if e != "memory" and os.path.exists(os.path.join(dst, e))]
     clash += [f"memory/{m}" for m in mem if os.path.exists(os.path.join(dst, "memory", m))]
     old = path_index().get(name)

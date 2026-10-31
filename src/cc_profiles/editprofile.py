@@ -15,7 +15,7 @@ from .core import (
     profile,
     write_json,
 )
-from .paths import history_lines, memory_files, path_index
+from .paths import history_lines, memory_files, memory_sharers, path_index, project_folders
 from .projects import move_history, move_plan, move_project_into
 from .sharing import primary
 from .launchers import (
@@ -86,6 +86,10 @@ def check_delete(pid, merge_into):
     dst = profile(merge_into) if merge_into else None
     if dst and dst["id"] == pid:
         raise ApiError("A profile cannot be merged into itself")
+    users = {u["label"] for name, _, _ in project_folders(prof, conversations=False) for u in memory_sharers(prof, name)}
+    if users:
+        raise ApiError(f"{' and '.join(sorted(users))} {'uses' if len(users) == 1 else 'use'} the memory of projects "
+                       f"in {prof['label']} (shared memory): separate it in the Memories tab first")
     return prof, dst
 
 

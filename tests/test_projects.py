@@ -434,3 +434,97 @@ def test_move_merges_history_without_duplicates(home, app_factory):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+# --- shared memory ------------------------------------------------------------------------
+def test_shared_memory_between_profiles(home, app_factory):
+    """Work and Personal use Default's memory of a project through a link: Work's own memories join it
+    (a clash goes to the backup), edits reach every profile, the project cannot be moved or deleted
+    from under them, and separating gives a profile its own copy again. All of it can be undone."""
+    basic_home(home)
+    home.conversation("work", "code/work/api", "s-api-work2", {"deploy.md": "deploy on fridays",
+                                                               "api-notes.md": "work's notes"})
+    home.profile("personal")
+    before = home.snapshot()
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    q = f"project={api}"
+
+    sh = app.get(f"/api/memory/list?profile=default&{q}")["sharing"]
+    assert sh["from"] is None and sh["with"] == [] and {o["id"]: o["own"] for o in sh["others"]} == {"work": 2, "personal": 0}
+    plan = app.get(f"/api/memory/share-plan?profile=work&{q}&from=default")
+    assert plan["join"] == ["deploy.md"] and plan["conflicts"] == ["api-notes.md"]
+    msg = app.post("/api/memory/share", {"profile": "work", "project": api, "from": "default", "shared": True})["message"]
+    assert "1 of its memories joined it" in msg and "1 with a name already there is kept in the backup" in msg
+    work_md = home.path(f".claude-work/projects/{api}/memory")
+    default_md = home.path(f".claude/projects/{api}/memory")
+    assert work_md.is_symlink() and os.readlink(work_md) == f"../../../.claude/projects/{api}/memory"
+    assert sorted(os.listdir(default_md)) == ["MEMORY.md", "api-notes.md", "deploy.md"]
+    assert "the api uses postgres" in (default_md / "api-notes.md").read_text()  # the shared one wins a clash
+    assert "(deploy.md)" in (default_md / "MEMORY.md").read_text()
+
+    # a profile that never opened the project gets the folder and the link
+    app.post("/api/memory/share", {"profile": "personal", "project": api, "from": "default", "shared": True})
+    assert home.path(f".claude-personal/projects/{api}/memory").is_symlink()
+    assert "already uses this memory" in app.post_error(
+        "/api/memory/share", {"profile": "work", "project": api, "from": "default", "shared": True})
+    assert "share it from there" in app.post_error(
+        "/api/memory/share", {"profile": "personal", "project": api, "from": "work", "shared": True})
+
+    # edited from Work: written in the shared folder, the link stays
+    app.post("/api/memory/save", {"profile": "work", "project": api, "file": "deploy.md", "content": "deploy on mondays"})
+    assert work_md.is_symlink() and "mondays" in (default_md / "deploy.md").read_text()
+    found = app.get("/api/search?q=mondays")["results"]["memories"]  # one result, every profile that sees it
+    assert len(found) == 1 and sorted(found[0]["profiles"]) == ["default", "personal", "work"]
+    assert app.get(f"/api/memory/list?profile=personal&{q}")["sharing"]["from"] == "default"
+    assert sorted(app.get(f"/api/memory/list?profile=default&{q}")["sharing"]["with"]) == ["personal", "work"]
+    assert next(p for p in app.get("/api/memory/projects?profile=work") if p["name"] == api)["shared"]
+    row = next(r for r in app.get("/api/projects") if r["name"] == api)
+    assert row["in"]["work"]["mem_from"] == "default" and "mem_from" not in row["in"]["default"]
+
+    # the holder's project stays put while others use its memory
+    err = app.post_error("/api/projects/move", {"project": api, "from": "default", "to": "work"})
+    assert "Personal and Work use its memory" in err and "Separate the memory" in err
+    assert "Cannot delete this project" in app.post_error("/api/projects/delete", {"project": api, "profile": "default"})
+
+    # separating: Personal gets its own copy, Work still shares
+    app.post("/api/memory/share", {"profile": "personal", "project": api, "shared": False})
+    personal_md = home.path(f".claude-personal/projects/{api}/memory")
+    assert not personal_md.is_symlink() and sorted(os.listdir(personal_md)) == sorted(os.listdir(default_md))
+    assert app.get(f"/api/memory/list?profile=default&{q}")["sharing"]["with"] == ["work"]
+    assert "is not shared" in app.post_error("/api/memory/share", {"profile": "personal", "project": api, "shared": False})
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_a_shared_memory_follows_its_project(home, app_factory):
+    """Moving a project whose memory is shared keeps the link (same project, another profile);
+    relinking it to another folder gives it a copy of its own; a profile holding shared memory
+    cannot be deleted."""
+    basic_home(home)
+    home.profile("personal")
+    shutil.rmtree(home.path(f".claude-work/projects/{san(home.path('code/work/api'))}"))
+    home.conversation("work", "code/work/cli", "s-cli", {"cli.md": "the cli is in go"})
+    before = home.snapshot()
+    app = app_factory()
+    api = san(home.path("code/work/api"))
+    app.post("/api/memory/share", {"profile": "work", "project": api, "from": "default", "shared": True})
+    plan = app.get(f"/api/projects/move/preview?project={api}&from=work&to=personal")
+    assert [i["action"] for i in plan["items"]] == ["link"]
+    app.post("/api/projects/move", {"project": api, "from": "work", "to": "personal"})
+    moved = home.path(f".claude-personal/projects/{api}/memory")
+    assert moved.is_symlink() and os.path.realpath(moved) == os.path.realpath(home.path(f".claude/projects/{api}/memory"))
+    assert not home.path(f".claude-work/projects/{api}").exists()
+
+    home.path("code/work/api2").mkdir()
+    app.post("/api/projects/relink", {"project": api, "profile": "personal", "path": str(home.path("code/work/api2"))})
+    copy = home.path(f".claude-personal/projects/{san(home.path('code/work/api2'))}/memory")
+    assert not copy.is_symlink() and (copy / "api-notes.md").read_text().endswith("the api uses postgres\n")
+    home.path("code/work/api2").rmdir()
+
+    cli = san(home.path("code/work/cli"))
+    app.post("/api/memory/share", {"profile": "personal", "project": cli, "from": "work", "shared": True})
+    assert "Personal uses the memory of projects in Work" in app.post_error("/api/profiles/delete", {"id": "work"})
+    app.restore_all()
+    assert home.snapshot() == before

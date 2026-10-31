@@ -62,13 +62,13 @@ def test_every_tab_renders_without_errors(page_on_sandbox):
 
 def test_theme_and_about_panels_open(page_on_sandbox):
     page, errors = page_on_sandbox
-    page.click("#theme-btn")
-    page.click('.popover [data-theme-set="light"]')
-    assert page.get_attribute("html", "data-theme") == "light"
-    page.keyboard.press("Escape")
-    assert page.query_selector(".popover") is None
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
+    page.click('#ab-theme [data-theme-set="light"]')  # the theme is picked in the About panel
+    assert page.get_attribute("html", "data-theme") == "light"
+    assert page.get_attribute('#ab-theme [data-theme-set="light"]', "aria-pressed") == "true"
+    page.click('#ab-theme [data-theme-set="system"]')
+    assert page.get_attribute("html", "data-theme") is None
     assert "cc-profiles" in page.inner_text(".drawer")
     page.wait_for_selector("#mac-app-add")
     assert "a window of its own" in page.inner_text("#mac-app")
@@ -620,4 +620,25 @@ def test_the_page_waits_for_a_restart_after_a_python_update(page_on_sandbox):
     page.wait_for_selector(".pcard")
     # on purpose: the answer above, and the check that the server is back, cut short by the reload
     errors[:] = [e for e in errors if "500" not in e and not e.endswith("/ net::ERR_ABORTED")]
+    assert errors == []
+
+
+def test_share_a_projects_memory_with_another_profile(page_on_sandbox):
+    """Memories tab: Share with… says what happens, then the project is marked shared and the
+    other profile can be stopped again."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click('[data-mproj]:has-text("code/personal/blog")')
+    page.wait_for_selector("#mshare")
+    assert "Only this profile uses these memories" in page.inner_text(".memshare")
+    page.click("#mshare")
+    page.wait_for_function("() => document.querySelector('#msplan')?.textContent.includes('will read and write these memories')")
+    page.select_option("#msp", "client")
+    page.click('.modal button:has-text("Share")')
+    page.wait_for_function("() => document.querySelector('.memshare')?.textContent.includes('Shared with')")
+    assert "Client" in page.inner_text(".memshare")
+    assert page.is_visible('[data-mproj]:has-text("code/personal/blog") .badge.b-shared')
+    page.click('[data-mshare-off="client"]')
+    page.click('.modal button:has-text("Separate")')
+    page.wait_for_function("() => document.querySelector('.memshare')?.textContent.includes('Only this profile')")
     assert errors == []
