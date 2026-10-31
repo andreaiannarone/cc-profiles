@@ -209,6 +209,9 @@ td.acts .btn + .btn { margin-left: 6px; }
 .seg { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .seg button { flex: 1; border: 0; border-radius: 7px; background: transparent; padding: 5px 14px; white-space: nowrap; cursor: pointer; }
 .seg button:hover { background: var(--panel-2); }
+/* as tall as a .btn.small next to it (the theme picker in About) */
+.seg.small { flex: none; padding: 2px; border-radius: 8px; }
+.seg.small button { flex: none; padding: 1px 9px; font-size: 12.5px; border-radius: 6px; }
 .seg button.on { background: var(--text); color: var(--bg); }
 .plist { max-height: 62vh; overflow: auto; }
 .plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
