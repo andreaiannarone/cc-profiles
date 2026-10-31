@@ -350,7 +350,7 @@ async function deleteProfile(id) {
       </div>
       <div class="hint" id="pd-plan" aria-live="polite"></div>
       <div class="hint">The profile and its <code>${esc(p.command)}</code> command are removed too. Everything can be undone from the Backups tab.</div>
-      <label class="f"><span>Type <b>${esc(p.label)}</b> to confirm</span><input class="text" id="pd-confirm" autocomplete="off"></label>
+      <label class="f"><span>Type “<b>${esc(p.label)}</b>” to confirm</span><input class="text" id="pd-confirm" autocomplete="off"></label>
     </div>`,
     actions: [{ label: "Delete profile", kind: "danger", value: "ok" }] });
   const btn = document.querySelector('.modal [data-i="0"]'), inp = $("#pd-confirm"), box = $("#pd-plan");
