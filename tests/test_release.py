@@ -265,6 +265,22 @@ def test_a_cancelled_check_is_started_again_and_a_failed_one_stops():
     assert not any(c.startswith("gh run rerun") for c in ran)
 
 
+def test_a_github_error_while_watching_the_release_run_is_not_the_end():
+    """`gh run watch` stops on a 502 though the run goes on: its status is read, it is watched again."""
+    states = [{"status": "queued"}, "not json", {"status": "completed", "conclusion": "success"}]
+    rel, ran, out = scripted(lambda cmd: (lambda s: s if isinstance(s, str) else json.dumps(s))(states.pop(0))
+                             if cmd[:2] == ["gh", "api"] else "")
+    rel.watch_run(41)
+    assert ran.count("gh run watch 41 --exit-status --interval 15") == 3 and "watching it again" in out.getvalue()
+    rel, ran, _ = scripted(lambda cmd: json.dumps({"status": "completed", "conclusion": "failure"}) if cmd[:2] == ["gh", "api"] else "")
+    with pytest.raises(release.ReleaseError, match="ended with failure"):
+        rel.watch_run(41)
+    rel, ran, _ = scripted(lambda cmd: "")  # GitHub never answers
+    with pytest.raises(release.ReleaseError, match="Could not follow the Release workflow"):
+        rel.watch_run(41)
+    assert ran.count("gh run watch 41 --exit-status --interval 15") == release.WATCH_TRIES
+
+
 @pytest.mark.parametrize("prs,tagged,expected,missing", [
     # stopped before the merge: wait for the checks, merge, tag, publish
     ([{"number": 7, "headRefName": "fix"}, {"number": 59, "headRefName": "release-0.5.6"}], False,
@@ -285,6 +301,8 @@ def test_resume_goes_on_from_where_the_release_stopped(prs, tagged, expected, mi
             return "abc\trefs/tags/v0.5.6" if tagged else ""
         if line.startswith("git branch --list"):
             return "  release-0.5.6"
+        if line.startswith("gh api repos/{owner}/{repo}/actions/runs/5"):
+            return json.dumps({"status": "completed", "conclusion": "success"})
         return "[]" if "--json" in cmd else ""
     rel, ran, out = scripted(answers)
     rel.release_run, rel.wait_for_pypi, rel.update_tap = lambda tag: 5, lambda new: None, lambda new: None

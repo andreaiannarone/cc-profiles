@@ -16,8 +16,10 @@ site's What's new page (docs/changelog.md) and the app's release notes
 waits for the Release workflow and for the wheel on PyPI; points the Homebrew formula
 in the tap to the new version; deletes the release branch.
 A check GitHub cancelled (a job it left in the queue until it gave up) is started again;
-a failed one stops the release. After a stop, `resume` goes on from the open release pull
-request, or from the merged one: every step from the merge on skips what is already done.
+a failed one stops the release. When `gh run watch` loses track of the Release workflow
+(GitHub answering with a server error), the run's status decides and it is watched again.
+After a stop, `resume` goes on from the open release pull request, or from the merged one:
+every step from the merge on skips what is already done.
 Needs git and an authenticated gh. Standard library only.
 """
 
@@ -49,6 +51,7 @@ CHECKS_APPEAR_TIMEOUT = 60      # seconds before pushing an empty "Trigger CI" c
 RUN_APPEAR_TIMEOUT = 180        # seconds for the Release workflow run to show up
 PYPI_TIMEOUT = 15 * 60
 CHECK_RERUNS = 2                # times the cancelled checks of a pull request are started again
+WATCH_TRIES = 20                # times the Release workflow is watched again after GitHub failed to answer
 RELEASE_BRANCH_RE = re.compile(r"^release-(\d+\.\d+\.\d+)$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -401,7 +404,7 @@ class Releaser:
                 self.run(["git", "tag", tag])
             self.run(["git", "push", "origin", tag])
         run_id = self.release_run(tag)
-        self.run(["gh", "run", "watch", str(run_id), "--exit-status", "--interval", "15"])
+        self.watch_run(run_id)
 
         self.step(f"Wait for cc-profiles {new} on PyPI")
         self.wait_for_pypi(new)
@@ -484,6 +487,32 @@ class Releaser:
                 pass
             time.sleep(5)
         return False
+
+    def watch_run(self, run_id):
+        """Wait for the Release workflow run to succeed. `gh run watch` gives up when GitHub answers
+        with a server error (a 502 while it reads the jobs) though the run goes on: then the run's own
+        status decides, and an unfinished run is watched again."""
+        watch = ["gh", "run", "watch", str(run_id), "--exit-status", "--interval", "15"]
+        if self.dry:
+            self.run(watch)
+            self.say(f"  (if GitHub fails to answer, the run's status is read and it is watched again, {WATCH_TRIES} times at most)")
+            return
+        for _ in range(WATCH_TRIES):
+            self.run(watch, check=False)
+            out = self.run(["gh", "api", f"repos/{{owner}}/{{repo}}/actions/runs/{run_id}"], capture=True, check=False)
+            try:
+                run = json.loads(out or "{}")
+            except ValueError:
+                run = {}
+            if run.get("status") == "completed":
+                if run.get("conclusion") == "success":
+                    return
+                raise ReleaseError(f"The Release workflow ended with {run.get('conclusion')}: look at run {run_id} on GitHub, "
+                                   "then finish with: python scripts/release.py resume")
+            self.say(f"  the Release workflow is {run.get('status') or 'not readable'} (GitHub may have failed to answer): watching it again")
+            self.wait(30)
+        raise ReleaseError(f"Could not follow the Release workflow (run {run_id}): when it has succeeded on GitHub, "
+                           "finish with: python scripts/release.py resume")
 
     def release_run(self, tag):
         """The id of the Release workflow run started by the tag."""

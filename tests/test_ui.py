@@ -222,9 +222,17 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
     page.click('[data-pdel="work"]')
-    page.click('.modal input[name="pd"][value="default"]')
+    page.select_option("#pd-into", "client")  # picking a profile picks moving
+    page.wait_for_function("() => document.querySelector('#pd-plan')?.textContent.includes('Moves to Client')")
+    assert page.is_checked('.modal input[name="pd"][value="merge"]')
     page.wait_for_selector("#pd-plan details")
-    assert "Moves to Default" in page.inner_text("#pd-plan")
+    delete = page.locator('.modal .foot button.danger')
+    page.fill("#pd-confirm", "Work")
+    assert delete.is_disabled()  # Work has a session open: deleting needs Delete it anyway
+    page.check("#pd-force")
+    assert delete.is_enabled()
+    page.fill("#pd-confirm", "Wor")
+    assert delete.is_disabled()
     cancel(page)
     page.click('label.switch:has([data-share="agents"][data-prof="work"])')
     page.wait_for_selector(".modal details")
@@ -641,4 +649,17 @@ def test_share_a_projects_memory_with_another_profile(page_on_sandbox):
     page.click('[data-mshare-off="client"]')
     page.click('.modal button:has-text("Separate")')
     page.wait_for_function("() => document.querySelector('.memshare')?.textContent.includes('Only this profile')")
+    assert errors == []
+
+
+def test_closing_move_memory_while_it_loads_projects(page_on_sandbox):
+    """Move memory…: another profile picked and the dialog closed before its projects arrive."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click('[data-mproj]:has-text("code/work/api")')
+    page.click("[data-mfile]")
+    page.click("#mmove")
+    page.select_option("#mvp", "work")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(500)  # the answer comes after the dialog is gone
     assert errors == []

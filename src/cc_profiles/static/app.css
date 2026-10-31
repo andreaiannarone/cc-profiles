@@ -308,7 +308,8 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .form { display: grid; gap: 12px; }
 .form label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
 .form .radio { display: grid; gap: 6px; }
-.form .radio label, .form .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13.5px; }
+.form .radio label, .form .checks label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text); font-size: 13.5px; }
+.form .radio input { accent-color: var(--accent); }  /* the chosen option is a selection: orange */
 .form .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .np-list { margin: 6px 0 0; padding-left: 18px; }
 .prow { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }

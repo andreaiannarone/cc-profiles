@@ -63,8 +63,10 @@ CHECK_EVERY = 86400
 
 
 def check_update():
+    # no-cache: right after a release PyPI's CDN can keep answering the previous version for minutes
+    req = urllib.request.Request(PYPI_URL, headers={"Cache-Control": "no-cache"})
     try:
-        with urllib.request.urlopen(PYPI_URL, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=10) as r:
             latest = json.loads(r.read())["info"]["version"]
     except (OSError, ValueError, KeyError) as e:
         raise ApiError(f"Could not reach PyPI: {e}. Check your connection and try again.", 502)
