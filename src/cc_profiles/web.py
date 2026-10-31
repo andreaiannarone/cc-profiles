@@ -24,9 +24,11 @@ from .memories import (
     memory_list,
     memory_projects,
     memory_read,
+    memory_share_plan,
     op_memory_delete,
     op_memory_move,
     op_memory_save,
+    op_memory_share,
 )
 from .sharing import list_sharing, op_share, share_plan
 from .settings import (
@@ -295,6 +297,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/projects": lambda: memory_projects(q["profile"]),
                 "/api/memory/list": lambda: memory_list(q["profile"], q["project"]),
                 "/api/memory/file": lambda: memory_read(q["profile"], q["project"], q["file"]),
+                "/api/memory/share-plan": lambda: memory_share_plan(q["profile"], q["project"], q["from"]),
                 "/api/conversations/projects": lambda: conversation_projects(q["profile"]),
                 "/api/conversations": lambda: list_conversations(q["profile"], q["project"]),
                 "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
@@ -371,6 +374,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
                                                            b["to_profile"], b["to_project"]),
                 "/api/memory/delete": lambda: op_memory_delete(b["profile"], b["project"], b["file"]),
+                "/api/memory/share": lambda: op_memory_share(b["profile"], b["project"], b.get("from"), bool(b["shared"])),
                 "/api/conversations/move": lambda: op_conversation_move(b["profile"], b["project"], b["session"], b["to"]),
                 "/api/conversations/delete": lambda: op_conversation_delete(b["profile"], b["project"], b["session"]),
                 "/api/backups/restore": lambda: op_restore(b["name"]),

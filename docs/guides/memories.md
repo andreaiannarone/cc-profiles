@@ -30,6 +30,19 @@ Typical uses:
 - a preference that is about *you*, not one project: move it to your home project so it applies everywhere
 - a work memory that ended up in a personal profile
 
+## Share with another profile
+
+A project you open with two accounts can keep **one memory**: what Claude learns about it in one profile, the other knows too. Pick the profile that holds the memories and the project, then **Share with…** and the other profile. The window says what happens to that profile's own memories of the project before anything changes.
+
+- The other profile's memory folder becomes a link to this one (`~/.claude-work/projects/<project>/memory → ../../../.claude/projects/<project>/memory`), as with [sharing](../concepts.md#sharing). Claude Code reads and writes through it, so both profiles see the same files.
+- Its own memories of the project join the shared ones, with their `MEMORY.md` lines. One with a file name already there keeps the shared version; its own goes to the backup.
+- A profile that never opened the project gets it, with the shared memory only.
+- Only the memory is shared. Conversations, prompt history and the project's settings stay per profile, and so does the login.
+
+The project list marks such projects **shared**. In the other profile the project says *Shared: the same memories as* the holder, with **Separate**; in the holder, **Stop sharing** next to each profile does the same. Separating gives that profile its own copy of the memories as they are: from then on changes no longer cross.
+
+While other profiles use a project's memory, the holder's project cannot be moved, relinked, merged or deleted, and the holder profile cannot be deleted: their links would point to nothing. Separate first. Moving the project of a profile that *uses* a shared memory keeps the link in the new profile; relinking it to another folder gives it a copy of its own. Every step is in a backup and can be undone.
+
 ## Delete
 
 **Delete** removes the line from `MEMORY.md` and moves the file to the backup.

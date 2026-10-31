@@ -216,6 +216,7 @@ td.acts .btn + .btn { margin-left: 6px; }
 .plist button.on { background: var(--accent-soft); }
 .plist .p { flex: 1; word-break: break-all; font-family: var(--mono); font-size: 12px; }
 .plist .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.memshare { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 label.check { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
 .cards { display: grid; gap: 10px; }
 .mcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; }

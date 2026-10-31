@@ -19,9 +19,9 @@ The code is one module per area. Each module imports only from the ones above it
 | `byfolder.py` | rule matching (`match_rule()`, `san()`), `cc-profiles which` and `shell-init`. Imports nothing from the package, so `which` starts fast on every `claude` launch |
 | `core.py` | paths and constants, `san()`, atomic `write_text()`, `cached_read()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
 | `folders.py` | Choose…: the system's folder dialog (`osascript`, `zenity`, `kdialog`) and the folder listing of the page's own browser (read-only) |
-| `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()` |
+| `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()`, shared memory links (`memory_holder()`, `memory_sharers()`) |
 | `projects.py` | list, move (with preview), relink, delete, rules |
-| `memories.py` | list, read, save, move, delete |
+| `memories.py` | list, read, save, move, delete; a project's memory shared between profiles (a link to the holder's), with a preview |
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `statusline.py` | the status line cc-profiles writes for a profile (a `sh` script reading Claude Code's JSON with `jq`), its presets and preview, applied to one profile or to all |

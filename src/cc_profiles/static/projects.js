@@ -290,11 +290,12 @@ function renderMemories() {
       <input class="search" style="min-width:0;margin:0" placeholder="Filter projects…" value="${esc(m.q)}" id="mq" aria-label="Filter projects">
       <label class="check"><input type="checkbox" id="mall" ${m.all ? "checked" : ""}> also show projects without memories</label></div>
       <div class="plist">${plist.map(p => `<button data-mproj="${esc(p.name)}" class="${p.name === m.project ? "on" : ""}">
-        <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No projects.</div>`}</div>
+        <span class="p">${esc(p.pretty)}</span>${p.shared ? `<span class="badge b-shared">shared</span>` : ""}<span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No projects.</div>`}</div>
     </aside>
     <section>${!cur ? `<div class="empty">Pick a project on the left.</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(cur.pretty)}</code> · ${esc(label(m.profile))}</div>
       ${!m.list ? `<div class="empty">${LOADER}</div>` : `
+        ${memSharing(m.list.sharing)}
         ${m.list.missing.length ? `<div class="issue err" style="margin-bottom:8px">MEMORY.md lists files that do not exist: ${m.list.missing.map(esc).join(", ")}</div>` : ""}
         <div class="cards">${m.list.items.map(it => `<div class="mcard ${it.file === m.file ? "on" : ""}" data-mfile="${esc(it.file)}" tabindex="0" role="button">
           <div class="t">${esc(it.name)} ${it.type ? `<span class="badge b-none">${esc(it.type)}</span>` : ""}
@@ -317,6 +318,50 @@ function renderMemories() {
     };
     $("#mmove").onclick = () => moveMemory(ctx());
   }
+  if ($("#mshare")) $("#mshare").onclick = () => shareMemory();
+  for (const b of $("#main").querySelectorAll("[data-mshare-off]")) b.onclick = () => separateMemory(b.dataset.mshareOff);
+}
+// Shared memory: other profiles use this profile's memory of the project, or this one uses another's
+function memSharing(sh) {
+  if (!sh) return "";
+  if (sh.from) return `<div class="memshare">Shared: the same memories as ${badge(sh.from)}
+    <button class="btn small" data-mshare-off="${esc(S.mem.profile)}">Separate</button></div>`;
+  const free = sh.others.filter(o => !o.elsewhere);
+  if (!sh.with.length && !free.length) return "";
+  return `<div class="memshare">${sh.with.length ? `Shared with ${sh.with.map(id => `${badge(id)}
+      <button class="btn small" data-mshare-off="${esc(id)}" aria-label="Stop sharing with ${esc(label(id))}">Stop sharing</button>`).join(" ")}`
+    : "Only this profile uses these memories."}
+    ${free.length ? `<button class="btn small" id="mshare">Share with…</button>` : ""}</div>`;
+}
+async function shareMemory() {
+  const m = S.mem, free = m.list.sharing.others.filter(o => !o.elsewhere);
+  const plan = async id => api(`/api/memory/share-plan?profile=${id}&project=${encodeURIComponent(m.project)}&from=${m.profile}`);
+  const says = p => {
+    let t = `${esc(p.profile)} will read and write these memories: what Claude learns in one profile, the other sees too.`;
+    if (p.join.length) t += ` Its own ${p.join.length} ${p.join.length === 1 ? "memory joins" : "memories join"} them.`;
+    if (p.conflicts.length) t += ` ${p.conflicts.length} with a name already here (${p.conflicts.map(esc).join(", ")}) ${p.conflicts.length === 1 ? "goes" : "go"} to the backup.`;
+    return t;
+  };
+  let p = await plan(free[0].id);
+  const resP = modal({ title: "Share memory", sub: `<code>${esc(m.projects.find(x => x.name === m.project)?.pretty || m.project)}</code>, from ${esc(label(m.profile))}`,
+    body: `<select id="msp" aria-label="Profile">${free.map(o => `<option value="${esc(o.id)}">${esc(label(o.id))}</option>`).join("")}</select>
+      <p class="hint" id="msplan">${says(p)}</p>`,
+    actions: [{ label: "Share", kind: "primary", value: "ok" }] });
+  const sel = $("#msp");
+  sel.onchange = async () => {  // the dialog may be gone when the answer comes
+    p = await plan(sel.value); const el = $("#msplan"); if (el) el.innerHTML = says(p);
+  };
+  const res = await resP;
+  if (!res) return;
+  await run(() => api("/api/memory/share", { profile: $("#msp", res.el).value, project: m.project, from: m.profile, shared: true }));
+  await loadMemProjects(); await openMemProject(m.project); loadProfiles();
+}
+async function separateMemory(pid) {
+  const m = S.mem;
+  if (!(await confirmBox(`Separate the memory of ${label(pid)}?`,
+      `${esc(label(pid))} gets its own copy of these memories: from now on changes in one profile no longer reach the other.`, "Separate"))) return;
+  await run(() => api("/api/memory/share", { profile: pid, project: m.project, shared: false }));
+  await loadMemProjects(); await openMemProject(m.project); loadProfiles();
 }
 async function moveMemory(ctx) {
   const projFor = async pid => (await api("/api/memory/projects?profile=" + pid));
