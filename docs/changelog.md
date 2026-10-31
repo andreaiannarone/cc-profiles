@@ -3,6 +3,17 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.6.3] - 2026-10-31
+
+**Added**
+- **Shared memory**: a project's memory can be shared between profiles from the Memories tab (**Share with…**), so what Claude learns about the project with one account the other knows too. The other profile's own memories of it join the shared ones, after a preview; **Separate** gives it its own copy again. Conversations, history and settings stay per profile.
+
+**Changed**
+- The theme (System, Light, Dark) is picked in the About panel (ⓘ), with the other cc-profiles settings, instead of a button in the header.
+
+**Fixed**
+- Mac app: the About panel and the dialogs dim the whole window and reach its top edge, instead of leaving the title bar as a band in the page's color above them. The page now runs under the title bar and leaves room for the window's buttons.
+
 ## [0.6.2] - 2026-10-30
 
 **Fixed**
@@ -333,6 +344,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0

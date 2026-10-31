@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-31
+
 ### Added
 - **Shared memory**: a project's memory can be shared between profiles from the Memories tab (**Share with…**), so what Claude learns about the project with one account the other knows too. The other profile's own memories of it join the shared ones, after a preview; **Separate** gives it its own copy again. Conversations, history and settings stay per profile.
 
@@ -344,7 +346,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.5.9...v0.6.0
