@@ -390,9 +390,6 @@ details.slscript pre { max-height: 320px; overflow: auto; margin: 8px 0 0; paddi
 .iconbtn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--panel); border-radius: 50%; cursor: pointer; color: var(--muted); align-self: center; }
 #gsearch { margin-left: auto; min-width: 220px; }
 .iconbtn:hover { color: var(--text); border-color: var(--faint); }
-.popover { position: fixed; z-index: 15; width: 260px; display: grid; gap: 8px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
-.popover h2 { margin: 0 0 2px; font-size: 15px; }
-.popover .seg button { padding: 6px 4px; }
 .iconbtn svg { width: 18px; height: 18px; }
 .iconbtn.has-update { position: relative; }
 .iconbtn.has-update::after { content: ""; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--logo); border: 2px solid var(--bg); }

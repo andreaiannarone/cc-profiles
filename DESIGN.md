@@ -11,7 +11,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/`: `index.html`
 
 ## Color
 
-All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme button in the header (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
+All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme picker in the About panel (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
 
 | Property | Light | Dark | Use |
 |---|---|---|---|
@@ -57,7 +57,7 @@ Rules:
 |---|---|---|
 | Profile card | `.pcard` | name and badge, monospace meta line, three big numbers; `.live` for "session open". `.pcard.add` is the dashed "+ New profile" variant |
 | Navigation | `nav.tabs#tabs` > `.tabrow`, `.more` | an underline nav like GitHub's, under the profile cards: each tab is a 16px stroke icon (`.ti`) plus its name, muted until hovered (a `--panel-2` rounded background) or active (full text color and a 2px orange underline on the nav's bottom line). Tabs that do not fit move, in order, into the **More** menu (`#moremenu`); the active tab always stays in the row, More is underlined when the active tab is in it, and a red dot marks it when a tab inside has a counter. Tab buttons keep `data-tab` and get `aria-current="page"` when active; a red `.count` shows the number of problems |
-| Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal, drawer or popover open. The header button is hidden on touch screens (`hover: none`) |
+| Keyboard shortcuts | `#keys-btn`, `showKeys()` | `/` search, `g` + letter for a tab, `?` the list in a modal. Ignored while typing in a field or with a modal or drawer open. The header button is hidden on touch screens (`hover: none`) |
 | Filters | `.chip` / `.chip.on` | the active chip is inverted (background `--text`) |
 | Buttons | `.btn` | `.primary` (the logo's orange `--logo` with `--logo-eye` text in both themes, at most one per row or modal), `.danger` (red text), `.small` |
 | Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-default`, `.b-warn`, `.b-err` | always short text, never an icon alone; `.b-default` (outlined) marks a setting left at its default. Never fade a badge with `opacity`: it breaks contrast |

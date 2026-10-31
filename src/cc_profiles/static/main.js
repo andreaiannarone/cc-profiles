@@ -60,7 +60,7 @@ document.addEventListener("keydown", e => {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
   const el = /** @type {HTMLElement} */ (e.target);
   if (el.isContentEditable || el.closest?.("input, textarea, select")) return;
-  if (document.querySelector(".modal-bg, .drawer, .popover, .moremenu:not([hidden])")) return;
+  if (document.querySelector(".modal-bg, .drawer, .moremenu:not([hidden])")) return;
   if (goPending && Date.now() - goPending < 1500) {
     goPending = 0;
     const tab = GO_KEYS.find(([k]) => k === e.key.toLowerCase())?.[1];
@@ -157,7 +157,6 @@ $("#about-btn").onclick = openAbout;
   $("header h1").addEventListener("mouseenter", () => { play(GESTURES[next]); next = (next + 1) % GESTURES.length; });
   play("play");
 }
-$("#theme-btn").onclick = () => (closeTheme ? closeTheme() : openTheme());
 loadClaudeStatus();
 checkWhatsNew();
 loadUpdateStatus();

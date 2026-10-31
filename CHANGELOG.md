@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - **Shared memory**: a project's memory can be shared between profiles from the Memories tab (**Share with…**), so what Claude learns about the project with one account the other knows too. The other profile's own memories of it join the shared ones, after a preview; **Separate** gives it its own copy again. Conversations, history and settings stay per profile.
 
+### Changed
+- The theme (System, Light, Dark) is picked in the About panel (ⓘ), with the other cc-profiles settings, instead of a button in the header.
+
 ## [0.6.2] - 2026-10-30
 
 ### Fixed

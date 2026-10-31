@@ -380,24 +380,13 @@ function setTheme(v) {
   if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
   else document.documentElement.removeAttribute("data-theme");
 }
-let closeTheme = null;
-function openTheme() {
-  const btn = $("#theme-btn"), r = btn.getBoundingClientRect();
-  const pop = document.createElement("div");
-  pop.className = "popover"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", "Theme");
-  pop.style.top = (r.bottom + 8) + "px";
-  pop.style.right = Math.max(16, document.documentElement.clientWidth - r.right) + "px";
-  const draw = () => {
-    const cur = savedTheme();
-    pop.innerHTML = `<h2>Theme</h2><div class="seg">${THEMES.map(([k, l]) => `<button data-theme-set="${k}" class="${cur === k ? "on" : ""}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
+// The picker in the About panel: System, Light, Dark
+const themeButtons = () => THEMES.map(([k, l]) =>
+  `<button data-theme-set="${k}" class="${savedTheme() === k ? "on" : ""}" aria-pressed="${savedTheme() === k}">${l}</button>`).join("");
+function bindTheme(seg) {
+  seg.onclick = e => {
+    const b = e.target.closest("[data-theme-set]");
+    if (!b) return;
+    setTheme(b.dataset.themeSet); seg.innerHTML = themeButtons(); $("button.on", seg)?.focus();
   };
-  const close = () => { pop.remove(); closeTheme = null; document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onOut); btn.focus(); };
-  const onKey = e => { if (e.key === "Escape") close(); };
-  const onOut = e => { if (!pop.contains(e.target) && !btn.contains(e.target)) close(); };
-  pop.addEventListener("click", e => { const b = e.target.closest("[data-theme-set]"); if (b) { setTheme(b.dataset.themeSet); draw(); $("button.on", pop)?.focus(); } });
-  draw();
-  document.body.append(pop);
-  document.addEventListener("keydown", onKey); document.addEventListener("mousedown", onOut);
-  closeTheme = close;
-  $("button.on", pop)?.focus();
 }

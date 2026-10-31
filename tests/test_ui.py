@@ -62,13 +62,13 @@ def test_every_tab_renders_without_errors(page_on_sandbox):
 
 def test_theme_and_about_panels_open(page_on_sandbox):
     page, errors = page_on_sandbox
-    page.click("#theme-btn")
-    page.click('.popover [data-theme-set="light"]')
-    assert page.get_attribute("html", "data-theme") == "light"
-    page.keyboard.press("Escape")
-    assert page.query_selector(".popover") is None
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
+    page.click('#ab-theme [data-theme-set="light"]')  # the theme is picked in the About panel
+    assert page.get_attribute("html", "data-theme") == "light"
+    assert page.get_attribute('#ab-theme [data-theme-set="light"]', "aria-pressed") == "true"
+    page.click('#ab-theme [data-theme-set="system"]')
+    assert page.get_attribute("html", "data-theme") is None
     assert "cc-profiles" in page.inner_text(".drawer")
     page.wait_for_selector("#mac-app-add")
     assert "a window of its own" in page.inner_text("#mac-app")
