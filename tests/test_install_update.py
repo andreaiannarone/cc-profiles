@@ -139,6 +139,25 @@ def test_install_kind(monkeypatch):
         assert U.install_kind() == kind
 
 
+def test_the_check_asks_pypi_past_its_cache(monkeypatch, tmp_path):
+    """Right after a release PyPI's CDN can answer the previous version: the check asks it not to."""
+    asked = []
+
+    class Answer:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"info": {"version": "9.9.9"}}'
+    monkeypatch.setattr(U.urllib.request, "urlopen", lambda req, timeout: asked.append(req) or Answer())
+    monkeypatch.setattr(U, "UPDATE_STATE", str(tmp_path / "update-check.json"))
+    assert U.check_update()["latest"] == "9.9.9"
+    assert asked[0].get_header("Cache-control") == "no-cache" and asked[0].full_url == U.PYPI_URL
+
+
 def test_version_key_of_odd_versions():
     assert U.version_key("") == () and U.version_key(None) == () and U.version_key("dev") == ()
     assert U.version_key("2") == (2,) and U.version_key("1.2.3.post1") == (1, 2, 3)

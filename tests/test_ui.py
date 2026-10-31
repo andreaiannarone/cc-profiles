@@ -642,3 +642,16 @@ def test_share_a_projects_memory_with_another_profile(page_on_sandbox):
     page.click('.modal button:has-text("Separate")')
     page.wait_for_function("() => document.querySelector('.memshare')?.textContent.includes('Only this profile')")
     assert errors == []
+
+
+def test_closing_move_memory_while_it_loads_projects(page_on_sandbox):
+    """Move memory…: another profile picked and the dialog closed before its projects arrive."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click('[data-mproj]:has-text("code/work/api")')
+    page.click("[data-mfile]")
+    page.click("#mmove")
+    page.select_option("#mvp", "work")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(500)  # the answer comes after the dialog is gone
+    assert errors == []

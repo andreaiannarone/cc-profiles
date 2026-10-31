@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.
+- Memories: closing **Move memory…** right after picking another profile no longer causes a page error.
+
 ## [0.6.3] - 2026-10-31
 
 ### Added

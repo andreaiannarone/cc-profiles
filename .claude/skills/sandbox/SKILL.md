@@ -17,8 +17,10 @@ The app writes into Claude Code's own files, so it never runs on the real home f
 2. Start the app on it, in the background, on port 4799 (4777 is the user's real instance):
 
    ```sh
-   HOME="<path from step 1>" .venv/bin/cc-profiles open --port 4799
+   HOME="<path from step 1>" CC_PROFILES_AUTO_APP=0 .venv/bin/cc-profiles open --port 4799
    ```
+
+   `CC_PROFILES_AUTO_APP=0` keeps the server from adding a Mac app to the sandbox at its first start. Such an app runs the installed `cc-profiles` from the Finder, with the real `HOME`: if the sandbox server stopped while its window was open, **Try again** would start cc-profiles on the real profiles. To look at a change to the Mac app itself, add it on purpose (`HOME="<path>" .venv/bin/cc-profiles install-app --port 4799`, after `scripts/build_app.py`), and quit it before stopping the server.
 
    Add `--no-browser` when you only need the API, for example to check a change with `curl`. API calls need the token: read it from the page (`const TOKEN = "…"`) and send it as `X-Token`, with `Host: 127.0.0.1:4799`.
 

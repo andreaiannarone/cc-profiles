@@ -372,7 +372,9 @@ async function moveMemory(ctx) {
       <select id="mvj" aria-label="Target project">${opts(list)}</select>`,
     actions: [{ label: "Move", kind: "primary", value: "ok" }] });
   const sel = $("#mvp");
-  sel.onchange = async () => { list = await projFor(sel.value); $("#mvj").innerHTML = opts(list); };
+  sel.onchange = async () => {  // the dialog may be gone when the answer comes
+    list = await projFor(sel.value); const el = $("#mvj"); if (el) el.innerHTML = opts(list);
+  };
   const res = await resP;
   if (!res) return;
   await run(() => api("/api/memory/move", { ...ctx, to_profile: $("#mvp", res.el).value, to_project: $("#mvj", res.el).value }));
