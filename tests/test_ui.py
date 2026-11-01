@@ -676,6 +676,10 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert "34%" in rows[0][1] and "resets at" in rows[0][1] and "resets " in rows[1][1]
     assert rows[1][0] == "qrow mid" and rows[0][0] == "qrow"  # orange from 75 %
     assert page.get_attribute('[data-quota="default"] .qbar', "aria-valuenow") == "34"
+    assert "Checked at" in page.inner_text('[data-quota="default"] .qfoot')
+    with page.expect_request(lambda r: "/api/quota?profile=default&fresh=1" in r.url):  # Refresh asks again
+        page.click('[data-qrefresh="default"]')
+    page.wait_for_selector('[data-quota="default"] .qrow')
     assert not page.query_selector('[data-quota="work"]')  # signed out: nothing to ask
     cards = page.eval_on_selector_all(".acard", "cs => cs.map(c => c.innerText)")
     assert "Max 5×" in cards[0] and "Member since Mar 2025" in cards[0] and "extra usage off" in cards[0]

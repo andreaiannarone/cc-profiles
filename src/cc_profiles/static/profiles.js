@@ -40,9 +40,9 @@ function accountsHtml() {
     <div class="health accounts">${a.accounts.map(card).join("")}</div>
     ${a.not_signed_in.length ? `<div class="hint" style="margin-top:8px">Not signed in to claude.ai: ${a.not_signed_in.map(esc).join(", ")}</div>` : ""}`;
 }
-function loadQuotas() {
-  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile).map(c => ({ id: c.quota_profile }))) {
-    api(`/api/quota?profile=${encodeURIComponent(p.id)}`)
+function loadQuotas(only, fresh) {
+  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only)).map(c => ({ id: c.quota_profile }))) {
+    api(`/api/quota?profile=${encodeURIComponent(p.id)}${fresh ? "&fresh=1" : ""}`)
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
         S.quota[p.id] = q;
@@ -51,6 +51,15 @@ function loadQuotas() {
       });
   }
 }
+// Refresh on a card: ask claude.ai again instead of the answer kept for 5 minutes
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-qrefresh]");
+  if (!b) return;
+  const id = b.dataset.qrefresh;
+  delete S.quota[id];
+  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  loadQuotas(id, true);
+});
 function signInIssue(id) {
   const x = S.accounts?.accounts.flatMap(c => c.profiles).find(y => y.id === id);
   return x && SIGN_IN[x.sign_in] ? ` <span class="issue">· ${esc(SIGN_IN[x.sign_in])}</span>` : "";
@@ -81,14 +90,16 @@ function bindQuotaMode(seg) {
 function quotaHtml(id) {
   const q = S.quota[id];
   if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
-  if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)}</div>`;
+  const refresh = `<button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button>`;
+  if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)} ${q.state === "error" || q.state === "expired" ? refresh : ""}</div>`;
+  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
   return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
     const used = Math.min(100, Math.max(0, l.percent)), level = used >= 90 ? " high" : used >= 75 ? " mid" : "";
     const left = quotaMode() === "left", pc = left ? 100 - used : used;
     return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
       <span class="qbar" role="meter" aria-label="${esc(l.label)} ${left ? "left" : "used"}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
       <span class="qp">${pc}%</span><span class="hint">${left ? "left · " : ""}${esc(resetText(l.resets_at))}</span></div>`;
-  }).join("")}</div>`;
+  }).join("")}<div class="qfoot"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>${refresh}</div></div>`;
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
