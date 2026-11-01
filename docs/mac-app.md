@@ -42,7 +42,7 @@ Drop them on the window or on the app's icon in the Dock. In a browser the page 
 
 ## Open a project in a terminal
 
-Every project with a folder has an **Open in Terminal** button (on its row, and in **Manage**): it opens the folder in a new terminal window with Claude Code already running in the profile you pick. When Claude Code exits, the shell stays open. With iTerm or Ghostty installed, pick which terminal in the About panel. This works in the browser too, on a Mac.
+Every project with a folder has an **Open in Terminal** button (on its row, and in **Manage**): it opens the folder in a new terminal window with Claude Code already running in the profile you pick. When Claude Code exits, the shell stays open. With iTerm or Ghostty installed, pick which terminal in the About panel, under **cc-profiles settings**. This works in the browser too, on a Mac.
 
 From the Finder, any folder opens the same way: right-click it, then **Quick Actions** (or **Services**) → **Open in Claude Code**. The profile is the one your [rules](guides/projects.md#assign-projects-with-rules) give the folder, as with [profile by folder](guides/profile-by-folder.md); with no rule, the profile its project is already in, else your first profile. **Open in Claude Code with Profile…** asks which. The app starts if it is not open. If the two items do not show, turn them on in System Settings → Keyboard → Keyboard Shortcuts → Services → Files and Folders.
 

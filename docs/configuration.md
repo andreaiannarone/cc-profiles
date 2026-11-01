@@ -137,4 +137,4 @@ Profile templates are `.zip` files in `~/.cc-profiles/templates/<name>.zip`, in 
 
 ### `terminal`
 
-The terminal **Open in Terminal** uses. On macOS `"Terminal"`, `"iTerm"` or `"Ghostty"`; on Linux `"GNOME Terminal"`, `"Konsole"`, `"Xfce Terminal"`, `"kitty"`, `"Alacritty"`, `"WezTerm"`, `"Ghostty"` or `"Default terminal"` (`x-terminal-emulator`). Set from the About panel when more than one is installed; when unset, or set to one that is gone, the first installed in that order.
+The terminal **Open in Terminal** uses. On macOS `"Terminal"`, `"iTerm"` or `"Ghostty"`; on Linux `"GNOME Terminal"`, `"Konsole"`, `"Xfce Terminal"`, `"kitty"`, `"Alacritty"`, `"WezTerm"`, `"Ghostty"` or `"Default terminal"` (`x-terminal-emulator`). Set from the About panel (**cc-profiles settings**) when more than one is installed; when unset, or set to one that is gone, the first installed in that order.
