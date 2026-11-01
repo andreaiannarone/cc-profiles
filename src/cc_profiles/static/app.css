@@ -98,7 +98,7 @@ header .sub { color: var(--muted); }
 .qrow .ql { color: var(--muted); white-space: nowrap; }
 .qrow .qp { text-align: right; font-variant-numeric: tabular-nums; }
 .qrow .hint { white-space: nowrap; }
-.accounts { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.health.accounts { grid-template-columns: 1fr; gap: 10px; }  /* one account under the other */
 .acard h2 { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
 .acard .quota { margin: 10px 0 0; }
 .aprofs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; font-size: 12.5px; }
