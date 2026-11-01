@@ -63,15 +63,31 @@ function resetText(iso) {
   if (d.getTime() - now.getTime() < 6 * 86400e3) return `resets ${d.toLocaleDateString("en-US", { weekday: "short" })} ${time}`;
   return `resets ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
+// Used or left, picked in the About panel and kept in localStorage, per browser. The colour
+// follows what is used either way: little left is orange, then red.
+const QUOTA_MODES = [["used", "Used"], ["left", "Left"]];
+const quotaMode = () => { try { return localStorage.getItem("cc-profiles.quota") === "left" ? "left" : "used"; } catch { return "used"; } };
+const quotaButtons = () => QUOTA_MODES.map(([k, l]) =>
+  `<button data-quota-set="${k}" class="${quotaMode() === k ? "on" : ""}" aria-pressed="${quotaMode() === k}">${l}</button>`).join("");
+function bindQuotaMode(seg) {
+  seg.onclick = e => {
+    const b = e.target.closest("[data-quota-set]");
+    if (!b) return;
+    try { localStorage.setItem("cc-profiles.quota", b.dataset.quotaSet); } catch {}
+    seg.innerHTML = quotaButtons(); $("button.on", seg)?.focus();
+    document.querySelectorAll("[data-quota]").forEach(el => { el.outerHTML = quotaHtml(el.dataset.quota); });
+  };
+}
 function quotaHtml(id) {
   const q = S.quota[id];
   if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
   if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)}</div>`;
   return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
-    const pc = Math.min(100, Math.max(0, l.percent)), level = pc >= 90 ? " high" : pc >= 75 ? " mid" : "";
+    const used = Math.min(100, Math.max(0, l.percent)), level = used >= 90 ? " high" : used >= 75 ? " mid" : "";
+    const left = quotaMode() === "left", pc = left ? 100 - used : used;
     return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
-      <span class="qbar" role="meter" aria-label="${esc(l.label)} used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
-      <span class="qp">${pc}%</span><span class="hint">${esc(resetText(l.resets_at))}</span></div>`;
+      <span class="qbar" role="meter" aria-label="${esc(l.label)} ${left ? "left" : "used"}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
+      <span class="qp">${pc}%</span><span class="hint">${left ? "left · " : ""}${esc(resetText(l.resets_at))}</span></div>`;
   }).join("")}</div>`;
 }
 function renderSharing() {

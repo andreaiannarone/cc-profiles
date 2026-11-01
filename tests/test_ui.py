@@ -682,6 +682,19 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert "Acme" in cards[1] and "signed out: log in again with /login" in cards[1]
     assert "Not signed in to claude.ai: Client" in page.inner_text("#main")
     assert "log in again" in page.inner_text(".prow:has-text('sam@acme.example')")
+    # About → Plan limits: Left shows what remains, coloured by what is used
+    page.click("#about-btn")
+    page.click('#ab-quota [data-quota-set="left"]')
+    assert page.get_attribute('#ab-quota [data-quota-set="left"]', "aria-pressed") == "true"
+    page.keyboard.press("Escape")
+    rows = page.eval_on_selector_all('[data-quota="default"] .qrow', "rs => rs.map(r => [r.className, r.innerText])")
+    assert "66%" in rows[0][1] and "left · resets at" in rows[0][1] and "19%" in rows[1][1] and rows[1][0] == "qrow mid"
+    assert page.get_attribute('[data-quota="default"] .qbar', "aria-label") == "5 h left"
+    page.reload()
+    page.wait_for_selector(".pcard")
+    open_tab(page, "profiles")
+    page.wait_for_selector('[data-quota="default"] .qrow')
+    assert "66%" in page.inner_text('[data-quota="default"] .qrow')  # remembered
     if importlib.util.find_spec("axe_playwright_python"):
         assert axe_violations(page) == []
     assert errors == []
