@@ -9,8 +9,8 @@ The **Projects** tab lists every project that has a folder under `projects/` in 
 The tab opens on **Needs attention**: projects to fix (a folder gone, content in the wrong profile) first, then the ones only waiting for a profile, in grey. The number on the tab counts the first kind. Use the chips to see all projects, the projects of one profile, or the shared ones, and the search field to filter by path.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/projects-dark.jpg">
-  <img src="../assets/screenshots/projects-light.jpg" alt="The Projects tab: five projects with their profile, conversations and memories per profile, one folder not found on disk and one project to move to Work" width="1440" height="684" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/projects-light.jpg">
+  <img src="../assets/screenshots/projects-dark.jpg" alt="The Projects tab: five projects with their profile, conversations and memories per profile, one folder not found on disk and one project to move to Work" width="1440" height="684" loading="lazy">
 </picture>
 
 ## Move a project to another profile

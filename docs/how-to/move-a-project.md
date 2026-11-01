@@ -14,8 +14,8 @@ Close the Claude Code sessions open in that project, in both profiles. Claude Co
 4. Confirm.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/move-dark.jpg">
-  <img src="../assets/screenshots/move-light.jpg" alt="The Move to Work dialog: what moves, a warning about open sessions, and the list of the 7 files and folders it touches" width="560" height="488" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/move-light.jpg">
+  <img src="../assets/screenshots/move-dark.jpg" alt="The Move to Work dialog: what moves, a warning about open sessions, and the list of the 7 files and folders it touches" width="560" height="488" loading="lazy">
 </picture>
 
 What moves:

@@ -183,14 +183,17 @@ a search box over search.json, a sidebar from _data/nav.yml, and the page's Mark
   // System → light → dark, remembered like in the app.
   const order = ["system", "light", "dark"], btn = document.getElementById("theme-btn");
   const cur = () => document.documentElement.dataset.theme || "system";
-  // Screenshots are <picture>s with a dark source for prefers-color-scheme (as on GitHub):
-  // a theme picked here overrides the system one for them too.
+  // Screenshots are dark by default: a <picture> with the dark image and a light source that
+  // never matches (media="not all", so GitHub always shows dark), turned on when light is picked here.
+  // A source for prefers-color-scheme follows the theme picked here too.
   const pictures = () => document.querySelectorAll(".doc picture source").forEach(src => {
     if (!src.dataset.media) {
-      if (!src.media.includes("prefers-color-scheme")) return;
-      src.dataset.media = src.media;  // the original, for "system"
+      if (src.media === "not all" && /-light\./.test(src.srcset)) src.dataset.media = "picked";
+      else if (src.media.includes("prefers-color-scheme")) src.dataset.media = src.media;  // the original, for "system"
+      else return;
     }
-    src.media = cur() === "dark" ? "all" : cur() === "light" ? "not all" : src.dataset.media;
+    if (src.dataset.media === "picked") src.media = cur() === "light" ? "all" : "not all";
+    else src.media = cur() === "dark" ? "all" : cur() === "light" ? "not all" : src.dataset.media;
   });
   const show = () => { btn.title = btn.ariaLabel = "Theme: " + cur(); pictures(); };
   btn.addEventListener("click", () => {

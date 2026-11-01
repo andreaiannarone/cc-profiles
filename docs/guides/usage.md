@@ -3,8 +3,8 @@
 The **Usage** tab (`g u`) shows how many tokens Claude used in each profile, per day, per project and per model, with an estimated cost. It is read-only: it reads the conversations Claude Code saved and changes nothing.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/usage-dark.jpg">
-  <img src="../assets/screenshots/usage-light.jpg" alt="The Usage tab: tokens and estimated cost per day, with totals per project, model and profile" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/usage-light.jpg">
+  <img src="../assets/screenshots/usage-dark.jpg" alt="The Usage tab: tokens and estimated cost per day, with totals per project, model and profile" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Pick what to see

@@ -1,5 +1,6 @@
 """Tests for the repository's tooling: the Claude Code hook and skills in .claude/,
 and the plugin marketplace."""
+import re
 import json
 import os
 import subprocess
@@ -147,6 +148,9 @@ def test_docs_page_navigation():
     assert 'a.className = "anchor"' in layout and ".doc .anchor" in css
     assert 'id="updated"' in layout and "api.github.com/repos/andreaiannarone/cc-profiles/commits" in layout
     assert '.doc picture source' in layout and "prefers-color-scheme" in layout
+    readme = (ROOT / "README.md").read_text()
+    for pic in re.findall(r"<picture>.*?</picture>", readme, re.S):  # screenshots are dark unless light is picked
+        assert "logo" in pic or ('media="not all"' in pic and re.search(r'<img src="[^"]*-dark\.', pic)), pic
     assert 'box.className = "zoom"' in layout and "dialog.zoom" in css  # screenshots open full size
     assert 'class="feedback"' in layout and "issues/new" in layout
     assert 'id="suggest"' in (ROOT / "docs" / "404.md").read_text() and 'getElementById("suggest")' in layout

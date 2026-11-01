@@ -33,9 +33,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-dark.gif">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-light.gif">
-    <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-light.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, a conversation, the skills, an MCP server, the comparison of two profiles and the backup of the move are shown" width="860">
+    <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-light.gif">
+    <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/demo-dark.gif" alt="cc-profiles in use: a project is moved from the Default profile to Work with one click, then its memories, a conversation, the skills, an MCP server, the comparison of two profiles and the backup of the move are shown" width="860">
   </picture>
 </p>
 
@@ -160,17 +159,15 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-light.jpg" alt="The Memories tab: projects on the left, the memories of the selected project with their descriptions, and an editor">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/memories-dark.jpg" alt="The Memories tab: projects on the left, the memories of the selected project with their descriptions, and an editor">
       </picture>
       <p align="center"><b>Memories</b>: every project's memories, with an editor</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-light.jpg" alt="The Conversations tab: the projects of a profile, the conversations of the selected one, and a read-only viewer of its messages">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/conversations-dark.jpg" alt="The Conversations tab: the projects of a profile, the conversations of the selected one, and a read-only viewer of its messages">
       </picture>
       <p align="center"><b>Conversations</b>: read, move or delete a single conversation</p>
     </td>
@@ -178,17 +175,15 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-light.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/usage-dark.jpg" alt="The Usage tab: total tokens, estimated cost, replies and cache share, then a bar chart of tokens per day over the last 30 days">
       </picture>
       <p align="center"><b>Usage</b>: tokens and estimated cost per day, project and model</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-light.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/statusline-dark.jpg" alt="The status line editor: pieces to tick and reorder, each with its brackets, a separator, colors and a live preview of the line">
       </picture>
       <p align="center"><b>Status line</b>: build it by ticking boxes, with a live preview</p>
     </td>
@@ -196,17 +191,15 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-light.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/skills-dark.jpg" alt="The Skills tab: a grid of skill cards with their descriptions, and the SKILL.md of the selected skill">
       </picture>
       <p align="center"><b>Skills</b>: browse, create, edit and copy skills</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available, and the claude.ai connectors with a switch each">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/mcp-dark.jpg" alt="The MCP tab: the MCP servers of a profile with their type, command or URL, and where they are available, and the claude.ai connectors with a switch each">
       </picture>
       <p align="center"><b>MCP</b>: servers for every project or for one</p>
     </td>
@@ -214,17 +207,15 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-light.jpg" alt="The Agents tab: the subagents of a profile as cards, and one open in a form with its model, description, effort, permission mode, max turns, color, tools and instructions">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/agents-dark.jpg" alt="The Agents tab: the subagents of a profile as cards, and one open in a form with its model, description, effort, permission mode, max turns, color, tools and instructions">
       </picture>
       <p align="center"><b>Agents</b>: subagents with a form for model, tools and instructions</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-light.jpg" alt="The Backups tab: every change made with cc-profiles, newest first, with Restore, Show changes and Keep">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/backups-dark.jpg" alt="The Backups tab: every change made with cc-profiles, newest first, with Restore, Show changes and Keep">
       </picture>
       <p align="center"><b>Backups</b>: every change, ready to be undone</p>
     </td>
@@ -232,17 +223,15 @@ cc-profiles
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-light.jpg" alt="The Compare tab: the settings of two profiles side by side, with the differences highlighted and buttons to copy them">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/compare-dark.jpg" alt="The Compare tab: the settings of two profiles side by side, with the differences highlighted and buttons to copy them">
       </picture>
       <p align="center"><b>Compare</b>: two profiles side by side, one-click copies</p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-dark.jpg">
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-light.jpg">
-        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-light.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
+        <source media="not all" srcset="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-light.jpg">
+        <img src="https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/docs/assets/screenshots/settings-dark.jpg" alt="The Settings tab: the settings of Claude Code's /config panel in groups, the file each value comes from, and the values of the other profiles">
       </picture>
       <p align="center"><b>Settings</b>: everything in /config, applied to one profile or all</p>
     </td>

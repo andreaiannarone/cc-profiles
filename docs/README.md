@@ -8,8 +8,8 @@ cc-profiles open
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/demo-dark.gif">
-  <img src="assets/demo-light.gif" alt="cc-profiles in use: a project moved between profiles, then its memories, a conversation, skills, an MCP server, a comparison and the backup">
+  <source media="not all" srcset="assets/demo-light.gif">
+  <img src="assets/demo-dark.gif" alt="cc-profiles in use: a project moved between profiles, then its memories, a conversation, skills, an MCP server, a comparison and the backup">
 </picture>
 
 Source code, issues and releases are on [GitHub](https://github.com/andreaiannarone/cc-profiles); the package is on [PyPI](https://pypi.org/project/cc-profiles/).

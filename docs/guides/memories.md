@@ -3,8 +3,8 @@
 Claude Code's auto-memory saves notes in `projects/<name>/memory/`, one Markdown file per memory, plus a `MEMORY.md` index that Claude reads at the start of every session in that project. The memories of your home folder's project act as general memories: they load whenever you start Claude Code from your home.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/memories-dark.jpg">
-  <img src="../assets/screenshots/memories-light.jpg" alt="The Memories tab: the memories of the work/api project in the Default profile, with deploy.md open in the editor" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/memories-light.jpg">
+  <img src="../assets/screenshots/memories-dark.jpg" alt="The Memories tab: the memories of the work/api project in the Default profile, with deploy.md open in the editor" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Browse

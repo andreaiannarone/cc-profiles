@@ -3,8 +3,8 @@
 Every operation that changes files creates a backup in `~/.cc-profiles/backups/<date>_<operation>/`, before touching anything.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/backups-dark.jpg">
-  <img src="../assets/screenshots/backups-light.jpg" alt="The Backups tab: three backups with Show changes, Restore, Keep and Delete" width="1440" height="646" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/backups-light.jpg">
+  <img src="../assets/screenshots/backups-dark.jpg" alt="The Backups tab: three backups with Show changes, Restore, Keep and Delete" width="1440" height="646" loading="lazy">
 </picture>
 
 ## Undo right away
