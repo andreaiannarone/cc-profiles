@@ -128,7 +128,7 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .sres .prow:hover { background: var(--panel-2); }
 .sres .snip { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
 .cmp td.v { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
-.cmp tr.diff td { background: var(--warn-soft); }
+.cmp tr.diff td { background: color-mix(in srgb, var(--warn) 6%, var(--panel)); }  /* a hint of amber: the "differs" badge carries the meaning */
 .cmp .src { font-family: inherit; font-size: 11px; color: var(--muted); margin-left: 6px; }
 .ext-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 22px 0 8px; }
 .ext-head h2 { margin: 0; font-size: 15px; }

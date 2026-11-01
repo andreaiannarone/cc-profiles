@@ -101,7 +101,7 @@ function renderCompare() {
   const mark = same => same ? `<span class="okmark">same</span>` : `<span class="badge b-warn">differs</span>`;
   const only = side => `<span class="badge b-warn">only in ${side === "a" ? A : B}</span>`;
   const btn = (attrs, label) => `<button class="btn small" ${attrs}>${label}</button>`;
-  const table = (cols, rows, empty) => rows.length ? `<div class="table cmp"><table><thead><tr>${cols.map(x => `<th>${x}</th>`).join("")}<th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+  const table = (cols, rows, empty) => rows.length ? `<div class="table cmp"><table>${cols.some(Boolean) ? `<thead><tr>${cols.map(x => `<th>${x}</th>`).join("")}<th></th></tr></thead>` : ""}<tbody>${rows.join("")}</tbody></table></div>`
     : `<div class="hint">${empty}</div>`;
   const listRows = (sec, kind, side, name, extra = "", label = "Copy") => `<tr class="diff"><td class="v">${esc(name)}</td><td>${only(side)}${extra}</td>
       <td class="acts">${btn(`data-cmp="${sec}" data-kind="${kind}" data-side="${side}" data-name="${esc(name)}"`, `${label} to ${side === "a" ? B : A}`)}</td></tr>`;
