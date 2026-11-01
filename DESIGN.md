@@ -115,4 +115,6 @@ Rules:
 
 The navigation needs no breakpoint: it measures itself and moves what does not fit into **More** (see *Navigation*), so nothing scrolls sideways even at 375px.
 
-At **820px** the memories grid becomes one column, search fields go full width, settings rows and permission columns stack, and tables scroll horizontally inside their container (the page itself never does). Profile and health cards adapt by themselves with `grid-template-columns: repeat(auto-fit, minmax(…))`.
+At **820px** the memories grid becomes one column, search fields go full width, settings rows and permission columns stack, and tables scroll horizontally inside their container (the page itself never does), except the two that matter most: the Projects table (`.ptable`) becomes one card per project (path, counts per profile, status, then the buttons on their own row) and backup rows put their buttons under the title. Health cards adapt by themselves with `grid-template-columns: repeat(auto-fit, minmax(…))`.
+
+At **560px** the profile cards go two by two and keep only the name, the badge and the three numbers, with short labels (`.s`: conv., proj., mem.; the long ones stay for screen readers).

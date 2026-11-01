@@ -219,6 +219,27 @@ def test_no_serious_accessibility_violations(page_on_sandbox, theme):
     assert found == {}, "\n".join(f"{t}: {x}" for t, vs in found.items() for x in vs)
 
 
+def test_projects_and_backups_fit_a_phone(page_on_sandbox):
+    """At 390 px: no sideways scroll, every project and backup button inside the screen, short card labels."""
+    page, errors = page_on_sandbox
+    page.set_viewport_size({"width": 390, "height": 844})
+    inside = """sel => [...document.querySelectorAll(sel)].every(b => { const r = b.getBoundingClientRect();
+        return r.left >= 0 && r.right <= innerWidth; })"""
+    open_tab(page, "projects")
+    page.wait_for_selector(".ptable td.acts button")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert page.evaluate(inside, ".ptable td.acts button")
+    assert page.is_visible(".pcard .nums .s")  # the long label stays, 1 px wide, for screen readers
+    assert page.evaluate("document.querySelector('.pcard .nums .l').getBoundingClientRect().width") <= 1
+    page.evaluate("async () => { await api('/api/settings/fields', {profile: 'default', values: {language: 'Italiano'}}); }")
+    open_tab(page, "backups")
+    page.wait_for_selector(".bk .acts button")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert page.evaluate(inside, ".bk .acts button")
+    assert page.evaluate("document.querySelector('.bk .t').getBoundingClientRect().width") > 300  # the title is not squeezed
+    assert errors == []
+
+
 def cancel(page):
     page.click(".modal [data-close]")
     page.wait_for_selector(".modal", state="detached")

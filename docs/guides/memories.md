@@ -9,7 +9,7 @@ Claude Code's auto-memory saves notes in `projects/<name>/memory/`, one Markdown
 
 ## Browse
 
-Pick a profile and a project on the left. By default only projects with memories are listed; tick *also show projects without memories* to see every project, for example to pick a destination.
+Pick a profile and a project in the list (on the left, or above on a phone). By default only projects with memories are listed; tick *also show projects without memories* to see every project, for example to pick a destination.
 
 Each memory shows its name, type (`user`, `feedback`, `project`, `reference`) and description, taken from the file's frontmatter. Two problems are flagged:
 

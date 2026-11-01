@@ -162,6 +162,7 @@ textarea.rawtext { width: min(760px, 80vw); min-height: 420px; font-family: var(
 .pcard .nums { display: flex; gap: 16px; margin-top: 10px; }
 .pcard .nums b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pcard .nums span { color: var(--muted); font-size: 12px; }
+.pcard .nums .s { display: none; }  /* the short label, at phone width */
 .live { font-size: 11.5px; color: var(--warn); background: var(--warn-soft); padding: 1px 7px; border-radius: 99px; margin-left: auto; }
 code, .mono { font-family: var(--mono); font-size: 12.5px; }
 
@@ -535,4 +536,30 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
   header { flex-wrap: wrap; }
   #gsearch { order: 3; flex-basis: 100%; }
   .table { overflow-x: auto; }
+  /* Projects: one card per project, the path on top and the actions underneath */
+  .ptable thead { display: none; }
+  .ptable, .ptable tbody, .ptable tr, .ptable td { display: block; }
+  .ptable tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .ptable td { padding: 2px 0; border: 0; }
+  .ptable td.path { font-size: 13px; overflow-wrap: anywhere; margin-bottom: 4px; }
+  .ptable td.nums { display: inline-block; margin-right: 14px; color: var(--muted); font-size: 12.5px; }
+  .ptable td.nums::before { content: attr(data-label) ": "; color: var(--text); }
+  .ptable td.nums.none { display: none; }
+  .ptable td.acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; text-align: left; }
+  /* Backups: the title takes the width, the buttons go underneath */
+  .bk { flex-wrap: wrap; }
+  .bk .txt { flex-basis: 100%; }
+  .bk .acts { flex-wrap: wrap; }
+}
+@media (max-width: 560px) {
+  /* the profile cards, two by two and without the details the Profiles tab shows */
+  .profiles { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .pcard { padding: 10px 12px; min-width: 0; }
+  .pcard .acct, .pcard .meta { display: none; }
+  .pcard .nums { gap: 10px; margin-top: 6px; }
+  .pcard .nums b { font-size: 15px; }
+  .pcard .nums span { font-size: 11.5px; }
+  .pcard .nums .l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }  /* still read aloud */
+  .pcard .nums .s { display: inline; }
+  .pcard.add { min-height: 0; }
 }

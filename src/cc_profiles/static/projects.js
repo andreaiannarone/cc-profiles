@@ -21,7 +21,7 @@ function renderProjects() {
       ${chips.map(([k, l]) => `<button class="chip ${S.filter === k ? "on" : ""}" data-filter="${k}">${esc(l)}</button>`).join("")}
       <input class="search" placeholder="Search a path…" value="${esc(S.q)}" id="q" aria-label="Search projects">
     </div>
-    <div class="table">${rows.length ? `<table>
+    <div class="table">${rows.length ? `<table class="ptable">
       <thead><tr><th>Project</th><th>Belongs to</th>${S.profiles.map(p => `<th>${esc(p.label)}</th>`).join("")}<th>Status</th><th></th></tr></thead>
       <tbody>${rows.map(r => {
         const pi = r.issues.find(i => i.kind === "profile");
@@ -31,7 +31,7 @@ function renderProjects() {
         return `<tr>
           <td class="path mono">${esc(r.pretty)}</td>
           <td>${badge(r.expected)}</td>
-          ${ids.map(id => { const s = r.in[id]; return `<td class="nums">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
+          ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
           <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
           <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
             ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
@@ -292,7 +292,7 @@ function renderMemories() {
       <div class="plist">${plist.map(p => `<button data-mproj="${esc(p.name)}" class="${p.name === m.project ? "on" : ""}">
         <span class="p">${esc(p.pretty)}</span>${p.shared ? `<span class="badge b-shared">shared</span>` : ""}<span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No projects.</div>`}</div>
     </aside>
-    <section>${!cur ? `<div class="empty">Pick a project on the left.</div>` : `
+    <section>${!cur ? `<div class="empty">Pick a project from the list.</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(cur.pretty)}</code> · ${esc(label(m.profile))}</div>
       ${!m.list ? `<div class="empty">${LOADER}</div>` : `
         ${memSharing(m.list.sharing)}
@@ -415,7 +415,7 @@ function renderConversations() {
       <div class="plist">${plist.map(p => `<button data-cproj="${esc(p.name)}" class="${p.name === c.project ? "on" : ""}">
         <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No conversations in this profile.</div>`}</div>
     </aside>
-    <section>${!c.project ? `<div class="empty">Pick a project on the left.</div>` : !c.list ? `<div class="empty">${LOADER}</div>` : `
+    <section>${!c.project ? `<div class="empty">Pick a project from the list.</div>` : !c.list ? `<div class="empty">${LOADER}</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(c.list.path)}</code> · ${esc(label(c.profile))} · ${plural(c.list.conversations.length, "conversation", "conversations")}</div>
       <div class="cards">${c.list.conversations.map(x => `<div class="ccard ${x.session === c.session ? "on" : ""}" data-conv="${esc(x.session)}" tabindex="0" role="button">
         <div class="t">${esc(x.title) || `<span class="hint">No prompt</span>`}</div>

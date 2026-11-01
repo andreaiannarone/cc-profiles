@@ -142,8 +142,8 @@ async function loadProfiles() {
         ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
       <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
       <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code></div>
-      <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
-        <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
+      <div class="nums">${[[p.conv, "conversations", "conv."], [p.projects, "projects", "proj."], [p.memories, "memories", "mem."]].map(([n, l, s]) =>
+        `<div><b>${n}</b><span><span class="l">${l}</span><span class="s" aria-hidden="true">${s}</span></span></div>`).join("")}</div>
     </div>`).join("") + `<button class="pcard add" data-newprofile>+ New profile</button>`;
 }
 async function loadProjects() {

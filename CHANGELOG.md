@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header.
 
 ### Fixed
+- At phone width, Projects and Backups show each row as a card, with the path or title on top and its buttons underneath, and the profile cards go two by two with short labels.
 - Dialogs and side panels keep the keyboard focus inside them, and give it back to the button that opened them when they close.
 - Placeholders in text fields are readable (WCAG AA contrast) in both themes.
 - Settings no longer scrolls sideways at phone width.

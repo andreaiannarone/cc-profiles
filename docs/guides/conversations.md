@@ -9,7 +9,7 @@ The **Conversations** tab shows the conversations Claude Code saved for each pro
 
 ## Browse
 
-Pick a profile and a project on the left: only projects with at least one conversation are listed, with how many they have. Each conversation shows:
+Pick a profile and a project in the list (on the left, or above on a phone): only projects with at least one conversation are listed, with how many they have. Each conversation shows:
 
 - its **title**: the one Claude Code generated, or else the first prompt you typed;
 - the date of its last message, how many prompts you typed and how many replies Claude wrote, and the size of the file.
