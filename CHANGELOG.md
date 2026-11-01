@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - Profiles tab: **Claude accounts**, above the profiles, with a card for each claude.ai account they are signed in to: name, email, organization and role, plan (such as Max 5× or Team), member and subscribed since, extra usage, the plan's usage limits (moved here from the profile rows), and the profiles using it, with those whose sign-in is gone and need `/login` again. Profiles signed in to no account are listed below.
 - Each account card shows when its limits were checked, with **Refresh** to ask claude.ai again; the bars take the card's whole width.
-- About panel: **Plan limits** shows the plan's usage limits as what is used or what is left.
+- About panel: a **Display** section with the theme and **Plan limits**, which shows the plan's usage limits as what is used or what is left.
 
 ### Changed
 - Profiles → **GitHub**: every profile now has a commit identity. Left empty, **Commits by** is filled in from the profile's GitHub account: the name of its GitHub profile and its `…@users.noreply.github.com` address, which GitHub links to the account (your git config when there is no account). Profiles without one get it when cc-profiles starts, and an identity taken from the account follows it when you pick another account. Every change goes to the backup.

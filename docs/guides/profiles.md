@@ -13,7 +13,7 @@ Above the profiles, **Claude accounts** has a card for each claude.ai account th
 
 ### Plan usage limits
 
-On each card, three bars show how much of the plan is used: the 5-hour window, the week, and the weekly limit of a single model when the plan has one, each with the time it resets. A bar turns orange from 75 % and red from 90 %. In the About panel (ⓘ), **Plan limits** picks whether the bars show how much is **used** or how much is **left**; the colour follows what is used either way, and the choice is kept in the browser.
+On each card, three bars show how much of the plan is used: the 5-hour window, the week, and the weekly limit of a single model when the plan has one, each with the time it resets. A bar turns orange from 75 % and red from 90 %. In the About panel (ⓘ), under **Display**, **Plan limits** picks whether the bars show how much is **used** or how much is **left**; the colour follows what is used either way, and the choice is kept in the browser.
 
 cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's sign-in (from the macOS keychain, or `.credentials.json` in the profile folder), and keeps the answer for 5 minutes: under the bars, the time it was checked, and **Refresh** to ask again now. The token is only read: it never reaches the page and is never stored, copied or refreshed. When it has expired, the row says to open Claude Code in the profile, which refreshes it. The first time, macOS may ask to let cc-profiles read the keychain. A sign-in with an API key, Bedrock or Vertex has no plan limits.
 

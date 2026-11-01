@@ -36,9 +36,10 @@ function renderAbout(dr, a) {
       ${p.shared.length ? `<div class="citem"><span class="k">Shared with ${esc(a.profiles[0].label)}</span>${list(p.shared)}</div>` : ""}
       <h4>Files</h4>${kv({ "Folder": p.dir, "Config": p.config })}
     </div>`).join("")}
+    <div class="card"><h3>Display</h3>
+      <div class="upd"><span class="dl" id="ab-theme-l">Theme</span><div class="seg small" id="ab-theme" role="group" aria-labelledby="ab-theme-l">${themeButtons()}</div></div>
+      <div class="upd"><span class="dl" id="ab-quota-l">Plan limits</span><div class="seg small" id="ab-quota" role="group" aria-labelledby="ab-quota-l">${quotaButtons()}</div><span class="hint">how much is used, or how much is left</span></div></div>
     <div class="card"><h3>cc-profiles</h3>${kv(a.app)}
-      <div class="upd"><span id="ab-theme-l">Theme</span><div class="seg small" id="ab-theme" role="group" aria-labelledby="ab-theme-l">${themeButtons()}</div></div>
-      <div class="upd"><span id="ab-quota-l">Plan limits</span><div class="seg small" id="ab-quota" role="group" aria-labelledby="ab-quota-l">${quotaButtons()}</div><span class="hint">how much is used, or how much is left</span></div>
       <div class="upd"><button class="btn small" id="upd-check">Check for updates</button><span class="hint" id="upd-status">Asks PyPI for the latest version.</span></div>
       <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label>
       <div class="upd" id="mac-app" hidden></div>
