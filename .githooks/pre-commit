@@ -1,0 +1,12 @@
+#!/bin/sh
+# Refuses a commit while a test fails. Enable it once with: git config core.hooksPath .githooks
+# Skipped when only docs or images change; skip it on purpose with git commit --no-verify.
+git diff --cached --name-only | grep -qE '^(src|tests|scripts)/|\.py$' || exit 0
+py=.venv/bin/python
+[ -x "$py" ] || { echo "pre-commit: no .venv: run .venv/bin/pip install -e \".[test]\" first, or commit with --no-verify" >&2; exit 1; }
+out=$("$py" -m pytest -n auto -q -p no:cacheprovider 2>&1)
+status=$?
+[ $status -eq 0 ] && exit 0
+printf '%s\n' "$out" | grep -E '^(FAILED|ERROR)|passed|failed' | tail -20 >&2
+echo "pre-commit: tests failed, nothing committed. Fix them, or commit with --no-verify." >&2
+exit 1

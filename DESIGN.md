@@ -34,7 +34,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--logo` / `--logo-back` / `--logo-eye` | `#d97757` / `#e9a98c` / `#1d1c1a` | `#d97757` / `#8a4a33` / `#1d1c1a` | the two pixel mascots next to the page title and in loading panels, nothing else (same colors as `docs/assets/logo.svg`) |
 
 Rules:
-- **Orange `--accent` is reserved for action.** Do not use it for states or badges: if something is orange, it can be clicked or it is the current selection.
+- **Orange `--accent` is reserved for action.** Do not use it for states or badges: if something is orange, it can be clicked, it is the current selection, or it is what the orange button next to it acts on (the new version that **Update** installs).
 - **Profiles get colors by position.** The first profile in the config is `b-p0`, the second `b-p1`, and so on, wrapping after six. Never tie a color to a profile id.
 - **State is never conveyed by color alone.** There is always text ("folder not found on disk") or an icon (✓ ! ✕) as well.
 

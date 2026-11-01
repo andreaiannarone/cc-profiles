@@ -33,6 +33,7 @@ User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules,
 
 ```sh
 .venv/bin/pip install -e ".[test]"     # once
+git config core.hooksPath .githooks     # once: .githooks/pre-commit refuses a commit while a test fails
 .venv/bin/python -m pytest -n auto     # all tests in parallel (about 30 s, 50 s with the UI tests; 2-3 min without -n)
 .venv/bin/cc-profiles --port 4799      # run the app (use HOME=<sandbox> unless you mean it)
 ```
