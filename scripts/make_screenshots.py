@@ -238,7 +238,8 @@ def main():
         for theme in THEMES:
             for step in (gallery, ) + (() if args.no_gif else ("gif",)):
                 root = sandbox()  # a fresh home for every run: the demo moves a project
-                app = App(FakeHome(root), {"PATH": f"{root}/.local/bin:/usr/bin:/bin"})
+                app = App(FakeHome(root), {"PATH": f"{root}/.local/bin:/usr/bin:/bin",
+                                           "CC_PROFILES_USAGE_URL": (root / ".sandbox-claude-ai-usage.json").as_uri()})
                 try:
                     app.post("/api/rules", {"match": "code/personal", "profile": "default"})
                     app.post("/api/rules", {"match": "code/work", "profile": "work"})

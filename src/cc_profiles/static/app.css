@@ -90,6 +90,21 @@ header .sub { color: var(--muted); }
 .pcard .meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
 .pcard .acct, .prow .acct { font-size: 13px; margin-top: 4px; overflow-wrap: anywhere; }
 .pcard .acct.none, .prow .acct.none { color: var(--muted); }
+/* the plan's usage limits under the account, one grid so the bars line up: neutral, orange from 75 %, red from 90 % */
+.quota { margin: 6px 0 2px; display: grid; grid-template-columns: max-content minmax(80px, 200px) 38px auto;
+  gap: 4px 10px; align-items: center; justify-content: start; font-size: 12.5px; }
+.quota.hint { display: block; }
+.qrow { display: contents; }
+.qrow .ql { color: var(--muted); white-space: nowrap; }
+.qrow .qp { text-align: right; font-variant-numeric: tabular-nums; }
+.qrow .hint { white-space: nowrap; }
+.qbar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.qbar i { display: block; height: 100%; border-radius: inherit; background: var(--muted); }
+.qrow.mid .qbar i { background: var(--warn); } .qrow.mid .qp { color: var(--warn); }
+.qrow.high .qbar i { background: var(--err); } .qrow.high .qp { color: var(--err); }
+@media (max-width: 560px) {
+  .quota { grid-template-columns: max-content 1fr 38px; } .qrow .hint { grid-column: 2 / -1; margin-top: -3px; }
+}
 mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
 .sres { display: grid; gap: 8px; }
 .sres .prow { cursor: pointer; }
@@ -318,6 +333,7 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .prow .t { display: flex; gap: 8px; align-items: center; font-weight: 600; }
 .prow .m { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .prow .acts { display: flex; gap: 6px; flex: none; }
+@media (max-width: 560px) { .prow { flex-wrap: wrap; } .prow .txt { flex-basis: 100%; } .prow .acts { flex-wrap: wrap; } }
 .section-title { font-size: 13px; font-weight: 600; color: var(--muted); margin: 22px 0 8px; }
 .upd { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .upd .hint { flex: 1; min-width: 200px; }
