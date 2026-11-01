@@ -77,7 +77,7 @@ $("#gsearch").addEventListener("keydown", e => {
 document.addEventListener("click", e => { if (e.target.closest("#tabs button") && S.search.q) { $("#gsearch").value = ""; S.search.q = ""; } }, true);
 
 // ---------- compare two profiles ----------
-S.cmp = { a: null, b: null, data: null, error: null };
+S.cmp = { a: null, b: null, data: null, error: null, all: false };  // all: the settings that are the same too
 async function loadCompare() {
   const c = S.cmp;
   if (S.profiles.length < 2) { c.data = null; c.error = "There is only one profile: create a second one to compare."; return renderCompare(); }
@@ -111,14 +111,17 @@ function renderCompare() {
     for (const r of P[k].only_b) perms.push(listRows("perm", k, "b", r, ` <code>${k}</code>`, "Add"));
   }
   const nBoth = ["allow", "ask", "deny"].reduce((n, k) => n + P[k].both.length, 0);
+  const nDiff = d.settings.filter(s => !s.same).length;
   const sk = d.skills, ag = d.agents, mc = d.mcp, md = d.claude_md, pl = d.plugins, mo = d.mods;
   const onOff = v => v ? "enabled" : `<span class="hint">disabled</span>`;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
-    ${table(["Setting", A, B], d.settings.map((s, i) => `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
+    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from · ${nDiff} of ${d.settings.length} ${nDiff === 1 ? "differs" : "differ"}</span>
+      ${nDiff < d.settings.length ? `<button class="btn small" id="cmp-all" aria-pressed="${c.all}">${c.all ? "Show only differences" : `Show all (${d.settings.length})`}</button>` : ""}</div>
+    ${table(["Setting", A, B], d.settings.map((s, i) => !c.all && s.same ? "" : `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
         <td class="v">${val(s.a, s.a_source)}</td><td class="v">${val(s.b, s.b_source)}</td>
-        <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`), "")}
+        <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`).filter(Boolean),
+      `The same value in all ${d.settings.length} settings. ✓`)}
     <div class="ext-head"><h2>Permissions</h2><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
     ${table(["Rule", "Where"], perms, "Both profiles have the same rules. ✓")}
     <div class="ext-head"><h2>Skills</h2><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
@@ -152,6 +155,8 @@ function bindCompare() {
   const pick = (id, k) => { const el = $(id); if (el) el.onchange = () => { c[k] = el.value; loadCompare(); }; };
   pick("#cmp-a", "a"); pick("#cmp-b", "b");
   if (!d) return;
+  const all = $("#cmp-all");
+  if (all) all.onclick = () => { c.all = !c.all; renderCompare(); $("#cmp-all")?.focus(); };
   const ids = { a: d.a.id, b: d.b.id }, other = s => (s === "a" ? "b" : "a"), name = s => (s === "a" ? d.a.label : d.b.label);
   const done = async fn => { try { await run(fn); } catch {} loadCompare(); };
   document.querySelectorAll("[data-cmp]").forEach(b => b.onclick = async () => {

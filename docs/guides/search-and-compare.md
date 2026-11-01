@@ -29,7 +29,7 @@ Esc, **Close search** or an empty field go back to the tab you were on.
 
 The **Compare** tab puts two profiles side by side: pick them at the top. Rows that differ are marked *differs* or *only in …*.
 
-- **Settings**: the value in use for each setting of the Settings tab, and the file it comes from. **A → B** copies a value into the other profile, like editing it in the Settings tab.
+- **Settings**: the settings that differ, with the value in use in each profile and the file it comes from; **Show all** lists the ones that are the same too. **A → B** copies a value into the other profile, like editing it in the Settings tab.
 - **Permissions**: the `allow`, `ask` and `deny` rules of `settings.json` that only one profile has. **Add to …** adds the rule to the other profile and keeps its own rules.
 - **Skills**: the skills only one profile has (**Copy to …** copies the whole folder) and the skills both have with a different `SKILL.md`, to edit in the Skills tab.
 - **Agents**: the agents only one profile has (**Copy to …** copies the file) and the agents both have with a different file, to edit in the Agents tab.

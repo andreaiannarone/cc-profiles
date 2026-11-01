@@ -373,7 +373,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/projects/delete": lambda: op_delete(b["project"], b["profile"]),
                 "/api/projects/relink": lambda: op_relink(b["project"], b["profile"], b["path"]),
                 "/api/projects/merge": lambda: op_merge(b["project"], b["profile"], b["into"]),
-                "/api/rules": lambda: op_rule(b["match"], b["profile"]),
+                "/api/rules": lambda: op_rule(b["match"], b["profile"], bool(b.get("exact"))),
                 "/api/memory/save": lambda: op_memory_save(b["profile"], b["project"], b["file"], b["content"]),
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
                                                            b["to_profile"], b["to_project"]),

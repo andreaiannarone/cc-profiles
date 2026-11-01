@@ -113,7 +113,7 @@ Other keys of `permissions` (such as `defaultMode`) are preserved. Rules in `set
 
 ## Advanced editor
 
-Edits the whole `settings.json` or `settings.local.json`: hooks, `env`, `attribution`, and anything else. The JSON is checked as you type, **Format** re-indents it, and invalid JSON or a non-object cannot be saved.
+Edits the whole `settings.json` or `settings.local.json`: hooks, `env`, `attribution`, and anything else. The JSON is checked as you type, **Format** re-indents it, **Save settings.json** (or **Save settings.local.json**) saves the file shown, and invalid JSON or a non-object cannot be saved.
 
 ## Global
 

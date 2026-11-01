@@ -85,7 +85,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/projects/relink` | `project`, `profile`, `path` |
 | `POST /api/projects/merge` | `project`, `profile`, `into`: a relink to the folder of another project of the same profile |
 | `POST /api/projects/delete` | `project`, `profile` |
-| `POST /api/rules` | `match`, `profile` (an id or `shared`) |
+| `POST /api/rules` | `match`, `profile` (an id or `shared`), `exact` (optional: `true` for a rule on the folder `match` alone, a full path starting with `/` or `~`) |
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |
 | `POST /api/memory/move` | `profile`, `project`, `file`, `to_profile`, `to_project` |
 | `POST /api/memory/delete` | `profile`, `project`, `file` |

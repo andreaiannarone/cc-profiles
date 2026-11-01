@@ -279,7 +279,7 @@ function renderSettings() {
     <section class="sec"><div class="h"><h2>Advanced editor</h2><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
       <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
         <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
-        <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save</button></div></div>
+        <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save ${st.rawFile === "settings" ? "settings.json" : "settings.local.json"}</button></div></div>
     </section>
 
     <section class="sec"><div class="h"><h2>Global</h2><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>

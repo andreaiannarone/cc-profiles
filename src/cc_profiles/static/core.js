@@ -12,6 +12,8 @@ const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: ""
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
+// a project that needs fixing: a missing folder or the wrong profile; "not assigned" is only a note
+const isProblem = r => r.issues.some(i => i.kind !== "unclassified");
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 // While a panel loads: the logo's two mascots hopping in turn (class spinner too, for code that waits for it to go)
 const LOADER = `<span class="spinner loader">${$("header .logo").outerHTML}</span>`;
@@ -148,7 +150,7 @@ async function loadProfiles() {
 }
 async function loadProjects() {
   S.projects = await api("/api/projects");
-  const n = S.projects.filter(r => r.issues.length).length;
+  const n = S.projects.filter(isProblem).length;
   const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n; syncNav();
 }
 async function refresh() { await Promise.all([loadProfiles(), loadProjects()]); render(); }

@@ -9,13 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Undo** in the message after every change: it restores that change's backup, as Backups → Restore does, and shows the tab again with the files as they are. The message stays 12 seconds, longer while the pointer or the focus is on it.
 - Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.
 - Usage tab: **Plan limits**, a chart per claude.ai account of the highest share of the weekly limit used each day, recorded whenever cc-profiles checks the limits (kept 90 days in `~/.cc-profiles/quota-history.json`).
+- Projects → **Assign…** lists the projects the rule takes while you type, warns when it would move one that already has a profile, and can make a rule for **only this folder**.
 - Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes.
 
 ### Changed
 - About panel: when a new cc-profiles is out, its version number is written in orange.
 - Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.
 - Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.
+- Projects: a project only waiting for a profile is a grey note, listed after the ones to fix, and the number on the tab counts only those to fix.
 - Memories: the selected project in the list has the same colors as the selected profile above it.
+- Compare: **Settings** lists only the settings that differ, with how many of all; **Show all** brings back the ones that are the same.
 - Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header.
 
 ### Fixed

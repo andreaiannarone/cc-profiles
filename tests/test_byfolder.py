@@ -215,3 +215,19 @@ def test_rules_are_checked_and_stored_relative_to_home(home, app_factory):
     assert "“~” → " in app.post("/api/rules", {"match": str(home.root), "profile": "shared"})["message"]
     rows = {r["pretty"]: r for r in app.get("/api/projects")}
     assert rows["~/code/work/api"]["expected"] == "work"
+
+
+def test_a_rule_for_one_folder_wins_over_the_text_rules(home, app_factory):
+    basic_home(home)
+    app = app_factory()
+    app.post("/api/rules", {"match": "code", "profile": "work"})
+    assert "full path" in app.post_error("/api/rules", {"match": "code/personal/blog", "profile": "default", "exact": True})
+    before = home.snapshot()
+    res = app.post("/api/rules", {"match": str(home.path("code/personal/blog")) + "/", "profile": "default", "exact": True})
+    assert "“~/code/personal/blog” (this folder only) → " in res["message"]
+    app.post("/api/rules", {"match": "code/personal", "profile": "work"})  # newer, but only a text rule
+    rows = {r["pretty"]: r for r in app.get("/api/projects")}
+    assert rows["~/code/personal/blog"]["expected"] == "default"
+    assert rows["~/code/work/api"]["expected"] == "work"
+    app.restore_all()
+    assert home.snapshot() == before

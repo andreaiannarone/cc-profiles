@@ -5,12 +5,14 @@
 // ---------- projects ----------
 function filtered() {
   const q = S.q.toLowerCase();
-  return S.projects.filter(r => {
+  const rows = S.projects.filter(r => {
     if (q && !r.pretty.toLowerCase().includes(q)) return false;
     if (S.filter === "issues") return r.issues.length > 0;
     if (S.filter === "all") return true;
     return r.expected === S.filter;
   });
+  // what needs fixing first, the projects only waiting for a profile after
+  return S.filter === "issues" ? rows.sort((a, b) => isProblem(b) - isProblem(a)) : rows;
 }
 function renderProjects() {
   const ids = S.profiles.map(p => p.id);
@@ -32,8 +34,8 @@ function renderProjects() {
           <td class="path mono">${esc(r.pretty)}</td>
           <td>${badge(r.expected)}</td>
           ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
-          <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
-          <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
+          <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : i.kind === "unclassified" ? "note" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
+          <td class="acts">${main ? `<button class="btn small${main.a === "rule" ? "" : " primary"}" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
             ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
             ${S.term?.supported && r.exists ? `<button class="btn small" data-act="term" data-name="${esc(r.name)}" title="Claude Code in this folder">Open in ${esc(S.term.terminal)}</button>` : ""}
             <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
@@ -186,13 +188,29 @@ async function doDelete(r, pid) {
 }
 async function doRule(r) {
   const guess = r.path ? r.path.replace(/^~\//, "") : "";
-  const res = await modal({ title: "Assign to a profile",
-    sub: "Creates a rule: every project whose path contains this text belongs to the chosen profile. New rules win over older ones.",
-    body: `<input class="text" value="${esc(guess)}" placeholder="e.g. code/work" aria-label="Path text">
-      <select id="rp" aria-label="Profile">${[...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared (all profiles)"]].map(([k, l]) => `<option value="${k}" ${k === r.expected ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`,
+  const opened = modal({ title: "Assign to a profile",
+    sub: "Creates a rule that gives projects to a profile, now and when new ones appear. A rule for one folder wins over the others; among the others, newer rules win.",
+    body: `<select id="rk" aria-label="Rule kind"><option value="match">Every path containing</option><option value="exact">Only this folder</option></select>
+      <input class="text" value="${esc(guess)}" placeholder="e.g. code/work" aria-label="Path text">
+      <select id="rp" aria-label="Profile">${[...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared (all profiles)"]].map(([k, l]) => `<option value="${k}" ${k === r.expected ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <div id="rmatch" class="rmatch" role="status"></div>`,
     actions: [{ label: "Save rule", kind: "primary", value: "ok" }] });
+  // which projects the rule takes, as the server matches it: the text anywhere in the path, or the folder itself
+  const inp = $(".modal input.text"), sel = $("#rp"), kind = $("#rk"), out = $("#rmatch");
+  kind.addEventListener("change", () => { inp.value = kind.value === "exact" ? (r.pretty || r.path || "") : guess; show(); });
+  const show = () => {
+    const m = inp.value.trim(), to = sel.value, exact = kind.value === "exact";
+    const target = exact ? m.replace(/\/+$/, "") : m;
+    const hits = !m ? [] : exact ? S.projects.filter(x => x.path && (x.pretty === target || x.path === target)) : S.projects.filter(x => x.path && x.path.includes(m));
+    const moved = hits.filter(x => x.expected && x.expected !== to);
+    out.innerHTML = !m ? "" : !hits.length ? "Matches no project yet: it applies to the ones that come later." :
+      `Matches ${plural(hits.length, "project", "projects")}: ${hits.slice(0, 6).map(x => `<code>${esc(x.pretty)}</code>${x.expected && x.expected !== to ? ` (now ${esc(label(x.expected))})` : ""}`).join(", ")}${hits.length > 6 ? "…" : ""}`
+      + (moved.length ? `<div class="issue">${plural(moved.length, "project", "projects")} would change profile${exact ? "" : `: write more of the path to leave ${moved.length === 1 ? "it" : "them"} out`}.</div>` : "");
+  };
+  inp.addEventListener("input", show); sel.addEventListener("change", show); show();
+  const res = await opened;
   if (!res) return;
-  await run(() => api("/api/rules", { match: $("input.text", res.el).value, profile: $("#rp", res.el).value })); await refresh();
+  await run(() => api("/api/rules", { match: $("input.text", res.el).value, profile: $("#rp", res.el).value, exact: $("#rk", res.el).value === "exact" })); await refresh();
 }
 async function doManage(r) {
   const ids = S.profiles.map(p => p.id);

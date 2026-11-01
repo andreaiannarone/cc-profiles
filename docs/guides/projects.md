@@ -6,7 +6,7 @@ The **Projects** tab lists every project that has a folder under `projects/` in 
 - One column per profile: how many conversations and memories the project has there.
 - **Status**: what needs fixing, if anything.
 
-The tab opens on **Needs attention**. Use the chips to see all projects, the projects of one profile, or the shared ones, and the search field to filter by path.
+The tab opens on **Needs attention**: projects to fix (a folder gone, content in the wrong profile) first, then the ones only waiting for a profile, in grey. The number on the tab counts the first kind. Use the chips to see all projects, the projects of one profile, or the shared ones, and the search field to filter by path.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/projects-dark.jpg">
@@ -58,6 +58,8 @@ On macOS and Linux, **Open in Terminal** (on the row, and in **Manage**) opens t
 ## Assign projects with rules
 
 **Assign…** (or *Assign to a profile* under **Manage**) creates a rule from a piece of the path, for example `code/work` → *Work*. Every current and future project whose path contains that text belongs to that profile. Prefer the shortest piece that is still unambiguous: a rule on a parent folder covers everything inside it.
+
+While you type, the dialog lists the projects the rule takes, and warns when it would give one that already has a profile to another. Choose **Only this folder** instead of **Every path containing** for a rule on that folder alone, not its subfolders: it wins over the text rules.
 
 ## Delete a project from a profile
 

@@ -240,6 +240,41 @@ def test_projects_and_backups_fit_a_phone(page_on_sandbox):
     assert errors == []
 
 
+def test_unassigned_projects_are_a_note_and_assign_shows_what_it_takes(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "projects")
+    page.wait_for_selector(".ptable")
+    counts = page.evaluate("""() => ({ badge: +document.querySelector('#cnt-projects').textContent || 0,
+        problems: S.projects.filter(isProblem).length,
+        unassigned: S.projects.filter(r => r.issues.some(i => i.kind === 'unclassified')).length })""")
+    assert counts["badge"] == counts["problems"]  # the tab counts only what needs fixing
+    page.evaluate("() => { doRule(S.projects.find(r => r.path)); }")  # not awaited: it waits for the dialog
+    page.wait_for_selector("#rmatch")
+    page.fill(".modal input.text", "/")
+    assert "Matches " in page.inner_text("#rmatch")
+    page.fill(".modal input.text", "no-such-folder-anywhere")
+    assert "Matches no project yet" in page.inner_text("#rmatch")
+    page.select_option("#rk", "exact")
+    assert "Matches 1 project" in page.inner_text("#rmatch")  # the folder itself
+    cancel(page)
+    assert errors == []
+
+
+def test_compare_lists_only_the_settings_that_differ(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "compare")
+    page.select_option("#cmp-b", label="Work")
+    page.wait_for_selector("#cmp-all")
+    rows = lambda: page.evaluate("document.querySelectorAll('.cmp')[0].querySelectorAll('tbody tr').length")
+    some = rows()
+    assert page.evaluate("[...document.querySelectorAll('.cmp')[0].querySelectorAll('tbody tr')].every(r => r.classList.contains('diff'))")
+    page.click("#cmp-all")
+    assert rows() > some and page.get_attribute("#cmp-all", "aria-pressed") == "true"
+    page.click("#cmp-all")
+    assert rows() == some
+    assert errors == []
+
+
 def cancel(page):
     page.click(".modal [data-close]")
     page.wait_for_selector(".modal", state="detached")
