@@ -199,7 +199,7 @@ select:not(.slbr):hover { border-color: var(--faint); }
 select:disabled { cursor: default; opacity: .6; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.btn { border: 1px solid var(--line); background: var(--btn); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
+.btn { border: 1px solid var(--line); background: var(--btn); color: var(--text); border-radius: 8px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--btn-hover); }
 /* the logo's orange in both themes, with the eyes' dark text (5.45:1; white would be 3.1:1) */
 .btn.primary { background: var(--logo); border-color: var(--logo); color: var(--logo-eye); }
