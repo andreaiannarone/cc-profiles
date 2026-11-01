@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Andrea Iannarone */
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --line: #e2dfd8;
-  --btn: #f3f1ed; --btn-hover: #e9e6e0;  /* buttons: a shade darker than the cards */
+  --btn: #e9e6e0; --btn-hover: #f3f1ed;  /* buttons: a shade apart from the cards; hover goes back toward them */
   --text: #1d1c1a; --muted: #6e6a62; --faint: #9b968c;
   --accent: #c2410c; --accent-soft: #fbe9df; --on-accent: #ffffff;
   /* profile palette, assigned in config order; "shared" has its own color */
@@ -16,7 +16,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
-    --btn: #1a1917; --btn-hover: #282723;
+    --btn: #282723; --btn-hover: #1a1917;
     --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
     --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
     --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
@@ -29,7 +29,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
-  --btn: #1a1917; --btn-hover: #282723;
+  --btn: #282723; --btn-hover: #1a1917;
   --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
   --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
   --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
