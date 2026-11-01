@@ -371,17 +371,16 @@ function bindSettings() {
 }
 
 // ---------- theme ----------
-// Dark until another choice is made. System follows the operating system; Light and Dark set
-// data-theme on <html>, which the CSS variables and the script in <head> read. The choice is kept
-// in localStorage, per browser ("system" too, so it is not taken for no choice).
-const THEMES = [["system", "System"], ["light", "Light"], ["dark", "Dark"]];
-const savedTheme = () => { try { return localStorage.getItem("cc-profiles.theme") || "dark"; } catch { return "dark"; } };
+// Dark unless Light is picked: data-theme on <html>, which the CSS variables and the script in
+// <head> read. The choice is kept in localStorage, per browser; an old "system" counts as dark.
+const THEMES = [["dark", "Dark"], ["light", "Light"]];
+const savedTheme = () => { try { return localStorage.getItem("cc-profiles.theme") === "light" ? "light" : "dark"; } catch { return "dark"; } };
 function setTheme(v) {
+  v = v === "light" ? "light" : "dark";
   try { localStorage.setItem("cc-profiles.theme", v); } catch {}
-  if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
-  else document.documentElement.removeAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", v);
 }
-// The picker in the About panel: System, Light, Dark
+// The picker in the About panel: Dark, Light
 const themeButtons = () => THEMES.map(([k, l]) =>
   `<button data-theme-set="${k}" class="${savedTheme() === k ? "on" : ""}" aria-pressed="${savedTheme() === k}">${l}</button>`).join("");
 function bindTheme(seg) {

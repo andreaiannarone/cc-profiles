@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes.
 
 ### Changed
-- The page is dark by default, as is the Mac app's window until the page loads. Pick **System** or **Light** in the About panel (ⓘ) to change it; a choice made before stays.
+- The page is dark by default, as is the Mac app's window until the page loads. The theme picker in the About panel (ⓘ) offers **Dark** and **Light**: the System option is gone, and a page that followed the system is now dark.
 - About panel: when a new cc-profiles is out, its version number is written in orange.
 - Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.
 - Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.

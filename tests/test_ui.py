@@ -71,8 +71,9 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page.click('#ab-theme [data-theme-set="light"]')  # the theme is picked in the About panel
     assert page.get_attribute("html", "data-theme") == "light"
     assert page.get_attribute('#ab-theme [data-theme-set="light"]', "aria-pressed") == "true"
-    page.click('#ab-theme [data-theme-set="system"]')
-    assert page.get_attribute("html", "data-theme") is None
+    assert page.eval_on_selector_all("#ab-theme [data-theme-set]", "bs => bs.map(b => b.textContent)") == ["Dark", "Light"]
+    page.click('#ab-theme [data-theme-set="dark"]')
+    assert page.get_attribute("html", "data-theme") == "dark"
     assert "cc-profiles" in page.inner_text(".drawer")
     page.wait_for_selector("#mac-app-add")
     assert "a window of its own" in page.inner_text("#mac-app")
