@@ -217,8 +217,12 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     assert home.path(".config/gh-work/hosts.yml").read_text() == \
         "github.com:\n    git_protocol: https\n    users:\n        me:\n    user: me\n"
     assert home.path(".config/gh-work/config.yml").read_text() == "editor: vim\n"
+    # and commits by its account, offline from the user name (the email it had alone is not enough)
     assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
-        "GH_CONFIG_DIR": str(home.path(".config/gh-work"))}
+        "GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "me", "GIT_COMMITTER_NAME": "me",
+        "GIT_COMMITTER_EMAIL": "me@users.noreply.github.com"}
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {
+        "GIT_AUTHOR_EMAIL": "me@users.noreply.github.com", "FOO": "1"}
     g = app.get("/api/github")
     assert "gho_" not in json.dumps(g)
     assert g["accounts"] == ["me", "me-at-work"]  # a user with its token in hosts.yml is not offered
@@ -226,8 +230,10 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
         ("default", "~/.config/gh", "me", True), ("work", "~/.config/gh-work", "me", True)]
     assert "already has" in app.post("/api/github/setup", {"profile": "work"})["message"]
 
-    # picking an account makes it the active user of the profile's own folder only
-    app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})
+    # picking an account makes it the active user of the profile's own folder only, and the
+    # identity taken from the old account follows the new one
+    assert "commits in Work are by me-at-work <me-at-work@users.noreply.github.com>" in \
+        app.post("/api/github/account", {"profile": "work", "user": "me-at-work"})["message"]
     assert home.path(".config/gh-work/hosts.yml").read_text() == \
         "github.com:\n    git_protocol: https\n    users:\n        me-at-work:\n    user: me-at-work\n"  # me left it
     assert "user: me\n" in home.path(".config/gh/hosts.yml").read_text()
@@ -243,8 +249,14 @@ def test_every_profile_has_its_own_github_folder(home, app_factory):
     assert json.loads(home.path(".claude-work/settings.json").read_text())["env"] == {
         "GH_CONFIG_DIR": str(home.path(".config/gh-work")), "GIT_AUTHOR_NAME": "Me At Work",
         "GIT_COMMITTER_NAME": "Me At Work", "GIT_COMMITTER_EMAIL": "me@work.example"}
+    # left empty: the one of its account again, never none
     app.post("/api/github/identity", {"profile": "work", "name": "", "email": ""})
-    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {"FOO": "1"}
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"] == {
+        "GIT_AUTHOR_EMAIL": "me-at-work@users.noreply.github.com", "FOO": "1"}
+    # written by hand: changing account keeps it
+    app.post("/api/github/identity", {"profile": "work", "name": "Me At Work", "email": "me@work.example"})
+    assert "commits" not in app.post("/api/github/account", {"profile": "work", "user": "me"})["message"]
+    assert json.loads(home.path(".claude-work/settings.local.json").read_text())["env"]["GIT_AUTHOR_EMAIL"] == "me@work.example"
     assert "both the name and the email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me"})
     assert "not an email" in app.post_error("/api/github/identity", {"profile": "work", "name": "Me", "email": "me"})
 
@@ -513,6 +525,39 @@ def test_merge_an_orphan_into_another_project(home, app_factory):
     shutil.rmtree(home.path("code/work/api"))
     assert "not on disk" in app.post_error("/api/projects/merge", {"project": blog, "profile": "default", "into": api})
     home.path("code/work/api").mkdir()
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_every_profile_has_a_commit_identity(home, app_factory, tmp_path):
+    basic_home(home)
+    home.profile("lab")  # no GitHub account: the git config
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    user: me\n")
+    home.write(".config/gh-work/hosts.yml", "github.com:\n    users:\n        nameless:\n    user: nameless\n")
+    home.write(".config/gh-lab/config.yml", "editor: vim\n")  # signed in to no account
+    for pid in ("work", "lab"):
+        home.json(f".claude-{pid}/settings.json", {"env": {"GH_CONFIG_DIR": str(home.path(f".config/gh-{pid}"))}})
+    home.write(".gitconfig", "[user]\n\tname = Git Me\n\temail = git@example.com\n")
+    api = tmp_path / "github-api" / "users"  # GitHub's public API, as files
+    api.mkdir(parents=True)
+    (api / "me").write_text(json.dumps({"login": "me", "id": 101, "name": "Me Myself"}))
+    (api / "nameless").write_text(json.dumps({"login": "nameless", "id": 202, "name": None}))
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_AUTO_GITHUB="1", CC_PROFILES_GITHUB_API=(tmp_path / "github-api").as_uri())
+
+    env = lambda d: json.loads(home.path(f"{d}/settings.json").read_text())["env"]
+    assert env(".claude")["GIT_AUTHOR_NAME"] == "Me Myself" and env(".claude")["GIT_COMMITTER_EMAIL"] == "101+me@users.noreply.github.com"
+    assert env(".claude-work")["GIT_AUTHOR_NAME"] == "nameless" and env(".claude-work")["GIT_AUTHOR_EMAIL"] == "202+nameless@users.noreply.github.com"
+    assert env(".claude-lab")["GIT_AUTHOR_NAME"] == "Git Me" and env(".claude-lab")["GIT_AUTHOR_EMAIL"] == "git@example.com"
+    g = {p["id"]: p for p in app.get("/api/github")["profiles"]}
+    assert g["default"]["suggest"] == {"name": "Me Myself", "email": "101+me@users.noreply.github.com"}
+    assert g["default"]["name"] == "Me Myself"
+
+    # without an account or a git config there is nothing to fill in: it has to be written
+    home.path(".gitconfig").unlink()
+    assert "write the name and email" in app.post_error("/api/github/identity", {"profile": "lab", "name": "", "email": ""})
+    home.write(".gitconfig", "[user]\n\tname = Git Me\n\temail = git@example.com\n")
 
     app.restore_all()
     assert home.snapshot() == before

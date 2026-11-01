@@ -39,7 +39,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/connectors/check` | `profile`, `force` (`1` to ask again within the hour) | `{skipped, gone, error}`: runs `claude mcp list` in the profile (at most once an hour) to learn the account's connectors; `gone` are the ones in the profile's list that the account no longer has. Skipped without Claude Code, without a sign-in, or with every connector off. Changes nothing |
 | `GET /api/folders` | `path` (absolute or starting with `~`), `hidden` (`1` to list hidden folders) | `{path, parent, home, folders, truncated, crumbs}`: the subfolders of the closest existing folder (at most 500), for the folder browser. Read-only |
 | `GET /api/folders/pick` | `start`, `prompt` | opens the system's folder dialog and waits: `{native: true, cancelled, path, exists}`, or `{native: false, start}` when there is none here. Read-only |
-| `GET /api/github` | | `{gh, git_uses_gh, accounts, profiles: [{id, label, dir, user, users, set_up, shared, default, name, email}], account_list: [{user, folders, used_by, insecure}], accounts_dir}`: each profile's GitHub CLI folder and active account, its commit identity, and every account signed in on the computer. Only user names are read from `hosts.yml`, never a token |
+| `GET /api/github` | | `{gh, git_uses_gh, accounts, profiles: [{id, label, dir, user, users, set_up, shared, default, name, email, suggest}], account_list: [{user, folders, used_by, insecure}], accounts_dir}`: each profile's GitHub CLI folder and active account, its commit identity and `suggest`, the one of its account (`{name, email}`, or `null` without an account or a git config), and every account signed in on the computer. Only user names are read from `hosts.yml`, never a token |
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
 | `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
 | `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source, mod}], marketplaces, dir, shared}`; `mod` is `null` for a plugin that is not a mod, else `{features, commands, events: [{name, label}], reach}` read from its source |
@@ -109,8 +109,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/connectors/forget` | `profile`, `name`: takes it off `claudeAiMcpEverConnected` (only when no deny rule blocks it) |
 | `POST /api/connectors/sync` | `profile`: takes off the list the connectors the last check found gone from the account |
 | `POST /api/github/save` | `changes: [{profile, user?, name?, email?}]`: the GitHub table, every change checked first, one backup |
-| `POST /api/github/account` | `profile`, `user`: makes a signed-in account the active one in the profile's folder |
-| `POST /api/github/identity` | `profile`, `name`, `email` (both or neither): `GIT_AUTHOR_*` and `GIT_COMMITTER_*` in the profile's `env` |
+| `POST /api/github/account` | `profile`, `user`: makes a signed-in account the active one in the profile's folder; a commit identity taken from the old account moves to the new one's |
+| `POST /api/github/identity` | `profile`, `name`, `email` (both, or both empty for the one of its account): `GIT_AUTHOR_*` and `GIT_COMMITTER_*` in the profile's `env` |
 | `POST /api/github/setup` | `profile`: gives it its own GitHub CLI folder now (the server does it at start) |
 | `POST /api/github/remove` | `user`: takes an account no profile uses off every folder; its keychain token stays |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |

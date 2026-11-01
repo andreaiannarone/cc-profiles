@@ -61,6 +61,7 @@ def child_env(env):
     env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
     env.setdefault("CC_PROFILES_PICKER", "none")  # never a real folder dialog on the screen
     env.setdefault("CC_PROFILES_AUTO_APP", "0")  # no Mac app added at start: tests compare the fake home
+    env.setdefault("CC_PROFILES_GITHUB_API", "http://127.0.0.1:9")  # never GitHub's API: offline, refused at once
     if os.environ.get("COVERAGE_PROCESS_START"):
         env["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_PROCESS_START"]
         # data next to the config, never in the process's working folder (often a fake home):

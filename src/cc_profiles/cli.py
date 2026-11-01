@@ -18,7 +18,7 @@ from .core import CONFIG_FILE, DATA_DIR, expand, find_tool, load_config, pretty,
 from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
-from .github import ensure_gh_folders
+from .github import ensure_gh_folders, ensure_identities
 from .macapp import app_for, ensure_app, install_app, set_app_off
 from .projects import list_projects
 from .search import warm_search
@@ -137,6 +137,13 @@ def serve(port, open_browser):
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
         print(f"Could not give every profile its GitHub CLI folder: {e}")
+    try:  # every profile with a commit identity, from its GitHub account when it had none
+        lines, backup = ensure_identities() if os.environ.get("CC_PROFILES_AUTO_GITHUB") != "0" else ([], None)
+        if lines:
+            print("Commits: " + "; ".join(lines) + f" (backup {pretty(backup)})")
+    except Exception as e:  # never a reason not to start
+        core.abort_open_backups(str(e))
+        print(f"Could not give every profile a commit identity: {e}")
     try:  # the Mac app the first time on macOS, then it follows the version and the place of cc-profiles
         lines, backup = ensure_app()
         if lines:

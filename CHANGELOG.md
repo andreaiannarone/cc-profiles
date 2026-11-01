@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Profiles → **GitHub**: every profile now has a commit identity. Left empty, **Commits by** is filled in from the profile's GitHub account: the name of its GitHub profile and its `…@users.noreply.github.com` address, which GitHub links to the account (your git config when there is no account). Profiles without one get it when cc-profiles starts, and an identity taken from the account follows it when you pick another account. Every change goes to the backup.
+
 ## [0.6.5] - 2026-11-01
 
 ### Added

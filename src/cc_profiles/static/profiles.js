@@ -116,10 +116,10 @@ function githubHtml() {
   };
   const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
-      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="Name: your git config" aria-label="Commit name in ${esc(p.label)}">
-        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="Email" title="For example ${esc(ghVal(p, "user") || "you")}@users.noreply.github.com" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
+      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="${esc(p.suggest?.name || "Name (required)")}" aria-label="Commit name in ${esc(p.label)}">
+        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="${esc(p.suggest?.email || "Email (required)")}" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
   return `<h2 class="section-title">GitHub</h2>
-    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here (empty: your git config). Tokens stay in the system keychain.</span></div>
+    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here. Left empty, they are filled in from its account: the name of its GitHub profile and its <code>…@users.noreply.github.com</code> address, which GitHub links to the account. Tokens stay in the system keychain.</span></div>
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
     ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}
