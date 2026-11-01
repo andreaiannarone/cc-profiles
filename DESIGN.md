@@ -11,7 +11,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/`: `index.html`
 
 ## Color
 
-All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme picker in the About panel (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the status line preview, which imitates a dark terminal in both themes (`.slpreview`: its background and the 8 ANSI colors).
+All colors are custom properties on `:root`. Dark mode redefines the same properties under `@media (prefers-color-scheme: dark)`, respecting `data-theme="light"`, and again under `:root[data-theme="dark"]` for a forced dark theme: keep the two dark blocks identical. The theme picker in the About panel (**System / Light / Dark**) sets `data-theme` and remembers the choice in `localStorage`; a tiny script in `<head>` applies it before the first paint. Do not hard-code colors outside these properties, except the white text of error toasts and the two panes that imitate a dark terminal in both themes: the status line preview (`.slpreview`: its background and the 8 ANSI colors) and the output of installs and updates (`pre.log`). Placeholders use `--muted` (`::placeholder`), never the browser's grey, which is under 4.5:1 on `--field`.
 
 | Property | Light | Dark | Use |
 |---|---|---|---|

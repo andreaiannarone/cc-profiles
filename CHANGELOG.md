@@ -8,6 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 - About panel: when a new cc-profiles is out, its version number is written in orange.
 - Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.
+
+### Fixed
+- Placeholders in text fields are readable (WCAG AA contrast) in both themes.
+- Settings no longer scrolls sideways at phone width.
+- Memories: **also show projects without memories** has a larger checkbox, and its whole label can be clicked.
 - Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.
 
 ## [0.6.6] - 2026-11-01
