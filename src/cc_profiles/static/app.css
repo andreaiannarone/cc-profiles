@@ -18,7 +18,7 @@
   :root:not([data-theme="light"]) {
     --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
     --btn: #282723; --btn-hover: #33312d;
-    --field: #141311;
+    --field: #1a1917;
     --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
     --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
     --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
@@ -32,7 +32,7 @@
 :root[data-theme="dark"] {
   --bg: #161513; --panel: #1f1e1b; --panel-2: #282723; --line: #353330;
   --btn: #282723; --btn-hover: #33312d;
-  --field: #141311;
+  --field: #1a1917;
   --text: #ecebe7; --muted: #a29e95; --faint: #75716a;
   --accent: #fb8a4c; --accent-soft: #3a2418; --on-accent: #1d1c1a;
   --p0: #5fd3a6; --p0-soft: #15332a; --p1: #8fb0ff; --p1-soft: #1c2742; --p2: #f9a8d4; --p2-soft: #3d1a2c;
