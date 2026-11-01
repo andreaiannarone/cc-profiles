@@ -130,7 +130,7 @@ def quota(pid, fresh=False):
     expires = tok.get("expiresAt")
     if isinstance(expires, (int, float)) and expires / 1000 < time.time() + 30:
         return {"state": "expired", "message": "Open Claude Code in this profile to see the quota"}
-    key = hashlib.sha256((email or tok["accessToken"]).encode()).hexdigest()
+    key = email or "profile:" + pid  # one account in two profiles: asked once
     with _lock:
         hit = _cache.get(key)
         if not fresh and hit and time.time() - hit[0] < CACHE_SECONDS:
