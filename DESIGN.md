@@ -7,7 +7,7 @@ The visual system of the cc-profiles UI (`src/cc_profiles/static/`: `index.html`
 1. **A tool, not a showcase.** People open the app to fix something, so density is high, hierarchy is clear and nothing is decorative. Color carries information; it is not there to look nice.
 2. **Every action that writes says what it will do, and friction grows with the stakes.** Assigning takes one click, moving takes a confirmation, deleting a profile requires typing its name. Confirmations give concrete numbers ("3 conversations, 2 memories") and say where data goes ("anything the target already has goes to the backup").
 3. **Problems before lists.** The Projects tab opens on *Needs attention*, and every row with a problem has exactly one primary button that fixes it.
-4. **No dead ends.** Every operation reports its result in a toast with the backup path. Empty states say why they are empty.
+4. **No dead ends.** Every operation reports its result in a toast with the backup path and **Undo**. Empty states say why they are empty.
 
 ## Color
 
@@ -85,7 +85,7 @@ Rules:
 | Changes drawer | `.drawer.wide`, `showChanges(name, trigger)` | Backups → *Show changes*: a wider drawer with the steps in plain words and one `details.chg` per copied file; `pre.diff` lines are `.a` (added, `--ok` mixed into `--panel`), `.d` (removed, `--err-soft`), `.h` (hunk, `--panel-2`), always with the `+`/`-` prefix so color is not the only cue |
 | Download | `download(path, fallback)` | fetches with the token and saves the Blob under the server's file name: profile export, usage CSV |
 | New version | `.iconbtn.has-update`, `#ab-update.update-on` | when the daily check finds a new cc-profiles: a dot on the About button and the About panel's **Update** button (next to Refresh; grey and disabled otherwise) in `--logo`, the mascot's orange, with `--logo-eye` text (5.45:1; white would be 3:1). The version is written in the panel's cc-profiles card, not on the button, the new number in `--accent` (`.newver`) |
-| Toast | `toast(msg, sub, err)` | bottom right, 6 s (9 s for errors), in the theme's colors (`--panel`, `--text`, `--line`; errors `--err-soft` with an `--err` border); `sub` in monospace for the backup path; `role="status"` or `alert` |
+| Toast | `toast(msg, sub, err, action)` | bottom right, 6 s (9 s for errors, 12 s with an action), paused while the pointer or the focus is on it, in the theme's colors (`--panel`, `--text`, `--line`; errors `--err-soft` with an `--err` border); `sub` in monospace (12px) for the backup path; `action` adds a small button: `run()` gives every operation with a backup an **Undo** that restores it (`undoBackup()`, then `reloadTab()`); `role="status"` or `alert` |
 | Loading | `LOADER` (`.spinner.loader`), `.spinner` | a panel that loads (an `.empty` state, the restart dialog, the Claude Code install notice) shows `LOADER`: the header's logo, its two mascots hopping in turn by whole pixels. Small inline waits (a status next to a button) keep the round `.spinner`. Always with a sentence about what we are waiting for when the wait is long |
 
 ## Writing
@@ -101,7 +101,7 @@ Rules:
 ## Accessibility and behavior
 
 - Visible focus everywhere: a 2px `--accent` outline.
-- Modals and the drawer have `role="dialog"`, `aria-modal="true"` and a label; Esc closes them and focus returns to the trigger.
+- Modals and the drawer have `role="dialog"`, `aria-modal="true"` and a label; Tab and Shift+Tab stay inside them (`trapTab()`), Esc closes them and focus returns to the trigger (`refocus()`, which finds it again by its `data-*` if the list was drawn again).
 - Inputs without a visible label have an `aria-label`.
 - Search fields keep the caret position when the list re-renders.
 - Contrast: main and secondary text pass WCAG AA (4.5:1) on `--bg` and `--panel` in both themes. Primary buttons are `--logo-eye` on `--logo` (5.45:1 in both themes), and on hover on `--logo` mixed 80% with white (`#e19279`, 6.96:1). Profile badges measure, light/dark: p0 4.7/7.4, p1 5.6/6.9, p2 4.9/8.4, p3 4.6/9.1, p4 6.4/7.7, p5 6.0/9.8, shared 5.8/7.3. Measure every new color in both themes before using it.

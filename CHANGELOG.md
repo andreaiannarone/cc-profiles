@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Undo** in the message after every change: it restores that change's backup, as Backups → Restore does, and shows the tab again with the files as they are. The message stays 12 seconds, longer while the pointer or the focus is on it.
 - Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.
 - Usage tab: **Plan limits**, a chart per claude.ai account of the highest share of the weekly limit used each day, recorded whenever cc-profiles checks the limits (kept 90 days in `~/.cc-profiles/quota-history.json`).
 - Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes.
@@ -18,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header.
 
 ### Fixed
+- Dialogs and side panels keep the keyboard focus inside them, and give it back to the button that opened them when they close.
 - Placeholders in text fields are readable (WCAG AA contrast) in both themes.
 - Settings no longer scrolls sideways at phone width.
 - Memories: **also show projects without memories** has a larger checkbox, and its whole label can be clicked.

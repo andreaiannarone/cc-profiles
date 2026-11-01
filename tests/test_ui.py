@@ -398,6 +398,50 @@ def test_a_limit_at_90_percent_is_told_once(page_on_sandbox):
     assert errors == []
 
 
+def test_undo_in_the_result_of_an_operation(page_on_sandbox):
+    """The toast after a write offers Undo: it restores that operation's backup and draws the tab again."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click(".plist button")
+    page.click("[data-mfile]")
+    page.wait_for_selector("#mtext")
+    ctx = page.evaluate("({profile: S.mem.profile, project: S.mem.project, file: S.mem.file})")
+    read = f"api(`/api/memory/file?profile=${{'{ctx['profile']}'}}&project=${{encodeURIComponent({json.dumps(ctx['project'])})}}&file=${{'{ctx['file']}'}}`).then(r => r.content)"
+    saved = page.evaluate(read)
+    page.fill("#mtext", saved + "\nA line to undo.")
+    page.click("#msave")
+    page.wait_for_selector(".toast.act button:has-text('Undo')")
+    assert "A line to undo." in page.evaluate(read)
+    page.click(".toast.act button:has-text('Undo')")
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('Restored'))")
+    assert page.evaluate(read) == saved
+    page.wait_for_function("s => document.querySelector('#mtext')?.value === s", arg=saved)  # the editor shows the file again
+    assert errors == []
+
+
+def test_dialogs_keep_and_give_back_the_focus(page_on_sandbox):
+    """Tab stays inside a dialog; Esc gives the focus back to the button that opened it."""
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.focus("#ptemplates")
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".modal")
+    for _ in range(12):
+        page.keyboard.press("Tab")
+        assert page.evaluate("!!document.activeElement.closest('.modal')")
+    page.keyboard.press("Shift+Tab")
+    assert page.evaluate("!!document.activeElement.closest('.modal')")
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => document.activeElement?.id === 'ptemplates'")
+    page.click("#about-btn")
+    page.wait_for_selector("#ab-close")
+    for _ in range(40):
+        page.keyboard.press("Tab")
+    assert page.evaluate("!!document.activeElement.closest('.drawer')")
+    page.keyboard.press("Escape")
+    assert errors == []
+
+
 def test_cancel_puts_back_the_saved_text(page_on_sandbox):
     """Skills and Memories editors: Cancel is enabled by a change and undoes it; Save disables it."""
     page, errors = page_on_sandbox

@@ -497,7 +497,8 @@ pre.diff .f { color: var(--muted); }
 /* in the colors of the theme in use, like a panel */
 .toast { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
 .toast.err { background: var(--err-soft); border-color: var(--err); }
-.toast small { display: block; color: var(--muted); margin-top: 2px; font-family: var(--mono); font-size: 11px; }
+.toast small { display: block; color: var(--muted); margin-top: 2px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.toast.act { display: flex; gap: 12px; align-items: center; } .toast.act > div { flex: 1; min-width: 0; }  /* the result of an operation, with Undo */
 /* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
 .useg { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
 .useg .seg { min-width: 0; }

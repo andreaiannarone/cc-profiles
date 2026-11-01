@@ -10,7 +10,7 @@ async function openAbout() {
   dr.innerHTML = `<div class="dh"><h2>Claude Code on this computer</h2><button class="btn small" id="ab-update" disabled>Update</button><button class="btn small" id="ab-reload">Refresh</button><button class="btn small" id="ab-close">Close</button></div>
     <div class="db" id="ab-body">${loading}</div>`;
   const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); $("#about-btn").focus(); };
-  const onKey = e => { if (e.key === "Escape") close(); };
+  const onKey = e => { if (e.key === "Escape") close(); else trapTab(e, dr); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
   document.body.append(bg, dr);
   $("#ab-close", dr).onclick = close; $("#ab-close", dr).focus();

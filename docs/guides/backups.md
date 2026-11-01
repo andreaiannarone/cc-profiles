@@ -7,6 +7,10 @@ Every operation that changes files creates a backup in `~/.cc-profiles/backups/<
   <img src="../assets/screenshots/backups-light.jpg" alt="The Backups tab: three backups with Show changes, Restore, Keep and Delete" width="1440" height="646" loading="lazy">
 </picture>
 
+## Undo right away
+
+The message after every change shows its backup and an **Undo** button: it does the same as **Restore** on that backup in this tab, without looking for it. The message stays 12 seconds, and as long as the pointer or the keyboard focus is on it.
+
 ## What a backup contains
 
 | File | Content |

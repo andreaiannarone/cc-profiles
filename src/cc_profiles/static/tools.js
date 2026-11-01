@@ -401,8 +401,8 @@ async function showChanges(name, trigger) {
   dr.setAttribute("aria-label", `Changes of ${b.title}`);
   dr.innerHTML = `<div class="dh"><h2>${esc(b.title)}</h2><button class="btn small" id="ch-close">Close</button></div>
     <div class="db" id="ch-body"><div class="empty">${LOADER} Comparing the backup with the files as they are now…</div></div>`;
-  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); trigger?.focus(); };
-  const onKey = e => { if (e.key === "Escape") close(); };
+  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); refocus(trigger); };
+  const onKey = e => { if (e.key === "Escape") close(); else trapTab(e, dr); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
   document.body.append(bg, dr);
   $("#ch-close", dr).onclick = close; $("#ch-close", dr).focus();
