@@ -519,6 +519,10 @@ pre.diff .f { color: var(--muted); }
 .u-out { fill: var(--p1); background: var(--p1); }
 .u-in { fill: var(--p3); background: var(--p3); }
 .u-read { fill: var(--faint); background: var(--faint); }
+.qcharts { display: grid; gap: 10px; }
+.qchart svg { height: 120px; }
+.qchart .top b { color: var(--text); font-weight: 600; }
+.q-ok { fill: var(--p1); } .q-mid { fill: var(--warn); } .q-high { fill: var(--err); }  /* the same steps as the bars in Profiles */
 .uproj td.path { min-width: 170px; }
 th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }

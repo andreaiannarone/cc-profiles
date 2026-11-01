@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.
+- Usage tab: **Plan limits**, a chart per claude.ai account of the highest share of the weekly limit used each day, recorded whenever cc-profiles checks the limits (kept 90 days in `~/.cc-profiles/quota-history.json`).
 - Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes.
 
 ### Changed

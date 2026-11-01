@@ -162,6 +162,8 @@ checkWhatsNew();
 loadUpdateStatus();
 api("/api/terminal").then(t => { S.term = t; if (t.supported && S.tab === "projects" && S.projects) renderProjects(); }).catch(() => {});
 setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
+watchQuotas();
+setInterval(watchQuotas, 15 * 60 * 1000);
 refresh().then(() => {  // the Mac app opens on the tab it was closed on; a browser tab on Projects
   let tab = null;
   if (IN_APP) try { tab = localStorage.getItem(APP_TAB); } catch {}

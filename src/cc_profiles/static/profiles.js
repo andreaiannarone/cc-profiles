@@ -43,14 +43,37 @@ function accountsHtml() {
     ${a.not_signed_in.length ? `<div class="hint" style="margin-top:8px">Not signed in to claude.ai: ${a.not_signed_in.map(esc).join(", ")}</div>` : ""}`;
 }
 function loadQuotas(only, fresh) {
-  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only)).map(c => ({ id: c.quota_profile }))) {
-    api(`/api/quota?profile=${encodeURIComponent(p.id)}${fresh ? "&fresh=1" : ""}`)
+  for (const c of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only))) {
+    const id = c.quota_profile;
+    api(`/api/quota?profile=${encodeURIComponent(id)}${fresh ? "&fresh=1" : ""}`)
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
-        S.quota[p.id] = q;
-        redrawQuota(p.id);
+        S.quota[id] = q;
+        redrawQuota(id);
+        warnQuota(c, q);
       });
   }
+}
+// Near the end of a limit: a toast once per limit and reset, from any tab. The page checks at start
+// and every 15 minutes (the server asks claude.ai at most every 5); the Mac app sends a notification
+// of its own instead, also with the window closed.
+const QUOTA_WARN = 90;
+async function watchQuotas() {
+  try { S.accounts = await api("/api/accounts"); } catch { return; }
+  loadQuotas();
+}
+function warnQuota(c, q) {
+  if (IN_APP || q?.state !== "ok") return;
+  let told = [];
+  try { told = JSON.parse(localStorage.getItem("cc-profiles.quota-warned") || "[]"); } catch {}
+  for (const l of q.limits.filter(l => l.percent >= QUOTA_WARN)) {
+    const key = `${c.email}|${l.label}|${l.resets_at || ""}`;
+    if (told.includes(key)) continue;
+    told.push(key);
+    toast(`${c.name || c.email}: ${l.percent}% of the ${l.label === "5 h" ? "5-hour" : l.label.toLowerCase()} limit used`,
+      `${resetText(l.resets_at) || "resets later"} · see the Profiles tab`);
+  }
+  try { localStorage.setItem("cc-profiles.quota-warned", JSON.stringify(told.slice(-50))); } catch {}
 }
 // Refresh on a card: ask claude.ai again instead of the answer kept for 5 minutes
 document.addEventListener("click", e => {

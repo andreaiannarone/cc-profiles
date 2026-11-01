@@ -104,6 +104,25 @@ def test_quota_when_claude_ai_cannot_be_reached(home, app_factory, tmp_path):
     assert "Unknown profile" in app.request("/api/quota?profile=nope")[1]["error"]
 
 
+def test_quota_history_keeps_the_days_highest_values(home, app_factory, claude_ai):
+    """Every answer from claude.ai updates the day's highest value of each limit, per account:
+    the Usage tab draws them. Older days than HISTORY_DAYS go."""
+    url, seen = claude_ai
+    signed_in(home, "", "me@example.com", "tok-new")
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com", "fullName": "Sam Example"}})
+    old = time.strftime("%Y-%m-%d", time.localtime(time.time() - 100 * 86400))
+    yesterday = time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))
+    today = time.strftime("%Y-%m-%d")
+    home.json(".cc-profiles/quota-history.json", {"me@example.com": {
+        old: {"Week": 10}, yesterday: {"5 h": 20, "Week": 15}, today: {"5 h": 70}}})
+    app = app_factory(CC_PROFILES_USAGE_URL=url)
+    assert app.get("/api/quota?profile=default")["state"] == "ok"
+    h = app.get("/api/quota/history")["accounts"]
+    assert [a["account"] for a in h] == ["me@example.com"] and h[0]["name"] == "Sam Example"
+    assert h[0]["days"] == [{"date": yesterday, "limits": {"5 h": 20, "Week": 15}},
+                            {"date": today, "limits": {"5 h": 70, "Week": 18, "Week · Opus": 0}}]  # 58 < 70 kept
+
+
 def test_keychain_names_follow_claude_code():
     sys.path.insert(0, str(SRC))
     from cc_profiles import quota

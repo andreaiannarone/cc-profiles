@@ -184,6 +184,7 @@ async function loadUsage() {
   const u = S.use, seq = ++u.seq;
   if (u.profile !== "all" && !S.profiles.some(p => p.id === u.profile)) u.profile = "all";
   u.data = null; u.error = null; renderUsage();
+  api("/api/quota/history").then(h => { u.history = h; if (seq === u.seq && u.data) renderUsage(); }).catch(() => {});
   try { const d = await api(`/api/usage?profile=${encodeURIComponent(u.profile)}&days=${u.days}`); if (seq === u.seq) u.data = d; }
   catch (e) { if (seq === u.seq) u.error = e.message; }
   if (seq === u.seq) renderUsage();
@@ -216,6 +217,39 @@ function usageChart(daily) {
         <line class="grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" vector-effect="non-scaling-stroke"/>
         <line class="grid" x1="0" y1="${half}" x2="${W}" y2="${half}" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>${bars}</svg>
       <div class="ax" aria-hidden="true"><span>${esc(dayLabel(daily[0].date))}</span><span>${esc(dayLabel(daily[Math.floor((n - 1) / 2)].date))}</span><span>${esc(dayLabel(daily[n - 1].date))}</span></div></div>`;
+}
+// The plan's weekly limit over the period: the day's highest share used, as cc-profiles saw it
+// whenever it checked the limits (the Profiles tab, and every 15 minutes while the page is open)
+function quotaHistoryHtml(days) {
+  const accounts = (S.use.history?.accounts || []).filter(a => a.days.length);
+  if (!accounts.length) return "";
+  const dates = [...Array(days)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
+  const W = 1000, H = 120, bw = W / days, gap = days > 40 ? 1.5 : 4, y90 = (H - H * 0.9).toFixed(1);
+  const chart = a => {
+    const by = Object.fromEntries(a.days.map(d => [d.date, d.limits]));
+    const seen = dates.filter(d => by[d]?.Week !== undefined);
+    if (!seen.length) return "";
+    const top = Math.max(...seen.map(d => by[d].Week));
+    const bars = dates.map((d, i) => {
+      const v = by[d]?.Week;
+      const tip = `${dayLabel(d, true)}: ` + (v === undefined ? "not checked" : `${v}% of the weekly limit used` + (by[d]["5 h"] !== undefined ? `, ${by[d]["5 h"]}% of a 5-hour window at most` : ""));
+      const h = v === undefined ? 0 : Math.max((v / 100) * H, 1);
+      return `<g class="day"><title>${esc(tip)}</title><rect class="hit" x="${(i * bw).toFixed(2)}" y="0" width="${bw.toFixed(2)}" height="${H}"/>${v === undefined ? ""
+        : `<rect class="bar${v >= 90 ? " q-high" : v >= 75 ? " q-mid" : " q-ok"}" x="${(i * bw + gap / 2).toFixed(2)}" y="${(H - h).toFixed(2)}" width="${Math.max(bw - gap, 0.6).toFixed(2)}" height="${h.toFixed(2)}"/>`}</g>`;
+    }).join("");
+    const label = `${a.name}: share of the weekly limit used each day from ${dayLabel(dates[0], true)} to ${dayLabel(dates[days - 1], true)}, checked on ${plural(seen.length, "day", "days")}; the highest is ${top}%`;
+    return `<div class="uchart qchart">
+      <div class="top"><span class="grow"><b>${esc(a.name)}</b> · weekly limit used, the day's highest · ${plural(seen.length, "day", "days")} checked · highest ${top}%</span>
+        <span class="legend">dashed line at 90%</span></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
+        <line class="grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" vector-effect="non-scaling-stroke"/>
+        <line class="grid" x1="0" y1="${y90}" x2="${W}" y2="${y90}" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>${bars}</svg>
+      <div class="ax" aria-hidden="true"><span>${esc(dayLabel(dates[0]))}</span><span>${esc(dayLabel(dates[Math.floor((days - 1) / 2)]))}</span><span>${esc(dayLabel(dates[days - 1]))}</span></div></div>`;
+  };
+  const charts = accounts.map(chart).filter(Boolean).join("");
+  return charts ? `<div class="ext-head"><h2>Plan limits</h2><span class="hint">every claude.ai account, whatever the profile above · recorded whenever cc-profiles checks the limits: the Profiles tab, and every 15 minutes while it is open</span></div>
+    <div class="qcharts">${charts}</div>` : "";
 }
 function renderUsage() {
   if (S.tab !== "usage") return;
@@ -257,6 +291,7 @@ function renderUsage() {
     </div>
     ${usageChart(d.daily)}
     ${note}
+    ${quotaHistoryHtml(d.days)}
     <div class="ext-head"><h2>Top projects</h2><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
     <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
     <div class="ext-head"><h2>Most expensive sessions</h2><span class="hint">the ${plural(d.sessions.length, "conversation", "conversations")} with the highest estimated cost, then the most tokens · open one to read it</span></div>

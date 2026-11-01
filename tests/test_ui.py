@@ -158,11 +158,15 @@ def test_usage_tab(page_on_sandbox):
     page.keyboard.press("u")
     page.wait_for_selector('#tabs button[data-tab="usage"][aria-current="page"]')
     page.wait_for_selector(".uchart svg g.day")
-    assert page.eval_on_selector_all(".uchart g.day", "gs => gs.length") == 30
+    assert page.eval_on_selector_all(".uchart:not(.qchart) g.day", "gs => gs.length") == 30
     assert "estimate" in page.inner_text("#main") and "not billed per token" in page.inner_text("#main")
     assert page.query_selector("text=Profiles") is not None  # per-profile table with All profiles
+    # the plan's weekly limit, recorded when the page checked the limits at start: today's bar, 81 %, orange
+    page.wait_for_selector(".qchart rect.bar")
+    assert "Sam Example" in page.inner_text(".qchart") and "highest 81%" in page.inner_text(".qchart")
+    assert page.eval_on_selector_all(".qchart rect.bar", "rs => rs.map(r => r.getAttribute('class'))") == ["bar q-mid"]
     page.click('[data-udays="7"]')
-    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 7")
+    page.wait_for_function("() => document.querySelectorAll('.uchart:not(.qchart) g.day').length === 7")
     assert page.get_attribute('[data-udays="7"]', "aria-pressed") == "true"
     page.click('[data-uprof="work"]')
     page.wait_for_selector('[data-uprof="work"].on')
@@ -170,7 +174,7 @@ def test_usage_tab(page_on_sandbox):
     assert "~/code/work/api" in page.inner_text("#main")  # work, last 7 days
     assert "~/code/personal/blog" not in page.inner_text("#main")
     page.click('[data-udays="14"]')
-    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 14")
+    page.wait_for_function("() => document.querySelectorAll('.uchart:not(.qchart) g.day').length === 14")
     assert page.evaluate("document.documentElement.scrollWidth") <= 1440
     assert errors == []
 
@@ -375,6 +379,22 @@ def test_agents_tab(page_on_sandbox):
     page.click("#agraw")
     assert "name: test-writer" in page.input_value("#agrawtext")
     page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_a_limit_at_90_percent_is_told_once(page_on_sandbox):
+    """From any tab: a toast when a plan limit reaches 90 %, once per limit and reset."""
+    page, errors = page_on_sandbox
+    answer = {"state": "ok", "plan": "max", "checked": 1, "limits": [
+        {"label": "5 h", "percent": 40, "resets_at": None}, {"label": "Week", "percent": 93, "resets_at": "2099-01-05T10:00:00Z"}]}
+    page.route("**/api/quota?*", lambda route: route.fulfill(content_type="application/json", body=json.dumps(answer)))
+    page.evaluate("watchQuotas()")
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('93% of the week limit used'))")
+    assert "Sam Example" in page.inner_text(".toast")
+    page.evaluate("document.querySelectorAll('.toast').forEach(t => t.remove())")
+    page.evaluate("watchQuotas()")
+    page.wait_for_timeout(500)
+    assert not page.query_selector(".toast")  # told already
     assert errors == []
 
 

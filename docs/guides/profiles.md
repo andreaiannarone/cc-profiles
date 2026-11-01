@@ -17,6 +17,8 @@ On each card, three bars show how much of the plan is used: the 5-hour window, t
 
 cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's sign-in (from the macOS keychain, or `.credentials.json` in the profile folder), and keeps the answer for 5 minutes: under the bars, the time it was checked, and **Refresh** to ask again now. The token is only read: it never reaches the page and is never stored, copied or refreshed. When it has expired, the row says to open Claude Code in the profile, which refreshes it. The first time, macOS may ask to let cc-profiles read the keychain. A sign-in with an API key, Bedrock or Vertex has no plan limits.
 
+While the page is open, cc-profiles checks the limits every 15 minutes, from any tab. When a limit reaches 90 % it says so once, in a message at the bottom of the page; the Mac app sends a macOS notification instead, also with its window closed, and shows the 5-hour window's use next to its [menu bar](../mac-app.md#menu-bar-and-login) icon. Every check also records the day's highest value of each limit, which the [Usage tab](usage.md) draws.
+
 ## Create a profile
 
 **New profile** (in the Profiles tab, or the **+ New profile** card at the top) asks for:

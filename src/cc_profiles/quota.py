@@ -14,7 +14,7 @@ import time
 import urllib.error
 import urllib.request
 
-from .core import HOME, find_tool, profile, profiles, read_json
+from .core import DATA_DIR, HOME, find_tool, profile, profiles, read_json, write_json
 
 # ---------------------------------------------------------------------------
 # Where Claude Code keeps the sign-in
@@ -33,6 +33,10 @@ USAGE_URL = os.environ.get("CC_PROFILES_USAGE_URL", "https://api.anthropic.com/a
 CACHE_SECONDS = 300
 _cache = {}
 _lock = threading.Lock()  # one request at a time: two profiles on one account ask once
+# The day's highest value of each limit, per account, for the chart in the Usage tab. Like
+# update-check.json it is the app's own cache of an answer, not a Claude Code file: no backup.
+HISTORY_FILE = os.path.join(DATA_DIR, "quota-history.json")
+HISTORY_DAYS = 90
 
 
 def keychain_services(dir_abs):
@@ -150,7 +154,47 @@ def quota(pid, fresh=False):
         res = ({"state": "ok", "limits": limits, "plan": tok.get("subscriptionType") or "", "checked": time.time()}
                if limits else {"state": "none", "message": "No plan limits for this account"})
         _cache[key] = (time.time(), res)
+        if limits:
+            record_history(key, limits)
         return res
+
+
+def record_history(key, limits, now=None):
+    """Keeps the day's highest value of each limit (called under _lock: one writer)."""
+    now = time.time() if now is None else now
+    data = read_json(HISTORY_FILE, {}) or {}
+    days = data.setdefault(key, {})
+    today = days.setdefault(time.strftime("%Y-%m-%d", time.localtime(now)), {})
+    changed = False
+    for item in limits:
+        if item["percent"] > today.get(item["label"], -1):
+            today[item["label"]] = item["percent"]
+            changed = True
+    oldest = time.strftime("%Y-%m-%d", time.localtime(now - HISTORY_DAYS * 86400))
+    for day in [d for d in days if d < oldest]:
+        del days[day]
+        changed = True
+    if changed:
+        try:
+            write_json(HISTORY_FILE, data)
+        except OSError:
+            pass  # only the chart misses a point
+
+
+def quota_history():
+    """The recorded days of each account, named from the profiles that use it."""
+    names = {}
+    for p in profiles():
+        a = (read_json(p["config_abs"], {}) or {}).get("oauthAccount") or {}
+        if a.get("emailAddress"):
+            names[a["emailAddress"]] = a.get("fullName") or a.get("displayName") or a["emailAddress"]
+        names["profile:" + p["id"]] = p["label"]
+    out = []
+    for key, days in sorted((read_json(HISTORY_FILE, {}) or {}).items()):
+        if isinstance(days, dict) and days:
+            out.append({"account": key, "name": names.get(key, key.replace("profile:", "")),
+                        "days": [{"date": d, "limits": v} for d, v in sorted(days.items())]})
+    return {"accounts": out}
 
 
 # ---------------------------------------------------------------------------
