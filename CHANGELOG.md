@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-01
+
 ### Added
 - **Undo** in the message after every change: it restores that change's backup, as Backups → Restore does, and shows the tab again with the files as they are. The message stays 12 seconds, longer while the pointer or the focus is on it.
 - Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.
@@ -402,7 +404,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...v0.6.4

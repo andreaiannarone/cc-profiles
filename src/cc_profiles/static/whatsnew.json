@@ -1,6 +1,49 @@
 {
  "releases": [
   {
+   "version": "0.6.7",
+   "date": "2026-11-01",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Undo** in the message after every change: it restores that change's backup, as Backups → Restore does, and shows the tab again with the files as they are. The message stays 12 seconds, longer while the pointer or the focus is on it.",
+      "Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.",
+      "Usage tab: **Plan limits**, a chart per claude.ai account of the highest share of the weekly limit used each day, recorded whenever cc-profiles checks the limits (kept 90 days in `~/.cc-profiles/quota-history.json`).",
+      "Projects → **Assign…** lists the projects the rule takes while you type, warns when it would move one that already has a profile, and can make a rule for **only this folder**.",
+      "Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes."
+     ]
+    },
+    {
+     "title": "Changed",
+     "items": [
+      "The page is dark by default, as is the Mac app's window until the page loads. The theme picker in the About panel (ⓘ) offers **Dark** and **Light**: the System option is gone, and a page that followed the system is now dark.",
+      "About panel: when a new cc-profiles is out, its version number is written in orange.",
+      "Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.",
+      "Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.",
+      "Projects: a project only waiting for a profile is a grey note, listed after the ones to fix, and the number on the tab counts only those to fix.",
+      "Delete a profile: when it has conversations or memories, moving them to another profile is the option already chosen.",
+      "Backups: **Restore** is an ordinary button (Show changes comes first), and its confirmation lists the steps it undoes.",
+      "Memories: the selected memory card has a dark outline instead of an orange one, which looked like the keyboard focus.",
+      "Projects: **Merge into…** explains itself when you point at it.",
+      "Memories: the selected project in the list has the same colors as the selected profile above it.",
+      "Compare: **Settings** lists only the settings that differ, with how many of all; **Show all** brings back the ones that are the same.",
+      "Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "At phone width, Projects and Backups show each row as a card, with the path or title on top and its buttons underneath, and the profile cards go two by two with short labels.",
+      "Dialogs and side panels keep the keyboard focus inside them, and give it back to the button that opened them when they close.",
+      "Placeholders in text fields are readable (WCAG AA contrast) in both themes.",
+      "Settings no longer scrolls sideways at phone width.",
+      "Memories: **also show projects without memories** has a larger checkbox, and its whole label can be clicked."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.6.6",
    "date": "2026-11-01",
    "sections": [
@@ -173,25 +216,6 @@
       "**Mods** in the Plugins tab: plugins of function hooks, which change Claude Code itself, are marked **mod**, with what they add (pane, band above the prompt, status line, slash commands…), the events they hook, and in orange what they can reach (network, programs, files, model calls), read from their source without running it.",
       "**Copy to…** in the Plugins tab copies a plugin installed for every project to another profile as `/plugin` would install it there (files, `installed_plugins.json` entry, marketplace), and enables it, with a backup.",
       "**Mods** in Compare: the mods only one profile has, with **Copy to …**, and those turned on in one profile only."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.5.7",
-   "date": "2026-10-13",
-   "sections": [
-    {
-     "title": "Changed",
-     "items": [
-      "**A profile's GitHub CLI folder lists only the account it uses**, so a Claude Code session of that profile sees no other account to switch to. When cc-profiles starts, and when you pick another account for a profile, the other accounts leave that profile's folder (with a backup); they stay listed in Default's folder or in `~/.config/gh-accounts`, so you can still pick them. Default's folder (your terminal's) and a folder with a token written in `hosts.yml` are left as they are."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "A `config.json` that could not be read for a moment (an editor half way through saving it) or that was not valid JSON was replaced with the defaults, losing the rules and the profile list. cc-profiles now reads it again for half a second, and if it stays broken keeps it as `config.broken-<date>-<time>.json` before starting from the defaults.",
-      "`scripts/release.py` no longer stops at the merge when GitHub cancels a check it left in the queue: it starts the cancelled checks again, twice at most, and stops with their names if one fails. `release.py resume` finishes a release that stopped half way, skipping the steps already done."
      ]
     }
    ]
