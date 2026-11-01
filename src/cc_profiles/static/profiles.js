@@ -34,8 +34,9 @@ function accountsHtml() {
     return `<div class="hcard acard"><div class="ahead"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
       ${who ? `<span class="hint">${who}</span>` : ""}</div>
       ${c.quota_profile ? quotaHtml(c.quota_profile) : ""}
-      <div class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</div>
-      ${facts.length ? `<div class="m">${esc(facts.join(" · "))}</div>` : ""}</div>`;
+      <div class="afoot"><span class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</span>
+        ${facts.length ? `<span class="m">${esc(facts.join(" · "))}</span>` : ""}
+        ${c.quota_profile ? quotaCheckHtml(c.quota_profile) : ""}</div></div>`;
   };
   return `<div class="section-title">Claude accounts</div>
     <div class="health accounts">${a.accounts.map(card).join("")}</div>
@@ -47,8 +48,7 @@ function loadQuotas(only, fresh) {
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
         S.quota[p.id] = q;
-        const el = document.querySelector(`[data-quota="${p.id}"]`);
-        if (el) el.outerHTML = quotaHtml(p.id);
+        redrawQuota(p.id);
       });
   }
 }
@@ -58,7 +58,7 @@ document.addEventListener("click", e => {
   if (!b) return;
   const id = b.dataset.qrefresh;
   delete S.quota[id];
-  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  redrawQuota(id);
   loadQuotas(id, true);
 });
 function signInIssue(id) {
@@ -85,22 +85,33 @@ function bindQuotaMode(seg) {
     if (!b) return;
     try { localStorage.setItem("cc-profiles.quota", b.dataset.quotaSet); } catch {}
     seg.innerHTML = quotaButtons(); $("button.on", seg)?.focus();
-    document.querySelectorAll("[data-quota]").forEach(el => { el.outerHTML = quotaHtml(el.dataset.quota); });
+    document.querySelectorAll("[data-quota]").forEach(el => redrawQuota(el.dataset.quota));
   };
+}
+function redrawQuota(id) {
+  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  document.querySelectorAll(`[data-qcheck="${id}"]`).forEach(el => { el.outerHTML = quotaCheckHtml(id); });
+}
+// when the limits were asked, with Refresh: at the end of the card's last line
+function quotaCheckHtml(id) {
+  const q = S.quota[id];
+  if (q?.state !== "ok") return `<span class="qcheck" data-qcheck="${id}"></span>`;
+  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
+  return `<span class="qcheck" data-qcheck="${id}"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>
+    <button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button></span>`;
 }
 function quotaHtml(id) {
   const q = S.quota[id];
   if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
   const refresh = `<button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button>`;
   if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)} ${q.state === "error" || q.state === "expired" ? refresh : ""}</div>`;
-  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
   return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
     const used = Math.min(100, Math.max(0, l.percent)), level = used >= 90 ? " high" : used >= 75 ? " mid" : "";
     const left = quotaMode() === "left", pc = left ? 100 - used : used;
     return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
       <span class="qbar" role="meter" aria-label="${esc(l.label)} ${left ? "left" : "used"}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
       <span class="qp">${pc}%</span><span class="hint">${left ? "left · " : ""}${esc(resetText(l.resets_at))}</span></div>`;
-  }).join("")}<div class="qfoot"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>${refresh}</div></div>`;
+  }).join("")}</div>`;
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;

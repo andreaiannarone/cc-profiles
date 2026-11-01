@@ -693,7 +693,7 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert "34%" in rows[0][1] and "resets at" in rows[0][1] and "resets " in rows[1][1]
     assert rows[1][0] == "qrow mid" and rows[0][0] == "qrow"  # orange from 75 %
     assert page.get_attribute('[data-quota="default"] .qbar', "aria-valuenow") == "34"
-    assert "Checked at" in page.inner_text('[data-quota="default"] .qfoot')
+    assert "Checked at" in page.inner_text('[data-qcheck="default"]')
     with page.expect_request(lambda r: "/api/quota?profile=default&fresh=1" in r.url):  # Refresh asks again
         page.click('[data-qrefresh="default"]')
     page.wait_for_selector('[data-quota="default"] .qrow')
