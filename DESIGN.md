@@ -18,7 +18,7 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | `--bg` | `#f6f5f2` | `#161513` | page background (warm paper, not pure white) |
 | `--panel` | `#ffffff` | `#1f1e1b` | cards, tables, modals, inputs |
 | `--panel-2` | `#f0eee9` | `#282723` | table headers, hover, options in modals |
-| `--btn` / `--btn-hover` | `#eeece7` / `#e5e2db` | `#121110` / `#282723` | secondary buttons: a shade darker than the cards and the page, so they stand out from both |
+| `--btn` / `--btn-hover` | `#f3f1ed` / `#e9e6e0` | `#1a1917` / `#282723` | secondary buttons: a shade darker than the cards, so they stand out from them |
 | `--line` | `#e2dfd8` | `#353330` | borders and separators |
 | `--text` | `#1d1c1a` | `#ecebe7` | main text; also the background of active chips and segments |
 | `--muted` | `#6e6a62` | `#a29e95` | secondary text, counts, labels |
