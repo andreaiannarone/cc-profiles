@@ -48,6 +48,10 @@ The same settings as the `/config` panel of Claude Code, in five groups, with co
 | Auto-connect to IDE (external terminal) | `autoConnectIde` ¹ | on/off |
 | Auto-install IDE extension | `autoInstallIdeExtension` ¹ | on/off, on by default |
 | Worktree base ref | `worktree.baseRef` | `fresh`, `head` |
+| **Voice** (claude.ai sign-in only; the same as `/voice`) | | |
+| Voice mode | `voice.enabled` | on/off |
+| How to talk | `voice.mode` | `hold` (default: hold the key while you talk), `tap` (tap to start, tap to stop and send) |
+| Send on release | `voice.autoSubmit` | on/off: send the prompt when you release the key, with `hold` only |
 | **Notifications and updates** | | |
 | Notifications | `preferredNotifChannel` ¹ | `auto`, `iterm2`, `terminal_bell`, `iterm2_with_bell`, `kitty`, `ghostty`, `notifications_disabled` |
 | Auto-update channel | `autoUpdatesChannel` | `latest`, `stable` |

@@ -7,22 +7,42 @@
 // keeps its scroll position, as in Settings.
 async function loadSharing() {
   if (!S.sharing) renderSharing();
-  const [sharing, shell, github] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
-    api("/api/github").catch(() => null)]);
-  S.sharing = sharing; S.shell = shell; S.github = github;
+  const [sharing, shell, github, accounts] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
+    api("/api/github").catch(() => null), api("/api/accounts").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; S.github = github; S.accounts = accounts;
   const y = window.scrollY;
   renderSharing();
   window.scrollTo(0, y);
   loadQuotas();
 }
 
-// ---------- the plan's usage limits of each profile's account ----------
-// Asked after the list is on screen, one profile at a time on the server (which keeps
-// each account's answer for 5 minutes); each row is filled as its answer arrives.
+// ---------- the claude.ai accounts and their plan's usage limits ----------
+// One card per account, above the profiles, with the profiles signed in to it. The limits are
+// asked after the cards are on screen, with a profile whose sign-in works (the server keeps
+// each account's answer for 5 minutes); each card is filled as its answer arrives.
 S.quota = {};
-function loadQuotas() {
-  for (const p of S.profiles.filter(x => x.email)) {
-    api(`/api/quota?profile=${encodeURIComponent(p.id)}`)
+const SIGN_IN = { ok: "", refresh: "", signed_out: "signed out: log in again with /login", none: "" };
+const monthYear = iso => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
+function accountsHtml() {
+  const a = S.accounts;
+  if (!a || !a.accounts.length) return "";
+  const card = c => {
+    const org = c.organization && !/'s Organization$/.test(c.organization) ? c.organization : "";
+    const facts = [c.since && `Member since ${monthYear(c.since)}`, c.subscribed && `subscribed since ${monthYear(c.subscribed)}`,
+      c.extra_usage === true ? "extra usage on" : c.extra_usage === false ? "extra usage off" : ""].filter(Boolean);
+    return `<div class="hcard acard"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
+      <div class="hint">${[c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ")}</div>
+      ${c.quota_profile ? quotaHtml(c.quota_profile) : ""}
+      <div class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</div>
+      ${facts.length ? `<div class="m">${esc(facts.join(" · "))}</div>` : ""}</div>`;
+  };
+  return `<div class="section-title">Claude accounts</div>
+    <div class="health accounts">${a.accounts.map(card).join("")}</div>
+    ${a.not_signed_in.length ? `<div class="hint" style="margin-top:8px">Not signed in to claude.ai: ${a.not_signed_in.map(esc).join(", ")}</div>` : ""}`;
+}
+function loadQuotas(only, fresh) {
+  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only)).map(c => ({ id: c.quota_profile }))) {
+    api(`/api/quota?profile=${encodeURIComponent(p.id)}${fresh ? "&fresh=1" : ""}`)
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
         S.quota[p.id] = q;
@@ -30,6 +50,19 @@ function loadQuotas() {
         if (el) el.outerHTML = quotaHtml(p.id);
       });
   }
+}
+// Refresh on a card: ask claude.ai again instead of the answer kept for 5 minutes
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-qrefresh]");
+  if (!b) return;
+  const id = b.dataset.qrefresh;
+  delete S.quota[id];
+  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  loadQuotas(id, true);
+});
+function signInIssue(id) {
+  const x = S.accounts?.accounts.flatMap(c => c.profiles).find(y => y.id === id);
+  return x && SIGN_IN[x.sign_in] ? ` <span class="issue">· ${esc(SIGN_IN[x.sign_in])}</span>` : "";
 }
 function resetText(iso) {
   if (!iso) return "";
@@ -39,16 +72,34 @@ function resetText(iso) {
   if (d.getTime() - now.getTime() < 6 * 86400e3) return `resets ${d.toLocaleDateString("en-US", { weekday: "short" })} ${time}`;
   return `resets ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
+// Used or left, picked in the About panel and kept in localStorage, per browser. The colour
+// follows what is used either way: little left is orange, then red.
+const QUOTA_MODES = [["used", "Used"], ["left", "Left"]];
+const quotaMode = () => { try { return localStorage.getItem("cc-profiles.quota") === "left" ? "left" : "used"; } catch { return "used"; } };
+const quotaButtons = () => QUOTA_MODES.map(([k, l]) =>
+  `<button data-quota-set="${k}" class="${quotaMode() === k ? "on" : ""}" aria-pressed="${quotaMode() === k}">${l}</button>`).join("");
+function bindQuotaMode(seg) {
+  seg.onclick = e => {
+    const b = e.target.closest("[data-quota-set]");
+    if (!b) return;
+    try { localStorage.setItem("cc-profiles.quota", b.dataset.quotaSet); } catch {}
+    seg.innerHTML = quotaButtons(); $("button.on", seg)?.focus();
+    document.querySelectorAll("[data-quota]").forEach(el => { el.outerHTML = quotaHtml(el.dataset.quota); });
+  };
+}
 function quotaHtml(id) {
   const q = S.quota[id];
   if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
-  if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)}</div>`;
+  const refresh = `<button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button>`;
+  if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)} ${q.state === "error" || q.state === "expired" ? refresh : ""}</div>`;
+  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
   return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
-    const pc = Math.min(100, Math.max(0, l.percent)), level = pc >= 90 ? " high" : pc >= 75 ? " mid" : "";
+    const used = Math.min(100, Math.max(0, l.percent)), level = used >= 90 ? " high" : used >= 75 ? " mid" : "";
+    const left = quotaMode() === "left", pc = left ? 100 - used : used;
     return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
-      <span class="qbar" role="meter" aria-label="${esc(l.label)} used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
-      <span class="qp">${pc}%</span><span class="hint">${esc(resetText(l.resets_at))}</span></div>`;
-  }).join("")}</div>`;
+      <span class="qbar" role="meter" aria-label="${esc(l.label)} ${left ? "left" : "used"}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
+      <span class="qp">${pc}%</span><span class="hint">${left ? "left · " : ""}${esc(resetText(l.resets_at))}</span></div>`;
+  }).join("")}<div class="qfoot"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>${refresh}</div></div>`;
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -59,11 +110,12 @@ function renderSharing() {
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
       <button class="btn" id="ptemplates">Templates…</button>
       <button class="btn primary" data-newprofile>New profile</button></div>
+    ${accountsHtml()}
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.email ? quotaHtml(p.id) : ""}${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}${signInIssue(p.id)}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
@@ -116,10 +168,10 @@ function githubHtml() {
   };
   const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
-      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="Name: your git config" aria-label="Commit name in ${esc(p.label)}">
-        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="Email" title="For example ${esc(ghVal(p, "user") || "you")}@users.noreply.github.com" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
+      <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="${esc(p.suggest?.name || "Name (required)")}" aria-label="Commit name in ${esc(p.label)}">
+        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="${esc(p.suggest?.email || "Email (required)")}" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
   return `<h2 class="section-title">GitHub</h2>
-    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here (empty: your git config). Tokens stay in the system keychain.</span></div>
+    <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here. Left empty, they are filled in from its account: the name of its GitHub profile and its <code>…@users.noreply.github.com</code> address, which GitHub links to the account. Tokens stay in the system keychain.</span></div>
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
     ${g.git_uses_gh === false ? `<div class="notice"><div class="txt"><b>git push ignores the profile's account</b><span>git does not ask <code>gh</code> for GitHub passwords. Run <code>gh auth setup-git</code> once in a terminal.</span></div>
       <button class="btn small" data-copy="gh auth setup-git">Copy command</button></div>` : ""}

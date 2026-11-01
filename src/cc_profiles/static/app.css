@@ -98,12 +98,19 @@ header .sub { color: var(--muted); }
 .qrow .ql { color: var(--muted); white-space: nowrap; }
 .qrow .qp { text-align: right; font-variant-numeric: tabular-nums; }
 .qrow .hint { white-space: nowrap; }
+.health.accounts { grid-template-columns: 1fr; gap: 10px; }  /* one account under the other */
+.acard h2 { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
+.acard .quota { margin: 10px 0 0; grid-template-columns: max-content 1fr 40px max-content; justify-content: stretch; }  /* bars as wide as the card */
+.qfoot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
+.aprofs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; font-size: 12.5px; }
+.aprof.off span { color: var(--warn); }
+.acard .m { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .qbar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .qbar i { display: block; height: 100%; border-radius: inherit; background: var(--muted); }
 .qrow.mid .qbar i { background: var(--warn); } .qrow.mid .qp { color: var(--warn); }
 .qrow.high .qbar i { background: var(--err); } .qrow.high .qp { color: var(--err); }
 @media (max-width: 560px) {
-  .quota { grid-template-columns: max-content 1fr 38px; } .qrow .hint { grid-column: 2 / -1; margin-top: -3px; }
+  .quota, .acard .quota { grid-template-columns: max-content 1fr 38px; } .qrow .hint { grid-column: 2 / -1; margin-top: -3px; }
 }
 mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
 .sres { display: grid; gap: 8px; }
@@ -338,6 +345,7 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .upd { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .upd .hint { flex: 1; min-width: 200px; }
 .upd a { color: var(--accent); }
+.upd .dl { min-width: 84px; }  /* Display: the pickers in one column */
 .plan { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); max-height: 220px; overflow-y: auto; }
 .plan li { margin: 2px 0; overflow-wrap: anywhere; }
 .plan li.conflict { color: var(--warn); }

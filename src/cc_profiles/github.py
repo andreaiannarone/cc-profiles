@@ -2,9 +2,13 @@
 # Copyright (C) 2026 Andrea Iannarone
 """cc-profiles: a GitHub account per profile."""
 
+import json
 import os
 import re
 import subprocess
+import time
+import urllib.parse
+import urllib.request
 
 from .core import (HOME, ApiError, Backup, find_tool, load_settings, pretty, profile, profiles, read_json,
                    session_hint, tool_env, write_json, write_text)
@@ -24,7 +28,8 @@ from .settings import save_settings_file, settings_files, shared_note
 # only the account it uses (restrict_folder()), so a session there sees no other account to
 # switch to; the others stay listed in Default's folder (your terminal's: left as it is) or in
 # the accounts folder. GIT_AUTHOR_* and
-# GIT_COMMITTER_* set who the commits are by. cc-profiles never reads a token, and never copies a
+# GIT_COMMITTER_* set who the commits are by: every profile has them, filled in from its account
+# when left empty (suggested_identity()). cc-profiles never reads a token, and never copies a
 # token line (gh's insecure storage writes them in hosts.yml).
 GH_HOST = "github.com"
 GH_ENV = "GH_CONFIG_DIR"
@@ -425,7 +430,8 @@ def github_state():
         active, users, _ = gh_users(used_folder(p))
         rows.append({"id": p["id"], "label": p["label"], "dir": pretty(own_folder(p)), "user": active,
                      "users": users, "set_up": set_up(p), "shared": shares_settings(p), "default": is_default(p),
-                     "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], "")})
+                     "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], ""),
+                     "suggest": suggested_identity(p)})
     return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows,
             "account_list": account_list(), "accounts_dir": pretty(accounts_folder())}
 
@@ -486,13 +492,79 @@ def account_change(prof, user):
     return None if gh_user(own_folder(prof)) == user else user
 
 
+# ---------------------------------------------------------------------------
+# Who the commits are by
+# ---------------------------------------------------------------------------
+# Every profile has a commit identity. Left empty, it is filled in from the profile's GitHub
+# account: the name of its public profile (or the user name) and its noreply address,
+# <id>+<user>@users.noreply.github.com, which GitHub links to the account. The id comes from
+# GitHub's public API, without a token; offline, the git config, or <user>@users.noreply.github.com.
+GITHUB_API = os.environ.get("CC_PROFILES_GITHUB_API", "https://api.github.com")
+_public = {}
+
+
+def public_user(user):
+    """{id, name} of a GitHub user from the public API, kept for a day (a failure for 10 minutes)."""
+    hit = _public.get(user)
+    if hit and time.time() - hit[0] < (86400 if hit[1] else 600):
+        return hit[1]
+    info = None
+    try:
+        req = urllib.request.Request(f"{GITHUB_API}/users/{urllib.parse.quote(user)}",
+                                     headers={"Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.load(r)
+        if isinstance(data, dict) and isinstance(data.get("id"), int):
+            info = {"id": data["id"], "name": (data.get("name") or "").strip()}
+    except (OSError, ValueError):
+        pass
+    _public[user] = (time.time(), info)
+    return info
+
+
+def git_config_identity():
+    git = find_tool("git")
+    out = {}
+    for key in ("name", "email"):
+        try:
+            r = subprocess.run([git, "config", "--global", "--get", f"user.{key}"], capture_output=True, text=True,
+                               timeout=5, env=tool_env()) if git else None
+        except (OSError, subprocess.TimeoutExpired):
+            r = None
+        out[key] = r.stdout.strip() if r and r.returncode == 0 else ""
+    return out if out["name"] and EMAIL.fullmatch(out["email"]) else None
+
+
+def suggested_identity(prof, user=None):
+    """The commit identity of a profile's GitHub account (user: that account instead of the active one),
+    or the git config without an account; None when there is neither."""
+    user = user or gh_user(used_folder(prof))
+    if not user:
+        return git_config_identity()
+    info = public_user(user)
+    if info:
+        return {"name": info["name"] or user, "email": f"{info['id']}+{user}@users.noreply.github.com"}
+    return git_config_identity() or {"name": user, "email": f"{user}@users.noreply.github.com"}
+
+
+def current_identity(prof):
+    env, _ = profile_env(prof)
+    name, email = env.get(GIT_ENV["name"][0], ""), env.get(GIT_ENV["email"][0], "")
+    return {"name": name, "email": email} if name and email else None
+
+
 def identity_change(prof, name, email):
-    """The env values for a commit identity (both empty: the git config); None when nothing changes."""
+    """The env values for a commit identity (both empty: the one of its account); None when nothing changes."""
     name, email = (name or "").strip(), (email or "").strip()
     if "\n" in name or "\n" in email:
         raise ApiError("Name and email must be one line each")
+    if not name and not email:
+        sug = suggested_identity(prof)
+        if not sug:
+            raise ApiError(f"{prof['label']}: write the name and email for its commits (it has no GitHub account to take them from)")
+        name, email = sug["name"], sug["email"]
     if bool(name) != bool(email):
-        raise ApiError(f"{prof['label']}: write both the name and the email for commits, or neither")
+        raise ApiError(f"{prof['label']}: write both the name and the email for commits, or leave both empty to use its account's")
     if email and not EMAIL.fullmatch(email):
         raise ApiError(f"{prof['label']}: not an email address: {email}")
     want = {k: name or None for k in GIT_ENV["name"]}
@@ -515,9 +587,8 @@ def apply_account(prof, user, bk):
 def apply_identity(prof, want, bk):
     set_env(prof, want, bk)
     name, email = want[GIT_ENV["name"][0]], want[GIT_ENV["email"][0]]
-    bk.note(f"{prof['label']}: commits by {name} <{email}>" if name else f"{prof['label']}: commits by the git config")
-    return (f"commits in {prof['label']} are by {name} <{email}>" if name else
-            f"commits in {prof['label']} use your git config") + shared_note(settings_files(prof)["settings"])
+    bk.note(f"{prof['label']}: commits by {name} <{email}>")
+    return f"commits in {prof['label']} are by {name} <{email}>" + shared_note(settings_files(prof)["settings"])
 
 
 def op_github_save(changes):
@@ -532,6 +603,8 @@ def op_github_save(changes):
         prof = profile(c.get("profile"))
         user = account_change(prof, c["user"]) if c.get("user") else None
         want = identity_change(prof, c.get("name"), c.get("email")) if "name" in c or "email" in c else None
+        if user and not want:
+            want = follow_account(prof, user)
         if user or want:
             plan.append((prof, user, want))
     if not plan:
@@ -549,13 +622,45 @@ def op_github_save(changes):
     return {"message": msg[0].upper() + msg[1:] + "." + hint, "backup": bk.close()}
 
 
+def follow_account(prof, user):
+    """The env values that move a commit identity taken from the profile's account to user's, or None
+    when the identity was written by hand (or is missing: identity_change() fills that in)."""
+    cur = current_identity(prof)
+    if not cur or cur != suggested_identity(prof):
+        return None
+    new = suggested_identity(prof, user)
+    return identity_change(prof, new["name"], new["email"]) if new and new != cur else None
+
+
 def op_github_account(pid, user):
     """Make user the active GitHub account of the profile's own folder."""
     prof = profile(pid)
     if not account_change(prof, user):
         return {"message": f"{prof['label']} already uses GitHub as {user}."}
+    want = follow_account(prof, user)
     bk = Backup("github", f"GitHub account of {prof['label']}: {user}")
-    return {"message": apply_account(prof, user, bk) + "." + session_hint(prof), "backup": bk.close()}
+    msg = apply_account(prof, user, bk)
+    if want:
+        msg += "; " + apply_identity(prof, want, bk)
+    return {"message": msg + "." + session_hint(prof), "backup": bk.close()}
+
+
+def ensure_identities():
+    """At every start of the server: a profile without a commit identity gets the one of its
+    account. Returns (lines to print, backup path or None)."""
+    todo = []
+    for p in profiles():
+        if shares_settings(p) or current_identity(p):
+            continue
+        sug = suggested_identity(p)
+        if sug:
+            todo.append((p, identity_change(p, sug["name"], sug["email"])))
+    todo = [(p, want) for p, want in todo if want]
+    if not todo:
+        return [], None
+    bk = Backup("github-identity", "Commit identity of " + ", ".join(p["label"] for p, _ in todo))
+    lines = [apply_identity(p, want, bk) for p, want in todo]
+    return lines, bk.close()
 
 
 def op_github_identity(pid, name, email):

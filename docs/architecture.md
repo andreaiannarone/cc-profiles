@@ -33,7 +33,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `agents.py` | subagents: the frontmatter fields checked against Claude Code's schema (`AGENT_SCHEMA_VERSION`), create, edit (other keys kept), rename, copy to one profile or to all, delete; plugin agents read-only |
 | `conversations.py` | list, view, move one, delete |
 | `usage.py` | tokens and estimated cost per day, project, model, profile and conversation, and the CSV export, from the usage of every reply (read-only); the list-price table |
-| `quota.py` | the plan's usage limits (5 hours, week) of the claude.ai account signed in to a profile, asked of claude.ai with the profile's sign-in from the keychain or `.credentials.json`, never stored or refreshed (read-only) |
+| `quota.py` | the claude.ai accounts the profiles are signed in to (from `oauthAccount`), and the plan's usage limits (5 hours, week) of each, asked of claude.ai with the profile's sign-in from the keychain or `.credentials.json`, never stored or refreshed (read-only) |
 | `mods.py` | Claude Code mods recognised among the installed plugins, and what each one does, read from its source (read-only) |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |

@@ -22,7 +22,12 @@ home = FakeHome(root)
 for name in ("", "work", "client"):
     home.profile(name)
 home.json(".claude.json", {
-    "oauthAccount": {"emailAddress": "me@example.com"},
+    "oauthAccount": {"accountUuid": "acc-me", "emailAddress": "me@example.com", "fullName": "Sam Example",
+                     "organizationUuid": "org-me", "organizationName": "me@example.com's Organization",
+                     "organizationRole": "admin", "organizationType": "claude_max",
+                     "organizationRateLimitTier": "default_claude_max_5x", "billingType": "stripe_subscription",
+                     "hasExtraUsageEnabled": False, "accountCreatedAt": "2025-03-02T10:00:00Z",
+                     "subscriptionCreatedAt": "2025-03-02T10:05:00Z"},
     "claudeAiMcpEverConnected": ["claude.ai Google Drive", "claude.ai Gmail", "claude.ai Linear"],
     "mcpServers": {
         "filesystem": {"type": "stdio", "command": "npx",
@@ -53,7 +58,12 @@ home.json(".sandbox-claude-ai-usage.json", {"limits": [
     {"kind": "weekly_all", "percent": 81, "resets_at": resets_in(3 * 86400 + 5 * 3600)},
     {"kind": "weekly_scoped", "percent": 12, "resets_at": resets_in(3 * 86400 + 5 * 3600),
      "scope": {"model": {"display_name": "Opus"}}}]})
-home.json(".claude-work/.claude.json", {"projects": {}})
+# Work is signed in to a team account whose sign-in is gone (as after /logout): log in again
+home.json(".claude-work/.claude.json", {"projects": {}, "oauthAccount": {
+    "accountUuid": "acc-work", "emailAddress": "sam@acme.example", "fullName": "Sam Example",
+    "organizationUuid": "org-acme", "organizationName": "Acme", "organizationRole": "user",
+    "organizationType": "claude_team", "billingType": "stripe_subscription", "hasExtraUsageEnabled": True,
+    "accountCreatedAt": "2025-09-15T09:00:00Z"}})
 home.json(".claude-client/.claude.json", {"projects": {}})
 home.json(".claude/settings.json", {"model": "sonnet", "timeFormat": "24-hour", "theme": "dark",
                                     "outputStyle": "Explanatory",
