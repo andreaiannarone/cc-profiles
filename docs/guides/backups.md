@@ -46,7 +46,7 @@ If an operation fails halfway (a disk error, a file Claude Code locked, a bug), 
 
 ## Restore
 
-**Restore** walks the journal backwards. It is itself an operation with a backup (titled *Before restoring: …*), so you can undo a restore.
+**Restore** walks the journal backwards. It is itself an operation with a backup (titled *Before restoring: …*), so you can undo a restore. Its confirmation lists the steps it undoes (the first six, the rest under **Show changes**) and how many of the files differ from the backup now.
 
 A step that cannot be replayed is skipped and reported, for example when something it needs was moved again since. The other steps still run.
 

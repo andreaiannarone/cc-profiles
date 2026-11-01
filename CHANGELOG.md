@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.
 - Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.
 - Projects: a project only waiting for a profile is a grey note, listed after the ones to fix, and the number on the tab counts only those to fix.
+- Delete a profile: when it has conversations or memories, moving them to another profile is the option already chosen.
+- Backups: **Restore** is an ordinary button (Show changes comes first), and its confirmation lists the steps it undoes.
+- Memories: the selected memory card has a dark outline instead of an orange one, which looked like the keyboard focus.
+- Projects: **Merge into…** explains itself when you point at it.
 - Memories: the selected project in the list has the same colors as the selected profile above it.
 - Compare: **Settings** lists only the settings that differ, with how many of all; **Show all** brings back the ones that are the same.
 - Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header.

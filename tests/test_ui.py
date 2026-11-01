@@ -275,6 +275,18 @@ def test_compare_lists_only_the_settings_that_differ(page_on_sandbox):
     assert errors == []
 
 
+def test_restore_says_what_it_undoes(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate("async () => { await api('/api/settings/fields', {profile: 'default', values: {language: 'Italiano'}}); }")
+    open_tab(page, "backups")
+    page.click("[data-restore] >> nth=0")
+    page.wait_for_selector(".modal ul.steps li")
+    assert "step" in page.inner_text(".modal")
+    assert "primary" not in page.get_attribute("[data-restore] >> nth=0", "class")  # Show changes is the routine action
+    cancel(page)
+    assert errors == []
+
+
 def cancel(page):
     page.click(".modal [data-close]")
     page.wait_for_selector(".modal", state="detached")
@@ -284,6 +296,7 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
     page.click('[data-pdel="work"]')
+    assert page.is_checked('.modal input[name="pd"][value="merge"]')  # Work has conversations: moving them is the default
     page.select_option("#pd-into", "client")  # picking a profile picks moving
     page.wait_for_function("() => document.querySelector('#pd-plan')?.textContent.includes('Moves to Client')")
     assert page.is_checked('.modal input[name="pd"][value="merge"]')

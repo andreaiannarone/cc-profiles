@@ -461,14 +461,15 @@ async function editProfile(id) {
 async function deleteProfile(id) {
   const p = S.profiles.find(x => x.id === id);
   const others = S.profiles.filter(x => x.id !== id);
+  const keep = others.length > 0 && p.conv + p.memories > 0;  // with something to lose, moving it is the default
   const resP = modal({ title: `Delete ${p.label}?`,
     sub: `<code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}`,
     body: `<div class="form">
       ${p.active ? `<div class="danger-box">A session is open in ${esc(p.label)}: a running Claude Code would keep writing to a folder that is gone. Close it first.
         <label class="check" style="margin-top:8px"><input type="checkbox" id="pd-force"> Delete it anyway</label></div>` : ""}
       <div class="radio" role="radiogroup" aria-label="What happens to its conversations and memories">
-        <label><input type="radio" name="pd" value="" checked> Delete everything</label>
-        ${others.length ? `<label><input type="radio" name="pd" value="merge"> Move its conversations, memories and history to
+        <label><input type="radio" name="pd" value="" ${keep ? "" : "checked"}> Delete everything</label>
+        ${others.length ? `<label><input type="radio" name="pd" value="merge" ${keep ? "checked" : ""}> Move its conversations, memories and history to
           <select id="pd-into" aria-label="Profile to move them to">${others.map(o => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label>` : ""}
       </div>
       <div class="hint" id="pd-plan" aria-live="polite"></div>

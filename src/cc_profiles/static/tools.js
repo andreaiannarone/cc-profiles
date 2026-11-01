@@ -345,7 +345,7 @@ function renderBackups() {
         <div class="t">${esc(b.title)} ${b.kept ? `<span class="badge b-shared" title="Never deleted by a cleanup">kept</span>` : ""} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.steps ? `<button class="btn small" data-bchanges="${esc(b.name)}">Show changes</button>` : ""}
-        ${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
+        ${b.restorable ? `<button class="btn small" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small" data-bkeep="${esc(b.name)}" aria-pressed="${b.kept}" title="${b.kept ? "Let the cleanup delete it once it is old enough" : "Never delete it in a cleanup"}">${b.kept ? "Kept ✓" : "Keep"}</button>
         <button class="btn small danger" data-bdel="${esc(b.name)}" ${b.kept ? `disabled title="Kept: turn off Keep to delete it"` : ""}>Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
@@ -386,7 +386,11 @@ async function restoreBackup(name) {
   const b = S.backups.find(x => x.name === name);
   const newer = S.backups.filter(x => x.created > b.created && x.restorable && !x.title.startsWith("Before restoring"));
   const warn = newer.length ? `<br><br><span class="issue">${plural(newer.length, "newer operation has", "newer operations have")} not been undone yet (${newer.slice(0, 3).map(x => esc(x.title)).join(" · ")}${newer.length > 3 ? "…" : ""}). If they touched the same files, undo them first, newest first.</span>` : "";
-  if (!(await confirmBox("Restore?", `<b>${esc(b.title)}</b><br>Undoes this operation by putting the files back as they were. Later changes to the same files are overwritten (but saved in the restore's own backup).${warn}`, "Restore"))) return;
+  // what it puts back, from the journal: the same steps as Show changes
+  const c = b.steps ? await api(`/api/backups/changes?name=${encodeURIComponent(name)}`).catch(() => null) : null;
+  const steps = c ? `<br><br>${plural(c.steps.length, "step", "steps")} to undo${c.files_changed ? `, ${plural(c.files_changed, "file", "files")} different from the backup now` : ""}:
+    <ul class="steps">${c.steps.slice(0, 6).map(x => `<li>${esc(x.text)}</li>`).join("")}${c.steps.length > 6 ? `<li>and ${c.steps.length - 6} more: see Show changes</li>` : ""}</ul>` : "";
+  if (!(await confirmBox("Restore?", `<b>${esc(b.title)}</b><br>Undoes this operation by putting the files back as they were. Later changes to the same files are overwritten (but saved in the restore's own backup).${steps}${warn}`, "Restore"))) return;
   const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
   if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
   await refresh(); loadBackups();

@@ -36,7 +36,7 @@ function renderProjects() {
           ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
           <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : i.kind === "unclassified" ? "note" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
           <td class="acts">${main ? `<button class="btn small${main.a === "rule" ? "" : " primary"}" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
-            ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
+            ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}" title="Put its history into a project you already have, instead of a folder">Merge into…</button>` : ""}
             ${S.term?.supported && r.exists ? `<button class="btn small" data-act="term" data-name="${esc(r.name)}" title="Claude Code in this folder">Open in ${esc(S.term.terminal)}</button>` : ""}
             <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
       }).join("")}</tbody></table>` : `<div class="empty">${S.filter === "issues" ? "Nothing needs attention. ✓" : "No projects."}</div>`}

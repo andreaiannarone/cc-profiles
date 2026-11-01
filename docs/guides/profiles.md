@@ -68,6 +68,8 @@ The **folder never changes**: the profile's files store absolute paths to it, so
 - **Delete everything**: the whole folder goes to the backup.
 - **First move conversations, memories and history to …**: every project with content is [moved](projects.md#move-a-project-to-another-profile) to another profile, together with the remaining prompt history, and then the folder goes to the backup.
 
+When the profile has conversations or memories, moving them is the option already chosen; pick **Delete everything** to drop them.
+
 In both cases the profile leaves `config.json` and its launcher (or shell alias) is removed. Type the profile's name to enable the button.
 
 The dialog shows what the chosen option does before you confirm: how many projects, conversations, memories and prompts move and where, and under **Show the files and folders it touches** every item, including the launcher, the alias line in your shell file, the entry in `config.json` and the folder that goes to the backup. The preview changes nothing.
