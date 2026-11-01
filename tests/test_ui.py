@@ -359,6 +359,9 @@ def test_agents_tab(page_on_sandbox):
     page.fill("#ag-maxTurns", "15")
     page.click("#agsave")
     page.wait_for_selector(".toast")
+    # the form is drawn again from the saved file (Cancel disabled again): until then, New agent… would be
+    # replaced by the old form, and the typed 15 alone does not prove the redraw
+    page.wait_for_selector("#agundo:disabled")
     page.wait_for_function("() => document.querySelector('#ag-maxTurns')?.value === '15'")
     # a new agent
     page.click("#agnew")

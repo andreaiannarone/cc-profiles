@@ -1,6 +1,7 @@
 """Tests for the repository's tooling: the Claude Code hook and skills in .claude/,
 and the plugin marketplace."""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -177,7 +178,11 @@ def test_docs_seo_and_llms_files():
 def test_pre_commit_hook_refuses_a_commit_while_a_test_fails(tmp_path):
     """.githooks/pre-commit runs the tests when code is staged, and only then."""
     hook = ROOT / ".githooks" / "pre-commit"
-    git = lambda *a: subprocess.run(["git", *a], cwd=tmp_path, capture_output=True, text=True, check=True)
+    # inside a real commit git sets GIT_DIR, GIT_INDEX_FILE…: without clearing them, these commands
+    # would work on the repository being committed instead of the temporary one
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    git = lambda *a: subprocess.run(["git", *a], cwd=tmp_path, env=env, capture_output=True, text=True, check=True)
+    hook_run = lambda: subprocess.run(["sh", str(hook)], cwd=tmp_path, env=env, capture_output=True, text=True)
     git("init", "-q")
     py = tmp_path / ".venv" / "bin" / "python"
     py.parent.mkdir(parents=True)
@@ -186,11 +191,11 @@ def test_pre_commit_hook_refuses_a_commit_while_a_test_fails(tmp_path):
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "a.md").write_text("x")
     git("add", "docs/a.md")
-    assert subprocess.run(["sh", str(hook)], cwd=tmp_path).returncode == 0  # docs only: no tests
+    assert hook_run().returncode == 0  # docs only: no tests
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "b.py").write_text("x = 1\n")
     git("add", "src/b.py")
-    r = subprocess.run(["sh", str(hook)], cwd=tmp_path, capture_output=True, text=True)
+    r = hook_run()
     assert r.returncode == 1 and "FAILED tests/test_x.py::test_y" in r.stderr and "nothing committed" in r.stderr
     py.write_text("#!/bin/sh\nexit 0\n")
-    assert subprocess.run(["sh", str(hook)], cwd=tmp_path).returncode == 0
+    assert hook_run().returncode == 0
