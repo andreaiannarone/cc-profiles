@@ -111,3 +111,37 @@ def test_keychain_names_follow_claude_code():
     assert quota.keychain_services(d) == ["Claude Code-credentials-" + hashlib.sha256(d.encode()).hexdigest()[:8]]
     default = quota.keychain_services(quota.HOME + "/.claude")
     assert default[0] == "Claude Code-credentials" and len(default) == 2
+
+
+def test_accounts_with_their_profiles(home, app_factory, claude_ai):
+    url, seen = claude_ai
+    signed_in(home, "", "me@example.com", "tok-new")
+    signed_in(home, "twin", "me@example.com", "tok-new", expires_in=-60)  # Claude Code refreshes it later
+    signed_in(home, "team", "me@acme.example")                          # signed out
+    signed_in(home, "out", "")
+    home.json(".claude.json", {"oauthAccount": {
+        "accountUuid": "a1", "emailAddress": "me@example.com", "fullName": "Sam Example", "organizationUuid": "o1",
+        "organizationName": "me@example.com's Organization", "organizationRole": "admin",
+        "organizationType": "claude_max", "organizationRateLimitTier": "default_claude_max_20x",
+        "billingType": "stripe_subscription", "hasExtraUsageEnabled": False,
+        "accountCreatedAt": "2025-03-02T10:00:00Z", "subscriptionCreatedAt": "2025-03-02T10:05:00Z"}})
+    home.json(".claude-twin/.claude.json", {"oauthAccount": {"accountUuid": "a1", "emailAddress": "me@example.com",
+                                                            "organizationUuid": "o1"}})
+    home.json(".claude-team/.claude.json", {"oauthAccount": {"accountUuid": "a1", "emailAddress": "me@acme.example",
+                                                            "organizationUuid": "o2", "organizationName": "Acme",
+                                                            "organizationType": "claude_team"}})
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_USAGE_URL=url)
+    r = app.get("/api/accounts")
+    ids = {p["dir"].split("/")[-1]: p["id"] for p in app.get("/api/profiles")}
+    assert r["not_signed_in"] == ["Out"]
+    me, team = r["accounts"]
+    assert {k: me[k] for k in ("email", "name", "plan", "role", "billing", "extra_usage", "since")} == {
+        "email": "me@example.com", "name": "Sam Example", "plan": "Max 20×", "role": "admin",
+        "billing": "stripe_subscription", "extra_usage": False, "since": "2025-03-02T10:00:00Z"}
+    assert [(p["id"], p["sign_in"]) for p in me["profiles"]] == [(ids[".claude"], "ok"), (ids[".claude-twin"], "refresh")]
+    assert me["quota_profile"] == ids[".claude"]
+    assert team["plan"] == "Team" and team["organization"] == "Acme"  # same person, another organization
+    assert team["profiles"][0]["sign_in"] == "signed_out" and team["quota_profile"] is None
+    assert "tok-" not in json.dumps(r) and seen == []  # listing asks claude.ai nothing
+    assert home.snapshot() == before

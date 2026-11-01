@@ -7,9 +7,13 @@ The **Profiles** tab lists your profiles with their command, folder and how many
   <img src="../assets/screenshots/profiles-light.jpg" alt="The Profiles tab: three profiles with their command, folder and counts, and the Sharing switches below" width="1440" height="900" loading="lazy">
 </picture>
 
-## Plan usage limits
+## Claude accounts
 
-Under the account of a profile signed in to claude.ai, three bars show how much of the plan is used: the 5-hour window, the week, and the weekly limit of a single model when the plan has one, each with the time it resets. A bar turns orange from 75 % and red from 90 %. Two profiles signed in to the same account show the same numbers.
+Above the profiles, **Claude accounts** has a card for each claude.ai account the profiles are signed in to (one per organization): the name, email, organization and role, the plan (such as Max 5× or Team), since when you are a member and subscribed, whether extra usage is on, and the profiles that use it. A profile whose sign-in is gone, as after `/logout`, says so: log in again there with `/login`. Profiles signed in to no account are listed under the cards.
+
+### Plan usage limits
+
+On each card, three bars show how much of the plan is used: the 5-hour window, the week, and the weekly limit of a single model when the plan has one, each with the time it resets. A bar turns orange from 75 % and red from 90 %.
 
 cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's sign-in (from the macOS keychain, or `.credentials.json` in the profile folder), and keeps the answer for 5 minutes. The token is only read: it never reaches the page and is never stored, copied or refreshed. When it has expired, the row says to open Claude Code in the profile, which refreshes it. The first time, macOS may ask to let cc-profiles read the keychain. A sign-in with an API key, Bedrock or Vertex has no plan limits.
 

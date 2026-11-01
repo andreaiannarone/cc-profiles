@@ -7,21 +7,41 @@
 // keeps its scroll position, as in Settings.
 async function loadSharing() {
   if (!S.sharing) renderSharing();
-  const [sharing, shell, github] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
-    api("/api/github").catch(() => null)]);
-  S.sharing = sharing; S.shell = shell; S.github = github;
+  const [sharing, shell, github, accounts] = await Promise.all([api("/api/sharing"), api("/api/shell").catch(() => null),
+    api("/api/github").catch(() => null), api("/api/accounts").catch(() => null)]);
+  S.sharing = sharing; S.shell = shell; S.github = github; S.accounts = accounts;
   const y = window.scrollY;
   renderSharing();
   window.scrollTo(0, y);
   loadQuotas();
 }
 
-// ---------- the plan's usage limits of each profile's account ----------
-// Asked after the list is on screen, one profile at a time on the server (which keeps
-// each account's answer for 5 minutes); each row is filled as its answer arrives.
+// ---------- the claude.ai accounts and their plan's usage limits ----------
+// One card per account, above the profiles, with the profiles signed in to it. The limits are
+// asked after the cards are on screen, with a profile whose sign-in works (the server keeps
+// each account's answer for 5 minutes); each card is filled as its answer arrives.
 S.quota = {};
+const SIGN_IN = { ok: "", refresh: "", signed_out: "signed out: log in again with /login", none: "" };
+const monthYear = iso => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
+function accountsHtml() {
+  const a = S.accounts;
+  if (!a || !a.accounts.length) return "";
+  const card = c => {
+    const org = c.organization && !/'s Organization$/.test(c.organization) ? c.organization : "";
+    const facts = [c.since && `Member since ${monthYear(c.since)}`, c.subscribed && `subscribed since ${monthYear(c.subscribed)}`,
+      c.extra_usage === true ? "extra usage on" : c.extra_usage === false ? "extra usage off" : ""].filter(Boolean);
+    return `<div class="hcard acard"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
+      <div class="hint">${[c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ")}</div>
+      ${c.quota_profile ? quotaHtml(c.quota_profile) : ""}
+      <div class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</div>
+      ${facts.length ? `<div class="m">${esc(facts.join(" · "))}</div>` : ""}</div>`;
+  };
+  return `<div class="section-title">Claude accounts</div>
+    <div class="health accounts">${a.accounts.map(card).join("")}</div>
+    ${a.not_signed_in.length ? `<div class="hint" style="margin-top:8px">Not signed in to claude.ai: ${a.not_signed_in.map(esc).join(", ")}</div>` : ""}`;
+}
 function loadQuotas() {
-  for (const p of S.profiles.filter(x => x.email)) {
+  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile).map(c => ({ id: c.quota_profile }))) {
     api(`/api/quota?profile=${encodeURIComponent(p.id)}`)
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
@@ -30,6 +50,10 @@ function loadQuotas() {
         if (el) el.outerHTML = quotaHtml(p.id);
       });
   }
+}
+function signInIssue(id) {
+  const x = S.accounts?.accounts.flatMap(c => c.profiles).find(y => y.id === id);
+  return x && SIGN_IN[x.sign_in] ? ` <span class="issue">· ${esc(SIGN_IN[x.sign_in])}</span>` : "";
 }
 function resetText(iso) {
   if (!iso) return "";
@@ -59,11 +83,12 @@ function renderSharing() {
       <button class="btn" data-pimport style="margin-left:auto">Import profile…</button>
       <button class="btn" id="ptemplates">Templates…</button>
       <button class="btn primary" data-newprofile>New profile</button></div>
+    ${accountsHtml()}
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.email ? quotaHtml(p.id) : ""}${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}${signInIssue(p.id)}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>

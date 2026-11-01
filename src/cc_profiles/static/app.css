@@ -98,6 +98,12 @@ header .sub { color: var(--muted); }
 .qrow .ql { color: var(--muted); white-space: nowrap; }
 .qrow .qp { text-align: right; font-variant-numeric: tabular-nums; }
 .qrow .hint { white-space: nowrap; }
+.accounts { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.acard h2 { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
+.acard .quota { margin: 10px 0 0; }
+.aprofs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; font-size: 12.5px; }
+.aprof.off span { color: var(--warn); }
+.acard .m { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .qbar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .qbar i { display: block; height: 100%; border-radius: inherit; background: var(--muted); }
 .qrow.mid .qbar i { background: var(--warn); } .qrow.mid .qp { color: var(--warn); }

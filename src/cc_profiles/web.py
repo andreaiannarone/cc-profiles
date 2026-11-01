@@ -85,7 +85,7 @@ from .conversations import (
     op_conversation_move,
 )
 from .usage import usage, usage_csv
-from .quota import quota
+from .quota import list_accounts, quota
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
@@ -307,6 +307,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/search": lambda: search(q.get("q", "")),
                 "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/quota": lambda: quota(q["profile"], q.get("fresh") == "1"),
+                "/api/accounts": lambda: list_accounts(),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
                 "/api/projects/merge/preview": lambda: merge_plan(q["project"], q["profile"], q["into"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),

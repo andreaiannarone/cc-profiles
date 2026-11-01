@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Andrea Iannarone
-"""cc-profiles: the plan's usage limits of the claude.ai account signed in to a profile (read-only)."""
+"""cc-profiles: the claude.ai accounts the profiles are signed in to, and their plan's usage limits (read-only)."""
 
 import hashlib
 import json
 import os
 import pwd
+import re
 import subprocess
 import sys
 import threading
@@ -13,7 +14,7 @@ import time
 import urllib.error
 import urllib.request
 
-from .core import HOME, find_tool, profile, read_json
+from .core import HOME, find_tool, profile, profiles, read_json
 
 # ---------------------------------------------------------------------------
 # Where Claude Code keeps the sign-in
@@ -150,3 +151,59 @@ def quota(pid, fresh=False):
                if limits else {"state": "none", "message": "No plan limits for this account"})
         _cache[key] = (time.time(), res)
         return res
+
+
+# ---------------------------------------------------------------------------
+# Accounts
+# ---------------------------------------------------------------------------
+# What Claude Code keeps of the account in the oauthAccount key of each profile's .claude.json:
+# accountUuid, emailAddress, fullName / displayName, organizationUuid, organizationName,
+# organizationRole, organizationType (claude_max, claude_pro, claude_team…), the rate limit tier
+# (default_claude_max_5x…), billingType, hasExtraUsageEnabled, accountCreatedAt, subscriptionCreatedAt.
+PLANS = {"claude_max": "Max", "claude_pro": "Pro", "claude_team": "Team", "claude_enterprise": "Enterprise",
+         "max": "Max", "pro": "Pro", "team": "Team", "enterprise": "Enterprise"}
+
+
+def plan_label(kind, tier):
+    if not kind:
+        return ""
+    label = PLANS.get(kind, kind.replace("claude_", "").replace("_", " ").capitalize())
+    m = re.search(r"_(\d+)x$", tier or "")
+    return f"{label} {m.group(1)}×" if m else label
+
+
+def sign_in_state(prof, email):
+    tok = sign_in(prof)
+    if not tok:
+        return "signed_out" if email else "none"
+    expires = tok.get("expiresAt")
+    if isinstance(expires, (int, float)) and expires / 1000 < time.time() + 30:
+        return "refresh"  # Claude Code refreshes it at the next session
+    return "ok"
+
+
+def list_accounts():
+    """The claude.ai accounts the profiles are signed in to, each with the profiles using it,
+    and the profiles signed in to none. Tokens are only looked at, never returned."""
+    accounts, none = {}, []
+    for p in profiles():
+        a = (read_json(p["config_abs"], {}) or {}).get("oauthAccount") or {}
+        email = a.get("emailAddress") or ""
+        if not email:
+            none.append(p["label"])
+            continue
+        key = (a.get("accountUuid") or email) + "/" + (a.get("organizationUuid") or "")
+        acc = accounts.setdefault(key, {
+            "email": email, "name": a.get("fullName") or a.get("displayName") or "",
+            "organization": a.get("organizationName") or "", "role": a.get("organizationRole") or "",
+            "plan": plan_label(a.get("organizationType"), a.get("organizationRateLimitTier") or a.get("userRateLimitTier")),
+            "billing": a.get("billingType") or "", "extra_usage": a.get("hasExtraUsageEnabled"),
+            "since": a.get("accountCreatedAt") or "", "subscribed": a.get("subscriptionCreatedAt") or "",
+            "profiles": []})
+        acc["profiles"].append({"id": p["id"], "label": p["label"], "sign_in": sign_in_state(p, email)})
+    out = list(accounts.values())
+    for acc in out:  # the quota is asked with a sign-in that works (or that Claude Code will refresh)
+        usable = [x["id"] for x in acc["profiles"] if x["sign_in"] == "ok"] + \
+                 [x["id"] for x in acc["profiles"] if x["sign_in"] == "refresh"]
+        acc["quota_profile"] = usable[0] if usable else None
+    return {"accounts": out, "not_signed_in": none}
