@@ -25,7 +25,7 @@ from .core import (
 # Dropdown options come from the settings schema inside the Claude Code binary
 # (version SCHEMA_VERSION): where the schema only accepts some values there is a
 # dropdown, where it accepts any string a free text field.
-SCHEMA_VERSION = "2.1.314"
+SCHEMA_VERSION = "2.1.316"
 # Built-in output styles and their descriptions, as in the Claude Code binary. "default"
 # is left out: it is the same as no value ("— default —" in the UI); field_options()
 # still lists it when a profile has it set explicitly.
@@ -112,6 +112,14 @@ SETTING_FIELDS = [
      "help": "Where new worktrees start: the default branch fetched fresh, or the current commit",
      "options": [("fresh", "Fresh default branch"), ("head", "Current commit (HEAD)")]},
     # notifications and updates
+    # voice mode (/voice): dictation with the claude.ai sign-in only
+    dict(_OFF, group="Voice", key="voice.enabled", label="Voice mode",
+         help="Dictate prompts by voice, as with /voice (claude.ai sign-in only)"),
+    {"group": "Voice", "key": "voice.mode", "type": "select", "default": "hold", "label": "How to talk",
+     "help": "Hold the key while you talk, or tap once to start and again to stop and send",
+     "options": [("hold", "Hold to talk"), ("tap", "Tap to start and stop")]},
+    dict(_OFF, group="Voice", key="voice.autoSubmit", label="Send on release",
+         help="Send the prompt when you release the key (Hold to talk only)"),
     {"group": "Notifications and updates", "key": "preferredNotifChannel", "type": "select", "default": "auto", "label": "Notifications",
      "file": "global", "help": "How Claude Code tells you it needs you",
      "options": [("auto", "Auto"), ("iterm2", "iTerm2"), ("terminal_bell", "Terminal bell"),

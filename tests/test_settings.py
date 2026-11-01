@@ -67,6 +67,11 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     app.post(P, {"profile": "work", "key": "permissions.defaultMode", "value": "plan"})
     assert json.loads(home.path(".claude.json").read_text())["autoCompactEnabled"] is False
     assert json.loads(home.path(".claude-work/settings.json").read_text()) == {"permissions": {"defaultMode": "plan"}}
+    # voice mode: the keys of the voice object, next to each other
+    app.post(P, {"profile": "work", "key": "voice.enabled", "value": True})
+    app.post(P, {"profile": "work", "key": "voice.mode", "value": "tap"})
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["voice"] == {"enabled": True, "mode": "tap"}
+    assert "pick one of the options" in app.post_error(P, {"profile": "work", "key": "voice.mode", "value": "loud"})
     # thinking on is the key's absence, as /config writes it
     app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": False})
     assert json.loads(home.path(".claude/settings.json").read_text())["alwaysThinkingEnabled"] is False
