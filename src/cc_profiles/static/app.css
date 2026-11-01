@@ -102,7 +102,8 @@ header .sub { color: var(--muted); }
 .qrow .qp { text-align: right; font-variant-numeric: tabular-nums; }
 .qrow .hint { white-space: nowrap; }
 .health.accounts { grid-template-columns: 1fr; gap: 10px; }  /* one account under the other */
-.acard h2 { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
+.acard .ahead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }  /* name, plan, then email · org · role */
+.acard h2 { display: flex; gap: 8px; align-items: center; margin: 0; }
 .acard .quota { margin: 10px 0 0; grid-template-columns: max-content 1fr 40px max-content; justify-content: stretch; }  /* bars as wide as the card */
 .qfoot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
 .aprofs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 8px; font-size: 12.5px; }

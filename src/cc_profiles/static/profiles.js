@@ -30,8 +30,9 @@ function accountsHtml() {
     const org = c.organization && !/'s Organization$/.test(c.organization) ? c.organization : "";
     const facts = [c.since && `Member since ${monthYear(c.since)}`, c.subscribed && `subscribed since ${monthYear(c.subscribed)}`,
       c.extra_usage === true ? "extra usage on" : c.extra_usage === false ? "extra usage off" : ""].filter(Boolean);
-    return `<div class="hcard acard"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
-      <div class="hint">${[c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ")}</div>
+    const who = [c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ");
+    return `<div class="hcard acard"><div class="ahead"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
+      ${who ? `<span class="hint">${who}</span>` : ""}</div>
       ${c.quota_profile ? quotaHtml(c.quota_profile) : ""}
       <div class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</div>
       ${facts.length ? `<div class="m">${esc(facts.join(" · "))}</div>` : ""}</div>`;
