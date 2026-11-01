@@ -13,6 +13,42 @@ async function loadSharing() {
   const y = window.scrollY;
   renderSharing();
   window.scrollTo(0, y);
+  loadQuotas();
+}
+
+// ---------- the plan's usage limits of each profile's account ----------
+// Asked after the list is on screen, one profile at a time on the server (which keeps
+// each account's answer for 5 minutes); each row is filled as its answer arrives.
+S.quota = {};
+function loadQuotas() {
+  for (const p of S.profiles.filter(x => x.email)) {
+    api(`/api/quota?profile=${encodeURIComponent(p.id)}`)
+      .catch(e => ({ state: "error", message: e.message }))
+      .then(q => {
+        S.quota[p.id] = q;
+        const el = document.querySelector(`[data-quota="${p.id}"]`);
+        if (el) el.outerHTML = quotaHtml(p.id);
+      });
+  }
+}
+function resetText(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), now = new Date();
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return `resets at ${time}`;
+  if (d.getTime() - now.getTime() < 6 * 86400e3) return `resets ${d.toLocaleDateString("en-US", { weekday: "short" })} ${time}`;
+  return `resets ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+function quotaHtml(id) {
+  const q = S.quota[id];
+  if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
+  if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)}</div>`;
+  return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
+    const pc = Math.min(100, Math.max(0, l.percent)), level = pc >= 90 ? " high" : pc >= 75 ? " mid" : "";
+    return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
+      <span class="qbar" role="meter" aria-label="${esc(l.label)} used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
+      <span class="qp">${pc}%</span><span class="hint">${esc(resetText(l.resets_at))}</span></div>`;
+  }).join("")}</div>`;
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -27,7 +63,7 @@ function renderSharing() {
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
           ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
+        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.email ? quotaHtml(p.id) : ""}${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
       <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>

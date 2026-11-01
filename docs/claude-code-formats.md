@@ -102,7 +102,11 @@ The values used by the UI are in `SETTING_FIELDS` in `settings.py`, checked agai
 
 ## Login
 
-`claude auth status` prints JSON with `loggedIn`, `email`, `authMethod`, `subscriptionType`, `orgName`, `apiProvider`, `analyticsDisabled` and more. With `CLAUDE_CONFIG_DIR` set, it reports that profile. On macOS, credentials may be stored in the Keychain under `Claude Code-credentials-<hash>`, one entry per config folder, or in `.credentials.json` in the profile folder.
+`claude auth status` prints JSON with `loggedIn`, `email`, `authMethod`, `subscriptionType`, `orgName`, `apiProvider`, `analyticsDisabled` and more. With `CLAUDE_CONFIG_DIR` set, it reports that profile. On macOS, credentials are stored in the login keychain, account `$USER`: `Claude Code-credentials` for `~/.claude` used without `CLAUDE_CONFIG_DIR`, `Claude Code-credentials-<first 8 hex digits of the SHA-256 of CLAUDE_CONFIG_DIR>` for any other folder. Elsewhere, or when the keychain cannot be used, they are in `.credentials.json` in the profile folder. Both hold `{"claudeAiOauth": {accessToken, refreshToken, expiresAt (ms), scopes, subscriptionType, rateLimitTier}}`; after a logout the entry can stay with an empty `accessToken`.
+
+## Plan usage limits
+
+`/usage` reads `GET https://api.anthropic.com/api/oauth/usage` with `Authorization: Bearer <accessToken>` and `anthropic-beta: oauth-2025-04-20` (the sign-in needs the `user:profile` scope). The answer has a `limits` list (`kind`: `session` for the 5-hour window, `weekly_all`, `weekly_scoped` with `scope.model.display_name`; `percent`, `resets_at`, `severity`) and, older, `five_hour`, `seven_day`, `seven_day_opus` and `seven_day_sonnet` with `utilization` and `resets_at`. `quota.py` reads both, never refreshing the token.
 
 ## claude.ai connectors
 

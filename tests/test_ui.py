@@ -3,6 +3,7 @@ errors, Content-Security-Policy violations or a tab stuck loading.
 
 Needs the ui extra and a browser: pip install -e ".[ui]" && python -m playwright install chromium.
 Skipped when Playwright is not installed, so the main suite keeps running without it."""
+import importlib.util
 import json
 import os
 import subprocess
@@ -24,7 +25,8 @@ def page_on_sandbox(tmp_path):
     fake_app.write_text("#!/bin/sh\n")
     (root / "Applications" / "iTerm.app").mkdir(parents=True)  # Open in iTerm, without opening it
     app = App(FakeHome(root), {"CC_PROFILES_APP_BINARY": str(fake_app), "CC_PROFILES_TERMINAL_DRYRUN": "1",
-                               "CC_PROFILES_TERMINAL_PLATFORM": "darwin"})
+                               "CC_PROFILES_TERMINAL_PLATFORM": "darwin",
+                               "CC_PROFILES_USAGE_URL": (root / ".sandbox-claude-ai-usage.json").as_uri()})
     errors = []
     with sync_api.sync_playwright() as p:
         try:
@@ -662,4 +664,19 @@ def test_closing_move_memory_while_it_loads_projects(page_on_sandbox):
     page.select_option("#mvp", "work")
     page.keyboard.press("Escape")
     page.wait_for_timeout(500)  # the answer comes after the dialog is gone
+    assert errors == []
+
+
+def test_profiles_show_the_plan_limits(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.wait_for_selector('[data-quota="default"] .qrow')
+    rows = page.eval_on_selector_all('[data-quota="default"] .qrow', "rs => rs.map(r => [r.className, r.innerText])")
+    assert [r[1].split()[:2] for r in rows] == [["5", "h"], ["Week", "81%"], ["Week", "·"]]
+    assert "34%" in rows[0][1] and "resets at" in rows[0][1] and "resets " in rows[1][1]
+    assert rows[1][0] == "qrow mid" and rows[0][0] == "qrow"  # orange from 75 %
+    assert page.get_attribute('[data-quota="default"] .qbar', "aria-valuenow") == "34"
+    assert not page.query_selector('[data-quota="work"]')  # not signed in: nothing to ask
+    if importlib.util.find_spec("axe_playwright_python"):
+        assert axe_violations(page) == []
     assert errors == []

@@ -18,6 +18,8 @@ In the Projects tab, pick Move on the project. cc-profiles moves its conversatio
 
 No. Login credentials (`.credentials.json` and the account stored in `.claude.json`) are never copied, shared, exported or put into templates, because a copied token can stop working when the original profile refreshes it. See [Export and import](guides/export-import.md).
 
+The only use of a profile's sign-in is to ask claude.ai for the [plan usage limits](guides/profiles.md#plan-usage-limits) shown in the Profiles tab, the way `/usage` does: the token is read, never stored, sent to the page or refreshed.
+
 ## Is it safe to use cc-profiles while Claude Code is running?
 
 Yes. Every file is written atomically, so Claude Code never reads half a file, every change is backed up first, and cc-profiles warns when a session is open in a profile it is about to change. Open sessions pick up most changes when they restart. See [Architecture](architecture.md).

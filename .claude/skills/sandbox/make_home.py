@@ -3,9 +3,11 @@
 Usage: .venv/bin/python .claude/skills/sandbox/make_home.py [folder]
 Without a folder it creates a new temporary one. Uses FakeHome from the tests.
 """
+import datetime
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -35,6 +37,22 @@ home.json(".claude.json", {
 # two GitHub CLI sign-ins (the user only: tokens live in the keychain), for the GitHub section
 for folder, user in ((".config/gh", "me-personal"), (".config/gh-work", "me-at-work")):
     home.write(folder + "/hosts.yml", f"github.com:\n    git_protocol: https\n    users:\n        {user}:\n    user: {user}\n")
+# Default's claude.ai sign-in (a made-up token) and the plan usage a fake claude.ai answers with: start the
+# app with CC_PROFILES_USAGE_URL pointing to that file, so the Profiles tab shows the limits without asking claude.ai
+home.json(".claude/.credentials.json", {"claudeAiOauth": {
+    "accessToken": "sandbox-not-a-real-token", "refreshToken": "sandbox-not-a-real-token",
+    "expiresAt": 4102444800000, "scopes": ["user:inference", "user:profile"], "subscriptionType": "max"}})
+
+
+def resets_in(seconds):
+    return datetime.datetime.fromtimestamp(time.time() + seconds, datetime.timezone.utc).isoformat()
+
+
+home.json(".sandbox-claude-ai-usage.json", {"limits": [
+    {"kind": "session", "percent": 34, "resets_at": resets_in(2 * 3600 + 1200)},
+    {"kind": "weekly_all", "percent": 81, "resets_at": resets_in(3 * 86400 + 5 * 3600)},
+    {"kind": "weekly_scoped", "percent": 12, "resets_at": resets_in(3 * 86400 + 5 * 3600),
+     "scope": {"model": {"display_name": "Opus"}}}]})
 home.json(".claude-work/.claude.json", {"projects": {}})
 home.json(".claude-client/.claude.json", {"projects": {}})
 home.json(".claude/settings.json", {"model": "sonnet", "timeFormat": "24-hour", "theme": "dark",

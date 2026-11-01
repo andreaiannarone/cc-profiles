@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Plan usage limits** in the Profiles tab: under the account of each profile signed in to claude.ai, how much of the 5-hour window and of the week is used (and of a single model's weekly limit, when the plan has one), with the time each resets; orange from 75 %, red from 90 %. cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's own sign-in, which it only reads: the token is never stored, shown or refreshed.
+
+### Fixed
+- Profiles tab at phone width: the buttons go under the profile instead of squeezing its text into a narrow column.
+
 ## [0.6.4] - 2026-10-31
 
 ### Changed
