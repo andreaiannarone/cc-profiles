@@ -248,7 +248,8 @@ td.acts .btn + .btn { margin-left: 6px; }
 .plist { max-height: 62vh; overflow: auto; }
 .plist button { display: flex; width: 100%; text-align: left; gap: 8px; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line); align-items: baseline; }
 .plist button:hover { background: var(--panel-2); }
-.plist button.on { background: var(--accent-soft); }
+.plist button.on { background: var(--text); color: var(--bg); }  /* selected like the segments above it */
+.plist button.on .n { color: inherit; opacity: .7; }
 .plist .p { flex: 1; word-break: break-all; font-family: var(--mono); font-size: 12px; }
 .plist .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .memshare { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }

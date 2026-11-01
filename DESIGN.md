@@ -64,7 +64,7 @@ Rules:
 | Buttons | `.btn` | `.primary` (the logo's orange `--logo` with `--logo-eye` text in both themes, at most one per row or modal), `.danger` (red text), `.small` |
 | Badges | `.badge` + `.b-p0`…`.b-p5`, `.b-shared`, `.b-none`, `.b-default`, `.b-warn`, `.b-err` | always short text, never an icon alone; `.b-default` (outlined) marks a setting left at its default. Never fade a badge with `opacity`: it breaks contrast |
 | Table | `.table > table` | header on `--panel-2`; paths in `td.path` (monospace, wrap anywhere); actions aligned right |
-| Side list | `.side` + `.plist` | scrolls on its own (max 62vh); the selected item is on `--accent-soft` |
+| Side list | `.side` + `.plist` | scrolls on its own (max 62vh); the selected item is like the selected segment: `--text` background, `--bg` text |
 | Memory card | `.mcard` / `.mcard.on` | focusable; orange border while open in the editor |
 | Editor | `.editor` | monospace textarea; actions at the bottom right: Delete · Move… · **Save** |
 | Switch | `.switch` | hidden checkbox plus a `span`; on = `--logo`, the mascot's orange like the primary buttons. Changes always go through a confirmation and flip back if cancelled |
