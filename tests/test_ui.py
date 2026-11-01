@@ -614,6 +614,23 @@ def test_keep_a_backup(page_on_sandbox):
 
 
 
+def test_a_new_version_is_written_in_orange(page_on_sandbox):
+    """About panel: Check for updates writes the new version in the accent orange."""
+    page, errors = page_on_sandbox
+    page.click("#about-btn")
+    page.wait_for_selector("#upd-check", timeout=15000)
+    page.route("**/api/update", lambda route: route.fulfill(content_type="application/json", body=json.dumps(
+        {"current": "0.6.5", "latest": "0.6.6", "newer": True, "can_update": True, "command": "pipx upgrade cc-profiles"})))
+    page.click("#upd-check")
+    page.wait_for_selector("#upd-status .newver")
+    assert page.inner_text("#upd-status .newver") == "0.6.6"
+    color, accent = page.evaluate("""() => [getComputedStyle(document.querySelector('#upd-status .newver')).color,
+        (() => { const s = document.createElement('span'); s.style.color = 'var(--accent)'; document.body.append(s);
+                 const c = getComputedStyle(s).color; s.remove(); return c; })()]""")
+    assert color == accent
+    assert errors == []
+
+
 def test_the_page_waits_for_a_restart_after_a_python_update(page_on_sandbox):
     """The server answers that Python was updated under it and that it is starting again:
     the page shows the restart dialog instead of only the error, then reloads."""

@@ -345,6 +345,7 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .upd { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .upd .hint { flex: 1; min-width: 200px; }
 .upd a { color: var(--accent); }
+.upd .newver { color: var(--accent); }  /* the version Update installs; --logo is too light for text */
 .upd .dl { min-width: 84px; }  /* Display: the pickers in one column */
 .plan { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); max-height: 220px; overflow-y: auto; }
 .plan li { margin: 2px 0; overflow-wrap: anywhere; }

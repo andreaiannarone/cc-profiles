@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- About panel: when a new cc-profiles is out, its version number is written in orange.
+
 ## [0.6.6] - 2026-11-01
 
 ### Added

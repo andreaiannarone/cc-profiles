@@ -103,7 +103,7 @@ function showUpdate(dr, u) {
   const st = $("#upd-status", dr);
   if (!st) return;  // the panel is still loading
   // the version is told here; the Update button is the one at the top, next to Refresh
-  st.innerHTML = `Version <b>${esc(u.latest)}</b> is available (you have ${esc(u.current)}).<br>
+  st.innerHTML = `Version <b class="newver">${esc(u.latest)}</b> is available (you have ${esc(u.current)}).<br>
     ${u.can_update ? `Click <b>Update</b> at the top.` : `Update it by hand with <code>${esc(u.manual || u.command || "")}</code>, then restart cc-profiles.`}
     <a href="https://cc-profiles.andreaia.com/changelog.html" target="_blank" rel="noopener">What's new</a>`;
 }
