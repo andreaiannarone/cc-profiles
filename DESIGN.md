@@ -16,7 +16,8 @@ All colors are custom properties on `:root`. Dark mode redefines the same proper
 | Property | Light | Dark | Use |
 |---|---|---|---|
 | `--bg` | `#f6f5f2` | `#161513` | page background (warm paper, not pure white) |
-| `--panel` | `#ffffff` | `#1f1e1b` | cards, tables, modals, inputs |
+| `--panel` | `#ffffff` | `#1f1e1b` | cards, tables, modals |
+| `--field` | `#f7f6f3` | `#141311` | text fields, text areas and dropdowns: a shade apart from the cards they sit on |
 | `--panel-2` | `#f0eee9` | `#282723` | table headers, hover, options in modals |
 | `--btn` / `--btn-hover` | `#e9e6e0` / `#f3f1ed` | `#282723` / `#33312d` | secondary buttons: a shade apart from the cards, so they stand out from them; lighter on hover in both themes |
 | `--line` | `#e2dfd8` | `#353330` | borders and separators |
