@@ -66,6 +66,8 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page, errors = page_on_sandbox
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
+    assert page.get_attribute("html", "data-theme") == "dark"  # dark until another choice
+    assert page.get_attribute('#ab-theme [data-theme-set="dark"]', "aria-pressed") == "true"
     page.click('#ab-theme [data-theme-set="light"]')  # the theme is picked in the About panel
     assert page.get_attribute("html", "data-theme") == "light"
     assert page.get_attribute('#ab-theme [data-theme-set="light"]', "aria-pressed") == "true"

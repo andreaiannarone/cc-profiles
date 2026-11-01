@@ -195,11 +195,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         window.title = "cc-profiles"
         window.titleVisibility = .hidden  // the page shows the name; the title bar is the page's color
         window.titlebarAppearsTransparent = true
-        window.backgroundColor = NSColor(name: nil) { appearance in  // until the page tells its own
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(srgbRed: 0x16 / 255, green: 0x15 / 255, blue: 0x13 / 255, alpha: 1)
-                : NSColor(srgbRed: 0xf6 / 255, green: 0xf5 / 255, blue: 0xf2 / 255, alpha: 1)
-        }
+        // dark, the page's default, until the page tells its own
+        window.backgroundColor = NSColor(srgbRed: 0x16 / 255, green: 0x15 / 255, blue: 0x13 / 255, alpha: 1)
+        window.appearance = NSAppearance(named: .darkAqua)
         window.tabbingMode = .disallowed
         window.minSize = NSSize(width: 720, height: 480)
         window.isReleasedWhenClosed = false  // closed to the menu bar, it opens again
@@ -294,8 +292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let button = retry ? "<p><a class=\"b\" href=\"\(retryScheme):retry\">Try again</a></p>" : ""
         let html = """
             <!doctype html><meta charset="utf-8"><title>cc-profiles</title><style>
-            :root { color-scheme: light dark; --bg: #f6f5f2; --ink: #1d1c1a; --dim: #6b6862; --accent: #d97757; }
-            @media (prefers-color-scheme: dark) { :root { --bg: #161513; --ink: #ecebe8; --dim: #a19d96; } }
+            :root { color-scheme: dark; --bg: #161513; --ink: #ecebe8; --dim: #a19d96; --accent: #d97757; }
             body { margin: 0; height: 100vh; display: grid; place-items: center; background: var(--bg);
               color: var(--ink); font: 14px/1.5 -apple-system, system-ui, sans-serif; }
             main { max-width: 560px; padding: 24px; }
