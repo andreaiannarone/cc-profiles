@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-01
+
 ### Added
 - **Plan usage limits** in the Profiles tab: under the account of each profile signed in to claude.ai, how much of the 5-hour window and of the week is used (and of a single model's weekly limit, when the plan has one), with the time each resets; orange from 75 %, red from 90 %. cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's own sign-in, which it only reads: the token is never stored, shown or refreshed.
 
@@ -361,7 +363,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2
