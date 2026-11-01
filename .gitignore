@@ -17,3 +17,6 @@ htmlcov/
 .cc-profiles/
 # isolated copies made by Claude Code agents
 .claude/worktrees/
+
+# impeccable design skill: critique archives and live-mode state, local only
+.impeccable/
