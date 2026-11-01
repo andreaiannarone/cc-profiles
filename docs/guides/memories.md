@@ -18,7 +18,7 @@ Each memory shows its name, type (`user`, `feedback`, `project`, `reference`) an
 
 ## Edit
 
-Click a memory to open it in the editor. **Save** keeps the previous version in a backup.
+Click a memory to open it in the editor. **Save** keeps the previous version in a backup; **Cancel** puts back what was last saved.
 
 ## Move
 

@@ -349,6 +349,13 @@ def test_agents_tab(page_on_sandbox):
     page.click('[data-agent="code-reviewer"]')
     page.wait_for_selector("#ag-name")
     assert page.input_value("#ag-model") == "sonnet" and page.input_value("#ag-tools") == "Read, Grep, Glob, Bash"
+    # Cancel puts back what was saved
+    assert page.is_disabled("#agundo")
+    page.fill("#ag-prompt", "Something else")
+    page.select_option("#ag-model", "")
+    page.click("#agundo")
+    assert page.input_value("#ag-model") == "sonnet" and page.input_value("#ag-prompt") != "Something else"
+    assert page.is_disabled("#agundo")
     page.fill("#ag-maxTurns", "15")
     page.click("#agsave")
     page.wait_for_selector(".toast")
@@ -365,6 +372,35 @@ def test_agents_tab(page_on_sandbox):
     page.click("#agraw")
     assert "name: test-writer" in page.input_value("#agrawtext")
     page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_cancel_puts_back_the_saved_text(page_on_sandbox):
+    """Skills and Memories editors: Cancel is enabled by a change and undoes it; Save disables it."""
+    page, errors = page_on_sandbox
+    open_tab(page, "skills")
+    page.click("[data-skill]")
+    page.wait_for_selector("#sktext")
+    saved = page.input_value("#sktext")
+    assert page.is_disabled("#skcancel")
+    page.fill("#sktext", "changed")
+    page.click("#skcancel")
+    assert page.input_value("#sktext") == saved and page.is_disabled("#skcancel")
+    page.fill("#sktext", saved + "\nOne more line.")
+    page.click("#sksave")
+    page.wait_for_selector(".toast")
+    assert page.is_disabled("#skcancel")
+    page.fill("#sktext", "changed")
+    page.click("#skcancel")
+    assert page.input_value("#sktext") == saved + "\nOne more line."
+    open_tab(page, "memories")
+    page.click(".plist button")
+    page.click("[data-mfile]")
+    page.wait_for_selector("#mtext")
+    saved = page.input_value("#mtext")
+    page.fill("#mtext", "changed")
+    page.click("#mcancel")
+    assert page.input_value("#mtext") == saved and page.is_disabled("#mcancel")
     assert errors == []
 
 

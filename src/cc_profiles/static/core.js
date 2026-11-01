@@ -85,6 +85,14 @@ function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
     ($("input, select", bg) || $("[data-i]", bg))?.focus();
   });
 }
+// Cancel in an editor: enabled once something changes, it puts back what was last saved
+function bindCancel(btn, reset) {
+  if (!btn) return;
+  const box = btn.closest(".editor");
+  const on = () => { btn.disabled = false; };
+  box.addEventListener("input", on); box.addEventListener("change", on);
+  btn.onclick = () => { reset(); btn.disabled = true; };
+}
 async function confirmBox(title, sub, okLabel = "Confirm", kind = "primary") {
   const r = await modal({ title, sub, actions: [{ label: okLabel, kind, value: true }] });
   return !!r;

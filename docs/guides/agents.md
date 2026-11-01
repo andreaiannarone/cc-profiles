@@ -53,7 +53,7 @@ Agents that installed plugins bring are listed below, under **From plugins**, re
 
 Other keys of the file, such as `hooks`, `mcpServers`, `skills` or `memory`, are not in the form: the editor's header lists them, and **Save** keeps them exactly as they were. **Edit file…** opens the whole file to change anything; it checks that the frontmatter is still there, that `name` has not changed (rename from the form) and that there is a description.
 
-**Save** keeps the previous version in the backup. A dropdown always keeps a value the file already has, even one the list does not know.
+**Save** keeps the previous version in the backup; **Cancel** puts back what was last saved. A dropdown always keeps a value the file already has, even one the list does not know.
 
 ## Copy and delete
 

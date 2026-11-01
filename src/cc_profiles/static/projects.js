@@ -305,13 +305,14 @@ function renderMemories() {
           <textarea id="mtext" spellcheck="false" aria-label="Memory content">${esc(m.content)}</textarea>
           <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
             <button class="btn danger" id="mdel">Delete</button><button class="btn" id="mmove">Move…</button>
-            <button class="btn primary" id="msave">Save</button></div></div>` : ""}`}`}
+            <button class="btn" id="mcancel" disabled title="Put back what was last saved">Cancel</button><button class="btn primary" id="msave">Save</button></div></div>` : ""}`}`}
     </section></div>`;
   $("#mq").oninput = e => { m.q = e.target.value; const pos = e.target.selectionStart; renderMemories(); const i = $("#mq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#mall").onchange = e => { m.all = e.target.checked; renderMemories(); };
   if ($("#msave")) {
     const ctx = () => ({ profile: m.profile, project: m.project, file: m.file });
-    $("#msave").onclick = async () => { await run(() => api("/api/memory/save", { ...ctx(), content: $("#mtext").value })); m.content = $("#mtext").value; };
+    $("#msave").onclick = async () => { await run(() => api("/api/memory/save", { ...ctx(), content: $("#mtext").value })); m.content = $("#mtext").value; $("#mcancel").disabled = true; };
+    bindCancel($("#mcancel"), () => { $("#mtext").value = m.content; });
     $("#mdel").onclick = async () => {
       if (!(await confirmBox("Delete this memory?", `<code>${esc(m.file)}</code> is removed from MEMORY.md and moved to the backup.`, "Delete"))) return;
       await run(() => api("/api/memory/delete", ctx())); m.file = null; await loadMemProjects(); await openMemProject(m.project); loadProfiles();
