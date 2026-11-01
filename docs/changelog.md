@@ -3,6 +3,14 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.6.5] - 2026-11-01
+
+**Added**
+- **Plan usage limits** in the Profiles tab: under the account of each profile signed in to claude.ai, how much of the 5-hour window and of the week is used (and of a single model's weekly limit, when the plan has one), with the time each resets; orange from 75 %, red from 90 %. cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's own sign-in, which it only reads: the token is never stored, shown or refreshed.
+
+**Fixed**
+- Profiles tab at phone width: the buttons go under the profile instead of squeezing its text into a narrow column.
+
 ## [0.6.4] - 2026-10-31
 
 **Changed**
@@ -353,6 +361,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.6.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.1...v0.6.2

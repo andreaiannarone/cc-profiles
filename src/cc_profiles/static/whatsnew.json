@@ -1,6 +1,24 @@
 {
  "releases": [
   {
+   "version": "0.6.5",
+   "date": "2026-11-01",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Plan usage limits** in the Profiles tab: under the account of each profile signed in to claude.ai, how much of the 5-hour window and of the week is used (and of a single model's weekly limit, when the plan has one), with the time each resets; orange from 75 %, red from 90 %. cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's own sign-in, which it only reads: the token is never stored, shown or refreshed."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "Profiles tab at phone width: the buttons go under the profile instead of squeezing its text into a narrow column."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.6.4",
    "date": "2026-10-31",
    "sections": [
@@ -166,19 +184,6 @@
      "items": [
       "A folder renamed, moved or deleted while the page was open showed only after a reload. The page now reads the profiles and projects again when you come back to its tab or window, and redraws the Projects and Health tabs if something changed.",
       "**Relink…** and **Run the checks again** search the folders afresh, so a folder moved in the last minute is suggested right away."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.5.5",
-   "date": "2026-10-11",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**Choose…** next to the folder fields of **Relink…** and **Try a folder**: it opens your system's folder dialog (Finder's on macOS, `zenity` or `kdialog` on Linux) and fills in the full path, which a browser never gives a web page. Where there is no dialog, such as WSL, a folder browser opens under the field, from `~` down, with hidden folders on request.",
-      "**Merge into…** next to **Relink…** (Projects and Health): merges a project whose folder is gone into another project of the same profile, picked from a list (same folder name first, with a filter). A preview says how many conversations, memories and prompts go in and which files the target already has; the target keeps its own, the originals go to the backup."
      ]
     }
    ]
