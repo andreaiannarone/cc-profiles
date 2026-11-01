@@ -1,7 +1,7 @@
 # Product
 <!-- impeccable:product-schema 1 -->
 
-Drafted from the repository (README, DESIGN.md, CLAUDE.md, the docs) and from the maintainer's requests while building it, without an interview: lines marked *(inferred)* are hypotheses to confirm or correct.
+Drafted from the repository (README, DESIGN.md, AGENTS.md, the docs) and from the maintainer's requests while building it, without an interview: lines marked *(inferred)* are hypotheses to confirm or correct.
 
 ## Platform
 
