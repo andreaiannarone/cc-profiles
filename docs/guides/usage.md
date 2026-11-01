@@ -3,8 +3,8 @@
 The **Usage** tab (`g u`) shows how many tokens Claude used in each profile, per day, per project and per model, with an estimated cost. It is read-only: it reads the conversations Claude Code saved and changes nothing.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/usage-dark.jpg">
-  <img src="../assets/screenshots/usage-light.jpg" alt="The Usage tab: tokens and estimated cost per day, with totals per project, model and profile" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/usage-light.jpg">
+  <img src="../assets/screenshots/usage-dark.jpg" alt="The Usage tab: tokens and estimated cost per day, with totals per project, model and profile" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Pick what to see
@@ -24,6 +24,7 @@ The **Usage** tab (`g u`) shows how many tokens Claude used in each profile, per
 | **Top projects** | the 10 projects with the most tokens, with their profile |
 | **Most expensive sessions** | the 10 conversations with the highest estimated cost in the period (then the most tokens): their first prompt, project, profile, last reply, replies, tokens and cost. Subagent replies count for the conversation that started them. Click the title to open the conversation in the Conversations tab |
 | **Models** | each model's replies and tokens by kind, and its cost |
+| **Plan limits** | for each claude.ai account, whatever profile is picked, the highest share of the weekly limit used each day of the period: orange from 75 %, red from 90 %, a dashed line at 90 %. Hover a bar to read it, with the highest use of a 5-hour window that day. It covers only the days cc-profiles checked the limits (the [Profiles tab](profiles.md#plan-usage-limits), and every 15 minutes while the page is open), kept for 90 days in `~/.cc-profiles/quota-history.json` |
 
 ## Export CSV
 

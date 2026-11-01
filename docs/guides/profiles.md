@@ -3,8 +3,8 @@
 The **Profiles** tab lists your profiles with their command, folder and how many conversations, projects and memories each has. From here you create, edit and delete profiles, start one from a template, choose what each profile shares with the source profile, and turn on [profile by folder](profile-by-folder.md).
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/profiles-dark.jpg">
-  <img src="../assets/screenshots/profiles-light.jpg" alt="The Profiles tab: three profiles with their command, folder and counts, and the Sharing switches below" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/profiles-light.jpg">
+  <img src="../assets/screenshots/profiles-dark.jpg" alt="The Profiles tab: three profiles with their command, folder and counts, and the Sharing switches below" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Claude accounts
@@ -16,6 +16,8 @@ Above the profiles, **Claude accounts** has a card for each claude.ai account th
 On each card, three bars show how much of the plan is used: the 5-hour window, the week, and the weekly limit of a single model when the plan has one, each with the time it resets. A bar turns orange from 75 % and red from 90 %. In the About panel (ⓘ), under **cc-profiles settings**, **Plan limits** picks whether the bars show how much is **used** or how much is **left**; the colour follows what is used either way, and the choice is kept in the browser.
 
 cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's sign-in (from the macOS keychain, or `.credentials.json` in the profile folder), and keeps the answer for 5 minutes: under the bars, the time it was checked, and **Refresh** to ask again now. The token is only read: it never reaches the page and is never stored, copied or refreshed. When it has expired, the row says to open Claude Code in the profile, which refreshes it. The first time, macOS may ask to let cc-profiles read the keychain. A sign-in with an API key, Bedrock or Vertex has no plan limits.
+
+While the page is open, cc-profiles checks the limits every 15 minutes, from any tab. When a limit reaches 90 % it says so once, in a message at the bottom of the page; the Mac app sends a macOS notification instead, also with its window closed, and shows the 5-hour window's use next to its [menu bar](../mac-app.md#menu-bar-and-login) icon. Every check also records the day's highest value of each limit, which the [Usage tab](usage.md) draws.
 
 ## Create a profile
 
@@ -65,6 +67,8 @@ The **folder never changes**: the profile's files store absolute paths to it, so
 
 - **Delete everything**: the whole folder goes to the backup.
 - **First move conversations, memories and history to …**: every project with content is [moved](projects.md#move-a-project-to-another-profile) to another profile, together with the remaining prompt history, and then the folder goes to the backup.
+
+When the profile has conversations or memories, moving them is the option already chosen; pick **Delete everything** to drop them.
 
 In both cases the profile leaves `config.json` and its launcher (or shell alias) is removed. Type the profile's name to enable the button.
 

@@ -3,8 +3,8 @@
 Two read-only views that look across profiles: they never change anything by themselves.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/compare-dark.jpg">
-  <img src="../assets/screenshots/compare-light.jpg" alt="The Compare tab: two profiles side by side, with what only one of them has" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/compare-light.jpg">
+  <img src="../assets/screenshots/compare-dark.jpg" alt="The Compare tab: two profiles side by side, with what only one of them has" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Search everything
@@ -29,7 +29,7 @@ Esc, **Close search** or an empty field go back to the tab you were on.
 
 The **Compare** tab puts two profiles side by side: pick them at the top. Rows that differ are marked *differs* or *only in …*.
 
-- **Settings**: the value in use for each setting of the Settings tab, and the file it comes from. **A → B** copies a value into the other profile, like editing it in the Settings tab.
+- **Settings**: the settings that differ, with the value in use in each profile and the file it comes from; **Show all** lists the ones that are the same too. **A → B** copies a value into the other profile, like editing it in the Settings tab.
 - **Permissions**: the `allow`, `ask` and `deny` rules of `settings.json` that only one profile has. **Add to …** adds the rule to the other profile and keeps its own rules.
 - **Skills**: the skills only one profile has (**Copy to …** copies the whole folder) and the skills both have with a different `SKILL.md`, to edit in the Skills tab.
 - **Agents**: the agents only one profile has (**Copy to …** copies the file) and the agents both have with a different file, to edit in the Agents tab.

@@ -77,12 +77,13 @@ function renderSkills(head) {
       <textarea id="sktext" spellcheck="false" aria-label="SKILL.md">${esc(x.content)}</textarea>
       <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
         <button class="btn danger" id="skdel">Delete</button><button class="btn" id="skcopy">Copy to…</button><button class="btn" id="skall">Copy to all…</button>
-        <button class="btn primary" id="sksave">Save</button></div></div>` : ""}`;
+        <button class="btn" id="skcancel" disabled title="Put back what was last saved">Cancel</button><button class="btn primary" id="sksave">Save</button></div></div>` : ""}`;
 
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#sknew").onclick = newSkill;
   if (cur) {
-    $("#sksave").onclick = async () => { try { await run(() => api("/api/skills/save", { profile: x.profile, name: x.skill, content: $("#sktext").value })); x.content = $("#sktext").value; } catch {} };
+    $("#sksave").onclick = async () => { try { await run(() => api("/api/skills/save", { profile: x.profile, name: x.skill, content: $("#sktext").value })); x.content = $("#sktext").value; $("#skcancel").disabled = true; } catch {} };
+    bindCancel($("#skcancel"), () => { $("#sktext").value = x.content; });
     $("#skdel").onclick = async () => {
       const sub = cur.linked ? `Only the link <code>${esc(x.skill)}</code> is removed; the folder it points to is untouched.` : `The folder <code>${esc(x.skill)}</code> goes to the backup.`;
       if (!(await confirmBox(`Delete ${x.skill}?`, sub + (x.skills.shared ? ` The skills are ${esc(x.skills.shared)}: it disappears there too.` : ""), "Delete", "danger"))) return;
@@ -228,12 +229,13 @@ function agentEditorHtml(a) {
     </div>
     <label class="f" style="margin-top:12px">Instructions: the agent's system prompt<textarea id="ag-prompt" spellcheck="false" placeholder="You are … When you are called, …">${esc(a.prompt || "")}</textarea></label>
     <div class="row"><span class="grow">${a.isNew ? "Saving creates the file." : "Saving keeps a copy of the previous version."}</span>
-      ${a.isNew ? `<button class="btn" id="agcancel">Cancel</button>` : `<button class="btn danger" id="agdel">Delete</button><button class="btn" id="agcopy">Copy to…</button><button class="btn" id="agall">Copy to all…</button><button class="btn" id="agraw">Edit file…</button>`}
+      ${a.isNew ? `<button class="btn" id="agcancel">Cancel</button>` : `<button class="btn danger" id="agdel">Delete</button><button class="btn" id="agcopy">Copy to…</button><button class="btn" id="agall">Copy to all…</button><button class="btn" id="agraw">Edit file…</button><button class="btn" id="agundo" disabled title="Put back what was last saved">Cancel</button>`}
       <button class="btn primary" id="agsave">${a.isNew ? "Create agent" : "Save"}</button></div></div>`;
 }
 function bindAgentEditor(a) {
   const x = S.ext, v = id => $(id)?.value ?? "";
   $("#agcancel") && ($("#agcancel").onclick = () => { x.agent = null; renderExt(); });
+  bindCancel($("#agundo"), () => renderExt());  // the form is drawn again from the saved file
   $("#agsave") && ($("#agsave").onclick = async () => {
     const fields = { name: v("#ag-name").trim(), description: v("#ag-description").replace(/\s+/g, " ").trim(), model: v("#ag-model"), effort: v("#ag-effort"),
       permissionMode: v("#ag-permissionMode"), maxTurns: v("#ag-maxTurns").trim(), color: v("#ag-color"), tools: v("#ag-tools"), disallowedTools: v("#ag-disallowedTools") };

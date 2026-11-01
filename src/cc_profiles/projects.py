@@ -397,18 +397,26 @@ def op_merge(name, pid, target):
     return r
 
 
-def op_rule(match, prof_id):
+def op_rule(match, prof_id, exact=False):
+    """A rule: `match` anywhere in the path, or with `exact` only the folder `match` itself."""
     if prof_id not in [p["id"] for p in profiles()] + ["shared"]:
         raise ApiError("Invalid profile")
     match = match.strip()
     if not match:
         raise ApiError("Empty rule")
     cfg = load_config()
-    if match.startswith(HOME):
+    kind = "exact" if exact else "match"
+    if exact:
+        if not match.startswith(("/", "~")):
+            raise ApiError("A rule for one folder needs its full path, starting with / or ~")
+        match = os.path.expanduser(match).rstrip("/") or "/"
+        if match == HOME or match.startswith(HOME + "/"):
+            match = "~" + match[len(HOME):]
+    elif match.startswith(HOME):
         match = "~" + match[len(HOME):] if match == HOME else match[len(HOME):].lstrip("/")
     bk = Backup("rule", f"Rule “{match}” → {pid_label(prof_id)}")
     bk.copy(CONFIG_FILE, "config.json")
-    cfg["rules"] = [r for r in cfg["rules"] if r.get("match") != match]
-    cfg["rules"].insert(0, {"match": match, "profile": prof_id})  # new rules win
+    cfg["rules"] = [r for r in cfg["rules"] if r.get(kind) != match]
+    cfg["rules"].insert(0, {kind: match, "profile": prof_id})  # new rules win
     write_json(CONFIG_FILE, cfg)
-    return {"message": f"Rule added: “{match}” → {pid_label(prof_id)}", "backup": bk.close()}
+    return {"message": f"Rule added: “{match}”{' (this folder only)' if exact else ''} → {pid_label(prof_id)}", "backup": bk.close()}

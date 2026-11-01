@@ -3,8 +3,8 @@
 The **Agents** tab manages the subagents of one profile at a time: the files in its `agents/` folder. Claude hands work to a subagent with the Agent tool when the subagent's description fits the task, and the subagent runs with its own instructions, model and tools. Pick the profile at the top of the tab, as in Skills and MCP.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/agents-dark.jpg">
-  <img src="../assets/screenshots/agents-light.jpg" alt="The Agents tab: the agents of the Default profile as cards, with code-reviewer open in the form: name, model, description, effort, permission mode, max turns, color, tools and instructions" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/agents-light.jpg">
+  <img src="../assets/screenshots/agents-dark.jpg" alt="The Agents tab: the agents of the Default profile as cards, with code-reviewer open in the form: name, model, description, effort, permission mode, max turns, color, tools and instructions" width="1440" height="900" loading="lazy">
 </picture>
 
 Every change goes to a backup first, like any other operation, and applies from the next Claude Code session in that profile.
@@ -53,7 +53,7 @@ Agents that installed plugins bring are listed below, under **From plugins**, re
 
 Other keys of the file, such as `hooks`, `mcpServers`, `skills` or `memory`, are not in the form: the editor's header lists them, and **Save** keeps them exactly as they were. **Edit file…** opens the whole file to change anything; it checks that the frontmatter is still there, that `name` has not changed (rename from the form) and that there is a description.
 
-**Save** keeps the previous version in the backup. A dropdown always keeps a value the file already has, even one the list does not know.
+**Save** keeps the previous version in the backup; **Cancel** puts back what was last saved. A dropdown always keeps a value the file already has, even one the list does not know.
 
 ## Copy and delete
 

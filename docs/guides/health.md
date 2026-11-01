@@ -3,8 +3,8 @@
 ## Health
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/health-dark.jpg">
-  <img src="../assets/screenshots/health-light.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink, Merge into and Delete" width="1440" height="864" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/health-light.jpg">
+  <img src="../assets/screenshots/health-dark.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink, Merge into and Delete" width="1440" height="864" loading="lazy">
 </picture>
 
 The **Health** tab checks every profile:

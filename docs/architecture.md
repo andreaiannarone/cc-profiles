@@ -89,7 +89,7 @@ Claude Code names project folders with `san(path)`, which loses information (`/`
 
 ### Caches
 
-A large home has tens of thousands of conversation files, so listings keep what they read. Every cache is read-only and lives in the server process; none is written to disk.
+A large home has tens of thousands of conversation files, so listings keep what they read. Every cache is read-only and lives in the server process; none is written to disk, except the plan limits' daily history (below).
 
 | Cache | Where | Keyed on |
 |---|---|---|
@@ -102,7 +102,7 @@ A large home has tens of thousands of conversation files, so listings keep what 
 | Size of a profile folder (About) | `backups._size_cache` | time: 60 s |
 | Folders under the search roots, by name (Health, relink candidates) | `health._cand_cache` | time: 60 s, and the search roots; **Relink…** and **Run the checks again** search afresh (`fresh=1`) |
 | Running `claude` processes | `core._running` | time: 3 s |
-| Plan usage limits of an account (Profiles) | `quota._cache` | time: 5 minutes, and the account |
+| Plan usage limits of an account (Profiles) | `quota._cache` | time: 5 minutes, and the account. Each new answer also updates the day's highest values in `~/.cc-profiles/quota-history.json` (the Usage tab's chart, 90 days), the only cache written to disk besides `update-check.json` |
 
 Rules that keep this safe:
 

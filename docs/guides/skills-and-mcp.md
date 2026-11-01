@@ -3,8 +3,8 @@
 Two tabs manage, for one profile at a time, the skills in its `skills/` folder (**Skills**) and the MCP servers in its `.claude.json` (**MCP**). Pick the profile at the top of either tab: the choice carries over when you switch between the two. You can also click **Skills** or **MCP** on a profile in the **Profiles** tab. The line next to the selector shows the account the profile is signed in with.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/skills-dark.jpg">
-  <img src="../assets/screenshots/skills-light.jpg" alt="The Skills tab: the skills of the Default profile, with release-notes open in the editor" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/skills-light.jpg">
+  <img src="../assets/screenshots/skills-dark.jpg" alt="The Skills tab: the skills of the Default profile, with release-notes open in the editor" width="1440" height="900" loading="lazy">
 </picture>
 
 Every change goes to a backup first, like any other operation, and applies from the next Claude Code session in that profile.
@@ -14,7 +14,7 @@ Every change goes to a backup first, like any other operation, and applies from 
 A skill is a folder `skills/<name>/` with a `SKILL.md` file: a frontmatter with `name` and `description`, then the instructions. Claude reads the description to decide when to use the skill.
 
 - **Browse**: each card shows the skill's name and description, how many files its folder holds, and **linked** when the folder is a link to somewhere else (tools such as `npx skills` install skills this way). Type in *Filter skills…* to narrow the list.
-- **Edit**: click a card to open its `SKILL.md`. The other files of the folder are listed above the editor. **Save** keeps the previous version in the backup.
+- **Edit**: click a card to open its `SKILL.md`. The other files of the folder are listed above the editor. **Save** keeps the previous version in the backup; **Cancel** puts back what was last saved.
 - **New skill…**: asks for a name (lowercase letters, digits and dashes) and a description, and creates `skills/<name>/SKILL.md` ready to fill in.
 - **Copy to…**: copies the whole folder to another profile. It is refused if that profile already has a skill with the same name, or if the two profiles [share](profiles.md) their skills (they already see the same ones).
 - **Copy to all…**: copies the folder to every profile that does not have the skill. The confirmation lists the profiles that get it and the ones skipped, with the reason: they already have a skill with that name, or they share their skills with the source profile (or with a profile that gets it), so they already see it. One backup covers every profile: one Restore undoes it all.
@@ -27,8 +27,8 @@ Skills that come from plugins are not listed here: manage them with `/plugin` in
 ## MCP servers
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/mcp-dark.jpg">
-  <img src="../assets/screenshots/mcp-light.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL, and the claude.ai connectors with a switch each" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/mcp-light.jpg">
+  <img src="../assets/screenshots/mcp-dark.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL, and the claude.ai connectors with a switch each" width="1440" height="900" loading="lazy">
 </picture>
 
 The tab lists the servers configured in the profile's `.claude.json` (for the default profile, `~/.claude.json`):

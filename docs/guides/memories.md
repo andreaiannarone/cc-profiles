@@ -3,13 +3,13 @@
 Claude Code's auto-memory saves notes in `projects/<name>/memory/`, one Markdown file per memory, plus a `MEMORY.md` index that Claude reads at the start of every session in that project. The memories of your home folder's project act as general memories: they load whenever you start Claude Code from your home.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/memories-dark.jpg">
-  <img src="../assets/screenshots/memories-light.jpg" alt="The Memories tab: the memories of the work/api project in the Default profile, with deploy.md open in the editor" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/memories-light.jpg">
+  <img src="../assets/screenshots/memories-dark.jpg" alt="The Memories tab: the memories of the work/api project in the Default profile, with deploy.md open in the editor" width="1440" height="900" loading="lazy">
 </picture>
 
 ## Browse
 
-Pick a profile and a project on the left. By default only projects with memories are listed; tick *also show projects without memories* to see every project, for example to pick a destination.
+Pick a profile and a project in the list (on the left, or above on a phone). By default only projects with memories are listed; tick *also show projects without memories* to see every project, for example to pick a destination.
 
 Each memory shows its name, type (`user`, `feedback`, `project`, `reference`) and description, taken from the file's frontmatter. Two problems are flagged:
 
@@ -18,7 +18,7 @@ Each memory shows its name, type (`user`, `feedback`, `project`, `reference`) an
 
 ## Edit
 
-Click a memory to open it in the editor. **Save** keeps the previous version in a backup.
+Click a memory to open it in the editor. **Save** keeps the previous version in a backup; **Cancel** puts back what was last saved.
 
 ## Move
 

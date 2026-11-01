@@ -114,6 +114,20 @@ func mascotImage() -> NSImage {
 }
 
 /// A WKWebView that hands folders dropped on it to the app (the page cannot learn their path).
+/// One limit of a plan ("5 h", "Week"…) and one account's limits, as the server reports them.
+struct Limit {
+    let label: String
+    let percent: Int
+    let resets: String
+}
+
+struct Quota {
+    let email: String
+    let title: String
+    let limits: [Limit]
+    var summary: String { limits.map { "\($0.label) \($0.percent)%" }.joined(separator: " · ") + " used" }
+}
+
 final class WebView: WKWebView {
     var onFolders: (([URL]) -> Void)?
 
@@ -145,6 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     let tokenLock = NSLock()
     var recent: [[String: Any]] = []     // the recent projects, for the Dock icon's menu
     var labels: [String: String] = [:]   // profile id → name
+    var quota: [Quota] = []              // the accounts' plan limits, for the menu bar
     let defaults = UserDefaults.standard
 
     var home: URL { URL(string: "http://127.0.0.1:\(launch?.port ?? 4777)/")! }
@@ -180,11 +195,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         window.title = "cc-profiles"
         window.titleVisibility = .hidden  // the page shows the name; the title bar is the page's color
         window.titlebarAppearsTransparent = true
-        window.backgroundColor = NSColor(name: nil) { appearance in  // until the page tells its own
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(srgbRed: 0x16 / 255, green: 0x15 / 255, blue: 0x13 / 255, alpha: 1)
-                : NSColor(srgbRed: 0xf6 / 255, green: 0xf5 / 255, blue: 0xf2 / 255, alpha: 1)
-        }
+        // dark, the page's default, until the page tells its own
+        window.backgroundColor = NSColor(srgbRed: 0x16 / 255, green: 0x15 / 255, blue: 0x13 / 255, alpha: 1)
+        window.appearance = NSAppearance(named: .darkAqua)
         window.tabbingMode = .disallowed
         window.minSize = NSSize(width: 720, height: 480)
         window.isReleasedWhenClosed = false  // closed to the menu bar, it opens again
@@ -211,6 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         start()
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkServer() }
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refreshRecent() }
+        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.refreshQuota() }
     }
 
     func showWindow() {
@@ -278,8 +292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let button = retry ? "<p><a class=\"b\" href=\"\(retryScheme):retry\">Try again</a></p>" : ""
         let html = """
             <!doctype html><meta charset="utf-8"><title>cc-profiles</title><style>
-            :root { color-scheme: light dark; --bg: #f6f5f2; --ink: #1d1c1a; --dim: #6b6862; --accent: #d97757; }
-            @media (prefers-color-scheme: dark) { :root { --bg: #161513; --ink: #ecebe8; --dim: #a19d96; } }
+            :root { color-scheme: dark; --bg: #161513; --ink: #ecebe8; --dim: #a19d96; --accent: #d97757; }
             body { margin: 0; height: 100vh; display: grid; place-items: center; background: var(--bg);
               color: var(--ink); font: 14px/1.5 -apple-system, system-ui, sans-serif; }
             main { max-width: 560px; padding: 24px; }
@@ -332,7 +345,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler done: @escaping () -> Void) {
         showWindow()
-        page("document.querySelector('#about-btn')?.click()")
+        if response.notification.request.content.userInfo["tab"] as? String == "profiles" {  // a plan limit
+            page("document.querySelector('#tabs button[data-tab=\"profiles\"]')?.click()")
+        } else {
+            page("document.querySelector('#about-btn')?.click()")
+        }
         done()
     }
 
@@ -389,6 +406,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if let url = webView.url, isLocal(url) {
             refreshRecent()
+            refreshQuota()
         }
         if let url = webView.url, isLocal(url), !pending.isEmpty {
             let urls = pending
@@ -643,7 +661,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     /// GET or POST to the server's API, waiting at most two seconds; the token comes from the page.
     /// Called from any thread.
-    func api(_ path: String, _ body: [String: String]? = nil) -> Any? {
+    func api(_ path: String, _ body: [String: String]? = nil, wait: Double = 2) -> Any? {
         func call(_ request: URLRequest) -> (Data?, HTTPURLResponse?) {
             var result: (Data?, HTTPURLResponse?) = (nil, nil)
             let done = DispatchSemaphore(value: 0)
@@ -651,7 +669,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
                 result = (data, response as? HTTPURLResponse)
                 done.signal()
             }.resume()
-            _ = done.wait(timeout: .now() + 2)
+            _ = done.wait(timeout: .now() + wait)
             return result
         }
         tokenLock.lock()
@@ -665,7 +683,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             tokenLock.unlock()
         }
         guard let token = token, let url = URL(string: path, relativeTo: home) else { return nil }
-        var request = URLRequest(url: url, timeoutInterval: 2)
+        var request = URLRequest(url: url, timeoutInterval: wait)
         request.setValue(token, forHTTPHeaderField: "X-Token")
         if let body = body {
             request.httpMethod = "POST"
@@ -746,6 +764,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let open = NSMenuItem(title: "Open cc-profiles", action: #selector(openFromMenu), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
+        if !quota.isEmpty {
+            menu.addItem(.separator())
+            for account in quota {
+                let item = NSMenuItem(title: account.title, action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+                let limits = NSMenuItem(title: account.summary, action: #selector(openProfiles), keyEquivalent: "")
+                limits.target = self
+                limits.toolTip = "Open the Profiles tab"
+                menu.addItem(limits)
+            }
+        }
+        refreshQuota()
         if let fetched = fetched, !fetched.projects.isEmpty {
             menu.addItem(.separator())
             addProjects(to: menu, fetched.projects, fetched.labels)
@@ -765,6 +796,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc func openFromMenu() {
         showWindow()
+    }
+
+    @objc func openProfiles() {
+        showWindow()
+        page("document.querySelector('#tabs button[data-tab=\"profiles\"]')?.click()")
+    }
+
+    // MARK: plan limits: the 5-hour window's use next to the menu bar icon, a notification at 90 %
+
+    /// Each signed-in account's limits, from the server: it reads the sign-in and asks claude.ai
+    /// (at most every five minutes); the app never sees a token. Called from any thread.
+    func fetchQuota() -> [Quota]? {
+        guard let accounts = (api("/api/accounts", wait: 5) as? [String: Any])?["accounts"] as? [[String: Any]] else { return nil }
+        return accounts.compactMap { account in
+            guard let id = account["quota_profile"] as? String,
+                  let path = "/api/quota?profile=\(id)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let answer = api(path, wait: 12) as? [String: Any], answer["state"] as? String == "ok",
+                  let limits = answer["limits"] as? [[String: Any]], !limits.isEmpty else { return nil }
+            let name = (account["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? (account["email"] as? String ?? "")
+            let plan = account["plan"] as? String ?? ""
+            return Quota(email: account["email"] as? String ?? name, title: plan.isEmpty ? name : "\(name) · \(plan)",
+                         limits: limits.map { Limit(label: $0["label"] as? String ?? "", percent: ($0["percent"] as? NSNumber)?.intValue ?? 0,
+                                                    resets: $0["resets_at"] as? String ?? "") })
+        }
+    }
+
+    func refreshQuota() {
+        DispatchQueue.global(qos: .utility).async {
+            guard let fetched = self.fetchQuota() else { return }
+            DispatchQueue.main.async { self.showQuota(fetched) }
+        }
+    }
+
+    func showQuota(_ fetched: [Quota]) {
+        quota = fetched
+        let session = fetched.lazy.compactMap { $0.limits.first { $0.label == "5 h" } }.first
+        statusItem?.button?.title = session.map { " \($0.percent)%" } ?? ""
+        statusItem?.button?.imagePosition = .imageLeading
+        statusItem?.button?.toolTip = (["cc-profiles"] + fetched.map { "\($0.title): \($0.summary)" }).joined(separator: "\n")
+        for account in fetched {
+            for limit in account.limits where limit.percent >= 90 {
+                notifyQuota(account, limit)
+            }
+        }
+    }
+
+    /// Once per account, limit and reset time.
+    func notifyQuota(_ account: Quota, _ limit: Limit) {
+        let key = "\(account.email)|\(limit.label)|\(limit.resets)"
+        var told = defaults.stringArray(forKey: "quotaNotified") ?? []
+        guard !told.contains(key) else { return }
+        told.append(key)
+        defaults.set(Array(told.suffix(50)), forKey: "quotaNotified")
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "\(limit.percent)% of the \(limit.label == "5 h" ? "5-hour" : limit.label.lowercased()) limit used"
+            content.body = "\(account.title). Click to see the plan limits."
+            content.userInfo = ["tab": "profiles"]
+            center.add(UNNotificationRequest(identifier: "quota-\(key)", content: content, trigger: nil))
+        }
     }
 
     @objc func openTerminal(_ sender: NSMenuItem) {

@@ -279,7 +279,7 @@ function renderSettings() {
     <section class="sec"><div class="h"><h2>Advanced editor</h2><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
       <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
         <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
-        <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save</button></div></div>
+        <div class="row-end"><span class="grow" id="raw-status" aria-live="polite"></span>${sh(d.files[st.rawFile])}<button class="btn" id="raw-format">Format</button><button class="btn primary" id="raw-save">Save ${st.rawFile === "settings" ? "settings.json" : "settings.local.json"}</button></div></div>
     </section>
 
     <section class="sec"><div class="h"><h2>Global</h2><span class="hint"><code>${esc(d.global.path)}</code> · almost everything in here is Claude Code's internal state: shown, not edited.</span></div>
@@ -371,16 +371,16 @@ function bindSettings() {
 }
 
 // ---------- theme ----------
-// System follows the operating system; Light and Dark set data-theme on <html>, which the CSS
-// variables and the script in <head> read. The choice is kept in localStorage, per browser.
-const THEMES = [["system", "System"], ["light", "Light"], ["dark", "Dark"]];
-const savedTheme = () => { try { return localStorage.getItem("cc-profiles.theme") || "system"; } catch { return "system"; } };
+// Dark unless Light is picked: data-theme on <html>, which the CSS variables and the script in
+// <head> read. The choice is kept in localStorage, per browser; an old "system" counts as dark.
+const THEMES = [["dark", "Dark"], ["light", "Light"]];
+const savedTheme = () => { try { return localStorage.getItem("cc-profiles.theme") === "light" ? "light" : "dark"; } catch { return "dark"; } };
 function setTheme(v) {
+  v = v === "light" ? "light" : "dark";
   try { localStorage.setItem("cc-profiles.theme", v); } catch {}
-  if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
-  else document.documentElement.removeAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", v);
 }
-// The picker in the About panel: System, Light, Dark
+// The picker in the About panel: Dark, Light
 const themeButtons = () => THEMES.map(([k, l]) =>
   `<button data-theme-set="${k}" class="${savedTheme() === k ? "on" : ""}" aria-pressed="${savedTheme() === k}">${l}</button>`).join("");
 function bindTheme(seg) {

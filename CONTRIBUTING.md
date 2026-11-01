@@ -104,7 +104,8 @@ docs/                            user guide and developer reference, published a
 scripts/                         release, README images, JavaScript and settings-schema checks, Homebrew formula
 .github/workflows/               CI, release to PyPI, CodeQL, the weekly Claude Code schema check
 DESIGN.md                        the UI's visual system: read it before touching index.html
-CLAUDE.md                        notes for AI coding assistants (also useful for humans)
+AGENTS.md                        notes for AI coding assistants (also useful for humans)
+CLAUDE.md                        imports AGENTS.md for Claude Code
 .claude/                         Claude Code project setup: permissions, a hook, two skills (see below)
 plugin/, .claude-plugin/         the Claude Code plugin and its marketplace
 install.sh                       the curl | sh installer

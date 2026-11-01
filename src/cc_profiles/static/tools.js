@@ -77,7 +77,7 @@ $("#gsearch").addEventListener("keydown", e => {
 document.addEventListener("click", e => { if (e.target.closest("#tabs button") && S.search.q) { $("#gsearch").value = ""; S.search.q = ""; } }, true);
 
 // ---------- compare two profiles ----------
-S.cmp = { a: null, b: null, data: null, error: null };
+S.cmp = { a: null, b: null, data: null, error: null, all: false };  // all: the settings that are the same too
 async function loadCompare() {
   const c = S.cmp;
   if (S.profiles.length < 2) { c.data = null; c.error = "There is only one profile: create a second one to compare."; return renderCompare(); }
@@ -101,7 +101,7 @@ function renderCompare() {
   const mark = same => same ? `<span class="okmark">same</span>` : `<span class="badge b-warn">differs</span>`;
   const only = side => `<span class="badge b-warn">only in ${side === "a" ? A : B}</span>`;
   const btn = (attrs, label) => `<button class="btn small" ${attrs}>${label}</button>`;
-  const table = (cols, rows, empty) => rows.length ? `<div class="table cmp"><table><thead><tr>${cols.map(x => `<th>${x}</th>`).join("")}<th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+  const table = (cols, rows, empty) => rows.length ? `<div class="table cmp"><table>${cols.some(Boolean) ? `<thead><tr>${cols.map(x => `<th>${x}</th>`).join("")}<th></th></tr></thead>` : ""}<tbody>${rows.join("")}</tbody></table></div>`
     : `<div class="hint">${empty}</div>`;
   const listRows = (sec, kind, side, name, extra = "", label = "Copy") => `<tr class="diff"><td class="v">${esc(name)}</td><td>${only(side)}${extra}</td>
       <td class="acts">${btn(`data-cmp="${sec}" data-kind="${kind}" data-side="${side}" data-name="${esc(name)}"`, `${label} to ${side === "a" ? B : A}`)}</td></tr>`;
@@ -111,14 +111,17 @@ function renderCompare() {
     for (const r of P[k].only_b) perms.push(listRows("perm", k, "b", r, ` <code>${k}</code>`, "Add"));
   }
   const nBoth = ["allow", "ask", "deny"].reduce((n, k) => n + P[k].both.length, 0);
+  const nDiff = d.settings.filter(s => !s.same).length;
   const sk = d.skills, ag = d.agents, mc = d.mcp, md = d.claude_md, pl = d.plugins, mo = d.mods;
   const onOff = v => v ? "enabled" : `<span class="hint">disabled</span>`;
   const plug = k => `${pl[k].only_a.length ? `only in ${A}: ${pl[k].only_a.map(esc).join(", ")}<br>` : ""}${pl[k].only_b.length ? `only in ${B}: ${pl[k].only_b.map(esc).join(", ")}<br>` : ""}${pl[k].both.length ? `in both: ${pl[k].both.map(esc).join(", ")}` : ""}` || "none";
   $("#main").innerHTML = `${head}
-    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from</span></div>
-    ${table(["Setting", A, B], d.settings.map((s, i) => `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
+    <div class="ext-head" style="margin-top:0"><h2>Settings</h2><span class="hint">the value in use and the file it comes from · ${nDiff} of ${d.settings.length} ${nDiff === 1 ? "differs" : "differ"}</span>
+      ${nDiff < d.settings.length ? `<button class="btn small" id="cmp-all" aria-pressed="${c.all}">${c.all ? "Show only differences" : `Show all (${d.settings.length})`}</button>` : ""}</div>
+    ${table(["Setting", A, B], d.settings.map((s, i) => !c.all && s.same ? "" : `<tr class="${s.same ? "" : "diff"}"><td>${esc(s.label)} ${s.same ? "" : mark(false)}</td>
         <td class="v">${val(s.a, s.a_source)}</td><td class="v">${val(s.b, s.b_source)}</td>
-        <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`), "")}
+        <td class="acts">${s.same ? "" : btn(`data-cmp="set" data-i="${i}" data-side="a"`, `${A} → ${B}`) + btn(`data-cmp="set" data-i="${i}" data-side="b"`, `${B} → ${A}`)}</td></tr>`).filter(Boolean),
+      `The same value in all ${d.settings.length} settings. ✓`)}
     <div class="ext-head"><h2>Permissions</h2><span class="hint">rules in <code>settings.json</code> · ${plural(nBoth, "rule", "rules")} in both</span></div>
     ${table(["Rule", "Where"], perms, "Both profiles have the same rules. ✓")}
     <div class="ext-head"><h2>Skills</h2><span class="hint">${sk.shared ? "the two profiles share the same skills folder" : `${plural(sk.both.length, "skill", "skills")} in both`}</span></div>
@@ -152,6 +155,8 @@ function bindCompare() {
   const pick = (id, k) => { const el = $(id); if (el) el.onchange = () => { c[k] = el.value; loadCompare(); }; };
   pick("#cmp-a", "a"); pick("#cmp-b", "b");
   if (!d) return;
+  const all = $("#cmp-all");
+  if (all) all.onclick = () => { c.all = !c.all; renderCompare(); $("#cmp-all")?.focus(); };
   const ids = { a: d.a.id, b: d.b.id }, other = s => (s === "a" ? "b" : "a"), name = s => (s === "a" ? d.a.label : d.b.label);
   const done = async fn => { try { await run(fn); } catch {} loadCompare(); };
   document.querySelectorAll("[data-cmp]").forEach(b => b.onclick = async () => {
@@ -184,6 +189,7 @@ async function loadUsage() {
   const u = S.use, seq = ++u.seq;
   if (u.profile !== "all" && !S.profiles.some(p => p.id === u.profile)) u.profile = "all";
   u.data = null; u.error = null; renderUsage();
+  api("/api/quota/history").then(h => { u.history = h; if (seq === u.seq && u.data) renderUsage(); }).catch(() => {});
   try { const d = await api(`/api/usage?profile=${encodeURIComponent(u.profile)}&days=${u.days}`); if (seq === u.seq) u.data = d; }
   catch (e) { if (seq === u.seq) u.error = e.message; }
   if (seq === u.seq) renderUsage();
@@ -216,6 +222,39 @@ function usageChart(daily) {
         <line class="grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" vector-effect="non-scaling-stroke"/>
         <line class="grid" x1="0" y1="${half}" x2="${W}" y2="${half}" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>${bars}</svg>
       <div class="ax" aria-hidden="true"><span>${esc(dayLabel(daily[0].date))}</span><span>${esc(dayLabel(daily[Math.floor((n - 1) / 2)].date))}</span><span>${esc(dayLabel(daily[n - 1].date))}</span></div></div>`;
+}
+// The plan's weekly limit over the period: the day's highest share used, as cc-profiles saw it
+// whenever it checked the limits (the Profiles tab, and every 15 minutes while the page is open)
+function quotaHistoryHtml(days) {
+  const accounts = (S.use.history?.accounts || []).filter(a => a.days.length);
+  if (!accounts.length) return "";
+  const dates = [...Array(days)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
+  const W = 1000, H = 120, bw = W / days, gap = days > 40 ? 1.5 : 4, y90 = (H - H * 0.9).toFixed(1);
+  const chart = a => {
+    const by = Object.fromEntries(a.days.map(d => [d.date, d.limits]));
+    const seen = dates.filter(d => by[d]?.Week !== undefined);
+    if (!seen.length) return "";
+    const top = Math.max(...seen.map(d => by[d].Week));
+    const bars = dates.map((d, i) => {
+      const v = by[d]?.Week;
+      const tip = `${dayLabel(d, true)}: ` + (v === undefined ? "not checked" : `${v}% of the weekly limit used` + (by[d]["5 h"] !== undefined ? `, ${by[d]["5 h"]}% of a 5-hour window at most` : ""));
+      const h = v === undefined ? 0 : Math.max((v / 100) * H, 1);
+      return `<g class="day"><title>${esc(tip)}</title><rect class="hit" x="${(i * bw).toFixed(2)}" y="0" width="${bw.toFixed(2)}" height="${H}"/>${v === undefined ? ""
+        : `<rect class="bar${v >= 90 ? " q-high" : v >= 75 ? " q-mid" : " q-ok"}" x="${(i * bw + gap / 2).toFixed(2)}" y="${(H - h).toFixed(2)}" width="${Math.max(bw - gap, 0.6).toFixed(2)}" height="${h.toFixed(2)}"/>`}</g>`;
+    }).join("");
+    const label = `${a.name}: share of the weekly limit used each day from ${dayLabel(dates[0], true)} to ${dayLabel(dates[days - 1], true)}, checked on ${plural(seen.length, "day", "days")}; the highest is ${top}%`;
+    return `<div class="uchart qchart">
+      <div class="top"><span class="grow"><b>${esc(a.name)}</b> · weekly limit used, the day's highest · ${plural(seen.length, "day", "days")} checked · highest ${top}%</span>
+        <span class="legend">dashed line at 90%</span></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
+        <line class="grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}" vector-effect="non-scaling-stroke"/>
+        <line class="grid" x1="0" y1="${y90}" x2="${W}" y2="${y90}" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>${bars}</svg>
+      <div class="ax" aria-hidden="true"><span>${esc(dayLabel(dates[0]))}</span><span>${esc(dayLabel(dates[Math.floor((days - 1) / 2)]))}</span><span>${esc(dayLabel(dates[days - 1]))}</span></div></div>`;
+  };
+  const charts = accounts.map(chart).filter(Boolean).join("");
+  return charts ? `<div class="ext-head"><h2>Plan limits</h2><span class="hint">every claude.ai account, whatever the profile above · recorded whenever cc-profiles checks the limits: the Profiles tab, and every 15 minutes while it is open</span></div>
+    <div class="qcharts">${charts}</div>` : "";
 }
 function renderUsage() {
   if (S.tab !== "usage") return;
@@ -257,6 +296,7 @@ function renderUsage() {
     </div>
     ${usageChart(d.daily)}
     ${note}
+    ${quotaHistoryHtml(d.days)}
     <div class="ext-head"><h2>Top projects</h2><span class="hint">${d.projects_count > d.projects.length ? `the ${d.projects.length} with the most tokens, of ${d.projects_count}` : "by tokens"} · ${esc(who)} · last ${d.days} days</span></div>
     <div class="table uproj"><table><thead><tr><th>Project</th>${all ? "<th>Profile</th>" : ""}<th class="r">Replies</th><th class="r">Tokens</th><th class="r">Estimated cost</th></tr></thead><tbody>${projects}</tbody></table></div>
     <div class="ext-head"><h2>Most expensive sessions</h2><span class="hint">the ${plural(d.sessions.length, "conversation", "conversations")} with the highest estimated cost, then the most tokens · open one to read it</span></div>
@@ -305,7 +345,7 @@ function renderBackups() {
         <div class="t">${esc(b.title)} ${b.kept ? `<span class="badge b-shared" title="Never deleted by a cleanup">kept</span>` : ""} ${b.failed ? `<span class="badge b-warn" title="${esc(b.failed)}">incomplete: the operation failed halfway</span>` : ""} ${b.restored ? `<span class="badge b-none">restored ${esc(when(b.restored))}</span>` : ""}</div>
         <div class="m">${esc(when(b.created))} · ${plural(b.steps, "step", "steps")} · ${size(b.size)}${b.log.length ? " · " + b.log.map(esc).join(" · ") : ""}</div></div>
       <div class="acts">${b.steps ? `<button class="btn small" data-bchanges="${esc(b.name)}">Show changes</button>` : ""}
-        ${b.restorable ? `<button class="btn small primary" data-restore="${esc(b.name)}">Restore</button>` : ""}
+        ${b.restorable ? `<button class="btn small" data-restore="${esc(b.name)}">Restore</button>` : ""}
         <button class="btn small" data-bkeep="${esc(b.name)}" aria-pressed="${b.kept}" title="${b.kept ? "Let the cleanup delete it once it is old enough" : "Never delete it in a cleanup"}">${b.kept ? "Kept ✓" : "Keep"}</button>
         <button class="btn small danger" data-bdel="${esc(b.name)}" ${b.kept ? `disabled title="Kept: turn off Keep to delete it"` : ""}>Delete</button></div></div>`).join("") || `<div class="empty">No backups yet: one is created for every operation.</div>`}</div>`;
   $("#bk-prune")?.addEventListener("click", pruneBackups);
@@ -346,7 +386,11 @@ async function restoreBackup(name) {
   const b = S.backups.find(x => x.name === name);
   const newer = S.backups.filter(x => x.created > b.created && x.restorable && !x.title.startsWith("Before restoring"));
   const warn = newer.length ? `<br><br><span class="issue">${plural(newer.length, "newer operation has", "newer operations have")} not been undone yet (${newer.slice(0, 3).map(x => esc(x.title)).join(" · ")}${newer.length > 3 ? "…" : ""}). If they touched the same files, undo them first, newest first.</span>` : "";
-  if (!(await confirmBox("Restore?", `<b>${esc(b.title)}</b><br>Undoes this operation by putting the files back as they were. Later changes to the same files are overwritten (but saved in the restore's own backup).${warn}`, "Restore"))) return;
+  // what it puts back, from the journal: the same steps as Show changes
+  const c = b.steps ? await api(`/api/backups/changes?name=${encodeURIComponent(name)}`).catch(() => null) : null;
+  const steps = c ? `<br><br>${plural(c.steps.length, "step", "steps")} to undo${c.files_changed ? `, ${plural(c.files_changed, "file", "files")} different from the backup now` : ""}:
+    <ul class="steps">${c.steps.slice(0, 6).map(x => `<li>${esc(x.text)}</li>`).join("")}${c.steps.length > 6 ? `<li>and ${c.steps.length - 6} more: see Show changes</li>` : ""}</ul>` : "";
+  if (!(await confirmBox("Restore?", `<b>${esc(b.title)}</b><br>Undoes this operation by putting the files back as they were. Later changes to the same files are overwritten (but saved in the restore's own backup).${steps}${warn}`, "Restore"))) return;
   const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
   if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
   await refresh(); loadBackups();
@@ -366,8 +410,8 @@ async function showChanges(name, trigger) {
   dr.setAttribute("aria-label", `Changes of ${b.title}`);
   dr.innerHTML = `<div class="dh"><h2>${esc(b.title)}</h2><button class="btn small" id="ch-close">Close</button></div>
     <div class="db" id="ch-body"><div class="empty">${LOADER} Comparing the backup with the files as they are now…</div></div>`;
-  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); trigger?.focus(); };
-  const onKey = e => { if (e.key === "Escape") close(); };
+  const close = () => { bg.remove(); dr.remove(); document.removeEventListener("keydown", onKey); refocus(trigger); };
+  const onKey = e => { if (e.key === "Escape") close(); else trapTab(e, dr); };
   bg.onclick = close; document.addEventListener("keydown", onKey);
   document.body.append(bg, dr);
   $("#ch-close", dr).onclick = close; $("#ch-close", dr).focus();

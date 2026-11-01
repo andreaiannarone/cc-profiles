@@ -3,8 +3,8 @@
 The **Settings** tab edits one profile at a time; pick it at the top. Changes apply from the next Claude Code session in that profile, and every save goes to the backup.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/settings-dark.jpg">
-  <img src="../assets/screenshots/settings-light.jpg" alt="The Settings tab: the /config settings of the Default profile with dropdowns and switches" width="1440" height="900" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/settings-light.jpg">
+  <img src="../assets/screenshots/settings-dark.jpg" alt="The Settings tab: the /config settings of the Default profile with dropdowns and switches" width="1440" height="900" loading="lazy">
 </picture>
 
 If a file is [shared](../concepts.md#sharing), a *shared with …* label warns that the change applies to every sharing profile.
@@ -113,7 +113,7 @@ Other keys of `permissions` (such as `defaultMode`) are preserved. Rules in `set
 
 ## Advanced editor
 
-Edits the whole `settings.json` or `settings.local.json`: hooks, `env`, `attribution`, and anything else. The JSON is checked as you type, **Format** re-indents it, and invalid JSON or a non-object cannot be saved.
+Edits the whole `settings.json` or `settings.local.json`: hooks, `env`, `attribution`, and anything else. The JSON is checked as you type, **Format** re-indents it, **Save settings.json** (or **Save settings.local.json**) saves the file shown, and invalid JSON or a non-object cannot be saved.
 
 ## Global
 

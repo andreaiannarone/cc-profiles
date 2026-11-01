@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = sorted(ROOT.glob("docs/**/*.md")) + [ROOT / f for f in
-        ("README.md", "CONTRIBUTING.md", "CLAUDE.md", "DESIGN.md", "SECURITY.md", "CHANGELOG.md")]
+        ("README.md", "CONTRIBUTING.md", "CLAUDE.md", "AGENTS.md", "DESIGN.md", "SECURITY.md", "CHANGELOG.md")]
 
 
 def strip_code(text):

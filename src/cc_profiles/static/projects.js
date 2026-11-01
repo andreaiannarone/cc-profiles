@@ -5,12 +5,14 @@
 // ---------- projects ----------
 function filtered() {
   const q = S.q.toLowerCase();
-  return S.projects.filter(r => {
+  const rows = S.projects.filter(r => {
     if (q && !r.pretty.toLowerCase().includes(q)) return false;
     if (S.filter === "issues") return r.issues.length > 0;
     if (S.filter === "all") return true;
     return r.expected === S.filter;
   });
+  // what needs fixing first, the projects only waiting for a profile after
+  return S.filter === "issues" ? rows.sort((a, b) => isProblem(b) - isProblem(a)) : rows;
 }
 function renderProjects() {
   const ids = S.profiles.map(p => p.id);
@@ -21,7 +23,7 @@ function renderProjects() {
       ${chips.map(([k, l]) => `<button class="chip ${S.filter === k ? "on" : ""}" data-filter="${k}">${esc(l)}</button>`).join("")}
       <input class="search" placeholder="Search a path…" value="${esc(S.q)}" id="q" aria-label="Search projects">
     </div>
-    <div class="table">${rows.length ? `<table>
+    <div class="table">${rows.length ? `<table class="ptable">
       <thead><tr><th>Project</th><th>Belongs to</th>${S.profiles.map(p => `<th>${esc(p.label)}</th>`).join("")}<th>Status</th><th></th></tr></thead>
       <tbody>${rows.map(r => {
         const pi = r.issues.find(i => i.kind === "profile");
@@ -31,10 +33,10 @@ function renderProjects() {
         return `<tr>
           <td class="path mono">${esc(r.pretty)}</td>
           <td>${badge(r.expected)}</td>
-          ${ids.map(id => { const s = r.in[id]; return `<td class="nums">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
-          <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
-          <td class="acts">${main ? `<button class="btn small primary" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
-            ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}">Merge into…</button>` : ""}
+          ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
+          <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : i.kind === "unclassified" ? "note" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
+          <td class="acts">${main ? `<button class="btn small${main.a === "rule" ? "" : " primary"}" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
+            ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}" title="Put its history into a project you already have, instead of a folder">Merge into…</button>` : ""}
             ${S.term?.supported && r.exists ? `<button class="btn small" data-act="term" data-name="${esc(r.name)}" title="Claude Code in this folder">Open in ${esc(S.term.terminal)}</button>` : ""}
             <button class="btn small" data-act="manage" data-name="${esc(r.name)}">Manage</button></td></tr>`;
       }).join("")}</tbody></table>` : `<div class="empty">${S.filter === "issues" ? "Nothing needs attention. ✓" : "No projects."}</div>`}
@@ -186,13 +188,29 @@ async function doDelete(r, pid) {
 }
 async function doRule(r) {
   const guess = r.path ? r.path.replace(/^~\//, "") : "";
-  const res = await modal({ title: "Assign to a profile",
-    sub: "Creates a rule: every project whose path contains this text belongs to the chosen profile. New rules win over older ones.",
-    body: `<input class="text" value="${esc(guess)}" placeholder="e.g. code/work" aria-label="Path text">
-      <select id="rp" aria-label="Profile">${[...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared (all profiles)"]].map(([k, l]) => `<option value="${k}" ${k === r.expected ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`,
+  const opened = modal({ title: "Assign to a profile",
+    sub: "Creates a rule that gives projects to a profile, now and when new ones appear. A rule for one folder wins over the others; among the others, newer rules win.",
+    body: `<select id="rk" aria-label="Rule kind"><option value="match">Every path containing</option><option value="exact">Only this folder</option></select>
+      <input class="text" value="${esc(guess)}" placeholder="e.g. code/work" aria-label="Path text">
+      <select id="rp" aria-label="Profile">${[...S.profiles.map(p => [p.id, p.label]), ["shared", "Shared (all profiles)"]].map(([k, l]) => `<option value="${k}" ${k === r.expected ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <div id="rmatch" class="rmatch" role="status"></div>`,
     actions: [{ label: "Save rule", kind: "primary", value: "ok" }] });
+  // which projects the rule takes, as the server matches it: the text anywhere in the path, or the folder itself
+  const inp = $(".modal input.text"), sel = $("#rp"), kind = $("#rk"), out = $("#rmatch");
+  kind.addEventListener("change", () => { inp.value = kind.value === "exact" ? (r.pretty || r.path || "") : guess; show(); });
+  const show = () => {
+    const m = inp.value.trim(), to = sel.value, exact = kind.value === "exact";
+    const target = exact ? m.replace(/\/+$/, "") : m;
+    const hits = !m ? [] : exact ? S.projects.filter(x => x.path && (x.pretty === target || x.path === target)) : S.projects.filter(x => x.path && x.path.includes(m));
+    const moved = hits.filter(x => x.expected && x.expected !== to);
+    out.innerHTML = !m ? "" : !hits.length ? "Matches no project yet: it applies to the ones that come later." :
+      `Matches ${plural(hits.length, "project", "projects")}: ${hits.slice(0, 6).map(x => `<code>${esc(x.pretty)}</code>${x.expected && x.expected !== to ? ` (now ${esc(label(x.expected))})` : ""}`).join(", ")}${hits.length > 6 ? "…" : ""}`
+      + (moved.length ? `<div class="issue">${plural(moved.length, "project", "projects")} would change profile${exact ? "" : `: write more of the path to leave ${moved.length === 1 ? "it" : "them"} out`}.</div>` : "");
+  };
+  inp.addEventListener("input", show); sel.addEventListener("change", show); show();
+  const res = await opened;
   if (!res) return;
-  await run(() => api("/api/rules", { match: $("input.text", res.el).value, profile: $("#rp", res.el).value })); await refresh();
+  await run(() => api("/api/rules", { match: $("input.text", res.el).value, profile: $("#rp", res.el).value, exact: $("#rk", res.el).value === "exact" })); await refresh();
 }
 async function doManage(r) {
   const ids = S.profiles.map(p => p.id);
@@ -292,7 +310,7 @@ function renderMemories() {
       <div class="plist">${plist.map(p => `<button data-mproj="${esc(p.name)}" class="${p.name === m.project ? "on" : ""}">
         <span class="p">${esc(p.pretty)}</span>${p.shared ? `<span class="badge b-shared">shared</span>` : ""}<span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No projects.</div>`}</div>
     </aside>
-    <section>${!cur ? `<div class="empty">Pick a project on the left.</div>` : `
+    <section>${!cur ? `<div class="empty">Pick a project from the list.</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(cur.pretty)}</code> · ${esc(label(m.profile))}</div>
       ${!m.list ? `<div class="empty">${LOADER}</div>` : `
         ${memSharing(m.list.sharing)}
@@ -305,13 +323,14 @@ function renderMemories() {
           <textarea id="mtext" spellcheck="false" aria-label="Memory content">${esc(m.content)}</textarea>
           <div class="row"><span class="grow">Saving keeps a copy of the previous version.</span>
             <button class="btn danger" id="mdel">Delete</button><button class="btn" id="mmove">Move…</button>
-            <button class="btn primary" id="msave">Save</button></div></div>` : ""}`}`}
+            <button class="btn" id="mcancel" disabled title="Put back what was last saved">Cancel</button><button class="btn primary" id="msave">Save</button></div></div>` : ""}`}`}
     </section></div>`;
   $("#mq").oninput = e => { m.q = e.target.value; const pos = e.target.selectionStart; renderMemories(); const i = $("#mq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#mall").onchange = e => { m.all = e.target.checked; renderMemories(); };
   if ($("#msave")) {
     const ctx = () => ({ profile: m.profile, project: m.project, file: m.file });
-    $("#msave").onclick = async () => { await run(() => api("/api/memory/save", { ...ctx(), content: $("#mtext").value })); m.content = $("#mtext").value; };
+    $("#msave").onclick = async () => { await run(() => api("/api/memory/save", { ...ctx(), content: $("#mtext").value })); m.content = $("#mtext").value; $("#mcancel").disabled = true; };
+    bindCancel($("#mcancel"), () => { $("#mtext").value = m.content; });
     $("#mdel").onclick = async () => {
       if (!(await confirmBox("Delete this memory?", `<code>${esc(m.file)}</code> is removed from MEMORY.md and moved to the backup.`, "Delete"))) return;
       await run(() => api("/api/memory/delete", ctx())); m.file = null; await loadMemProjects(); await openMemProject(m.project); loadProfiles();
@@ -414,7 +433,7 @@ function renderConversations() {
       <div class="plist">${plist.map(p => `<button data-cproj="${esc(p.name)}" class="${p.name === c.project ? "on" : ""}">
         <span class="p">${esc(p.pretty)}</span><span class="n">${p.count}</span></button>`).join("") || `<div class="empty">No conversations in this profile.</div>`}</div>
     </aside>
-    <section>${!c.project ? `<div class="empty">Pick a project on the left.</div>` : !c.list ? `<div class="empty">${LOADER}</div>` : `
+    <section>${!c.project ? `<div class="empty">Pick a project from the list.</div>` : !c.list ? `<div class="empty">${LOADER}</div>` : `
       <div class="hint" style="margin-bottom:8px"><code>${esc(c.list.path)}</code> · ${esc(label(c.profile))} · ${plural(c.list.conversations.length, "conversation", "conversations")}</div>
       <div class="cards">${c.list.conversations.map(x => `<div class="ccard ${x.session === c.session ? "on" : ""}" data-conv="${esc(x.session)}" tabindex="0" role="button">
         <div class="t">${esc(x.title) || `<span class="hint">No prompt</span>`}</div>

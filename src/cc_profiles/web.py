@@ -85,7 +85,7 @@ from .conversations import (
     op_conversation_move,
 )
 from .usage import usage, usage_csv
-from .quota import list_accounts, quota
+from .quota import list_accounts, quota, quota_history
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
@@ -308,6 +308,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/usage": lambda: usage(q.get("profile", "all"), q.get("days", "30")),
                 "/api/quota": lambda: quota(q["profile"], q.get("fresh") == "1"),
                 "/api/accounts": lambda: list_accounts(),
+                "/api/quota/history": lambda: quota_history(),
                 "/api/compare": lambda: compare(q["a"], q["b"]),
                 "/api/projects/merge/preview": lambda: merge_plan(q["project"], q["profile"], q["into"]),
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
@@ -372,7 +373,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/projects/delete": lambda: op_delete(b["project"], b["profile"]),
                 "/api/projects/relink": lambda: op_relink(b["project"], b["profile"], b["path"]),
                 "/api/projects/merge": lambda: op_merge(b["project"], b["profile"], b["into"]),
-                "/api/rules": lambda: op_rule(b["match"], b["profile"]),
+                "/api/rules": lambda: op_rule(b["match"], b["profile"], bool(b.get("exact"))),
                 "/api/memory/save": lambda: op_memory_save(b["profile"], b["project"], b["file"], b["content"]),
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
                                                            b["to_profile"], b["to_project"]),

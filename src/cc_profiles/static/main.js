@@ -134,6 +134,21 @@ const openCard = c => c.dataset.agent ? openAgent(c.dataset.agent) : c.dataset.s
 document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openCard(c); });
 document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(c); } });
 
+// After an Undo: every list read again, the current tab drawn from fresh data
+async function reloadTab() {
+  await refresh();
+  S.health = null;
+  if (S.tab === "memories" && S.mem.profile) {
+    const { project, file } = S.mem;
+    await loadMemProjects();
+    if (!project) return renderMemories();
+    await openMemProject(project);
+    if (file && S.mem.list?.items.some(it => it.file === file)) await openMemFile(file);  // the editor stays open
+    return;
+  }
+  if (S.tab === "conversations" && S.conv.profile) { await loadConvProjects(); return renderConversations(); }
+  if (S.tab !== "projects") TAB_BUTTONS.find(b => b.dataset.tab === S.tab)?.click();
+}
 function render() {
   if (S.tab === "projects") renderProjects();
   else if (S.tab === "memories") renderMemories();
@@ -162,6 +177,8 @@ checkWhatsNew();
 loadUpdateStatus();
 api("/api/terminal").then(t => { S.term = t; if (t.supported && S.tab === "projects" && S.projects) renderProjects(); }).catch(() => {});
 setInterval(loadUpdateStatus, 3600 * 1000);  // a page left open learns about a new version too
+watchQuotas();
+setInterval(watchQuotas, 15 * 60 * 1000);
 refresh().then(() => {  // the Mac app opens on the tab it was closed on; a browser tab on Projects
   let tab = null;
   if (IN_APP) try { tab = localStorage.getItem(APP_TAB); } catch {}

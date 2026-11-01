@@ -1,0 +1,95 @@
+# AGENTS.md
+
+Notes for AI coding assistants (and humans) working on this repository. Codex, Cursor and the other agents read this file; Claude Code reads it through `CLAUDE.md`, which imports it. Edit this file, not `CLAUDE.md`.
+
+The `.claude/` setup (the sandbox hook, the skills) works only in Claude Code. With another agent the same rules hold without the hook: never start the app or run a write operation without a sandbox `HOME` (see `.claude/skills/sandbox/make_home.py`).
+
+## What this is
+
+**cc-profiles** is a local web UI to manage multiple Claude Code profiles: folders like `~/.claude` and `~/.claude-<id>`, selected with `CLAUDE_CONFIG_DIR`. It moves projects between profiles, relinks projects whose folder moved, edits memories and settings, shares skills and plugins, creates and deletes profiles, and can undo every one of these operations.
+
+The app **modifies Claude Code's own files, possibly while a session is using them**. Every change must therefore be reversible and safe for concurrent readers. That constraint drives everything else.
+
+## Layout
+
+| Path | Role |
+|---|---|
+| `src/cc_profiles/` | the server, one module per area (`core`, `projects`, `memories`, `extensions`, `backups`, …, `web` for HTTP, `cli`); see the table in `docs/architecture.md`. `server.py` only re-exports them; the version is in `__init__.py` |
+| `src/cc_profiles/app/main.swift` | the Mac app (`cc-profiles install-app`, `macapp.py`): a WKWebView window around the page, AppKit only. Compiled by `scripts/build_app.py` into `app/cc-profiles-app` (git-ignored, shipped in the package; the release workflow builds it on macOS). A checkout without it compiles it with `swiftc` at `install-app` |
+| `src/cc_profiles/static/` | the UI, vanilla JS, no build step: `index.html` (the markup, plus two inline scripts with the token and the theme, allowed by a per-response CSP nonce), `app.css`, and classic scripts loaded in order that share one global scope: `core.js` (state `S`, helpers, `api()`, `modal()`) first, one file per area (`projects.js`, `profiles.js`, `extensions.js`, `settings.js`, `about.js`, `tools.js`), `main.js` (navigation, the click handler, start) last. A new file goes in `index.html`'s list; served by `static_file()` in `web.py` |
+| `tests/conftest.py` | `FakeHome` (builds fake profiles) and `App` (a real server on it, plus an API client) |
+| `tests/test_<area>.py` | end-to-end tests of the API on a fake home, one file per area (`test_projects.py`, `test_settings.py`, `test_backups.py`, `test_mac_app.py`…), with shared helpers (`basic_home()`, `run_cli()`…) in `helpers.py`; `test_ui.py` drives the page in Chromium (with axe); `test_tooling.py`, `test_docs.py`, `test_release.py`, `test_check_schema.py` cover the hook, plugin, docs site, links and scripts |
+| `DESIGN.md` | the UI's visual system: read it before touching the UI |
+| `.claude-plugin/marketplace.json` | makes the repo a Claude Code plugin marketplace |
+| `plugin/` | the Claude Code plugin: `commands/open.md` runs `cc-profiles open`. Same text as `COMMAND_TEXT` in `command.py` without the mark (a test checks it). Check it with `claude plugin validate .` and `claude plugin validate plugin` |
+| `.claude/` | Claude Code project setup: `settings.json` (permissions, hook), `hooks/sandbox_guard.py` (blocks cc-profiles on the real home), skills `sandbox` (fake home + app on port 4799) and `check-settings-schema` |
+| `install.sh` | `curl … \| sh` installer: pipx or uv, then `cc-profiles install-command` (or `--off` with `--no-command`; the server also adds the command at its first start, see `ensure_command()`). POSIX `sh`, no `sudo`. Test it with `HOME=<sandbox> CC_PROFILES_SOURCE=$PWD sh install.sh` |
+| `docs/assets/` | the logo (`logo.svg`), the two mascots alone (`logo-mark.svg`, inlined next to the title in `index.html`) and one mascot (`favicon.svg`, inlined as the favicon); the README screenshots and demo GIFs (made by `scripts/make_screenshots.py`, never by hand), the social preview, and `site.css` for the docs site |
+| `docs/` site | published by GitHub Pages at https://cc-profiles.andreaia.com (`CNAME`) with Jekyll: `_config.yml`, `_layouts/default.html` (the app's header, colors and theme switch), `_includes/logo.svg`, `_data/nav.yml` (the sidebar; every page must be in it). Pages must not contain `{{` or `{%`, and must link files outside `docs/` by their full GitHub URL |
+| `scripts/` | `release.py next` (the whole release; versions move one step, only the last number up to 9; `release.py resume` finishes one that stopped), `build_app.py` (the Mac app, both architectures), `make_screenshots.py`, `check_js.py` (tsc --checkJs on the UI), `check_settings_schema.py` (used by the skill and the weekly workflow), `homebrew_formula.py` (no tap published yet) |
+| `.github/workflows/` | `ci.yml` (tests, UI, install.sh, package, JS check), `release.yml` (tag → PyPI), `codeql.yml`, `claude-code-schema.yml` (weekly check against the latest Claude Code, opens an issue) |
+
+User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
+
+## Commands
+
+```sh
+.venv/bin/pip install -e ".[test]"     # once
+git config core.hooksPath .githooks     # once: .githooks/pre-commit refuses a commit while a test fails
+.venv/bin/python -m pytest -n auto     # all tests in parallel (about 30 s, 50 s with the UI tests; 2-3 min without -n)
+.venv/bin/cc-profiles --port 4799      # run the app (use HOME=<sandbox> unless you mean it)
+```
+
+Only ever run write operations against a sandbox `HOME`, never against real profiles. The `sandbox_guard.py` hook blocks starting the app without one; the `/sandbox` skill builds one with sample data.
+
+## Hard rules
+
+- **Standard library only, Python 3.9 compatible**: no `match`, no `X | None` annotations, no new dependencies.
+- **Atomic writes**: always `write_text()` / `write_json()` (temp file in the same folder, then `os.replace`). They follow symlinks with `os.path.realpath`. Without that, `os.replace` would replace a shared file's link with a regular file and silently break sharing.
+- **Every write goes through `Backup`**, which journals its steps in `manifest.json`:
+  - `bk.copy(path)` **before** modifying a file (it records `absent` if the file did not exist). Only the first copy of a path counts.
+  - `bk.stash(path)` instead of deleting anything.
+  - `bk.moved(src, dst)` after every `shutil.move`.
+  - `bk.mkdir(path)` to create folders (it journals every missing parent); `bk.created(path)` for new links, launchers and profiles.
+  - `bk.close()` at the end; return its value in the `backup` field of the response.
+
+  Journal a new folder (`bk.created`) before filling it. If an operation raises, the POST handler closes its open backups as "failed" (`abort_open_backups`), so whatever was journaled can still be restored; `CC_PROFILES_FAULT=<name>` makes `fault_point(name)` raise in tests.
+
+  A step that is not journaled makes the operation impossible to undo. The tests catch it: they restore everything and compare snapshots of the fake home.
+- **One write at a time**: POST handlers run under `_lock`.
+- **Never trust the client**: project, memory and backup names go through `project_dir()`, `memory_path()` and `backup_path()`, which reject `/`, `..` and empty names. The installer accepts only a method id from `INSTALL_METHODS`, never a command.
+- **Local security**: listen on `127.0.0.1` only. `_guard()` checks the `Host` header (against DNS rebinding) and the `X-Token` header on every `/api/` call (against cross-site requests). Do not relax these checks and do not add CORS headers.
+- **Never copy login credentials** between profiles (`.credentials.json`, `oauthAccount`). A copied token can be invalidated when the original profile refreshes it. `quota.py` alone reads a profile's token (keychain or `.credentials.json`), only to ask claude.ai for the plan usage limits: never store it, send it to the page or refresh it (refreshing replaces the refresh token Claude Code holds). The keychain is asked only on the real home (`keychain_token()`); tests and the sandbox use `CC_PROFILES_USAGE_URL`. The same goes for GitHub: every profile has its GitHub CLI folder (`own_folder()`: `~/.config/gh` for Default, `~/.config/gh-<id>`), created at start by `ensure_gh_folders()` (`CC_PROFILES_AUTO_GITHUB=0` in tests); `github.py` reads only the users in `hosts.yml`, switches the active one, and copies it without token lines. Every profile has a commit identity (`ensure_identities()` at start, `suggested_identity()`: the account's noreply address from GitHub's public API, `CC_PROFILES_GITHUB_API`, which `child_env()` points to a refused port). A profile's folder lists only its account (`restrict_folder()`; not Default's, not one with token lines), the others stay listed in Default's folder or `~/.config/gh-accounts` (`remember()`).
+
+## Claude Code's on-disk formats (undocumented, may change)
+
+- **Project folders**: `projects/<name>`, where `<name>` is the absolute path with every non-alphanumeric character replaced by `-` (`san()`). This is **not reversible**: `path_index()` recovers the real path from config files, prompt history and the `cwd` field of conversations, and `resolve_on_disk()` rebuilds it by walking the disk when nothing mentions it.
+- **Conversations**: `projects/<name>/<sessionId>.jsonl`. File snapshots live in `file-history/<sessionId>/`, outside `projects/`, so they must move together with the conversation.
+- **Prompt history** (arrow up in Claude Code): `history.jsonl`, one JSON line per prompt with `display`, `timestamp` and `project`.
+- **Per-project settings**: the `projects` key of `.claude.json`. For the default profile this file is `~/.claude.json`, outside `~/.claude`; for other profiles it is `<dir>/.claude.json`.
+- **Memories**: `projects/<name>/memory/*.md` with frontmatter (`name`, `description`, `metadata.type`), plus a `MEMORY.md` index with one `- [Title](file.md) — description` line per memory.
+- **Settings precedence**: `settings.local.json` wins over `settings.json`. `effective()` finds where a value lives, and writes go to that file.
+- **Settings schema**: dropdown options in `SETTING_FIELDS` come from the schema inside the Claude Code binary (`SCHEMA_VERSION`); the `/check-settings-schema` skill walks through the check. To check them after a Claude Code update, run `strings -n 6 "$(readlink -f "$(which claude)")"` and search for `<key>:()=>`. For example `effortLevel:()=>B(["low",…])` is an enum, while `o()` means any string, which gets a free text field. Lists referenced by name, like `B(vZe)`, are defined elsewhere as `vZe=[…]`. Always keep a current value that is not in the list as an option; never drop it.
+- **Sharing**: relative symlinks (`../.claude/skills`) to the first profile in `config.json`, the source. Never chain links through secondary profiles.
+- **Shared memory**: a project's `memory/` can be a relative link to the same project's `memory/` in any other profile, the holder (`../../../.claude/projects/<name>/memory`); a link always points to a real folder, never to another link. `memory_holder()` and `memory_sharers()` in `paths.py` find them. `merge_dir()` carries a link (`carry_memory_link()`) instead of merging what it points to, and `check_memory_users()` refuses to move, relink, merge or delete the holder's project (and `check_delete()` the holder profile) while others use it.
+- **claude.ai connectors**: they come with the account. `claudeAiMcpEverConnected` in `.claude.json` lists the ones connected in the profile (`"claude.ai Gmail"`); a deny rule `mcp__claude_ai_Gmail` (name normalized like Claude Code's `mcp__` tool names, see `connector_rule()`) blocks one in a profile, `"disableClaudeAiConnectors": true` blocks them all. Claude Code never shortens that list: `connectors_check()` runs `claude mcp list` (cached an hour, it starts every MCP server of the profile) to learn the account's current connectors; tests use a fake `claude` in the fake home's `~/.local/bin`.
+- **Release notes**: `static/whatsnew.json` (shown in the app after an update) and `docs/changelog.md` are built from `CHANGELOG.md` by `scripts/release.py`, which also updates the Homebrew tap (`andreaiannarone/homebrew-cc-profiles`). Never edit them by hand; tests check they match.
+- **Installer**: the commands in `INSTALL_METHODS` come from the official docs (code.claude.com/docs/en/setup). For tests, `CC_PROFILES_INSTALL_DRYRUN=1` (plus `CC_PROFILES_INSTALL_DRYRUN_CODE=7` to simulate a failure) runs `echo` instead of installing.
+- **Self-update**: updating only on click; the check runs by itself at most once a day (`update_daily()` in `cli.py`, `auto_check()`, the answer cached in `~/.cc-profiles/update-check.json`) unless `"update_check": false`; test servers set `CC_PROFILES_UPDATE_CHECK=0` (`child_env()`), so they never reach PyPI. `UPDATE_COMMANDS` holds the fixed pipx, uv and brew commands; `install_kind()` picks one from where the code runs (`/pipx/venvs/`, `/uv/tools/`, `/Cellar/cc-profiles/`, or `source`); after a successful update `restart_soon()` re-executes the server on the same port. An unexpected error after Homebrew deleted the Python the server started on (`python_replaced()`: the standard library's folder is gone) restarts it the same way (`unexpected_error()`, with `restarting` in the answer: the page waits and reloads); tests point `CC_PROFILES_STDLIB_DIR` to a folder they delete. Right after a release PyPI's JSON API is ahead of the download index: `index_lag()` turns the resulting pip/pipx/uv output (`INDEX_LAG_SIGNS`), or an installed version that did not change, into a "try again in a few minutes" answer (`retry`, raw output in `details`). For tests, `CC_PROFILES_PYPI_URL` points the check to a `file://` JSON, `CC_PROFILES_UPDATE_DRYRUN=1` skips the update, and `CC_PROFILES_INSTALL_KIND=pipx` (with a fake `pipx` first on `PATH`) runs the update path without a real install. `cc-profiles uninstall` and `reinstall` (`selfinstall.py`) use the same install kinds with the fixed `UNINSTALL_COMMANDS` and `REINSTALL_COMMANDS`; tests run them with `CC_PROFILES_INSTALL_KIND=pipx` and a fake `pipx` in the fake home's `~/.local/bin`.
+
+## Known gotchas
+
+- Backups must be listed and restored by their `created` timestamp, not by name: names only have seconds, and operations in the same second depend on each other.
+- A `projects/` folder may hold only memories and no conversation: "no conversations" does not mean "empty".
+- `settings.local.json` and `plugins/installed_plugins.json` contain absolute paths to the profile folder. When copying a profile, rewrite them unless that part is shared.
+- External programs (`claude`, `brew`, `npm`, `node`) are looked up with `find_tool()`, which adds `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` to `PATH`. The app may have been started from a terminal that does not have them yet.
+- The Mac app (`~/Applications/cc-profiles.app`) is ours only with `CCProfilesManaged` in its Info.plist (`APP_MARK`): never rewrite or remove another one. Tests use a fake program (`CC_PROFILES_APP_BINARY`); never open the real app on the real home. The server adds the app at its first start on macOS (`ensure_app()`, remembered as `"mac_app"` in `config.json`); tests set `CC_PROFILES_AUTO_APP=0` (`child_env()`).
+- New profiles get a launcher in `~/.local/bin` marked with `LAUNCHER_MARK`. Only files with that mark may be rewritten or removed. The same goes for `commands/cc-profiles.md` and `COMMAND_MARK`. Aliases from older setups in `~/.zshrc`, `~/.bashrc` and `~/.bash_profile` are handled by `rewrite_alias()`, which touches only the alias line and the `# Claude Code:` comment above it.
+
+- Listings reuse file contents through `cached_read()`, keyed on each file's stat (see `docs/architecture.md`, Caches). Before a write, read afresh (`history_lines()`, `memory_files(d, fresh=True)`, `read_json()`): never decide a write on a time-keyed cache.
+
+## Style
+
+- UI text, messages and comments in English. Sentence case, buttons named after their action, concrete numbers. See `DESIGN.md`.
+- Error messages say what happened and what to do, e.g. `ApiError("Folder does not exist: …")`.
+- Add code to the right module and follow the existing patterns. A module imports only from the modules above it in `docs/architecture.md`: if two areas need the same helper, move it down (usually into `core.py`) instead of creating a cycle. Read `core.PORT` and `core.ALLOWED_HOSTS` through `core`, never by name.

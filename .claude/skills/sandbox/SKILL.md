@@ -4,7 +4,7 @@ description: Start cc-profiles on a fake home with sample profiles, projects and
 ---
 # Run cc-profiles on a sandbox
 
-The app writes into Claude Code's own files, so it never runs on the real home folder (see CLAUDE.md; the `sandbox_guard.py` hook enforces it). This skill builds a fake home and starts the app on it.
+The app writes into Claude Code's own files, so it never runs on the real home folder (see AGENTS.md; the `sandbox_guard.py` hook enforces it). This skill builds a fake home and starts the app on it.
 
 1. Build the fake home. It prints its path:
 

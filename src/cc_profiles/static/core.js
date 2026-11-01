@@ -12,6 +12,8 @@ const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: ""
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const label = id => id === "shared" ? "All profiles" : (S.profiles.find(p => p.id === id)?.label || id);
+// a project that needs fixing: a missing folder or the wrong profile; "not assigned" is only a note
+const isProblem = r => r.issues.some(i => i.kind !== "unclassified");
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 // While a panel loads: the logo's two mascots hopping in turn (class spinner too, for code that waits for it to go)
 const LOADER = `<span class="spinner loader">${$("header .logo").outerHTML}</span>`;
@@ -48,20 +50,54 @@ async function waitForRestart(hint) {
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
 }
-function toast(msg, sub, err) {
+// action: { label, run } adds a button. A toast stays while the pointer or the focus is on it.
+function toast(msg, sub, err, action) {
   const t = document.createElement("div");
-  t.className = "toast" + (err ? " err" : "");
+  t.className = "toast" + (err ? " err" : "") + (action ? " act" : "");
   t.setAttribute("role", err ? "alert" : "status");
-  t.innerHTML = esc(msg) + (sub ? `<small>${esc(sub)}</small>` : "");
+  t.innerHTML = `<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>${action ? `<button class="btn small">${esc(action.label)}</button>` : ""}`;
+  if (action) $("button", t).onclick = () => { t.remove(); action.run(); };
   $("#toasts").append(t);
-  setTimeout(() => t.remove(), err ? 9000 : 6000);
+  let timer;
+  const wait = () => { clearTimeout(timer); timer = setTimeout(() => t.remove(), err ? 9000 : action ? 12000 : 6000); };
+  t.addEventListener("mouseenter", () => clearTimeout(timer)); t.addEventListener("mouseleave", wait);
+  t.addEventListener("focusin", () => clearTimeout(timer)); t.addEventListener("focusout", wait);
+  wait();
 }
+// An operation's result, with Undo when it wrote a backup: Undo restores it, like Backups → Restore
 async function run(fn) {
-  try { const r = await fn(); if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : ""); return r; }
-  catch (e) { toast(e.message, "", true); throw e; }
+  try {
+    const r = await fn();
+    if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : "", false,
+      r.backup ? { label: "Undo", run: () => undoBackup(r.backup) } : undefined);
+    return r;
+  } catch (e) { toast(e.message, "", true); throw e; }
+}
+async function undoBackup(backup) {
+  const r = await run(() => api("/api/backups/restore", { name: backup.split("/").pop() })).catch(() => null);
+  if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
+  if (r) await reloadTab();
 }
 
 // ---------- modal ----------
+// Keyboard focus in dialogs: Tab and Shift+Tab go round inside the box, and on close the focus
+// goes back to the button that opened it (found again by its data-* if the list was drawn again)
+function trapTab(e, box) {
+  if (e.key !== "Tab") return;
+  const all = [...box.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.getClientRects().length);
+  if (!all.length) return;
+  const first = all[0], last = all[all.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !box.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (document.activeElement === last || !box.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+}
+function refocus(el) {
+  if (!el || el === document.body) return;
+  if (el.isConnected) return el.focus();
+  const attrs = [...el.attributes].filter(a => a.name.startsWith("data-") || a.name === "id");
+  if (!attrs.length) return;
+  document.querySelector(el.tagName + attrs.map(a => `[${a.name}="${CSS.escape(a.value)}"]`).join(""))?.focus();
+}
 function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
   return new Promise(resolve => {
     const bg = document.createElement("div");
@@ -71,8 +107,9 @@ function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
       <div class="body">${body}</div>
       <div class="foot">${actions.map((a, i) => a.label ? `<button class="btn ${a.kind || ""}" data-i="${i}">${esc(a.label)}</button>` : "").join("")}
         <button class="btn" data-close>${esc(cancel)}</button></div></div>`;
-    const close = v => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
-    const onKey = e => { if (e.key === "Escape") close(null); };
+    const back = document.activeElement;
+    const close = v => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); setTimeout(() => { if (!$(".modal-bg")) refocus(back); }); };  // unless another dialog opened
+    const onKey = e => { if (e.key === "Escape") close(null); else trapTab(e, $(".modal", bg)); };
     document.addEventListener("keydown", onKey);
     bg.addEventListener("click", e => {
       if (e.target === bg || /** @type {Element} */ (e.target).hasAttribute("data-close")) return close(null);
@@ -84,6 +121,14 @@ function modal({ title, sub, body = "", actions = [], cancel = "Cancel" }) {
     document.body.append(bg);
     ($("input, select", bg) || $("[data-i]", bg))?.focus();
   });
+}
+// Cancel in an editor: enabled once something changes, it puts back what was last saved
+function bindCancel(btn, reset) {
+  if (!btn) return;
+  const box = btn.closest(".editor");
+  const on = () => { btn.disabled = false; };
+  box.addEventListener("input", on); box.addEventListener("change", on);
+  btn.onclick = () => { reset(); btn.disabled = true; };
 }
 async function confirmBox(title, sub, okLabel = "Confirm", kind = "primary") {
   const r = await modal({ title, sub, actions: [{ label: okLabel, kind, value: true }] });
@@ -99,13 +144,13 @@ async function loadProfiles() {
         ${p.active ? `<span class="live" title="A conversation was written in the last 2 minutes">session open</span>` : ""}</div>
       <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
       <div class="meta"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code></div>
-      <div class="nums"><div><b>${p.conv}</b><span>conversations</span></div>
-        <div><b>${p.projects}</b><span>projects</span></div><div><b>${p.memories}</b><span>memories</span></div></div>
+      <div class="nums">${[[p.conv, "conversations", "conv."], [p.projects, "projects", "proj."], [p.memories, "memories", "mem."]].map(([n, l, s]) =>
+        `<div><b>${n}</b><span><span class="l">${l}</span><span class="s" aria-hidden="true">${s}</span></span></div>`).join("")}</div>
     </div>`).join("") + `<button class="pcard add" data-newprofile>+ New profile</button>`;
 }
 async function loadProjects() {
   S.projects = await api("/api/projects");
-  const n = S.projects.filter(r => r.issues.length).length;
+  const n = S.projects.filter(isProblem).length;
   const c = $("#cnt-projects"); c.hidden = !n; c.textContent = n; syncNav();
 }
 async function refresh() { await Promise.all([loadProfiles(), loadProjects()]); render(); }

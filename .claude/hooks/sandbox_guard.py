@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Andrea Iannarone
 """PreToolUse hook: never start cc-profiles on the real home folder.
 
-CLAUDE.md says to run the app only against a sandbox HOME, because even a first
+AGENTS.md says to run the app only against a sandbox HOME, because even a first
 start writes ~/.cc-profiles/config.json, and every operation writes into the real
 Claude Code profiles. This hook turns that rule into a check: a Bash command that
 runs cc-profiles (or python -m cc_profiles) without HOME=<another folder> in front

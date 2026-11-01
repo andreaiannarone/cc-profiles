@@ -66,11 +66,14 @@ def test_theme_and_about_panels_open(page_on_sandbox):
     page, errors = page_on_sandbox
     page.click("#about-btn")
     page.wait_for_selector("#upd-check", timeout=15000)
+    assert page.get_attribute("html", "data-theme") == "dark"  # dark until another choice
+    assert page.get_attribute('#ab-theme [data-theme-set="dark"]', "aria-pressed") == "true"
     page.click('#ab-theme [data-theme-set="light"]')  # the theme is picked in the About panel
     assert page.get_attribute("html", "data-theme") == "light"
     assert page.get_attribute('#ab-theme [data-theme-set="light"]', "aria-pressed") == "true"
-    page.click('#ab-theme [data-theme-set="system"]')
-    assert page.get_attribute("html", "data-theme") is None
+    assert page.eval_on_selector_all("#ab-theme [data-theme-set]", "bs => bs.map(b => b.textContent)") == ["Dark", "Light"]
+    page.click('#ab-theme [data-theme-set="dark"]')
+    assert page.get_attribute("html", "data-theme") == "dark"
     assert "cc-profiles" in page.inner_text(".drawer")
     page.wait_for_selector("#mac-app-add")
     assert "a window of its own" in page.inner_text("#mac-app")
@@ -158,11 +161,15 @@ def test_usage_tab(page_on_sandbox):
     page.keyboard.press("u")
     page.wait_for_selector('#tabs button[data-tab="usage"][aria-current="page"]')
     page.wait_for_selector(".uchart svg g.day")
-    assert page.eval_on_selector_all(".uchart g.day", "gs => gs.length") == 30
+    assert page.eval_on_selector_all(".uchart:not(.qchart) g.day", "gs => gs.length") == 30
     assert "estimate" in page.inner_text("#main") and "not billed per token" in page.inner_text("#main")
     assert page.query_selector("text=Profiles") is not None  # per-profile table with All profiles
+    # the plan's weekly limit, recorded when the page checked the limits at start: today's bar, 81 %, orange
+    page.wait_for_selector(".qchart rect.bar")
+    assert "Sam Example" in page.inner_text(".qchart") and "highest 81%" in page.inner_text(".qchart")
+    assert page.eval_on_selector_all(".qchart rect.bar", "rs => rs.map(r => r.getAttribute('class'))") == ["bar q-mid"]
     page.click('[data-udays="7"]')
-    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 7")
+    page.wait_for_function("() => document.querySelectorAll('.uchart:not(.qchart) g.day').length === 7")
     assert page.get_attribute('[data-udays="7"]', "aria-pressed") == "true"
     page.click('[data-uprof="work"]')
     page.wait_for_selector('[data-uprof="work"].on')
@@ -170,7 +177,7 @@ def test_usage_tab(page_on_sandbox):
     assert "~/code/work/api" in page.inner_text("#main")  # work, last 7 days
     assert "~/code/personal/blog" not in page.inner_text("#main")
     page.click('[data-udays="14"]')
-    page.wait_for_function("() => document.querySelectorAll('.uchart g.day').length === 14")
+    page.wait_for_function("() => document.querySelectorAll('.uchart:not(.qchart) g.day').length === 14")
     assert page.evaluate("document.documentElement.scrollWidth") <= 1440
     assert errors == []
 
@@ -215,6 +222,74 @@ def test_no_serious_accessibility_violations(page_on_sandbox, theme):
     assert found == {}, "\n".join(f"{t}: {x}" for t, vs in found.items() for x in vs)
 
 
+def test_projects_and_backups_fit_a_phone(page_on_sandbox):
+    """At 390 px: no sideways scroll, every project and backup button inside the screen, short card labels."""
+    page, errors = page_on_sandbox
+    page.set_viewport_size({"width": 390, "height": 844})
+    inside = """sel => [...document.querySelectorAll(sel)].every(b => { const r = b.getBoundingClientRect();
+        return r.left >= 0 && r.right <= innerWidth; })"""
+    open_tab(page, "projects")
+    page.wait_for_selector(".ptable td.acts button")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert page.evaluate(inside, ".ptable td.acts button")
+    assert page.is_visible(".pcard .nums .s")  # the long label stays, 1 px wide, for screen readers
+    assert page.evaluate("document.querySelector('.pcard .nums .l').getBoundingClientRect().width") <= 1
+    page.evaluate("async () => { await api('/api/settings/fields', {profile: 'default', values: {language: 'Italiano'}}); }")
+    open_tab(page, "backups")
+    page.wait_for_selector(".bk .acts button")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert page.evaluate(inside, ".bk .acts button")
+    assert page.evaluate("document.querySelector('.bk .t').getBoundingClientRect().width") > 300  # the title is not squeezed
+    assert errors == []
+
+
+def test_unassigned_projects_are_a_note_and_assign_shows_what_it_takes(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "projects")
+    page.wait_for_selector(".ptable")
+    counts = page.evaluate("""() => ({ badge: +document.querySelector('#cnt-projects').textContent || 0,
+        problems: S.projects.filter(isProblem).length,
+        unassigned: S.projects.filter(r => r.issues.some(i => i.kind === 'unclassified')).length })""")
+    assert counts["badge"] == counts["problems"]  # the tab counts only what needs fixing
+    page.evaluate("() => { doRule(S.projects.find(r => r.path)); }")  # not awaited: it waits for the dialog
+    page.wait_for_selector("#rmatch")
+    page.fill(".modal input.text", "/")
+    assert "Matches " in page.inner_text("#rmatch")
+    page.fill(".modal input.text", "no-such-folder-anywhere")
+    assert "Matches no project yet" in page.inner_text("#rmatch")
+    page.select_option("#rk", "exact")
+    assert "Matches 1 project" in page.inner_text("#rmatch")  # the folder itself
+    cancel(page)
+    assert errors == []
+
+
+def test_compare_lists_only_the_settings_that_differ(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "compare")
+    page.select_option("#cmp-b", label="Work")
+    page.wait_for_selector("#cmp-all")
+    rows = lambda: page.evaluate("document.querySelectorAll('.cmp')[0].querySelectorAll('tbody tr').length")
+    some = rows()
+    assert page.evaluate("[...document.querySelectorAll('.cmp')[0].querySelectorAll('tbody tr')].every(r => r.classList.contains('diff'))")
+    page.click("#cmp-all")
+    assert rows() > some and page.get_attribute("#cmp-all", "aria-pressed") == "true"
+    page.click("#cmp-all")
+    assert rows() == some
+    assert errors == []
+
+
+def test_restore_says_what_it_undoes(page_on_sandbox):
+    page, errors = page_on_sandbox
+    page.evaluate("async () => { await api('/api/settings/fields', {profile: 'default', values: {language: 'Italiano'}}); }")
+    open_tab(page, "backups")
+    page.click("[data-restore] >> nth=0")
+    page.wait_for_selector(".modal ul.steps li")
+    assert "step" in page.inner_text(".modal")
+    assert "primary" not in page.get_attribute("[data-restore] >> nth=0", "class")  # Show changes is the routine action
+    cancel(page)
+    assert errors == []
+
+
 def cancel(page):
     page.click(".modal [data-close]")
     page.wait_for_selector(".modal", state="detached")
@@ -224,6 +299,7 @@ def test_previews_and_apply_to_all_confirmations_render(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")
     page.click('[data-pdel="work"]')
+    assert page.is_checked('.modal input[name="pd"][value="merge"]')  # Work has conversations: moving them is the default
     page.select_option("#pd-into", "client")  # picking a profile picks moving
     page.wait_for_function("() => document.querySelector('#pd-plan')?.textContent.includes('Moves to Client')")
     assert page.is_checked('.modal input[name="pd"][value="merge"]')
@@ -349,9 +425,19 @@ def test_agents_tab(page_on_sandbox):
     page.click('[data-agent="code-reviewer"]')
     page.wait_for_selector("#ag-name")
     assert page.input_value("#ag-model") == "sonnet" and page.input_value("#ag-tools") == "Read, Grep, Glob, Bash"
+    # Cancel puts back what was saved
+    assert page.is_disabled("#agundo")
+    page.fill("#ag-prompt", "Something else")
+    page.select_option("#ag-model", "")
+    page.click("#agundo")
+    assert page.input_value("#ag-model") == "sonnet" and page.input_value("#ag-prompt") != "Something else"
+    assert page.is_disabled("#agundo")
     page.fill("#ag-maxTurns", "15")
     page.click("#agsave")
     page.wait_for_selector(".toast")
+    # the form is drawn again from the saved file (Cancel disabled again): until then, New agent… would be
+    # replaced by the old form, and the typed 15 alone does not prove the redraw
+    page.wait_for_selector("#agundo:disabled")
     page.wait_for_function("() => document.querySelector('#ag-maxTurns')?.value === '15'")
     # a new agent
     page.click("#agnew")
@@ -365,6 +451,95 @@ def test_agents_tab(page_on_sandbox):
     page.click("#agraw")
     assert "name: test-writer" in page.input_value("#agrawtext")
     page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_a_limit_at_90_percent_is_told_once(page_on_sandbox):
+    """From any tab: a toast when a plan limit reaches 90 %, once per limit and reset."""
+    page, errors = page_on_sandbox
+    answer = {"state": "ok", "plan": "max", "checked": 1, "limits": [
+        {"label": "5 h", "percent": 40, "resets_at": None}, {"label": "Week", "percent": 93, "resets_at": "2099-01-05T10:00:00Z"}]}
+    page.route("**/api/quota?*", lambda route: route.fulfill(content_type="application/json", body=json.dumps(answer)))
+    page.evaluate("watchQuotas()")
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('93% of the week limit used'))")
+    assert "Sam Example" in page.inner_text(".toast")
+    page.evaluate("document.querySelectorAll('.toast').forEach(t => t.remove())")
+    page.evaluate("watchQuotas()")
+    page.wait_for_timeout(500)
+    assert not page.query_selector(".toast")  # told already
+    assert errors == []
+
+
+def test_undo_in_the_result_of_an_operation(page_on_sandbox):
+    """The toast after a write offers Undo: it restores that operation's backup and draws the tab again."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click(".plist button")
+    page.click("[data-mfile]")
+    page.wait_for_selector("#mtext")
+    ctx = page.evaluate("({profile: S.mem.profile, project: S.mem.project, file: S.mem.file})")
+    read = f"api(`/api/memory/file?profile=${{'{ctx['profile']}'}}&project=${{encodeURIComponent({json.dumps(ctx['project'])})}}&file=${{'{ctx['file']}'}}`).then(r => r.content)"
+    saved = page.evaluate(read)
+    page.fill("#mtext", saved + "\nA line to undo.")
+    page.click("#msave")
+    page.wait_for_selector(".toast.act button:has-text('Undo')")
+    assert "A line to undo." in page.evaluate(read)
+    page.click(".toast.act button:has-text('Undo')")
+    page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('Restored'))")
+    assert page.evaluate(read) == saved
+    page.wait_for_function("s => document.querySelector('#mtext')?.value === s", arg=saved)  # the editor shows the file again
+    assert errors == []
+
+
+def test_dialogs_keep_and_give_back_the_focus(page_on_sandbox):
+    """Tab stays inside a dialog; Esc gives the focus back to the button that opened it."""
+    page, errors = page_on_sandbox
+    open_tab(page, "profiles")
+    page.focus("#ptemplates")
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".modal")
+    for _ in range(12):
+        page.keyboard.press("Tab")
+        assert page.evaluate("!!document.activeElement.closest('.modal')")
+    page.keyboard.press("Shift+Tab")
+    assert page.evaluate("!!document.activeElement.closest('.modal')")
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => document.activeElement?.id === 'ptemplates'")
+    page.click("#about-btn")
+    page.wait_for_selector("#ab-close")
+    for _ in range(40):
+        page.keyboard.press("Tab")
+    assert page.evaluate("!!document.activeElement.closest('.drawer')")
+    page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_cancel_puts_back_the_saved_text(page_on_sandbox):
+    """Skills and Memories editors: Cancel is enabled by a change and undoes it; Save disables it."""
+    page, errors = page_on_sandbox
+    open_tab(page, "skills")
+    page.click("[data-skill]")
+    page.wait_for_selector("#sktext")
+    saved = page.input_value("#sktext")
+    assert page.is_disabled("#skcancel")
+    page.fill("#sktext", "changed")
+    page.click("#skcancel")
+    assert page.input_value("#sktext") == saved and page.is_disabled("#skcancel")
+    page.fill("#sktext", saved + "\nOne more line.")
+    page.click("#sksave")
+    page.wait_for_selector(".toast")
+    assert page.is_disabled("#skcancel")
+    page.fill("#sktext", "changed")
+    page.click("#skcancel")
+    assert page.input_value("#sktext") == saved + "\nOne more line."
+    open_tab(page, "memories")
+    page.click(".plist button")
+    page.click("[data-mfile]")
+    page.wait_for_selector("#mtext")
+    saved = page.input_value("#mtext")
+    page.fill("#mtext", "changed")
+    page.click("#mcancel")
+    assert page.input_value("#mtext") == saved and page.is_disabled("#mcancel")
     assert errors == []
 
 
@@ -614,6 +789,23 @@ def test_keep_a_backup(page_on_sandbox):
 
 
 
+def test_a_new_version_is_written_in_orange(page_on_sandbox):
+    """About panel: Check for updates writes the new version in the accent orange."""
+    page, errors = page_on_sandbox
+    page.click("#about-btn")
+    page.wait_for_selector("#upd-check", timeout=15000)
+    page.route("**/api/update", lambda route: route.fulfill(content_type="application/json", body=json.dumps(
+        {"current": "0.6.5", "latest": "0.6.6", "newer": True, "can_update": True, "command": "pipx upgrade cc-profiles"})))
+    page.click("#upd-check")
+    page.wait_for_selector("#upd-status .newver")
+    assert page.inner_text("#upd-status .newver") == "0.6.6"
+    color, accent = page.evaluate("""() => [getComputedStyle(document.querySelector('#upd-status .newver')).color,
+        (() => { const s = document.createElement('span'); s.style.color = 'var(--accent)'; document.body.append(s);
+                 const c = getComputedStyle(s).color; s.remove(); return c; })()]""")
+    assert color == accent
+    assert errors == []
+
+
 def test_the_page_waits_for_a_restart_after_a_python_update(page_on_sandbox):
     """The server answers that Python was updated under it and that it is starting again:
     the page shows the restart dialog instead of only the error, then reloads."""
@@ -676,7 +868,7 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert "34%" in rows[0][1] and "resets at" in rows[0][1] and "resets " in rows[1][1]
     assert rows[1][0] == "qrow mid" and rows[0][0] == "qrow"  # orange from 75 %
     assert page.get_attribute('[data-quota="default"] .qbar', "aria-valuenow") == "34"
-    assert "Checked at" in page.inner_text('[data-quota="default"] .qfoot')
+    assert "Checked at" in page.inner_text('[data-qcheck="default"]')
     with page.expect_request(lambda r: "/api/quota?profile=default&fresh=1" in r.url):  # Refresh asks again
         page.click('[data-qrefresh="default"]')
     page.wait_for_selector('[data-quota="default"] .qrow')

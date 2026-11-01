@@ -30,26 +30,50 @@ function accountsHtml() {
     const org = c.organization && !/'s Organization$/.test(c.organization) ? c.organization : "";
     const facts = [c.since && `Member since ${monthYear(c.since)}`, c.subscribed && `subscribed since ${monthYear(c.subscribed)}`,
       c.extra_usage === true ? "extra usage on" : c.extra_usage === false ? "extra usage off" : ""].filter(Boolean);
-    return `<div class="hcard acard"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
-      <div class="hint">${[c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ")}</div>
+    const who = [c.name ? esc(c.email) : "", org && esc(org), c.role && esc(c.role)].filter(Boolean).join(" · ");
+    return `<div class="hcard acard"><div class="ahead"><h2>${esc(c.name || c.email)} ${c.plan ? `<span class="badge b-none">${esc(c.plan)}</span>` : ""}</h2>
+      ${who ? `<span class="hint">${who}</span>` : ""}</div>
       ${c.quota_profile ? quotaHtml(c.quota_profile) : ""}
-      <div class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</div>
-      ${facts.length ? `<div class="m">${esc(facts.join(" · "))}</div>` : ""}</div>`;
+      <div class="afoot"><span class="aprofs"><span class="hint">Used by</span>${c.profiles.map(x => `<span class="aprof${SIGN_IN[x.sign_in] ? " off" : ""}">${badge(x.id)}${SIGN_IN[x.sign_in] ? ` <span>${esc(SIGN_IN[x.sign_in])}</span>` : ""}</span>`).join("")}</span>
+        ${facts.length ? `<span class="m">${esc(facts.join(" · "))}</span>` : ""}
+        ${c.quota_profile ? quotaCheckHtml(c.quota_profile) : ""}</div></div>`;
   };
   return `<div class="section-title">Claude accounts</div>
     <div class="health accounts">${a.accounts.map(card).join("")}</div>
     ${a.not_signed_in.length ? `<div class="hint" style="margin-top:8px">Not signed in to claude.ai: ${a.not_signed_in.map(esc).join(", ")}</div>` : ""}`;
 }
 function loadQuotas(only, fresh) {
-  for (const p of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only)).map(c => ({ id: c.quota_profile }))) {
-    api(`/api/quota?profile=${encodeURIComponent(p.id)}${fresh ? "&fresh=1" : ""}`)
+  for (const c of (S.accounts?.accounts || []).filter(c => c.quota_profile && (!only || c.quota_profile === only))) {
+    const id = c.quota_profile;
+    api(`/api/quota?profile=${encodeURIComponent(id)}${fresh ? "&fresh=1" : ""}`)
       .catch(e => ({ state: "error", message: e.message }))
       .then(q => {
-        S.quota[p.id] = q;
-        const el = document.querySelector(`[data-quota="${p.id}"]`);
-        if (el) el.outerHTML = quotaHtml(p.id);
+        S.quota[id] = q;
+        redrawQuota(id);
+        warnQuota(c, q);
       });
   }
+}
+// Near the end of a limit: a toast once per limit and reset, from any tab. The page checks at start
+// and every 15 minutes (the server asks claude.ai at most every 5); the Mac app sends a notification
+// of its own instead, also with the window closed.
+const QUOTA_WARN = 90;
+async function watchQuotas() {
+  try { S.accounts = await api("/api/accounts"); } catch { return; }
+  loadQuotas();
+}
+function warnQuota(c, q) {
+  if (IN_APP || q?.state !== "ok") return;
+  let told = [];
+  try { told = JSON.parse(localStorage.getItem("cc-profiles.quota-warned") || "[]"); } catch {}
+  for (const l of q.limits.filter(l => l.percent >= QUOTA_WARN)) {
+    const key = `${c.email}|${l.label}|${l.resets_at || ""}`;
+    if (told.includes(key)) continue;
+    told.push(key);
+    toast(`${c.name || c.email}: ${l.percent}% of the ${l.label === "5 h" ? "5-hour" : l.label.toLowerCase()} limit used`,
+      `${resetText(l.resets_at) || "resets later"} · see the Profiles tab`);
+  }
+  try { localStorage.setItem("cc-profiles.quota-warned", JSON.stringify(told.slice(-50))); } catch {}
 }
 // Refresh on a card: ask claude.ai again instead of the answer kept for 5 minutes
 document.addEventListener("click", e => {
@@ -57,7 +81,7 @@ document.addEventListener("click", e => {
   if (!b) return;
   const id = b.dataset.qrefresh;
   delete S.quota[id];
-  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  redrawQuota(id);
   loadQuotas(id, true);
 });
 function signInIssue(id) {
@@ -84,22 +108,33 @@ function bindQuotaMode(seg) {
     if (!b) return;
     try { localStorage.setItem("cc-profiles.quota", b.dataset.quotaSet); } catch {}
     seg.innerHTML = quotaButtons(); $("button.on", seg)?.focus();
-    document.querySelectorAll("[data-quota]").forEach(el => { el.outerHTML = quotaHtml(el.dataset.quota); });
+    document.querySelectorAll("[data-quota]").forEach(el => redrawQuota(el.dataset.quota));
   };
+}
+function redrawQuota(id) {
+  document.querySelectorAll(`[data-quota="${id}"]`).forEach(el => { el.outerHTML = quotaHtml(id); });
+  document.querySelectorAll(`[data-qcheck="${id}"]`).forEach(el => { el.outerHTML = quotaCheckHtml(id); });
+}
+// when the limits were asked, with Refresh: at the end of the card's last line
+function quotaCheckHtml(id) {
+  const q = S.quota[id];
+  if (q?.state !== "ok") return `<span class="qcheck" data-qcheck="${id}"></span>`;
+  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
+  return `<span class="qcheck" data-qcheck="${id}"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>
+    <button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button></span>`;
 }
 function quotaHtml(id) {
   const q = S.quota[id];
   if (!q) return `<div class="quota hint" data-quota="${id}">Checking the plan's limits…</div>`;
   const refresh = `<button class="btn small" data-qrefresh="${id}" title="Ask claude.ai again">Refresh</button>`;
   if (q.state !== "ok") return `<div class="quota hint" data-quota="${id}">${esc(q.message)} ${q.state === "error" || q.state === "expired" ? refresh : ""}</div>`;
-  const checked = q.checked ? new Date(q.checked * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
   return `<div class="quota" data-quota="${id}">${q.limits.map(l => {
     const used = Math.min(100, Math.max(0, l.percent)), level = used >= 90 ? " high" : used >= 75 ? " mid" : "";
     const left = quotaMode() === "left", pc = left ? 100 - used : used;
     return `<div class="qrow${level}"><span class="ql">${esc(l.label)}</span>
       <span class="qbar" role="meter" aria-label="${esc(l.label)} ${left ? "left" : "used"}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}"><i style="width:${pc}%"></i></span>
       <span class="qp">${pc}%</span><span class="hint">${left ? "left · " : ""}${esc(resetText(l.resets_at))}</span></div>`;
-  }).join("")}<div class="qfoot"><span class="hint">${checked ? `Checked at ${checked}` : ""}</span>${refresh}</div></div>`;
+  }).join("")}</div>`;
 }
 function renderSharing() {
   if (S.tab !== "profiles") return;
@@ -426,14 +461,15 @@ async function editProfile(id) {
 async function deleteProfile(id) {
   const p = S.profiles.find(x => x.id === id);
   const others = S.profiles.filter(x => x.id !== id);
+  const keep = others.length > 0 && p.conv + p.memories > 0;  // with something to lose, moving it is the default
   const resP = modal({ title: `Delete ${p.label}?`,
     sub: `<code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}`,
     body: `<div class="form">
       ${p.active ? `<div class="danger-box">A session is open in ${esc(p.label)}: a running Claude Code would keep writing to a folder that is gone. Close it first.
         <label class="check" style="margin-top:8px"><input type="checkbox" id="pd-force"> Delete it anyway</label></div>` : ""}
       <div class="radio" role="radiogroup" aria-label="What happens to its conversations and memories">
-        <label><input type="radio" name="pd" value="" checked> Delete everything</label>
-        ${others.length ? `<label><input type="radio" name="pd" value="merge"> Move its conversations, memories and history to
+        <label><input type="radio" name="pd" value="" ${keep ? "" : "checked"}> Delete everything</label>
+        ${others.length ? `<label><input type="radio" name="pd" value="merge" ${keep ? "checked" : ""}> Move its conversations, memories and history to
           <select id="pd-into" aria-label="Profile to move them to">${others.map(o => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label>` : ""}
       </div>
       <div class="hint" id="pd-plan" aria-live="polite"></div>

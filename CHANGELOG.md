@@ -5,6 +5,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Undo** in the message after every change: it restores that change's backup, as Backups → Restore does, and shows the tab again with the files as they are. The message stays 12 seconds, longer while the pointer or the focus is on it.
+- Plan limits: while the page is open, cc-profiles checks them every 15 minutes, and says once when a limit reaches 90 %. The Mac app sends a notification instead, also with its window closed, and shows the 5-hour window's use next to its menu bar icon, with every account's limits in its menu.
+- Usage tab: **Plan limits**, a chart per claude.ai account of the highest share of the weekly limit used each day, recorded whenever cc-profiles checks the limits (kept 90 days in `~/.cc-profiles/quota-history.json`).
+- Projects → **Assign…** lists the projects the rule takes while you type, warns when it would move one that already has a profile, and can make a rule for **only this folder**.
+- Skills, Agents and Memories editors: **Cancel** puts back what was last saved. It is enabled once something changes.
+
+### Changed
+- The page is dark by default, as is the Mac app's window until the page loads. The theme picker in the About panel (ⓘ) offers **Dark** and **Light**: the System option is gone, and a page that followed the system is now dark.
+- About panel: when a new cc-profiles is out, its version number is written in orange.
+- Buttons other than the orange ones stand out from the cards: a shade darker in the light theme, lighter in the dark one; text fields and dropdowns have a background of their own too.
+- Profiles tab: on each Claude account card, the email, organization and role sit next to the name and plan, and the profiles using it, the account facts and when its limits were checked, with Refresh, share one line under the limits.
+- Projects: a project only waiting for a profile is a grey note, listed after the ones to fix, and the number on the tab counts only those to fix.
+- Delete a profile: when it has conversations or memories, moving them to another profile is the option already chosen.
+- Backups: **Restore** is an ordinary button (Show changes comes first), and its confirmation lists the steps it undoes.
+- Memories: the selected memory card has a dark outline instead of an orange one, which looked like the keyboard focus.
+- Projects: **Merge into…** explains itself when you point at it.
+- Memories: the selected project in the list has the same colors as the selected profile above it.
+- Compare: **Settings** lists only the settings that differ, with how many of all; **Show all** brings back the ones that are the same.
+- Compare: rows that differ have a hint of amber instead of a solid background (the **differs** and **only in** badges mark them), and the Plugins table has no empty header.
+
+### Fixed
+- At phone width, Projects and Backups show each row as a card, with the path or title on top and its buttons underneath, and the profile cards go two by two with short labels.
+- Dialogs and side panels keep the keyboard focus inside them, and give it back to the button that opened them when they close.
+- Placeholders in text fields are readable (WCAG AA contrast) in both themes.
+- Settings no longer scrolls sideways at phone width.
+- Memories: **also show projects without memories** has a larger checkbox, and its whole label can be clicked.
+
 ## [0.6.6] - 2026-11-01
 
 ### Added

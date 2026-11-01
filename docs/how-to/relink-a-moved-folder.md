@@ -13,8 +13,8 @@ Open the **Projects** tab. The project is under **Needs attention**, with its ol
 Click **Relink…**. cc-profiles suggests folders with the same name, found by searching your home folder up to 5 levels deep. Pick the right one, type the new path, or click **Choose…** to pick the folder in your system's dialog, and confirm.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/relink-dark.jpg">
-  <img src="../assets/screenshots/relink-light.jpg" alt="The Relink to a folder dialog, with the new path of the project typed in and the Choose button" width="560" height="224" loading="lazy">
+  <source media="not all" srcset="../assets/screenshots/relink-light.jpg">
+  <img src="../assets/screenshots/relink-dark.jpg" alt="The Relink to a folder dialog, with the new path of the project typed in and the Choose button" width="560" height="224" loading="lazy">
 </picture>
 
 Relinking works on one profile at a time. If the project has history in more than one profile, relink it in each: the **Health** tab lists it under every profile concerned. In that profile, relinking:
