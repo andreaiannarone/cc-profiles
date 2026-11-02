@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Automatic export**, in the About panel: every profile exported every day or every week, conversations included and never the login, into `iCloud Drive/cc-profiles exports` (or `~/.cc-profiles/exports`), keeping the last 3 of each. Off until you turn it on; **Export now** runs it at once, and the panel shows the last and next export.
+- A profile whose folder is gone can be put back from its latest export: **Restore from export…** in the Profiles tab, with Undo. The Mac app sends a notification when a profile's folder disappears.
+
 ### Fixed
 - A GitHub account renamed after signing in: the GitHub CLI keeps the old name, which may now belong to someone else. cc-profiles asks `gh` whose account it really is, suggests the commit identity of that account (not of whoever has the old name now), and the GitHub table says **renamed** with the new name and **Sign in again…**.
 - A new profile made from a base commits as its own GitHub account: the commit identity copied from a base signed in to another account is replaced by the new account's, and the message says so. A profile without an identity gets its account's right away, instead of at the next start.

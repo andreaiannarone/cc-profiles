@@ -69,6 +69,10 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
 | `GET /api/macapp` | | the [Mac app](mac-app.md): `{supported: false}` outside macOS, else `{supported, state, path, port}`, `state` being `missing`, `current`, `outdated` (another version, or another port than this server) or `foreign` (an app cc-profiles did not create) |
 | `GET /api/terminal` | | Open in Terminal: `{supported: false}` outside macOS and a Linux graphical session, else `{supported, terminal, choices}`, `terminal` being the one projects open in and `choices` the ones installed |
+| `GET /api/autoexport` | | the automatic export: `every` (`day`, `week` or `null`), `dir`, `icloud`, `keep`, `running` and the `profile` being exported, `last` and `next` (Unix times), and `results`: per profile its `file` and `size`, or an `error` |
+| `POST /api/autoexport` | `{every}` | turn the automatic export on (`day`, `week`) or off (anything else), with a backup |
+| `POST /api/autoexport/run` | `{}` | export every profile now, in the background: follow it with `GET /api/autoexport` |
+| `POST /api/profiles/restore-export` | `{id}` | put back the folder of a profile that is gone from its latest export (`restore_from` in `GET /api/profiles`), with a backup |
 | `GET /api/update/auto` | | the same fields from the last answer, without asking PyPI, plus `enabled` (the automatic daily check) and `checked` (when PyPI was last asked) |
 | `POST /api/update/auto` | `{enabled}` | turn the automatic daily check on or off (`update_check` in `config.json`), with a backup |
 | `GET /api/claude/status` | | whether Claude Code is installed, install methods, install job state |

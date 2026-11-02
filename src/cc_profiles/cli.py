@@ -24,6 +24,7 @@ from .projects import list_projects
 from .search import warm_search
 from .usage import warm_usage
 from .updater import auto_check
+from .autoexport import auto_export_loop
 from .selfinstall import (REINSTALL_COMMANDS, UNINSTALL_PAGE, package_command, purge_data, remove_traces,
                           run_package, uninstall_plan)
 from .web import Handler, Server
@@ -154,6 +155,7 @@ def serve(port, open_browser):
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     threading.Thread(target=update_daily, daemon=True).start()
+    threading.Thread(target=auto_export_loop, daemon=True).start()
     signal.signal(signal.SIGTERM, stop_gracefully)
     url = f"http://127.0.0.1:{port}"
     try:

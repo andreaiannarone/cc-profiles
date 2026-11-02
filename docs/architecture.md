@@ -42,6 +42,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |
+| `autoexport.py` | automatic exports of every profile (daily or weekly, the last 3 of each kept) into iCloud Drive or `~/.cc-profiles/exports`, in a background thread; a profile whose folder is gone restored from its latest export |
 | `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
 | `plugins.py` | installed plugins, enable and disable, copy to another profile |
 | `editprofile.py` | rename, change command, delete with optional merge, with a preview |

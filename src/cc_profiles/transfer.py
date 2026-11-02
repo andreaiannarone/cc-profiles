@@ -136,6 +136,62 @@ def export_profile(pid, projects, template=False):
     return tmp, f"cc-profiles-{prof['id']}-{time.strftime('%Y-%m-%d')}.zip"
 
 
+def open_export(zip_path):
+    """(open ZipFile, manifest) of an export, every entry checked before anything is written."""
+    try:
+        z = zipfile.ZipFile(zip_path)
+    except (zipfile.BadZipFile, OSError):
+        raise ApiError("This is not a zip file. Export the profile from cc-profiles and try again.")
+    try:
+        infos = z.infolist()
+        for info in infos:
+            check_zip_entry(info)
+        try:
+            man = json.loads(z.read(EXPORT_MANIFEST))
+        except (KeyError, ValueError):
+            raise ApiError("This zip was not exported by cc-profiles: it has no cc-profiles-export.json.")
+        if man.get("app") != "cc-profiles" or man.get("format") != EXPORT_FORMAT:
+            raise ApiError("This export was made by a newer cc-profiles: update cc-profiles and try again.")
+        if sum(i.file_size for i in infos) > IMPORT_MAX_UNPACKED:
+            raise ApiError("The archive is too big once unpacked (over 5 GB).")
+    except Exception:
+        z.close()
+        raise
+    return z, man
+
+
+def unpack_export(z, new, skipped, config=None):
+    """Write an export's files into the folder new (already created and journaled). Items in
+    skipped are left out (they get linked instead): skipped[item] collects what was left.
+    config: where its .claude.json goes (new/.claude.json by default; None-like False: nowhere)."""
+    for info in z.infolist():
+        if info.is_dir():
+            continue
+        top, _, rest = info.filename.partition("/")
+        if top == "profile":
+            item, _, inner = rest.partition("/")
+            if item in skipped:  # linked to the source instead
+                skipped[item].add(inner.split("/")[0] or item)
+                continue
+            dst = os.path.join(new, rest)
+        elif top == "home-memory":
+            dst = os.path.join(new, "projects", san(HOME), "memory", rest)
+        else:
+            continue
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        data = z.read(info)
+        if top == "profile" and holds_profile_paths(rest):
+            data = data.decode(errors="replace").replace(DIR_PLACEHOLDER, new).encode()
+        with open(dst, "wb") as f:
+            f.write(data)
+    if config is False:
+        return
+    cfg = json.loads(z.read("claude.json")) if "claude.json" in z.namelist() else {}
+    for k in ("oauthAccount", "userID"):
+        cfg.pop(k, None)
+    write_json(config or os.path.join(new, ".claude.json"), cfg)
+
+
 def check_zip_entry(info):
     name = info.filename
     parts = name.split("/")
@@ -174,22 +230,8 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
     share: items linked to the source profile instead of being unpacked from the archive."""
     share = share_items(share)
     skipped = {i: set() for i in share}
-    try:
-        z = zipfile.ZipFile(zip_path)
-    except (zipfile.BadZipFile, OSError):
-        raise ApiError("This is not a zip file. Export the profile from cc-profiles and try again.")
+    z, man = open_export(zip_path)
     with z:
-        infos = z.infolist()
-        for info in infos:  # check everything before writing anything
-            check_zip_entry(info)
-        try:
-            man = json.loads(z.read(EXPORT_MANIFEST))
-        except (KeyError, ValueError):
-            raise ApiError("This zip was not exported by cc-profiles: it has no cc-profiles-export.json.")
-        if man.get("app") != "cc-profiles" or man.get("format") != EXPORT_FORMAT:
-            raise ApiError("This export was made by a newer cc-profiles: update cc-profiles and try again.")
-        if sum(i.file_size for i in infos) > IMPORT_MAX_UNPACKED:
-            raise ApiError("The archive is too big once unpacked (over 5 GB).")
         if template:  # the template's own label and id belong to the profile it was saved from
             label, pid, new, command = check_new_profile(label, pid)
             bk = Backup("new-profile", f"New profile {label} from template {template} ({pretty(new)})")
@@ -200,30 +242,7 @@ def op_import_profile(zip_path, label, pid, template=None, share=None):
         bk.created(new)  # journaled first: a failure while unpacking leaves a folder that Restore removes
         os.makedirs(new)
         try:
-            for info in infos:
-                if info.is_dir():
-                    continue
-                top, _, rest = info.filename.partition("/")
-                if top == "profile":
-                    item, _, inner = rest.partition("/")
-                    if item in skipped:  # linked to the source below instead
-                        skipped[item].add(inner.split("/")[0] or item)
-                        continue
-                    dst = os.path.join(new, rest)
-                elif top == "home-memory":
-                    dst = os.path.join(new, "projects", san(HOME), "memory", rest)
-                else:
-                    continue
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                data = z.read(info)
-                if top == "profile" and holds_profile_paths(rest):
-                    data = data.decode(errors="replace").replace(DIR_PLACEHOLDER, new).encode()
-                with open(dst, "wb") as f:
-                    f.write(data)
-            cfg = json.loads(z.read("claude.json")) if "claude.json" in z.namelist() else {}
-            for k in ("oauthAccount", "userID"):
-                cfg.pop(k, None)
-            write_json(os.path.join(new, ".claude.json"), cfg)
+            unpack_export(z, new, skipped)
             link_shared(new, share, bk)  # before the command: a shared commands/ gets it in the source
             if command_wanted() and command_state(new) in ("missing", "outdated"):
                 write_command(new, bk, pid)

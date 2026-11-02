@@ -45,6 +45,7 @@ function renderAbout(dr, a) {
       <div class="upd"><span class="dl" id="ab-theme-l">Theme</span><div class="seg small" id="ab-theme" role="group" aria-labelledby="ab-theme-l">${themeButtons()}</div></div>
       <div class="upd"><span class="dl" id="ab-quota-l">Plan limits</span><div class="seg small" id="ab-quota" role="group" aria-labelledby="ab-quota-l">${quotaButtons()}</div><span class="hint">how much is used, or how much is left</span></div>
       ${S.term?.choices?.length > 1 ? `<label class="upd"><span class="dl">Open projects in</span><select id="term-pick">${S.term.choices.map(c => `<option${c === S.term.terminal ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
+      <div id="ab-export"></div>
       <label class="check upd"><input type="checkbox" id="upd-auto"${S.upd?.enabled === false ? "" : " checked"}> <span>Check for updates automatically, once a day<br><span class="hint">PyPI sees your IP address; updating still needs your click</span></span></label></div>
     <p class="hint" style="margin:0;text-align:center">© 2026 <a href="https://andreaiannarone.com" target="_blank" rel="noopener">Andrea Iannarone</a></p>`;
   bindTheme($("#ab-theme", dr));
@@ -59,11 +60,45 @@ function renderAbout(dr, a) {
   $("#ab-news", dr).onclick = () => showWhatsNew();
   $("#ab-report", dr).onclick = () => reportProblem(a);
   loadMacApp(dr);
+  loadAutoExport(dr);
   const tp = $("#term-pick", dr);
   if (tp) tp.onchange = async () => {
     try { await run(() => api("/api/terminal", { terminal: tp.value })); S.term = await api("/api/terminal"); } catch { tp.value = S.term.terminal; return; }
     if (S.tab === "projects") renderProjects();
   };
+}
+// Automatic export: every profile, conversations included, into a folder (iCloud Drive when there is one)
+const EXPORT_EVERY = [["", "Off"], ["day", "Every day"], ["week", "Every week"]];
+async function loadAutoExport(dr) {
+  const box = $("#ab-export", dr);
+  if (!box) return;
+  let x;
+  try { x = await api("/api/autoexport"); } catch { return; }
+  if (!box.isConnected) return;
+  const on = x.every || "";
+  const done = x.results.filter(r => r.file), failed = x.results.filter(r => r.error);
+  const where = `<code>${esc(x.dir)}</code>${x.icloud ? " (iCloud Drive)" : ""}`;
+  const status = x.running ? `${LOADER} Exporting${x.profile ? " " + esc(x.profile) : ""}…`
+    : x.last ? `Last export ${esc(when(x.last))}: ${plural(done.length, "profile", "profiles")}, ${esc(size(done.reduce((n, r) => n + (r.size || 0), 0)))} in ${where}.`
+      + (x.next ? ` Next ${esc(when(x.next))}.` : "")
+      + failed.map(r => `<br><span class="err-text">${esc(r.label)}: ${esc(r.error)}</span>`).join("")
+    : `Every profile, conversations included and never the login, goes into ${where}; the last ${x.keep} of each are kept.`;
+  box.innerHTML = `<div class="upd"><span class="dl" id="ab-exp-l">Automatic export</span>
+      <div class="seg small" id="ab-exp" role="group" aria-labelledby="ab-exp-l">${EXPORT_EVERY.map(([k, l]) =>
+        `<button data-exp-set="${k}" class="${on === k ? "on" : ""}" aria-pressed="${on === k}">${l}</button>`).join("")}</div>
+      <button class="btn small" id="exp-now"${x.running ? " disabled" : ""}>Export now</button></div>
+    <p class="hint" id="exp-status" style="margin:0 0 6px">${status}</p>`;
+  $("#ab-exp", box).onclick = async e => {
+    const b = e.target.closest("[data-exp-set]");
+    if (!b || b.classList.contains("on")) return;
+    try { await run(() => api("/api/autoexport", { every: b.dataset.expSet || null })); } catch {}
+    loadAutoExport(dr);
+  };
+  $("#exp-now", box).onclick = async () => {
+    try { await run(() => api("/api/autoexport/run", {})); } catch {}
+    loadAutoExport(dr);
+  };
+  if (x.running) setTimeout(() => loadAutoExport(dr), 1500);
 }
 // The Mac app (macOS only): added or brought up to date with a click, like an update
 async function loadMacApp(dr, m) {

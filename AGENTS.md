@@ -29,7 +29,7 @@ The app **modifies Claude Code's own files, possibly while a session is using th
 | `scripts/` | `release.py next` (the whole release; versions move one step, only the last number up to 9; `release.py resume` finishes one that stopped), `build_app.py` (the Mac app, both architectures), `make_screenshots.py`, `check_js.py` (tsc --checkJs on the UI), `check_settings_schema.py` (used by the skill and the weekly workflow), `homebrew_formula.py` (no tap published yet) |
 | `.github/workflows/` | `ci.yml` (tests, UI, install.sh, package, JS check), `release.yml` (tag → PyPI), `codeql.yml`, `claude-code-schema.yml` (weekly check against the latest Claude Code, opens an issue) |
 
-User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`.
+User data, **never in the repo**: `~/.cc-profiles/config.json` (profiles, rules, search roots) and `~/.cc-profiles/backups/`. The automatic exports (`autoexport.py`) go to `iCloud Drive/cc-profiles exports` or `~/.cc-profiles/exports`: tests point them elsewhere with `CC_PROFILES_EXPORT_DIR`, and the export files are cc-profiles' own, so pruning them needs no backup (only names matching `cc-profile-<id>-<date>.zip` are ever removed).
 
 ## Commands
 
