@@ -59,7 +59,7 @@ function toast(msg, sub, err, action) {
   if (action) $("button", t).onclick = () => { t.remove(); action.run(); };
   $("#toasts").append(t);
   let timer;
-  const wait = () => { clearTimeout(timer); timer = setTimeout(() => t.remove(), err ? 9000 : action ? 12000 : 6000); };
+  const wait = () => { clearTimeout(timer); timer = setTimeout(() => t.remove(), err ? 6000 : action ? 7000 : 3500); };
   t.addEventListener("mouseenter", () => clearTimeout(timer)); t.addEventListener("mouseleave", wait);
   t.addEventListener("focusin", () => clearTimeout(timer)); t.addEventListener("focusout", wait);
   wait();

@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Messages in the bottom right corner close sooner: after 3.5 seconds, 7 with **Undo**, 6 for errors (they were 6, 12 and 9). They still stay while the pointer or the focus is on them.
+
 ## [0.6.7] - 2026-11-01
 
 ### Added
