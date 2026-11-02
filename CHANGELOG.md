@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-11-02
+
 ### Added
 - **Automatic export**, in the About panel: every profile exported every day or every week, conversations included and never the login, into `iCloud Drive/cc-profiles exports` (or `~/.cc-profiles/exports`), keeping the last 3 of each. Off until you turn it on; **Export now** runs it at once, and the panel shows the last and next export.
 - A profile whose folder is gone can be put back from its latest export: **Restore from export…** in the Profiles tab, with Undo. The Mac app sends a notification when a profile's folder disappears.
@@ -417,7 +419,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.7...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.8...HEAD
+[0.6.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.4...v0.6.5
