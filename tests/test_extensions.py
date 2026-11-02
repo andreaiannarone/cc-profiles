@@ -419,6 +419,37 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_an_account_renamed_on_github(home, app_factory):
+    """Renamed after signing in: hosts.yml keeps the old name, which may now be someone else's.
+    gh itself says whose token it is; the commit identity and the table follow the real account."""
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        old-name:\n    user: old-name\n")
+    gh = home.write(".local/bin/gh", """#!/bin/sh
+echo "$GH_CONFIG_DIR|$@" >> "$HOME/gh-calls"
+echo '{"id": 42, "login": "new-name", "name": "New Name"}'
+""")
+    gh.chmod(0o755)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_GH_CHECK="1")
+
+    row = app.get("/api/github")["profiles"][0]
+    assert row["user"] == "old-name" and row["renamed"] == "new-name"
+    assert row["suggest"] == {"name": "New Name", "email": "42+new-name@users.noreply.github.com"}
+    app.get("/api/github")
+    assert home.path("gh-calls").read_text().splitlines() == [f"{home.path('.config/gh')}|api user --hostname github.com"]
+    app.post("/api/github/save", {"changes": [{"profile": "default", "name": "", "email": ""}]})  # its account's
+    assert json.loads(home.path(".claude/settings.json").read_text())["env"]["GIT_AUTHOR_EMAIL"] == \
+        "42+new-name@users.noreply.github.com"
+
+    # signed in again as the new name: nothing to say any more (hosts.yml changed, gh is asked again)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        new-name:\n    user: new-name\n")
+    assert app.get("/api/github")["profiles"][0]["renamed"] is None
+    app.restore_all()
+    home.path("gh-calls").unlink()
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        old-name:\n    user: old-name\n")
+    assert home.snapshot() == before
+
+
 def test_agents_are_managed_and_undoable(home, app_factory):
     basic_home(home)
     home.write(".claude/agents/reviewer.md", "---\nname: reviewer\ndescription: Reviews diffs. Use after coding.\n"

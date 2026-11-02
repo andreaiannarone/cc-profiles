@@ -10,7 +10,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from .core import (HOME, ApiError, Backup, find_tool, folder_missing, load_settings, pretty, profile, profiles, read_json,
+from .core import (HOME, ApiError, Backup, file_sig, find_tool, folder_missing, load_settings, pretty, profile, profiles, read_json,
                    session_hint, tool_env, write_json, write_text)
 from .settings import save_settings_file, settings_files, shared_note
 
@@ -452,7 +452,7 @@ def github_state():
         rows.append({"id": p["id"], "label": p["label"], "dir": pretty(own_folder(p)), "user": active,
                      "users": users, "set_up": set_up(p), "shared": shares_settings(p), "default": is_default(p),
                      "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], ""),
-                     "suggest": suggested_identity(p)})
+                     "suggest": suggested_identity(p), "renamed": renamed_to(used_folder(p))})
     return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows,
             "account_list": account_list(), "accounts_dir": pretty(accounts_folder())}
 
@@ -556,12 +556,53 @@ def git_config_identity():
     return out if out["name"] and EMAIL.fullmatch(out["email"]) else None
 
 
+_owners = {}
+
+
+def token_owner(folder):
+    """{id, login, name} of the account whose token gh holds for the active user of folder, asked
+    through gh itself (the token stays in the keychain, cc-profiles never reads it). It differs from
+    the login in hosts.yml when the account was renamed on GitHub after signing in: the old name may
+    now belong to someone else. Kept while hosts.yml does not change, for a day (a failure for
+    10 minutes); None without gh, offline or signed out. CC_PROFILES_GH_CHECK=0 turns it off (tests)."""
+    if os.environ.get("CC_PROFILES_GH_CHECK") == "0" or not gh_user(folder):
+        return None
+    gh = find_tool("gh")
+    if not gh:
+        return None
+    key, sig = folder, file_sig(os.path.join(folder, "hosts.yml"))
+    hit = _owners.get(key)
+    if hit and hit[1] == sig and time.time() - hit[0] < (86400 if hit[2] else 600):
+        return hit[2]
+    info = None
+    try:
+        r = subprocess.run([gh, "api", "user", "--hostname", "github.com"], capture_output=True, text=True,
+                           timeout=8, env=dict(tool_env(), GH_CONFIG_DIR=folder, GH_PROMPT_DISABLED="1"))
+        data = json.loads(r.stdout) if r.returncode == 0 else None
+        if isinstance(data, dict) and isinstance(data.get("id"), int) and USER.fullmatch(str(data.get("login"))):
+            info = {"id": data["id"], "login": data["login"], "name": (data.get("name") or "").strip()}
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        pass
+    _owners[key] = (time.time(), sig, info)
+    return info
+
+
+def renamed_to(folder):
+    """The account's current name when it was renamed on GitHub after signing in to folder, else None."""
+    owner = token_owner(folder)
+    return owner["login"] if owner and owner["login"] != gh_user(folder) else None
+
+
 def suggested_identity(prof, user=None):
     """The commit identity of a profile's GitHub account (user: that account instead of the active one),
     or the git config without an account; None when there is neither."""
-    user = user or gh_user(used_folder(prof))
+    folder = used_folder(prof)
+    user = user or gh_user(folder)
     if not user:
         return git_config_identity()
+    owner = token_owner(folder) if user == gh_user(folder) else None
+    if owner:  # the account itself, even renamed: its old name may be someone else's now
+        return {"name": owner["name"] or owner["login"], "email": f"{owner['id']}+{owner['login']}@users.noreply.github.com"}
     info = public_user(user)
     if info:
         return {"name": info["name"] or user, "email": f"{info['id']}+{user}@users.noreply.github.com"}

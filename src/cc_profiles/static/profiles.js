@@ -199,7 +199,9 @@ function githubHtml() {
     return `<select data-ghacc="${p.id}" aria-label="GitHub account of ${esc(p.label)}">
       ${cur ? "" : `<option value="" selected disabled>not signed in</option>`}
       ${users.map(u => `<option value="${esc(u)}" ${u === cur ? "selected" : ""}>${esc(u)}</option>`).join("")}
-      <option value="+">Another account…</option></select>`;
+      <option value="+">Another account…</option></select>${p.renamed && cur === p.user ? `
+      <div class="hint ghrenamed"><span class="badge b-warn">renamed</span> Now <b>${esc(p.renamed)}</b> on GitHub: the name ${esc(p.user)} may be someone else's.
+        <button class="btn small" data-ghrelogin="${p.id}">Sign in again…</button></div>` : ""}`;
   };
   const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
@@ -265,6 +267,12 @@ function wireGithub() {
   const prof = id => g.profiles.find(x => x.id === id);
   document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyCommand(b.dataset.copy, b));
   document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
+  document.querySelectorAll("[data-ghrelogin]").forEach(b => b.onclick = () => {
+    const p = S.github.profiles.find(x => x.id === b.dataset.ghrelogin);
+    signInModal(`Sign in again to GitHub for ${p.label}`,
+      `The account was renamed to <b>${esc(p.renamed)}</b> after signing in. Sign in once more with it, then pick it in the menu.`,
+      (p.default ? "" : `GH_CONFIG_DIR=${p.dir} `) + "gh auth login");
+  });
   $("#gh-addacc")?.addEventListener("click", () => signInModal("Add a GitHub account",
     `Sign in once in a terminal, in <code>${esc(g.accounts_dir)}</code>: no profile changes account. Then connect it to the profiles you want.`,
     `GH_CONFIG_DIR=${g.accounts_dir} gh auth login`));
