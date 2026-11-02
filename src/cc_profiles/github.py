@@ -567,7 +567,7 @@ def token_owner(folder):
     10 minutes); None without gh, offline or signed out. CC_PROFILES_GH_CHECK=0 turns it off (tests)."""
     if os.environ.get("CC_PROFILES_GH_CHECK") == "0" or not gh_user(folder):
         return None
-    gh = find_tool("gh")
+    gh = os.environ.get("CC_PROFILES_GH_BINARY") or find_tool("gh")  # tests: a fake gh, not the runner's
     if not gh:
         return None
     key, sig = folder, file_sig(os.path.join(folder, "hosts.yml"))

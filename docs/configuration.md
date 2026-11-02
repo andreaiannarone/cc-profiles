@@ -57,6 +57,7 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
 | `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
 | `CC_PROFILES_GH_CHECK` | `0`: never ask `gh` whose account a signed-in GitHub user really is (the tests set it) |
+| `CC_PROFILES_GH_BINARY` | the `gh` program asked that question, instead of the one on `PATH` (the tests point it to a fake `gh`) |
 | `CC_PROFILES_EXPORT_DIR` | where the automatic exports go, instead of iCloud Drive or `~/.cc-profiles/exports` |
 | `CC_PROFILES_EXPORT_TICK` | **for tests**: seconds between two checks of whether an automatic export is due (900 by default) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |

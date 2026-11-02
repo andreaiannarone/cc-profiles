@@ -430,7 +430,7 @@ echo '{"id": 42, "login": "new-name", "name": "New Name"}'
 """)
     gh.chmod(0o755)
     before = home.snapshot()
-    app = app_factory(CC_PROFILES_GH_CHECK="1")
+    app = app_factory(CC_PROFILES_GH_CHECK="1", CC_PROFILES_GH_BINARY=str(gh))  # CI runners have a real gh
 
     row = app.get("/api/github")["profiles"][0]
     assert row["user"] == "old-name" and row["renamed"] == "new-name"
