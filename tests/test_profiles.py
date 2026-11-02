@@ -7,6 +7,7 @@ import io
 import json
 import os
 import shutil
+import socket
 import time
 import urllib.error
 import urllib.request
@@ -217,6 +218,30 @@ def test_import_recreates_the_profile_and_restores(home, app_factory):
     assert "already exists" in json.loads(raw(app, "/api/profiles/import?label=Laptop&id=laptop", data)[1])["error"]
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_import_takes_archives_over_500_mb(home, app_factory):
+    """An export with conversations passes 500 MB; only the 2 GB limit refuses it, before reading the body."""
+    basic_home(home)
+    app = app_factory()
+
+    def send(length, body):
+        with socket.create_connection(("127.0.0.1", app.port), timeout=10) as s:
+            s.sendall((f"POST /api/profiles/import?label=Big&id=big HTTP/1.1\r\nHost: 127.0.0.1:{app.port}\r\n"
+                       f"X-Token: {app.token}\r\nContent-Type: application/zip\r\nContent-Length: {length}\r\n"
+                       "Connection: close\r\n\r\n").encode() + body)
+            s.shutdown(socket.SHUT_WR)  # the upload stops short of its length
+            answer = b""
+            while True:
+                chunk = s.recv(65536)
+                if not chunk:
+                    break
+                answer += chunk
+        return json.loads(answer.split(b"\r\n\r\n", 1)[1])["error"]
+
+    assert "interrupted" in send(600 * 1024 ** 2, b"PK")  # accepted by size, then cut off
+    assert "over 2 GB" in send(2 * 1024 ** 3 + 1, b"")
+    assert not home.path(".claude-big").exists()
 
 
 @pytest.mark.parametrize("bad", ["../evil.txt", "/etc/evil", "profile/../../evil", "link"])

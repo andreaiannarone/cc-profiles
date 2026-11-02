@@ -122,7 +122,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
 | `POST /api/plugins/copy` | `profile`, `plugin`, `to`: copies a plugin installed for every project, with its marketplace, to another profile and enables it there |
-| `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 500 MB), not JSON |
+| `POST /api/profiles/import?label=…&id=…` | the request body is the exported `.zip` itself (`Content-Type: application/zip`, up to 2 GB), not JSON |
 | `POST /api/settings/field` | `profile`, `key`, `value` (`null` removes the setting) |
 | `POST /api/settings/permissions` | `profile`, `rules: {allow, ask, deny}` (lists of strings) |
 | `POST /api/settings/field/all` | `profile`, `key`: the profile's value goes to every other profile, one backup |

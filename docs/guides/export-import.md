@@ -42,7 +42,7 @@ When a profile's folder disappears (deleted by another program, say), the **Prof
 
 In the **Profiles** tab, click **Import profile…**, pick the `.zip`, and choose a name and an id (they are suggested from the file name). cc-profiles creates `~/.claude-<id>`, its `claude-<id>` command in `~/.local/bin` and the `/cc-profiles` command, and adds the profile to the list.
 
-The archive is checked before anything is written: an entry with an absolute path, a `..`, a link or a device file, or anything that is not part of an export, refuses the whole import. Archives over 500 MB, or over 5 GB once unpacked, are refused too.
+The archive is checked before anything is written: an entry with an absolute path, a `..`, a link or a device file, or anything that is not part of an export, refuses the whole import. Archives over 2 GB, or over 5 GB once unpacked, are refused too.
 
 The imported profile is **not logged in**: run its command and log in with `/login`.
 

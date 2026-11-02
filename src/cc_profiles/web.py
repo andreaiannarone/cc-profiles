@@ -245,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
         if n <= 0:
             raise ApiError("Pick the .zip of an exported profile")
         if n > IMPORT_MAX:
-            raise ApiError("The file is too big (over 500 MB)")
+            raise ApiError("The file is too big (over 2 GB)")
         fd, tmp = tempfile.mkstemp(prefix="cc-profiles-import-", suffix=".zip")
         try:
             with os.fdopen(fd, "wb") as f:

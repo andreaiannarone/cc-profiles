@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - A profile whose folder is gone can be put back from its latest export: **Restore from export…** in the Profiles tab, with Undo. The Mac app sends a notification when a profile's folder disappears.
 
 ### Fixed
+- **Import profile…** takes archives up to 2 GB: an export of a profile with its conversations easily passes the old 500 MB limit, which refused it.
 - A GitHub account renamed after signing in: the GitHub CLI keeps the old name, which may now belong to someone else. cc-profiles asks `gh` whose account it really is, suggests the commit identity of that account (not of whoever has the old name now), and the GitHub table says **renamed** with the new name and **Sign in again…**.
 - A new profile made from a base commits as its own GitHub account: the commit identity copied from a base signed in to another account is replaced by the new account's, and the message says so. A profile without an identity gets its account's right away, instead of at the next start.
 - A profile whose folder was removed outside cc-profiles: the Profiles tab marks it **folder missing** and says to put the folder back or delete the profile, which still works. Every change that involves it is refused with that message, before anything is written: it no longer fails halfway with a `FileNotFoundError`, leaves an incomplete backup or creates loose folders where the profile was, and the checks at start no longer leave a failed backup each time.

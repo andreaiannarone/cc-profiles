@@ -40,7 +40,7 @@ from .github import new_profile_folder
 EXPORT_FORMAT = 1
 EXPORT_MANIFEST = "cc-profiles-export.json"
 DIR_PLACEHOLDER = "__CC_PROFILES_PROFILE_DIR__"
-IMPORT_MAX = 500 * 1024 * 1024          # size of the uploaded zip
+IMPORT_MAX = 2 * 1024 ** 3             # size of the uploaded zip: a profile with its conversations passes 500 MB
 IMPORT_MAX_UNPACKED = 5 * 1024 ** 3     # size once unpacked: refuse zip bombs
 NEVER_EXPORT = {".credentials.json"}    # at any depth
 # A template (see templates.py) is an export with only these top-level items, and with
