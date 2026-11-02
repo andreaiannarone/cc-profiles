@@ -398,13 +398,34 @@ def new_profile_folder(new, pid, bk):
     settings = os.path.join(new, "settings.json")
     data = read_json(settings, {}) if os.path.exists(settings) else {}
     data = data if isinstance(data, dict) else {}
-    data["env"] = dict(data.get("env") if isinstance(data.get("env"), dict) else {}, **{GH_ENV: own})
+    env = data.get("env") if isinstance(data.get("env"), dict) else {}
+    copied_from = env.get(GH_ENV) or gh_default_dir()  # the base's folder, when settings.json was copied
+    data["env"] = dict(env, **{GH_ENV: own})
     write_json(settings, data)  # inside the new profile's folder: restoring removes it with the folder
     bk.note(f"{GH_ENV} = {pretty(own)}")
     user = gh_user(own)
     if not user or gh_users(src)[2]:  # the token stayed in the source's hosts.yml
         return f"sign in to GitHub for it with GH_CONFIG_DIR={pretty(own)} gh auth login"
-    return f"GitHub as {user}, from {pretty(own)}: pick another account in Profiles → GitHub"
+    note = f"GitHub as {user}, from {pretty(own)}: pick another account in Profiles → GitHub"
+    return note + new_profile_identity({"dir_abs": new, "label": pid}, user, gh_user(copied_from), bk)
+
+
+def new_profile_identity(prof, user, base_user, bk):
+    """A new profile commits as its GitHub account: an identity copied from a base signed in to
+    another account is replaced (it would sign the new account's commits with the base's name).
+    Returns a note for the message."""
+    cur = current_identity(prof)
+    if cur and (not base_user or base_user == user):  # same account, or unknown (an import): kept
+        return ""
+    sug = suggested_identity(prof, user)
+    if not sug or sug == cur:
+        return ""
+    want = {k: sug["name"] for k in GIT_ENV["name"]}
+    want.update({k: sug["email"] for k in GIT_ENV["email"]})
+    set_env(prof, want, bk)
+    bk.note(f"commits by {sug['name']} <{sug['email']}>")
+    was = f", not {cur['name']} <{cur['email']}> copied from the base" if cur else ""
+    return f"; commits by {sug['name']} <{sug['email']}>{was}: change it in Profiles → GitHub"
 
 
 def git_uses_gh():
