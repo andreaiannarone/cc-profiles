@@ -377,6 +377,9 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
     basic_home(home)
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
     home.write(".config/gh/config.yml", "editor: vim\n")
+    home.json(".claude/settings.json", {"env": {"GIT_AUTHOR_NAME": "Me Myself", "GIT_COMMITTER_NAME": "Me Myself",
+                                                "GIT_AUTHOR_EMAIL": "me@example.com", "GIT_COMMITTER_EMAIL": "me@example.com"}})
+    home.write(".config/gh-client/hosts.yml", "github.com:\n    users:\n        client-co:\n    user: client-co\n")
     before = home.snapshot()
     app = app_factory()
 
@@ -385,8 +388,21 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
     assert home.path(".config/gh-noa/hosts.yml").read_text() == home.path(".config/gh/hosts.yml").read_text()
     assert home.path(".config/gh-noa/config.yml").read_text() == "editor: vim\n"
     assert oct(home.path(".config/gh-noa/hosts.yml").stat().st_mode & 0o777) == "0o600"
-    assert json.loads(home.path(".claude-noa/settings.json").read_text())["env"] == {
-        "GH_CONFIG_DIR": str(home.path(".config/gh-noa"))}
+    assert json.loads(home.path(".claude-noa/settings.json").read_text())["env"] == {  # commits by its account
+        "GH_CONFIG_DIR": str(home.path(".config/gh-noa")), "GIT_AUTHOR_NAME": "me", "GIT_COMMITTER_NAME": "me",
+        "GIT_AUTHOR_EMAIL": "me@users.noreply.github.com", "GIT_COMMITTER_EMAIL": "me@users.noreply.github.com"}
+
+    # from a base: its commit identity stays with the same account, never with another one
+    def env(pid):
+        return json.loads(home.path(f".claude-{pid}/settings.json").read_text())["env"]
+    app.post("/api/profiles/create", {"label": "Twin", "id": "twin", "base": "default", "share": []})
+    assert env("twin")["GIT_AUTHOR_NAME"] == "Me Myself"  # GitHub as me, like Default
+    r = app.post("/api/profiles/create", {"label": "Client", "id": "client", "base": "default", "share": []})
+    assert "commits by client-co <client-co@users.noreply.github.com>, not Me Myself <me@example.com> " \
+           "copied from the base" in r["message"]
+    assert {k: v for k, v in env("client").items() if k.startswith("GIT_")} == {
+        "GIT_AUTHOR_NAME": "client-co", "GIT_COMMITTER_NAME": "client-co",
+        "GIT_AUTHOR_EMAIL": "client-co@users.noreply.github.com", "GIT_COMMITTER_EMAIL": "client-co@users.noreply.github.com"}
 
     # a token written in hosts.yml (gh's insecure storage) is never copied: that folder needs a sign-in
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n            oauth_token: gho_secret\n"
@@ -400,6 +416,37 @@ def test_new_profiles_get_their_own_github_folder(home, app_factory):
 
     app.restore_all()
     home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    git_protocol: https\n    user: me\n")
+    assert home.snapshot() == before
+
+
+def test_an_account_renamed_on_github(home, app_factory):
+    """Renamed after signing in: hosts.yml keeps the old name, which may now be someone else's.
+    gh itself says whose token it is; the commit identity and the table follow the real account."""
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        old-name:\n    user: old-name\n")
+    gh = home.write(".local/bin/gh", """#!/bin/sh
+echo "$GH_CONFIG_DIR|$@" >> "$HOME/gh-calls"
+echo '{"id": 42, "login": "new-name", "name": "New Name"}'
+""")
+    gh.chmod(0o755)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_GH_CHECK="1", CC_PROFILES_GH_BINARY=str(gh))  # CI runners have a real gh
+
+    row = app.get("/api/github")["profiles"][0]
+    assert row["user"] == "old-name" and row["renamed"] == "new-name"
+    assert row["suggest"] == {"name": "New Name", "email": "42+new-name@users.noreply.github.com"}
+    app.get("/api/github")
+    assert home.path("gh-calls").read_text().splitlines() == [f"{home.path('.config/gh')}|api user --hostname github.com"]
+    app.post("/api/github/save", {"changes": [{"profile": "default", "name": "", "email": ""}]})  # its account's
+    assert json.loads(home.path(".claude/settings.json").read_text())["env"]["GIT_AUTHOR_EMAIL"] == \
+        "42+new-name@users.noreply.github.com"
+
+    # signed in again as the new name: nothing to say any more (hosts.yml changed, gh is asked again)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        new-name:\n    user: new-name\n")
+    assert app.get("/api/github")["profiles"][0]["renamed"] is None
+    app.restore_all()
+    home.path("gh-calls").unlink()
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        old-name:\n    user: old-name\n")
     assert home.snapshot() == before
 
 

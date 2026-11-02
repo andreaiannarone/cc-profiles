@@ -10,7 +10,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from .core import (HOME, ApiError, Backup, find_tool, load_settings, pretty, profile, profiles, read_json,
+from .core import (HOME, ApiError, Backup, file_sig, find_tool, folder_missing, load_settings, pretty, profile, profiles, read_json,
                    session_hint, tool_env, write_json, write_text)
 from .settings import save_settings_file, settings_files, shared_note
 
@@ -370,7 +370,7 @@ def needs_restricting(prof):
 def ensure_gh_folders():
     """At every start of the server: every profile gets its own GitHub CLI folder, with only the
     account it uses in it. Returns (lines to print, backup path or None)."""
-    todo = [p for p in profiles() if not set_up(p) or needs_restricting(p)]
+    todo = [p for p in profiles() if not folder_missing(p) and (not set_up(p) or needs_restricting(p))]
     if not todo:
         return [], None
     bk, lines = Backup("github-folders", "A GitHub CLI folder for each profile"), []
@@ -398,13 +398,34 @@ def new_profile_folder(new, pid, bk):
     settings = os.path.join(new, "settings.json")
     data = read_json(settings, {}) if os.path.exists(settings) else {}
     data = data if isinstance(data, dict) else {}
-    data["env"] = dict(data.get("env") if isinstance(data.get("env"), dict) else {}, **{GH_ENV: own})
+    env = data.get("env") if isinstance(data.get("env"), dict) else {}
+    copied_from = env.get(GH_ENV) or gh_default_dir()  # the base's folder, when settings.json was copied
+    data["env"] = dict(env, **{GH_ENV: own})
     write_json(settings, data)  # inside the new profile's folder: restoring removes it with the folder
     bk.note(f"{GH_ENV} = {pretty(own)}")
     user = gh_user(own)
     if not user or gh_users(src)[2]:  # the token stayed in the source's hosts.yml
         return f"sign in to GitHub for it with GH_CONFIG_DIR={pretty(own)} gh auth login"
-    return f"GitHub as {user}, from {pretty(own)}: pick another account in Profiles → GitHub"
+    note = f"GitHub as {user}, from {pretty(own)}: pick another account in Profiles → GitHub"
+    return note + new_profile_identity({"dir_abs": new, "label": pid}, user, gh_user(copied_from), bk)
+
+
+def new_profile_identity(prof, user, base_user, bk):
+    """A new profile commits as its GitHub account: an identity copied from a base signed in to
+    another account is replaced (it would sign the new account's commits with the base's name).
+    Returns a note for the message."""
+    cur = current_identity(prof)
+    if cur and (not base_user or base_user == user):  # same account, or unknown (an import): kept
+        return ""
+    sug = suggested_identity(prof, user)
+    if not sug or sug == cur:
+        return ""
+    want = {k: sug["name"] for k in GIT_ENV["name"]}
+    want.update({k: sug["email"] for k in GIT_ENV["email"]})
+    set_env(prof, want, bk)
+    bk.note(f"commits by {sug['name']} <{sug['email']}>")
+    was = f", not {cur['name']} <{cur['email']}> copied from the base" if cur else ""
+    return f"; commits by {sug['name']} <{sug['email']}>{was}: change it in Profiles → GitHub"
 
 
 def git_uses_gh():
@@ -431,7 +452,7 @@ def github_state():
         rows.append({"id": p["id"], "label": p["label"], "dir": pretty(own_folder(p)), "user": active,
                      "users": users, "set_up": set_up(p), "shared": shares_settings(p), "default": is_default(p),
                      "name": env.get(GIT_ENV["name"][0], ""), "email": env.get(GIT_ENV["email"][0], ""),
-                     "suggest": suggested_identity(p)})
+                     "suggest": suggested_identity(p), "renamed": renamed_to(used_folder(p))})
     return {"gh": bool(find_tool("gh")), "git_uses_gh": git_uses_gh(), "accounts": known_users(), "profiles": rows,
             "account_list": account_list(), "accounts_dir": pretty(accounts_folder())}
 
@@ -535,12 +556,53 @@ def git_config_identity():
     return out if out["name"] and EMAIL.fullmatch(out["email"]) else None
 
 
+_owners = {}
+
+
+def token_owner(folder):
+    """{id, login, name} of the account whose token gh holds for the active user of folder, asked
+    through gh itself (the token stays in the keychain, cc-profiles never reads it). It differs from
+    the login in hosts.yml when the account was renamed on GitHub after signing in: the old name may
+    now belong to someone else. Kept while hosts.yml does not change, for a day (a failure for
+    10 minutes); None without gh, offline or signed out. CC_PROFILES_GH_CHECK=0 turns it off (tests)."""
+    if os.environ.get("CC_PROFILES_GH_CHECK") == "0" or not gh_user(folder):
+        return None
+    gh = os.environ.get("CC_PROFILES_GH_BINARY") or find_tool("gh")  # tests: a fake gh, not the runner's
+    if not gh:
+        return None
+    key, sig = folder, file_sig(os.path.join(folder, "hosts.yml"))
+    hit = _owners.get(key)
+    if hit and hit[1] == sig and time.time() - hit[0] < (86400 if hit[2] else 600):
+        return hit[2]
+    info = None
+    try:
+        r = subprocess.run([gh, "api", "user", "--hostname", "github.com"], capture_output=True, text=True,
+                           timeout=8, env=dict(tool_env(), GH_CONFIG_DIR=folder, GH_PROMPT_DISABLED="1"))
+        data = json.loads(r.stdout) if r.returncode == 0 else None
+        if isinstance(data, dict) and isinstance(data.get("id"), int) and USER.fullmatch(str(data.get("login"))):
+            info = {"id": data["id"], "login": data["login"], "name": (data.get("name") or "").strip()}
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        pass
+    _owners[key] = (time.time(), sig, info)
+    return info
+
+
+def renamed_to(folder):
+    """The account's current name when it was renamed on GitHub after signing in to folder, else None."""
+    owner = token_owner(folder)
+    return owner["login"] if owner and owner["login"] != gh_user(folder) else None
+
+
 def suggested_identity(prof, user=None):
     """The commit identity of a profile's GitHub account (user: that account instead of the active one),
     or the git config without an account; None when there is neither."""
-    user = user or gh_user(used_folder(prof))
+    folder = used_folder(prof)
+    user = user or gh_user(folder)
     if not user:
         return git_config_identity()
+    owner = token_owner(folder) if user == gh_user(folder) else None
+    if owner:  # the account itself, even renamed: its old name may be someone else's now
+        return {"name": owner["name"] or owner["login"], "email": f"{owner['id']}+{owner['login']}@users.noreply.github.com"}
     info = public_user(user)
     if info:
         return {"name": info["name"] or user, "email": f"{info['id']}+{user}@users.noreply.github.com"}
@@ -650,7 +712,7 @@ def ensure_identities():
     account. Returns (lines to print, backup path or None)."""
     todo = []
     for p in profiles():
-        if shares_settings(p) or current_identity(p):
+        if folder_missing(p) or shares_settings(p) or current_identity(p):
             continue
         sug = suggested_identity(p)
         if sug:

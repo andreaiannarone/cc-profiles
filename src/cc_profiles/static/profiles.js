@@ -149,10 +149,11 @@ function renderSharing() {
     <div class="section-title">Your profiles</div>
     <div class="table">${S.profiles.map(p => `<div class="prow"><div class="txt">
         <div class="t">${esc(p.label)} ${badge(p.id)} ${p.primary ? `<span class="badge b-none">source</span>` : ""}
-          ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}</div>
-        <div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}${signInIssue(p.id)}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}
+          ${p.active ? `<span class="live" style="margin-left:0">session open</span>` : ""}${p.missing ? `<span class="badge b-warn">folder missing</span>` : ""}</div>
+        ${p.missing ? `<div class="acct">Its folder <code>${esc(p.dir)}</code> does not exist any more: ${p.restore_from
+          ? `restore it from the export of ${esc(p.restore_from.day)}, or delete the profile.` : "put it back, or delete the profile."}</div>` : `<div class="acct${p.email ? "" : " none"}">${p.email ? `Signed in as <b>${esc(p.email)}</b>` : "Not signed in"}${signInIssue(p.id)}</div>${p.github ? `<div class="acct">GitHub as <b>${esc(p.github)}</b></div>` : ""}`}
         <div class="m"><code>${esc(p.command)}</code> · <code>${esc(p.dir)}</code> · ${plural(p.conv, "conversation", "conversations")} · ${plural(p.projects, "project", "projects")} · ${plural(p.memories, "memory", "memories")}</div></div>
-      <div class="acts"><button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button><button class="btn small" data-pedit="${p.id}">Edit</button>
+      <div class="acts">${p.missing ? (p.restore_from ? `<button class="btn small primary" data-prestore="${p.id}">Restore from export…</button>` : "") : `<button class="btn small" data-pext="${p.id}" data-ext="skills">Skills</button><button class="btn small" data-pext="${p.id}" data-ext="mcp">MCP</button><button class="btn small" data-pexport="${p.id}">Export…</button>`}<button class="btn small" data-pedit="${p.id}">Edit</button>
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h2>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h2>
@@ -199,7 +200,9 @@ function githubHtml() {
     return `<select data-ghacc="${p.id}" aria-label="GitHub account of ${esc(p.label)}">
       ${cur ? "" : `<option value="" selected disabled>not signed in</option>`}
       ${users.map(u => `<option value="${esc(u)}" ${u === cur ? "selected" : ""}>${esc(u)}</option>`).join("")}
-      <option value="+">Another account…</option></select>`;
+      <option value="+">Another account…</option></select>${p.renamed && cur === p.user ? `
+      <div class="hint ghrenamed"><span class="badge b-warn">renamed</span> Now <b>${esc(p.renamed)}</b> on GitHub: the name ${esc(p.user)} may be someone else's.
+        <button class="btn small" data-ghrelogin="${p.id}">Sign in again…</button></div>` : ""}`;
   };
   const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
@@ -265,6 +268,12 @@ function wireGithub() {
   const prof = id => g.profiles.find(x => x.id === id);
   document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyCommand(b.dataset.copy, b));
   document.querySelectorAll("[data-ghsetup]").forEach(b => b.onclick = () => githubPost("/api/github/setup", { profile: b.dataset.ghsetup }));
+  document.querySelectorAll("[data-ghrelogin]").forEach(b => b.onclick = () => {
+    const p = S.github.profiles.find(x => x.id === b.dataset.ghrelogin);
+    signInModal(`Sign in again to GitHub for ${p.label}`,
+      `The account was renamed to <b>${esc(p.renamed)}</b> after signing in. Sign in once more with it, then pick it in the menu.`,
+      (p.default ? "" : `GH_CONFIG_DIR=${p.dir} `) + "gh auth login");
+  });
   $("#gh-addacc")?.addEventListener("click", () => signInModal("Add a GitHub account",
     `Sign in once in a terminal, in <code>${esc(g.accounts_dir)}</code>: no profile changes account. Then connect it to the profiles you want.`,
     `GH_CONFIG_DIR=${g.accounts_dir} gh auth login`));
@@ -505,5 +514,18 @@ async function deleteProfile(id) {
   const merge_into = res.el.querySelector('input[name="pd"]:checked').value === "merge" ? $("#pd-into", res.el).value : "";
   try { await run(() => api("/api/profiles/delete", { id, merge_into, force: !!$("#pd-force", res.el)?.checked })); } catch { return; }
   if (S.mem.profile === id) { S.mem.profile = null; S.mem.project = null; }
+  await refresh(); loadSharing();
+}
+
+// A profile whose folder is gone, back from its latest export (the automatic export, or one saved there)
+async function restoreFromExport(id) {
+  const p = S.profiles.find(x => x.id === id);
+  if (!p?.restore_from) return;
+  const ok = await modal({ title: `Restore ${p.label}`,
+    sub: `Puts <code>${esc(p.dir)}</code> back from the export of ${esc(p.restore_from.day)}: settings, memories and conversations as they were then. The login is never in an export: log in again with /login. Undo removes the folder again.`,
+    body: `<div class="hint">From <code>${esc(p.restore_from.file)}</code></div>`,
+    actions: [{ label: "Restore", kind: "primary", value: true }] });
+  if (!ok) return;
+  try { await run(() => api("/api/profiles/restore-export", { id })); } catch {}
   await refresh(); loadSharing();
 }

@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 from . import __version__
 from . import core
-from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups
+from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups, check_profile_folders
 from .projects import list_projects, merge_plan, move_plan, op_delete, op_merge, op_move, op_relink, op_rule
 from .memories import (
     memory_list,
@@ -45,7 +45,7 @@ from .settings import (
     setting_all_plan,
 )
 from .statusline import get_statusline, op_statusline, op_statusline_all, statusline_all_plan, statusline_preview
-from .health import candidates, health, list_profiles
+from .health import candidates, health
 from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
@@ -89,6 +89,7 @@ from .quota import list_accounts, quota, quota_history
 from .search import compare, search
 from .newprofile import op_create_profile
 from .transfer import IMPORT_MAX, export_profile, op_import_profile
+from .autoexport import export_status, op_auto_export, op_restore_export, op_run_export, profiles_with_exports
 from .templates import list_templates, op_create_from_template, op_template_delete, op_template_save
 from .plugins import list_plugins, op_plugin_copy, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_update_profile
@@ -244,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
         if n <= 0:
             raise ApiError("Pick the .zip of an exported profile")
         if n > IMPORT_MAX:
-            raise ApiError("The file is too big (over 500 MB)")
+            raise ApiError("The file is too big (over 2 GB)")
         fd, tmp = tempfile.mkstemp(prefix="cc-profiles-import-", suffix=".zip")
         try:
             with os.fdopen(fd, "wb") as f:
@@ -291,7 +292,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/usage.csv":
                 return self._send_download(*usage_csv(q.get("profile", "all"), q.get("days", "30")), "text/csv; charset=utf-8")
             routes = {
-                "/api/profiles": lambda: list_profiles(),
+                "/api/profiles": lambda: profiles_with_exports(),
+                "/api/autoexport": lambda: export_status(),
                 "/api/projects": lambda: list_projects(),
                 "/api/health": lambda: health(q.get("fresh") == "1"),
                 "/api/candidates": lambda: candidates(q.get("name", ""), q.get("fresh") == "1"),
@@ -435,6 +437,9 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/mcp/copy": lambda: op_mcp_copy(b["profile"], b["scope"], b["name"], b["to"]),
                 "/api/mcp/copy-all": lambda: op_mcp_copy_all(b["profile"], b["scope"], b["name"]),
                 "/api/profiles/update": lambda: op_update_profile(b["id"], b.get("label"), b.get("command")),
+                "/api/profiles/restore-export": lambda: op_restore_export(b["id"]),
+                "/api/autoexport": lambda: op_auto_export(b.get("every")),
+                "/api/autoexport/run": lambda: op_run_export(),
                 "/api/profiles/delete": lambda: op_delete_profile(b["id"], b.get("merge_into") or None,
                                                                   bool(b.get("force"))),
                 "/api/profiles/create": lambda: op_create_profile(
@@ -444,6 +449,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.path not in routes:
                 return self._json(404, {"error": "Not found"})
             with _lock:
+                check_profile_folders(b)
                 self._json(200, routes[self.path]())
         except ApiError as e:
             self._json(e.status, {"error": self._failed(str(e))})

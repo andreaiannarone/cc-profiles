@@ -102,6 +102,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.pext) { S.tab = t.dataset.ext; markTab(S.tab); return loadExt(t.dataset.pext); }
   if (t.dataset.extprof) return loadExt(t.dataset.extprof);
   if (t.dataset.pdel) return deleteProfile(t.dataset.pdel);
+  if (t.dataset.prestore) return restoreFromExport(t.dataset.prestore);
   if (t.dataset.restore) return restoreBackup(t.dataset.restore);
   if (t.dataset.bchanges) return showChanges(t.dataset.bchanges, t);
   if (t.dataset.bdel) return deleteBackup(t.dataset.bdel);

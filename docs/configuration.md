@@ -56,6 +56,10 @@ You can also run it as a module: `python3 -m cc_profiles`.
 | `CC_PROFILES_AUTO_APP` | `0`: at start, do not add the Mac app (the tests set it); one already there is still kept up to date |
 | `CC_PROFILES_AUTO_GITHUB` | `0`: at start, do not give the profiles their own GitHub CLI folder (the tests set it) |
 | `CC_PROFILES_UPDATE_CHECK` | `0`: never check PyPI on its own (the tests set it) |
+| `CC_PROFILES_GH_CHECK` | `0`: never ask `gh` whose account a signed-in GitHub user really is (the tests set it) |
+| `CC_PROFILES_GH_BINARY` | the `gh` program asked that question, instead of the one on `PATH` (the tests point it to a fake `gh`) |
+| `CC_PROFILES_EXPORT_DIR` | where the automatic exports go, instead of iCloud Drive or `~/.cc-profiles/exports` |
+| `CC_PROFILES_EXPORT_TICK` | **for tests**: seconds between two checks of whether an automatic export is due (900 by default) |
 | `CC_PROFILES_FAULT` | **for tests**: makes the operation step with that name fail, to test that a failed operation stays restorable |
 | `CC_PROFILES_SOURCE` | for `install.sh`: install from this folder instead of PyPI |
 | `CLAUDE_CONFIG_DIR` | read by `cc-profiles label` to know the active profile; when it is set, the [profile by folder](guides/profile-by-folder.md) function leaves it as it is |
@@ -117,6 +121,10 @@ Optional, `15`, `30`, `60` or `90` (`180` and `365`, offered by 0.4.0 and 0.4.1,
 ### `mac_app`
 
 macOS. Absent until the first start, which adds the [Mac app](mac-app.md) and sets it to `true`; after that the app is never added again by itself, so one you delete stays deleted. `false` (`cc-profiles install-app --off`, or `install.sh --no-app`) means it is never added; **Add Mac app** or `cc-profiles install-app` sets it back to `true`.
+
+### `auto_export`
+
+Optional, `"day"` or `"week"`; absent means off. Every profile is exported that often, conversations included, into `iCloud Drive/cc-profiles exports` (or `~/.cc-profiles/exports` without iCloud Drive), keeping the last 3 of each. Set it from the About panel. The last run is recorded in `~/.cc-profiles/auto-export.json`. See [Automatic export](guides/export-import.md#automatic-export).
 
 ### `update_check`
 

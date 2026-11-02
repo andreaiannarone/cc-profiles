@@ -224,7 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         start()
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkServer() }
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refreshRecent() }
-        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.refreshQuota() }
+        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.refreshQuota(); self?.checkMissingFolders() }
     }
 
     func showWindow() {
@@ -345,7 +345,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler done: @escaping () -> Void) {
         showWindow()
-        if response.notification.request.content.userInfo["tab"] as? String == "profiles" {  // a plan limit
+        if response.notification.request.content.userInfo["tab"] as? String == "profiles" {  // a plan limit, a missing folder
             page("document.querySelector('#tabs button[data-tab=\"profiles\"]')?.click()")
         } else {
             page("document.querySelector('#about-btn')?.click()")
@@ -407,6 +407,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if let url = webView.url, isLocal(url) {
             refreshRecent()
             refreshQuota()
+            checkMissingFolders()
         }
         if let url = webView.url, isLocal(url), !pending.isEmpty {
             let urls = pending
@@ -839,6 +840,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             for limit in account.limits where limit.percent >= 90 {
                 notifyQuota(account, limit)
             }
+        }
+    }
+
+    // MARK: a profile whose folder disappeared: a notification once, until the folder is back
+
+    func checkMissingFolders() {
+        DispatchQueue.global(qos: .utility).async {
+            guard let list = self.api("/api/profiles", wait: 10) as? [[String: Any]] else { return }
+            let missing = list.filter { $0["missing"] as? Bool == true }
+            let ids = Set(missing.compactMap { $0["id"] as? String })
+            // a folder that came back is told again if it disappears again
+            var told = Set(self.defaults.stringArray(forKey: "missingNotified") ?? []).intersection(ids)
+            for profile in missing {
+                guard let id = profile["id"] as? String, !told.contains(id) else { continue }
+                told.insert(id)
+                let label = profile["label"] as? String ?? id, dir = profile["dir"] as? String ?? ""
+                let day = (profile["restore_from"] as? [String: Any])?["day"] as? String
+                self.notifyMissing(id: id, title: "The folder of \(label) is gone",
+                                   body: day.map { "\(dir) does not exist any more. Click to restore it from the export of \($0)." }
+                                       ?? "\(dir) does not exist any more. Click to see the profile.")
+            }
+            self.defaults.set(Array(told), forKey: "missingNotified")
+        }
+    }
+
+    func notifyMissing(id: String, title: String, body: String) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.userInfo = ["tab": "profiles"]
+            center.add(UNNotificationRequest(identifier: "missing-\(id)", content: content, trigger: nil))
         }
     }
 

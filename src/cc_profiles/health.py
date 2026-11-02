@@ -15,6 +15,7 @@ from .core import (
     SEARCH_SKIP,
     active_session,
     expand,
+    folder_missing,
     find_tool,
     load_config,
     pretty,
@@ -43,6 +44,7 @@ def list_profiles():
             "conv": sum(len(convs) for _, _, convs in projs),
             "memories": sum(len(memory_files(d)) for _, d, _ in projs),
             "active": active_session(p),
+            "missing": folder_missing(p),
         })
     return out
 
