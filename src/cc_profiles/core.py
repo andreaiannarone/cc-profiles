@@ -122,7 +122,11 @@ def write_text(path, text):
     os.replace on the link would turn it into a regular file and break sharing."""
     path = os.path.realpath(path)
     tmp = f"{path}.tmp-{os.getpid()}"
-    with open(tmp, "w") as f:
+    try:
+        f = open(tmp, "w")
+    except FileNotFoundError:
+        raise ApiError(missing_folder_message(os.path.dirname(path))) from None
+    with f:
         f.write(text)
     if os.path.exists(path):
         shutil.copymode(path, tmp)
@@ -193,6 +197,37 @@ def profiles():
     return out
 
 
+def folder_missing(prof):
+    """Whether the profile's folder is gone (removed outside cc-profiles): nothing can be written there."""
+    return not os.path.isdir(prof["dir_abs"])
+
+
+def missing_folder_message(folder):
+    """Why a write into folder failed: it does not exist. Names the profile when the folder
+    is inside one whose own folder is gone."""
+    for p in profiles():
+        if folder_missing(p) and (folder + "/").startswith(p["dir_abs"].rstrip("/") + "/"):
+            return (f"The folder of {p['label']} does not exist any more: {pretty(p['dir_abs'])}. "
+                    f"Put it back, or delete the profile in the Profiles tab.")
+    return f"Folder does not exist: {pretty(folder)}"
+
+
+PROFILE_KEYS = ("profile", "from", "to", "into", "to_profile", "merge_into", "base")
+
+
+def check_profile_folders(body):
+    """Before a write: refuse it when it names a profile whose folder is gone, rather than
+    fail halfway or create a few loose folders where the profile was. Deleting or renaming
+    the profile itself (its "id") stays possible."""
+    named = set()
+    for k in PROFILE_KEYS:
+        v = body.get(k)
+        named.update(x for x in (v if isinstance(v, list) else [v]) if isinstance(x, str))
+    for p in profiles():
+        if p["id"] in named and folder_missing(p):
+            raise ApiError(missing_folder_message(p["dir_abs"]))
+
+
 def profile(pid):
     for p in profiles():
         if p["id"] == pid:
@@ -222,11 +257,12 @@ def _open_backups():
 
 def abort_open_backups(error):
     """An operation failed: close its open backups with what was journaled so far.
-    A backup with no steps has nothing to undo and is removed. Returns whether any
+    A backup with no steps has nothing to undo and is removed, as is one that only noted
+    files about to be created that were never created. Returns whether any
     step was kept (so the error can say that Restore undoes it)."""
     kept = False
     for bk in list(_open_backups()):
-        if bk.journal:
+        if any(e["op"] != "absent" or os.path.lexists(e["path"]) for e in bk.journal):
             bk.close(failed=error)
             kept = True
         else:

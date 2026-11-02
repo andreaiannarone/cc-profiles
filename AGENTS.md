@@ -81,6 +81,7 @@ Only ever run write operations against a sandbox `HOME`, never against real prof
 
 - Backups must be listed and restored by their `created` timestamp, not by name: names only have seconds, and operations in the same second depend on each other.
 - A `projects/` folder may hold only memories and no conversation: "no conversations" does not mean "empty".
+- A profile's folder can disappear outside cc-profiles while `config.json` still lists it (`folder_missing()`). The POST handler refuses any write naming such a profile (`check_profile_folders()`, keys in `PROFILE_KEYS`) except deleting or renaming it by `id`; the checks at start skip it. Without that, `bk.mkdir` would quietly recreate loose folders where the profile was.
 - `settings.local.json` and `plugins/installed_plugins.json` contain absolute paths to the profile folder. When copying a profile, rewrite them unless that part is shared.
 - External programs (`claude`, `brew`, `npm`, `node`) are looked up with `find_tool()`, which adds `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` to `PATH`. The app may have been started from a terminal that does not have them yet.
 - The Mac app (`~/Applications/cc-profiles.app`) is ours only with `CCProfilesManaged` in its Info.plist (`APP_MARK`): never rewrite or remove another one. Tests use a fake program (`CC_PROFILES_APP_BINARY`); never open the real app on the real home. The server adds the app at its first start on macOS (`ensure_app()`, remembered as `"mac_app"` in `config.json`); tests set `CC_PROFILES_AUTO_APP=0` (`child_env()`).

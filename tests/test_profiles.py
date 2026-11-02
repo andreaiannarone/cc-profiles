@@ -6,6 +6,7 @@ usually end by restoring every backup and comparing the fake home with how it st
 import io
 import json
 import os
+import shutil
 import time
 import urllib.error
 import urllib.request
@@ -106,6 +107,34 @@ def test_delete_refused_while_session_open(home, app_factory):
     f = next(home.path(".claude-work/projects").rglob("*.jsonl"))
     os.utime(f, (time.time(), time.time()))
     assert "session is open" in app.post_error("/api/profiles/delete", {"id": "work"})
+
+
+def test_profile_whose_folder_is_gone(home, app_factory):
+    """Something outside cc-profiles removed a profile's folder: every write to it says so,
+    leaves no backup behind, and the profile can still be deleted."""
+    basic_home(home)
+    home.write(".config/gh/hosts.yml", "github.com:\n    users:\n        me:\n    user: me\n")
+    app_factory().stop()  # config.json now lists Work
+    shutil.rmtree(home.path(".claude-work"))
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_AUTO_GITHUB="1")  # the checks at start skip Work
+    backups = app.get("/api/backups")  # Default's commit identity, nothing about Work
+    assert [b.get("failed") for b in backups] == [None] and "Work" not in json.dumps(backups)
+
+    work = next(p for p in app.get("/api/profiles") if p["id"] == "work")
+    assert work["missing"] and work["projects"] == 0
+    gone = "The folder of Work does not exist any more: ~/.claude-work."
+    assert gone in app.post_error("/api/github/setup", {"profile": "work"})
+    assert gone in app.post_error("/api/settings/field", {"profile": "work", "key": "verbose", "value": True})
+    blog = san(home.path("code/personal/blog"))  # no loose projects/ folder where Work was
+    assert gone in app.post_error("/api/projects/move", {"project": blog, "from": "default", "to": "work"})
+    assert app.get("/api/backups") == backups  # nothing was written: nothing to restore
+    assert not home.path(".claude-work").exists()
+
+    app.post("/api/profiles/delete", {"id": "work", "merge_into": "default"})
+    assert [p["id"] for p in app.get("/api/profiles")] == ["default"]
+    app.restore_all()
+    assert home.snapshot() == before
 
 
 # --- export, import, plugins --------------------------------------------------

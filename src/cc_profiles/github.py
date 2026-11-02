@@ -10,7 +10,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from .core import (HOME, ApiError, Backup, find_tool, load_settings, pretty, profile, profiles, read_json,
+from .core import (HOME, ApiError, Backup, find_tool, folder_missing, load_settings, pretty, profile, profiles, read_json,
                    session_hint, tool_env, write_json, write_text)
 from .settings import save_settings_file, settings_files, shared_note
 
@@ -370,7 +370,7 @@ def needs_restricting(prof):
 def ensure_gh_folders():
     """At every start of the server: every profile gets its own GitHub CLI folder, with only the
     account it uses in it. Returns (lines to print, backup path or None)."""
-    todo = [p for p in profiles() if not set_up(p) or needs_restricting(p)]
+    todo = [p for p in profiles() if not folder_missing(p) and (not set_up(p) or needs_restricting(p))]
     if not todo:
         return [], None
     bk, lines = Backup("github-folders", "A GitHub CLI folder for each profile"), []
@@ -650,7 +650,7 @@ def ensure_identities():
     account. Returns (lines to print, backup path or None)."""
     todo = []
     for p in profiles():
-        if shares_settings(p) or current_identity(p):
+        if folder_missing(p) or shares_settings(p) or current_identity(p):
             continue
         sug = suggested_identity(p)
         if sug:

@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- A profile whose folder was removed outside cc-profiles: the Profiles tab marks it **folder missing** and says to put the folder back or delete the profile, which still works. Every change that involves it is refused with that message, before anything is written: it no longer fails halfway with a `FileNotFoundError`, leaves an incomplete backup or creates loose folders where the profile was, and the checks at start no longer leave a failed backup each time.
+
 ### Changed
 - Messages in the bottom right corner close sooner: after 3.5 seconds, 7 with **Undo**, 6 for errors (they were 6, 12 and 9). They still stay while the pointer or the focus is on them.
 

@@ -6,6 +6,7 @@ Skipped when Playwright is not installed, so the main suite keeps running withou
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -893,4 +894,21 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert "66%" in page.inner_text('[data-quota="default"] .qrow')  # remembered
     if importlib.util.find_spec("axe_playwright_python"):
         assert axe_violations(page) == []
+    assert errors == []
+
+
+def test_a_profile_whose_folder_is_gone(page_on_sandbox, tmp_path):
+    """Its folder removed outside cc-profiles: every tab still renders, Profiles says what to do."""
+    page, errors = page_on_sandbox
+    shutil.rmtree(tmp_path / "sandbox" / ".claude-client")
+    page.reload()
+    page.wait_for_selector(".pcard")
+    for tab in page.eval_on_selector_all("#tabs button[data-tab]", "bs => bs.map(b => b.dataset.tab)"):
+        page.click(f'#tabs button[data-tab="{tab}"]')
+        page.wait_for_function("() => { const m = document.querySelector('#main');"
+                               " return m.children.length && !m.querySelector('.spinner'); }", timeout=10000)
+    open_tab(page, "profiles")
+    row = page.locator(".prow:has-text('folder missing')")
+    assert "~/.claude-client does not exist any more" in row.inner_text()
+    assert row.locator("[data-pext]").count() == 0 and row.locator("[data-pdel]").count() == 1
     assert errors == []

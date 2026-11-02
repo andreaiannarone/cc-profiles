@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 from . import __version__
 from . import core
-from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups
+from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups, check_profile_folders
 from .projects import list_projects, merge_plan, move_plan, op_delete, op_merge, op_move, op_relink, op_rule
 from .memories import (
     memory_list,
@@ -444,6 +444,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.path not in routes:
                 return self._json(404, {"error": "Not found"})
             with _lock:
+                check_profile_folders(b)
                 self._json(200, routes[self.path]())
         except ApiError as e:
             self._json(e.status, {"error": self._failed(str(e))})
