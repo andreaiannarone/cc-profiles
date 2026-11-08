@@ -14,19 +14,16 @@ from .sharing import primary, share_state
 # A personal command in <profile>/commands/, so the name is just /cc-profiles
 # (plugin commands always get a "plugin:" prefix). The mark is a YAML comment in
 # the frontmatter: Claude Code does not show it to the model, and only files with
-# it may be rewritten. plugin/commands/open.md is the same text, without the mark
-# and with plain `cc-profiles`. Claude Code puts the arguments (/cc-profiles restart)
-# in place of $ARGUMENTS before it runs the ! line.
+# it may be rewritten. Claude Code puts the arguments (/cc-profiles restart) in place
+# of $ARGUMENTS before it runs the ! line.
+#
+# plugin/commands/open.md (PLUGIN_COMMAND_TEXT) says the same without a ! line or
+# allowed-tools: the plugin directory accepts inline shell and Bash in allowed-tools
+# only from Verified organizations, so there Claude runs the command with its Bash
+# tool, which asks the user once.
 COMMAND_MARK = "# managed by cc-profiles"
 COMMAND_NAME = "cc-profiles.md"
-COMMAND_TEMPLATE = """---
-{mark}description: Open the cc-profiles web UI to manage your Claude Code profiles
-argument-hint: "[restart|stop]"
-allowed-tools: Bash({exe} open:*)
----
-!`{exe} open $ARGUMENTS`
-
-Tell the user, in one short line, what the output above says: the URL where cc-profiles is open; that it was restarted, and that they should reload the page; that it was stopped or was not running; or why it did not start or stop.
+_COMMAND_TAIL = """the URL where cc-profiles is open; that it was restarted, and that they should reload the page; that it was stopped or was not running; or why it did not start or stop.
 
 If the output says the action is unknown, say that this command accepts nothing, `restart` or `stop`.
 
@@ -38,6 +35,25 @@ uv tool install cc-profiles
 brew install andreaiannarone/cc-profiles/cc-profiles
 ```
 """
+COMMAND_TEMPLATE = """---
+{mark}description: Open the cc-profiles web UI to manage your Claude Code profiles
+argument-hint: "[restart|stop]"
+allowed-tools: Bash({exe} open:*)
+---
+!`{exe} open $ARGUMENTS`
+
+Tell the user, in one short line, what the output above says: """ + _COMMAND_TAIL
+PLUGIN_COMMAND_TEXT = """---
+description: Open the cc-profiles web UI to manage your Claude Code profiles
+argument-hint: "[restart|stop]"
+---
+Run `cc-profiles open $ARGUMENTS` with the Bash tool, nothing else, and wait for it to finish.
+
+Then tell the user, in one short line, what its output says: """ + _COMMAND_TAIL.replace(
+    "cc-profiles was moved or uninstalled. Say that running `cc-profiles` once in a terminal fixes this command, "
+    "and that if it is not installed, one of these installs it:",
+    "the cc-profiles app is not installed, or not in the PATH Claude Code was started with. Say that this "
+    "command only opens the app, and that one of these installs it (then restart Claude Code):")
 
 
 def command_text(exe, mark=True):

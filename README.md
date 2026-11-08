@@ -105,7 +105,7 @@ Try it without installing anything:
 uvx cc-profiles
 ```
 
-From the Claude Code plugin marketplace. The command is then `/cc-profiles:open`, because Claude Code prefixes plugin commands with the plugin's name. The plugin only opens the app, so install cc-profiles first:
+From the Claude Code plugin marketplace. The command is then `/cc-profiles:open`, because Claude Code prefixes plugin commands with the plugin's name; Claude runs `cc-profiles open` for it, so Claude Code asks once for permission. The plugin only opens the app, so install cc-profiles first:
 
 ```
 /plugin marketplace add andreaiannarone/cc-profiles
