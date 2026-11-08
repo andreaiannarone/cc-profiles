@@ -43,7 +43,7 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
    - [Health and About](guides/health.md): checks, orphan projects, installing Claude Code
 7. [Configuration reference](configuration.md): `config.json`, command line, environment variables
 8. [Troubleshooting](troubleshooting.md)
-9. [Glossary](glossary.md), [Uninstall](uninstall.md), [What's new](changelog.md)
+9. [Glossary](glossary.md), [Privacy](privacy.md), [Uninstall](uninstall.md), [What's new](changelog.md)
 
 ## Working on cc-profiles
 

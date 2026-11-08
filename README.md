@@ -373,6 +373,7 @@ The **Projects** tab assigns each project to a profile using rules: "a path cont
 - **[Configuration](https://cc-profiles.andreaia.com/configuration.html)**: `config.json`, command line, environment variables
 - **[Troubleshooting](https://cc-profiles.andreaia.com/troubleshooting.html)**: common problems and their fixes
 - **[Glossary](https://cc-profiles.andreaia.com/glossary.html)**: the words the app uses
+- **[Privacy](https://cc-profiles.andreaia.com/privacy.html)**: what cc-profiles reads, keeps on your computer, and sends
 - **[Uninstall](https://cc-profiles.andreaia.com/uninstall.html)**: remove cc-profiles; your profiles stay as they are
 - **[What's new](https://cc-profiles.andreaia.com/changelog.html)**: every release
 
@@ -433,6 +434,8 @@ No dependencies: cc-profiles uses only the Python standard library.
   - the official **Claude Code installer**, only when you click **Install**.
 - The list of your claude.ai connectors comes from `claude mcp list`, so that request is Claude Code's own, with its own sign-in.
 - What it keeps stays on your computer, in `~/.cc-profiles`: its settings, the backups, and the plan limits history (by account email, 90 days). The automatic export, off until you turn it on, writes your profiles to `iCloud Drive/cc-profiles exports` when iCloud Drive is there (synced by iCloud like any file in it), else to `~/.cc-profiles/exports`.
+
+Privacy: what cc-profiles reads, keeps and sends, in full, is on the [Privacy](https://cc-profiles.andreaia.com/privacy.html) page.
 
 See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 
