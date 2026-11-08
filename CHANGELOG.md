@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The plugin's description says what cc-profiles does and that it needs the cc-profiles app, installed with pipx, uv or Homebrew: the plugin only opens it.
+
 ## [0.6.9] - 2026-11-08
 
 ### Changed
