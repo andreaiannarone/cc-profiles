@@ -3,6 +3,7 @@ errors, Content-Security-Policy violations or a tab stuck loading.
 
 Needs the ui extra and a browser: pip install -e ".[ui]" && python -m playwright install chromium.
 Skipped when Playwright is not installed, so the main suite keeps running without it."""
+import re
 import importlib.util
 import json
 import os
@@ -866,7 +867,8 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     page.wait_for_selector('[data-quota="default"] .qrow')
     rows = page.eval_on_selector_all('[data-quota="default"] .qrow', "rs => rs.map(r => [r.className, r.innerText])")
     assert [r[1].split()[:2] for r in rows] == [["5", "h"], ["Week", "81%"], ["Week", "·"]]
-    assert "34%" in rows[0][1] and "resets at" in rows[0][1] and "resets " in rows[1][1]
+    # "resets at 9:30 PM" on the same day, "resets Mon 12:04 AM" when the 5 hours end after midnight
+    assert "34%" in rows[0][1] and re.search(r"resets (at|[A-Z][a-z]{2}) ", rows[0][1]) and "resets " in rows[1][1]
     assert rows[1][0] == "qrow mid" and rows[0][0] == "qrow"  # orange from 75 %
     assert page.get_attribute('[data-quota="default"] .qbar', "aria-valuenow") == "34"
     assert "Checked at" in page.inner_text('[data-qcheck="default"]')
@@ -885,7 +887,7 @@ def test_profiles_show_the_plan_limits(page_on_sandbox):
     assert page.get_attribute('#ab-quota [data-quota-set="left"]', "aria-pressed") == "true"
     page.keyboard.press("Escape")
     rows = page.eval_on_selector_all('[data-quota="default"] .qrow', "rs => rs.map(r => [r.className, r.innerText])")
-    assert "66%" in rows[0][1] and "left · resets at" in rows[0][1] and "19%" in rows[1][1] and rows[1][0] == "qrow mid"
+    assert "66%" in rows[0][1] and re.search(r"left · resets (at|[A-Z][a-z]{2}) ", rows[0][1]) and "19%" in rows[1][1] and rows[1][0] == "qrow mid"
     assert page.get_attribute('[data-quota="default"] .qbar', "aria-label") == "5 h left"
     page.reload()
     page.wait_for_selector(".pcard")
