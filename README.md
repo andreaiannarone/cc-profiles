@@ -148,7 +148,7 @@ cc-profiles
 - 🧭 **Fast to get around**: keyboard shortcuts (`/` to search, `g` then a letter to open a tab, `?` for the list), and quick even on homes with thousands of projects.
 - ⌨️ **Inside Claude Code**: `/cc-profiles` opens the app from any session, `/cc-profiles restart` restarts it after an update; `cc-profiles label` shows the active profile in your status line.
 - 🌓 **Light and dark**: the About panel (ⓘ) picks System, Light or Dark; System follows your operating system.
-- 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. Nothing is sent anywhere unless you click to check for updates or to install Claude Code.
+- 🔒 **Local and private**: listens on `127.0.0.1` only, with a token on every request. It talks only to PyPI (updates), Anthropic (your plan limits, with your own sign-in) and GitHub's public API (commit identities); see [Security](#security).
 - 🔄 **Updates from the app**: cc-profiles checks PyPI once a day (or when you click **Check for updates** in the (i) panel) and shows a dot when a new version is out; one click updates and restarts it (pipx, uv or Homebrew), then it shows what's new. **Report a problem…** opens a bug report with the versions filled in.
 
 ---
@@ -426,7 +426,13 @@ No dependencies: cc-profiles uses only the Python standard library.
 - Names of projects, memories, skills and backups are validated against path traversal.
 - Login credentials are never copied between profiles: each profile signs in on its own. Copying an MCP server copies its configuration, never its sign-in.
 - GitHub tokens are never read or copied: cc-profiles reads only the user names in the GitHub CLI's `hosts.yml`, and the tokens stay in the system keychain.
-- cc-profiles reaches the internet only to ask pypi.org for its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click), and when you click **Install** to run the official Claude Code installer. The list of your claude.ai connectors comes from `claude mcp list`, so that request is Claude Code's own, with its own sign-in.
+- cc-profiles reaches the internet only for these, and sends nothing else anywhere:
+  - **pypi.org**, to learn its latest version, once a day (PyPI sees your IP address; turn it off in the (i) panel to check only when you click);
+  - **api.anthropic.com**, to read each claude.ai account's plan usage limits, with that profile's own sign-in, read-only, the way Claude Code's `/usage` does; the token is never stored, refreshed or shown in the page;
+  - **api.github.com**, public API without a token, to suggest each profile's commit identity from its GitHub user name;
+  - the official **Claude Code installer**, only when you click **Install**.
+- The list of your claude.ai connectors comes from `claude mcp list`, so that request is Claude Code's own, with its own sign-in.
+- What it keeps stays on your computer, in `~/.cc-profiles`: its settings, the backups, and the plan limits history (by account email, 90 days). The automatic export, off until you turn it on, writes your profiles to `iCloud Drive/cc-profiles exports` when iCloud Drive is there (synced by iCloud like any file in it), else to `~/.cc-profiles/exports`.
 
 See [SECURITY.md](https://github.com/andreaiannarone/cc-profiles/blob/main/SECURITY.md) to report a vulnerability.
 
