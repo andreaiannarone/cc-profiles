@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- `/cc-profiles` (and the plugin's `/cc-profiles:open`), when cc-profiles is not installed, suggests `pipx`, `uv` or Homebrew instead of a `curl … | sh` line. The plugin has an icon and a link to its repository, for the Claude plugin directory.
+
 ## [0.6.8] - 2026-11-02
 
 ### Added

@@ -156,13 +156,19 @@ def test_a_running_claude_process_marks_its_profile_active(home, app_factory, tm
     work = home.profile("work")  # no conversations: only the process can make it active
     fake = tmp_path / "bin" / "claude"
     fake.parent.mkdir()
-    shutil.copy("/bin/sleep", fake)
+    env = {"HOME": str(home.root), "CLAUDE_CONFIG_DIR": str(work)}
     if sys.platform == "darwin":
+        shutil.copy("/bin/sleep", fake)
         # A copied system binary is killed at launch, and ps -E hides the environment of
         # system binaries (a link to /bin/sleep runs, but shows no CLAUDE_CONFIG_DIR):
         # an ad-hoc signature makes the copy an ordinary program, like the real claude.
         subprocess.run(["codesign", "-f", "-s", "-", str(fake)], check=True, capture_output=True)
-    proc =subprocess.Popen([str(fake), "30"], env={"HOME": str(home.root), "CLAUDE_CONFIG_DIR": str(work)})
+        proc = subprocess.Popen([str(fake), "30"], env=env)
+    else:
+        # Not a copy of /bin/sleep: on Ubuntu 26.04 it is the multi-call coreutils binary,
+        # which picks the tool from its name and refuses "claude". A link to Python waits instead.
+        os.symlink(os.path.realpath(sys.executable), fake)
+        proc = subprocess.Popen([str(fake), "-c", "import time; time.sleep(30)"], env=env)
     try:
         core._running["at"] = 0  # the result is cached for 3 s
         assert os.path.realpath(work) in core.running_claude_dirs()

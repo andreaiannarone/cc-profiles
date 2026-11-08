@@ -30,10 +30,12 @@ Tell the user, in one short line, what the output above says: the URL where cc-p
 
 If the output says the action is unknown, say that this command accepts nothing, `restart` or `stop`.
 
-If the command was not found, cc-profiles was moved or uninstalled. Say that running `cc-profiles` once in a terminal fixes this command, and that if it is not installed, this installs it:
+If the command was not found, cc-profiles was moved or uninstalled. Say that running `cc-profiles` once in a terminal fixes this command, and that if it is not installed, one of these installs it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
+pipx install cc-profiles
+uv tool install cc-profiles
+brew install andreaiannarone/cc-profiles/cc-profiles
 ```
 """
 

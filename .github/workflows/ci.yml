@@ -16,8 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
         include:
+          # setup-python has no 3.9 for Ubuntu 26.04 (ubuntu-latest since November 2026)
+          - os: ubuntu-24.04
+            python: "3.9"
           - os: macos-latest
             python: "3.13"
     steps:
