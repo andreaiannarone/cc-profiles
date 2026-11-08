@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-11-08
+
 ### Changed
 - `/cc-profiles` (and the plugin's `/cc-profiles:open`), when cc-profiles is not installed, suggests `pipx`, `uv` or Homebrew instead of a `curl … | sh` line. The plugin has an icon and a link to its repository, for the Claude plugin directory.
 
@@ -422,7 +424,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.8...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.9...HEAD
+[0.6.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.5...v0.6.6
