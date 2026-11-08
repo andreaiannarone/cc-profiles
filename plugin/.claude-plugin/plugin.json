@@ -1,9 +1,11 @@
 {
   "name": "cc-profiles",
+  "displayName": "cc-profiles",
   "version": "0.7.0",
   "description": "Opens cc-profiles, a local web UI to manage multiple Claude Code profiles (move projects and memories, compare settings, see plan limits), with /cc-profiles:open. Requires the cc-profiles app: pipx install cc-profiles (or uv tool install, or Homebrew).",
   "author": { "name": "Andrea Iannarone" },
   "homepage": "https://cc-profiles.andreaia.com",
   "repository": "https://github.com/andreaiannarone/cc-profiles",
-  "license": "GPL-3.0-or-later"
+  "license": "GPL-3.0-or-later",
+  "keywords": ["profiles", "accounts", "multi-account", "config", "projects", "memory", "settings", "usage-limits"]
 }

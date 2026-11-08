@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The plugin's listing shows its name as cc-profiles, in lowercase, with keywords to find it.
+
 ## [0.7.0] - 2026-11-08
 
 ### Changed
