@@ -3,6 +3,14 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.2] - 2026-11-08
+
+**Added**
+- A **Privacy** page in the documentation: what cc-profiles reads, what it keeps on your computer, and the services it talks to. The plugin links it (`privacyPolicyUrl`).
+
+**Fixed**
+- The README and the Health guide said cc-profiles reaches only PyPI and the Claude Code installer: they now also list Anthropic (the plan limits, with each profile's own sign-in) and GitHub's public API (commit identities).
+
 ## [0.7.1] - 2026-11-08
 
 **Changed**
@@ -432,6 +440,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.9...v0.7.0
 [0.6.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.8...v0.6.9
