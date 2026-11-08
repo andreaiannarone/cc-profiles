@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- A **Privacy** page in the documentation: what cc-profiles reads, what it keeps on your computer, and the services it talks to. The plugin links it (`privacyPolicyUrl`).
+
+### Fixed
+- The README and the Health guide said cc-profiles reaches only PyPI and the Claude Code installer: they now also list Anthropic (the plan limits, with each profile's own sign-in) and GitHub's public API (commit identities).
+
 ## [0.7.1] - 2026-11-08
 
 ### Changed

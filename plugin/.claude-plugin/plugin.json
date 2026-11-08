@@ -6,6 +6,7 @@
   "author": { "name": "Andrea Iannarone" },
   "homepage": "https://cc-profiles.andreaia.com",
   "repository": "https://github.com/andreaiannarone/cc-profiles",
+  "privacyPolicyUrl": "https://cc-profiles.andreaia.com/privacy.html",
   "license": "GPL-3.0-or-later",
   "keywords": ["profiles", "accounts", "multi-account", "config", "projects", "memory", "settings", "usage-limits"]
 }
