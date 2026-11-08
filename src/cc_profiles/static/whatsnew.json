@@ -1,6 +1,18 @@
 {
  "releases": [
   {
+   "version": "0.7.3",
+   "date": "2026-11-08",
+   "sections": [
+    {
+     "title": "Changed",
+     "items": [
+      "The plugin's `/cc-profiles:open` has Claude run `cc-profiles open` with its Bash tool, which asks for permission the first time, instead of running it by itself: the Claude plugin directory accepts commands that run by themselves only from Verified organizations. `/cc-profiles`, added by the app, still opens it at once."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.2",
    "date": "2026-11-08",
    "sections": [
@@ -179,30 +191,6 @@
      "items": [
       "**Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.",
       "Memories: closing **Move memory…** right after picking another profile no longer causes a page error."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.3",
-   "date": "2026-10-31",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**Shared memory**: a project's memory can be shared between profiles from the Memories tab (**Share with…**), so what Claude learns about the project with one account the other knows too. The other profile's own memories of it join the shared ones, after a preview; **Separate** gives it its own copy again. Conversations, history and settings stay per profile."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "The theme (System, Light, Dark) is picked in the About panel (ⓘ), with the other cc-profiles settings, instead of a button in the header."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "Mac app: the About panel and the dialogs dim the whole window and reach its top edge, instead of leaving the title bar as a band in the page's color above them. The page now runs under the title bar and leaves room for the window's buttons."
      ]
     }
    ]
