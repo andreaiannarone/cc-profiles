@@ -303,6 +303,8 @@ def test_resume_goes_on_from_where_the_release_stopped(prs, tagged, expected, mi
             return "  release-0.5.6"
         if line.startswith("gh api repos/{owner}/{repo}/actions/runs/5"):
             return json.dumps({"status": "completed", "conclusion": "success"})
+        if line.startswith("gh pr checks"):
+            return json.dumps([{"name": "tests", "bucket": "pass", "state": "SUCCESS", "link": RUN}])
         return "[]" if "--json" in cmd else ""
     rel, ran, out = scripted(answers)
     rel.release_run, rel.wait_for_pypi, rel.update_tap = lambda tag: 5, lambda new: None, lambda new: None
@@ -314,3 +316,17 @@ def test_resume_goes_on_from_where_the_release_stopped(prs, tagged, expected, mi
         pos = found
     assert not [m for m in missing if m in text], text
     assert ("already on origin" in out.getvalue()) == tagged
+
+
+def test_resume_waits_for_the_checks_of_a_pull_request_just_opened(monkeypatch):
+    """Right after `gh pr create` GitHub lists no check yet: merging then would fail on the
+    branch rules, and `gh pr checks --watch` ends at once with nothing to watch."""
+    monkeypatch.setattr(release, "CHECKS_APPEAR_TIMEOUT", 0)
+    rel, ran, _ = scripted(lambda cmd: json.dumps([{"number": 59, "headRefName": "release-0.5.6"}])
+                           if cmd[:3] == ["gh", "pr", "list"] else ("[]" if "--json" in cmd else ""))
+    with pytest.raises(release.ReleaseError, match="No checks on pull request #59 after 0 s"):
+        rel.resume()
+    assert not any(c.startswith("gh pr merge") for c in ran)
+    rel, ran, _ = scripted(lambda cmd: "[]" if "--json" in cmd else "")
+    with pytest.raises(release.ReleaseError, match="No checks on pull request #59"):
+        rel.wait_for_checks(59)

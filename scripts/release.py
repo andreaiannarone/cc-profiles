@@ -345,6 +345,10 @@ class Releaser:
             number, new = found
             self.say(f"pull request #{number} (Release {new}) is open: waiting for its checks, then merging it")
             self.step("Wait for the checks")
+            # A pull request opened a moment ago has no checks yet: merging then fails on the branch rules
+            if not self.checks_appear(number) and not self.dry:
+                raise ReleaseError(f"No checks on pull request #{number} after {CHECKS_APPEAR_TIMEOUT} s: "
+                                   "push an empty commit to its branch to start them, then resume again.")
             self.merge(new, number)
         else:
             init = self.run(["git", "show", f"origin/main:{INIT.replace(os.sep, '/')}"], capture=True, readonly=True)
@@ -377,11 +381,14 @@ class Releaser:
         for attempt in range(CHECK_RERUNS + 1):
             self.run(watch, check=False)
             try:
-                failed, cancelled, runs = check_problems(json.loads(self.run(listing, capture=True, check=False) or "[]"))
+                listed = json.loads(self.run(listing, capture=True, check=False) or "[]")
+                failed, cancelled, runs = check_problems(listed)
             except ValueError:
                 raise ReleaseError(f"Could not read the checks of pull request #{number}: look at it on GitHub.")
             if failed:
                 raise ReleaseError(f"Failed checks on pull request #{number}: {', '.join(failed)}.")
+            if not listed:  # `gh pr checks --watch` ends at once when nothing is reported yet
+                raise ReleaseError(f"No checks on pull request #{number}: look at it on GitHub.")
             if not cancelled:
                 return
             if attempt == CHECK_RERUNS or not runs:
