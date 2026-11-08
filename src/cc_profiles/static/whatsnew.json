@@ -1,6 +1,24 @@
 {
  "releases": [
   {
+   "version": "0.7.2",
+   "date": "2026-11-08",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "A **Privacy** page in the documentation: what cc-profiles reads, what it keeps on your computer, and the services it talks to. The plugin links it (`privacyPolicyUrl`)."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "The README and the Health guide said cc-profiles reaches only PyPI and the Claude Code installer: they now also list Anthropic (the plan limits, with each profile's own sign-in) and GitHub's public API (commit identities)."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.1",
    "date": "2026-11-08",
    "sections": [
@@ -185,18 +203,6 @@
      "title": "Fixed",
      "items": [
       "Mac app: the About panel and the dialogs dim the whole window and reach its top edge, instead of leaving the title bar as a band in the page's color above them. The page now runs under the title bar and leaves room for the window's buttons."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.2",
-   "date": "2026-10-30",
-   "sections": [
-    {
-     "title": "Fixed",
-     "items": [
-      "After Homebrew updated Python under a running cc-profiles, buttons such as **Check for updates** failed with errors like `LookupError: unknown encoding: idna`, because the old Python's files were gone. The server now notices, starts again with the new Python, and the page reloads by itself."
      ]
     }
    ]
