@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-08
+
 ### Changed
 - The plugin's description says what cc-profiles does and that it needs the cc-profiles app, installed with pipx, uv or Homebrew: the plugin only opens it.
 
@@ -427,7 +429,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.9...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.9...v0.7.0
 [0.6.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.6...v0.6.7
