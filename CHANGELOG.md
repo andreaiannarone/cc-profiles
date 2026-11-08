@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-11-08
+
 ### Changed
 - The plugin's `/cc-profiles:open` has Claude run `cc-profiles open` with its Bash tool, which asks for permission the first time, instead of running it by itself: the Claude plugin directory accepts commands that run by themselves only from Verified organizations. `/cc-profiles`, added by the app, still opens it at once.
 
@@ -445,7 +447,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.6.9...v0.7.0
