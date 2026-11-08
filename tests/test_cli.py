@@ -270,7 +270,12 @@ def test_plugin_command_matches_installed_command():
     sys.path.insert(0, str(SRC))
     from cc_profiles import server
     plugin = (SRC.parent / "plugin" / "commands" / "open.md").read_text()
-    assert plugin == server.command_text("cc-profiles", mark=False)
+    assert plugin == server.PLUGIN_COMMAND_TEXT
+    # what the plugin directory refuses from organizations that are not Verified
+    assert "!`" not in plugin and "allowed-tools" not in plugin and "| sh" not in plugin
+    # the same answers as /cc-profiles, and the same ways to install the app
+    for part in ("accepts nothing, `restart` or `stop`", "pipx install cc-profiles", "uv tool install cc-profiles"):
+        assert part in plugin and part in server.command_text("cc-profiles")
 
 
 def test_install_script_options():

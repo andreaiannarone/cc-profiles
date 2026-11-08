@@ -97,7 +97,7 @@ The repository is also a Claude Code plugin marketplace. Install the plugin once
 /plugin install cc-profiles@cc-profiles
 ```
 
-The plugin's command is `/cc-profiles:open`, because Claude Code always prefixes plugin commands with the plugin's name; it does the same as `/cc-profiles`, `restart` and `stop` included (`/cc-profiles:open restart`). The plugin only opens the app: install `cc-profiles` first. To get it in every profile, install it in the source profile and share `plugins` from the **Profiles** tab.
+The plugin's command is `/cc-profiles:open`, because Claude Code always prefixes plugin commands with the plugin's name; it does the same as `/cc-profiles`, `restart` and `stop` included (`/cc-profiles:open restart`), except that Claude runs `cc-profiles open` with its Bash tool, so Claude Code asks for permission the first time (choose to always allow it). The plugin directory accepts commands that run by themselves only from Verified organizations. The plugin only opens the app: install `cc-profiles` first. To get it in every profile, install it in the source profile and share `plugins` from the **Profiles** tab.
 
 ## Starting Claude Code in a profile
 

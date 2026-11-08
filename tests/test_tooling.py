@@ -82,9 +82,10 @@ def test_plugin_marketplace_manifests():
     manifest = json.loads((plugin_dir / ".claude-plugin" / "plugin.json").read_text())
     assert manifest["name"] == entry["name"] == "cc-profiles"
     command = (plugin_dir / "commands" / "open.md").read_text()
-    # /cc-profiles:open restart|stop: the arguments reach cc-profiles open, which the rule allows
-    assert "!`cc-profiles open $ARGUMENTS`" in command
-    assert 'argument-hint: "[restart|stop]"' in command and "allowed-tools: Bash(cc-profiles open:*)" in command
+    # /cc-profiles:open restart|stop: the arguments reach cc-profiles open, which Claude runs with
+    # its Bash tool (the directory takes a ! line or Bash in allowed-tools only from Verified organizations)
+    assert "Run `cc-profiles open $ARGUMENTS` with the Bash tool" in command
+    assert 'argument-hint: "[restart|stop]"' in command and "allowed-tools" not in command and "!`" not in command
 
 
 # The only files of the docs site that are Liquid by design: everything else is rendered as written.

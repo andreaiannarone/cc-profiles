@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- The plugin's `/cc-profiles:open` has Claude run `cc-profiles open` with its Bash tool, which asks for permission the first time, instead of running it by itself: the Claude plugin directory accepts commands that run by themselves only from Verified organizations. `/cc-profiles`, added by the app, still opens it at once.
+
 ## [0.7.2] - 2026-11-08
 
 ### Added
