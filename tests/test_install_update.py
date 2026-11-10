@@ -5,6 +5,7 @@ usually end by restoring every backup and comparing the fake home with how it st
 """
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -311,6 +312,29 @@ def test_claude_status_with_fake_tools(home, app_factory, tmp_path):
     assert "npm is not available: needs Node.js 22" in app.post_error("/api/claude/install", {"method": "npm"})
     about = app.get("/api/about")
     assert about["claude"]["Version"] == "2.1.300"
+
+
+def test_the_terminal_path_comes_from_the_login_shell(home, app_factory, tmp_path):
+    """Started by the Mac app, the server has macOS's minimal PATH, without ~/.local/bin: whether
+    the terminal finds claude (and the launchers) is asked of the user's login shell instead."""
+    basic_home(home)
+    home.write(".local/bin/claude", '#!/bin/sh\necho "2.1.322 (Claude Code)"\n')
+    home.path(".local/bin/claude").chmod(0o755)
+    mac_app = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "CC_PROFILES_SHELL": shutil.which("bash")}
+
+    # the startup file of the shell does not put ~/.local/bin in the PATH: found, but not by the terminal
+    st = app_factory(**mac_app).get("/api/claude/status")
+    assert st["installed"] and st["version"] == "2.1.322" and st["in_path"] is False
+
+    home.write(".bash_profile", 'export PATH="$HOME/.local/bin:$PATH"\n')
+    app = app_factory(**mac_app)
+    assert app.get("/api/claude/status")["in_path"] is True
+    r = app.post("/api/profiles/create", {"label": "Empty", "id": "empty", "base": "", "share": []})
+    assert "not in your PATH" not in r["message"]
+
+    # a shell that cannot answer: the server's own PATH decides, as before
+    st = app_factory(PATH=f"{home.path('.local/bin')}:/usr/bin:/bin", CC_PROFILES_SHELL="/nonexistent/sh").get("/api/claude/status")
+    assert st["in_path"] is True
 
 
 def test_claude_status_when_node_says_nothing_useful(home, app_factory, tmp_path):

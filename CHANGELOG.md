@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- Opened from the Mac app, cc-profiles said "Claude Code is installed, but your terminal cannot find it" although the terminal found it: apps opened from the Finder or the Dock get a minimal `PATH` from macOS, without the lines of `~/.zshrc`, and cc-profiles looked there. It now asks your login shell for the `PATH` a new terminal gets. The same went for the note that `~/.local/bin` is not in your `PATH` after creating or importing a profile.
+
 ## [0.7.4] - 2026-11-10
 
 ### Added

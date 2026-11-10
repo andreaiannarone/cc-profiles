@@ -63,6 +63,6 @@ If Claude Code is not found, a notice at the top of the page offers **Install Cl
 
 Methods that cannot work on your machine are disabled, with the reason ("Homebrew is not installed", "needs Node.js 22 or later"). The installation output is shown live, and at the end the app checks that `claude` is really there.
 
-If Claude Code is installed but your terminal cannot find it (usually because `~/.local/bin` is not in `PATH`), the notice tells you which line to add to your shell startup file.
+If Claude Code is installed but your terminal cannot find it (usually because `~/.local/bin` is not in `PATH`), the notice tells you which line to add to your shell startup file. cc-profiles asks your login shell for the `PATH` a new terminal gets, so the notice is right even when cc-profiles runs from the Mac app, whose own `PATH` is macOS's minimal one.
 
 cc-profiles looks for programs in your `PATH` plus `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`, so it finds a fresh installation even if it was started from a terminal opened before installing.

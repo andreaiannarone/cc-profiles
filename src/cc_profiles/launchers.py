@@ -8,7 +8,7 @@ import shutil
 import sys
 
 from .byfolder import SHELL_MARK, SHELLS, pick, profile_dir, resolve, shell_line
-from .core import ApiError, Backup, HOME, LAUNCHER_DIR, LAUNCHER_MARK, find_tool, load_config, pretty, write_text
+from .core import ApiError, Backup, HOME, LAUNCHER_DIR, LAUNCHER_MARK, find_tool, load_config, pretty, terminal_path, write_text
 from .projects import list_projects
 
 # ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def write_launcher(command, dir_, label, bk):
 
 
 def launcher_dir_in_path():
-    return LAUNCHER_DIR in os.environ.get("PATH", "").split(":")
+    return LAUNCHER_DIR in terminal_path()
 
 
 def rewrite_alias(old_cmd, new_line, bk):

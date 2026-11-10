@@ -5,13 +5,12 @@
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import threading
 import time
 
-from .core import ApiError, find_tool, pretty, tool_env
+from .core import ApiError, find_tool, in_terminal_path, pretty, tool_env
 from .info import claude_version
 
 # ---------------------------------------------------------------------------
@@ -67,7 +66,7 @@ def claude_status():
                         "available": ok, "why": why})
     return {"installed": bool(b), "path": pretty(os.path.realpath(b)) if b else None,
             "version": claude_version() if b else None,
-            "in_path": bool(shutil.which("claude")), "platform": sys.platform,
+            "in_path": in_terminal_path("claude"), "platform": sys.platform,
             "supported": sys.platform in ("darwin", "linux"),
             "methods": methods, "job": job_state()}
 
