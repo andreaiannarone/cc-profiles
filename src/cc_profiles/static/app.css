@@ -568,3 +568,4 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
   .pcard .nums .s { display: inline; }
   .pcard.add { min-height: 0; }
 }
+.browser-warn { margin: 0 0 8px; }

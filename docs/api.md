@@ -37,6 +37,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/agents/file` | `profile`, `name` | `{content, fields, prompt, valid, other}`: the whole file, the form's fields, the instructions, and the other keys of the frontmatter |
 | `GET /api/agents/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
+| `GET /api/browser` | `profile` | `{config, email, local: {name, servers, taken, command, npx, elsewhere}, chrome: {on, profiles}, warnings}`: the local browser (Playwright's MCP server; `servers` are this profile's servers running it, `taken` a server called `playwright` that is something else, `elsewhere` the other profiles that have it) and Claude in Chrome at start (`claudeInChromeDefaultEnabled`; `profiles` every profile where it is on, with its account). `warnings` when Chrome is on at start in profiles of more than one account |
 | `GET /api/connectors` | `profile` | `{connectors: [{name, rule, blocked, where, seen, on_account}], all_off, url, check, errors}`: the claude.ai connectors of the profile. `rule` is the deny rule for the whole connector, `where` the settings files that have it, `seen` whether it is in `claudeAiMcpEverConnected`, `on_account` what the last check found (`null` before one); `all_off` lists the files with `disableClaudeAiConnectors: true` |
 | `GET /api/connectors/check` | `profile`, `force` (`1` to ask again within the hour) | `{skipped, gone, error}`: runs `claude mcp list` in the profile (at most once an hour) to learn the account's connectors; `gone` are the ones in the profile's list that the account no longer has. Skipped without Claude Code, without a sign-in, or with every connector off. Changes nothing |
 | `GET /api/folders` | `path` (absolute or starting with `~`), `hidden` (`1` to list hidden folders) | `{path, parent, home, folders, truncated, crumbs}`: the subfolders of the closest existing folder (at most 500), for the folder browser. Read-only |
@@ -58,6 +59,8 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
 | `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
+| `GET /api/browser/local/all/preview` | | `{name, from, apply, skip}`: the profiles the local browser would be added to |
+| `GET /api/browser/chrome-off/all/preview` | | `{apply, skip}`: the profiles where Claude in Chrome connects at start |
 | `GET /api/templates` | | `{templates: [{name, from, created, items, skills, mcp, counts, size}], dir}`; `counts`: entries per shareable item the template holds, e.g. `{skills: 3, "CLAUDE.md": 1}` |
 | `GET /api/backups` | | backups, newest first, with title, size, steps, `restorable` |
 | `GET /api/backups/changes` | `name` | `{name, title, created, log, failed, restored, steps, files_changed, max_lines, max_bytes}`: each journal step with `op`, `text` (in plain words), `path`, `to` (moves), `now` (`file`, `folder`, `link` or `null`); `copy` steps add `diff` with `status` (`changed`, `same`, `hidden-only`, `secret`, `too-big`, `binary`, `dir`, `unavailable`), `lines` (unified diff, the backup copy against the file now, at most 2,000 lines), `added`, `removed`, `truncated`, `notes`. JSON is compared with sorted keys and secrets masked; `.credentials.json` is never read. Read-only |
@@ -110,6 +113,10 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
 | `POST /api/mcp/copy-all` | `profile`, `scope`, `name`: to every profile that lacks it, one backup |
 | `POST /api/mcp/delete` | `profile`, `scope`, `name` |
+| `POST /api/browser/local` | `profile`: adds the local browser (`playwright`: `npx @playwright/mcp@latest --isolated`) for every project |
+| `POST /api/browser/local/all` | to every profile that lacks it, one backup |
+| `POST /api/browser/chrome-off` | `profile`: sets `claudeInChromeDefaultEnabled` to false (never true: turning it on needs the user's consent in `/chrome`) |
+| `POST /api/browser/chrome-off/all` | in every profile where it is on, one backup |
 | `POST /api/connectors/set` | `profile`, `name`, `enabled`: removes or adds the deny rule for the whole connector |
 | `POST /api/connectors/all` | `profile`, `enabled`: removes or sets `disableClaudeAiConnectors` |
 | `POST /api/connectors/forget` | `profile`, `name`: takes it off `claudeAiMcpEverConnected` (only when no deny rule blocks it) |

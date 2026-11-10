@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Browser for Claude**, in Skills and MCP servers: add a **local browser** (Playwright's MCP server, `npx @playwright/mcp@latest --isolated`) to a profile or to all of them, a Chrome that Claude Code starts on this computer with a clean profile, so nothing goes through the claude.ai account; and turn off **Claude in Chrome at start** (Enabled by default in `/chrome`) in a profile or in all. Claude in Chrome reaches Claude Code through the account, so people sharing one can drive each other's browser; the section explains it, and warns when Chrome connects at start in profiles of more than one account, since the extension serves one at a time.
+
 ## [0.7.3] - 2026-11-08
 
 ### Changed

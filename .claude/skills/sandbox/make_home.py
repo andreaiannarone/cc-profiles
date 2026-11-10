@@ -29,6 +29,7 @@ home.json(".claude.json", {
                      "hasExtraUsageEnabled": False, "accountCreatedAt": "2025-03-02T10:00:00Z",
                      "subscriptionCreatedAt": "2025-03-02T10:05:00Z"},
     "claudeAiMcpEverConnected": ["claude.ai Google Drive", "claude.ai Gmail", "claude.ai Linear"],
+    "claudeInChromeDefaultEnabled": True,  # Claude in Chrome at start, as Work: two accounts, one extension
     "mcpServers": {
         "filesystem": {"type": "stdio", "command": "npx",
                        "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/code"]},
@@ -59,7 +60,7 @@ home.json(".sandbox-claude-ai-usage.json", {"limits": [
     {"kind": "weekly_scoped", "percent": 12, "resets_at": resets_in(3 * 86400 + 5 * 3600),
      "scope": {"model": {"display_name": "Opus"}}}]})
 # Work is signed in to a team account whose sign-in is gone (as after /logout): log in again
-home.json(".claude-work/.claude.json", {"projects": {}, "oauthAccount": {
+home.json(".claude-work/.claude.json", {"projects": {}, "claudeInChromeDefaultEnabled": True, "oauthAccount": {
     "accountUuid": "acc-work", "emailAddress": "sam@acme.example", "fullName": "Sam Example",
     "organizationUuid": "org-acme", "organizationName": "Acme", "organizationRole": "user",
     "organizationType": "claude_team", "billingType": "stripe_subscription", "hasExtraUsageEnabled": True,

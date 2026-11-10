@@ -51,6 +51,17 @@ Not listed here, because they are configured elsewhere:
 
 Claude Code keeps `.claude.json` in memory while it runs. Close open sessions in the profile before changing its MCP servers, or restart them afterwards.
 
+## Browser for Claude
+
+Under the MCP servers, **Browser for Claude** says how Claude Code opens web pages in the profile, and lets you choose:
+
+- **Local browser**: [Playwright's MCP server](https://github.com/microsoft/playwright-mcp), added as `playwright` with `npx @playwright/mcp@latest --isolated`. Claude Code starts a Chrome of its own on this computer when a session needs a browser, with a clean profile kept in memory and thrown away when it closes. Nothing goes through your claude.ai account, so it can never drive someone else's browser; sites you need must be signed in to there. **Add** puts it in this profile for every project, **Add to all…** in every profile that lacks it. It needs Node.js (`npx`): the section says so when it is missing. It is then an ordinary MCP server in the list above, to edit or delete.
+- **Claude in Chrome at start**: the Chrome extension, with the sites you are signed in to. It reaches Claude Code through Anthropic's bridge, by account: any Chrome signed in to the account, on any computer, can be the one a session drives, so people who share an account can end up driving each other's browser. **Turn off** clears **Enabled by default** of `/chrome` (`claudeInChromeDefaultEnabled` in the profile's `.claude.json`): sessions then connect to Chrome only when started with `claude --chrome`. **Turn off in all…** does it in every profile. cc-profiles never turns it on: Claude Code asks for your consent first, so do that with `/chrome`.
+
+The extension is signed in to one claude.ai account at a time. When Chrome connects at start in profiles of two or more accounts, the section warns that the profiles of the other accounts find no browser, and suggests the local one for them.
+
+Every change goes to a backup, with **Undo** in the message.
+
 ## claude.ai connectors
 
 Connectors (Gmail, Google Drive, Canva…) belong to your claude.ai account, not to the profile: every profile signed in with the same account gets the same ones, and you connect or remove them on [claude.ai](https://claude.ai/customize/connectors). What a profile can do is keep some of them out, and the **claude.ai connectors** section under the MCP servers does that with a switch:
