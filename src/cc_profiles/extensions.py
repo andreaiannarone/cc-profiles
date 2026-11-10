@@ -308,10 +308,16 @@ def mcp_all_plan(pid, scope, name):
     """Which profiles copying an MCP server to every profile that lacks it changes, and which it skips."""
     src = profile(pid)
     mcp_server(pid, scope, name)  # it exists
-    written = {os.path.realpath(src["config_abs"]): src["label"]}
+    return dict(add_everywhere_plan(name, src), name=name, **{"from": src["label"]})
+
+
+def add_everywhere_plan(name, src=None):
+    """The profiles a user-scope MCP server called `name` can be added to (not src, not a .claude.json
+    already counted, not one that cannot be read or already has a server with that name)."""
+    written = {os.path.realpath(src["config_abs"]): src["label"]} if src else {}
     apply, skip = [], []
     for o in profiles():
-        if o["id"] == pid:
+        if src and o["id"] == src["id"]:
             continue
         real = os.path.realpath(o["config_abs"])
         cfg = read_json(o["config_abs"])
@@ -326,16 +332,11 @@ def mcp_all_plan(pid, scope, name):
             apply.append({"id": o["id"], "label": o["label"], "detail": f"added to {pretty(o['config_abs'])} for every project"})
             continue
         skip.append({"id": o["id"], "label": o["label"], "reason": reason})
-    return {"name": name, "from": src["label"], "apply": apply, "skip": skip}
+    return {"apply": apply, "skip": skip}
 
 
-def op_mcp_copy_all(pid, scope, name):
-    plan = mcp_all_plan(pid, scope, name)
-    if not plan["apply"]:
-        raise no_targets(plan)
-    src = profile(pid)
-    conf = mcp_server(pid, scope, name)["config"]
-    bk = Backup("mcp-copy-all", f"Copy MCP server {name} from {src['label']} to every profile")
+def add_everywhere(plan, name, conf, bk):
+    """Add a user-scope MCP server to every profile the plan applies to, journaled in bk."""
     for t in plan["apply"]:
         o = profile(t["id"])
         cfg = load_claude_json(o)
@@ -345,10 +346,163 @@ def op_mcp_copy_all(pid, scope, name):
         bk.note(f"{o['label']}: {t['detail']}")
     for s in plan["skip"]:
         bk.note(f"skipped {s['label']}: {s['reason']}")
+
+
+def op_mcp_copy_all(pid, scope, name):
+    plan = mcp_all_plan(pid, scope, name)
+    if not plan["apply"]:
+        raise no_targets(plan)
+    src = profile(pid)
+    conf = mcp_server(pid, scope, name)["config"]
+    bk = Backup("mcp-copy-all", f"Copy MCP server {name} from {src['label']} to every profile")
+    add_everywhere(plan, name, conf, bk)
     msg = plan_message(f"MCP server {name} copied", plan)
     if conf.get("type") in ("http", "sse"):
         msg += " If it needs a sign-in, run /mcp in each profile to authenticate."
     return {"message": msg, "backup": bk.close()}
+
+
+# A browser for Claude. Claude in Chrome (the extension) reaches Claude Code through Anthropic's
+# bridge, by account: every Chrome signed in to the account, on any computer, can be the one a
+# session drives, and the extension is signed in to one account at a time. The local browser is
+# Playwright's MCP server: a Chrome that Claude Code starts on this computer, with a clean profile
+# kept in memory (--isolated). "Enabled by default" in /chrome is claudeInChromeDefaultEnabled in
+# the profile's .claude.json (false when missing). Claude Code marks that /config item as needing
+# the user's consent, so cc-profiles only turns it off: turning it on stays in /chrome.
+LOCAL_BROWSER = "playwright"
+LOCAL_BROWSER_CONF = {"type": "stdio", "command": "npx", "args": ["@playwright/mcp@latest", "--isolated"]}
+PLAYWRIGHT_PACKAGE = "@playwright/mcp"
+CHROME_KEY = "claudeInChromeDefaultEnabled"
+
+
+def is_playwright(conf):
+    return isinstance(conf, dict) and any(PLAYWRIGHT_PACKAGE in str(a) for a in [conf.get("command")] + list(conf.get("args") or []))
+
+
+def browser_profiles():
+    """Every profile once per .claude.json, with its account and whether Chrome connects at start."""
+    seen, out = set(), []
+    for o in profiles():
+        real = os.path.realpath(o["config_abs"])
+        if real in seen:
+            continue
+        seen.add(real)
+        cfg = read_json(o["config_abs"], {}) or {}
+        cfg = cfg if isinstance(cfg, dict) else {}
+        out.append({"id": o["id"], "label": o["label"], "chrome": cfg.get(CHROME_KEY) is True,
+                    "email": (cfg.get("oauthAccount") or {}).get("emailAddress", "")})
+    return out
+
+
+def browser_status(pid):
+    prof = profile(pid)
+    cfg = read_json(prof["config_abs"], {}) or {}
+    cfg = cfg if isinstance(cfg, dict) else {}
+    servers = cfg.get("mcpServers") or {}
+    local = sorted(n for n, c in servers.items() if is_playwright(c))
+    everyone = browser_profiles()
+    chrome = [o for o in everyone if o["chrome"]]
+    accounts = sorted({o["email"] for o in chrome if o["email"]})
+    me = next((o for o in everyone if o["id"] == pid), None) or {"chrome": cfg.get(CHROME_KEY) is True,
+                                                                  "email": (cfg.get("oauthAccount") or {}).get("emailAddress", "")}
+    warnings = []
+    if me["chrome"] and len(accounts) > 1:
+        warnings.append(f"Claude in Chrome connects at start in profiles of {len(accounts)} claude.ai accounts "
+                        f"({', '.join(accounts)}). The extension is signed in to one account at a time, so the "
+                        "profiles of the other accounts find no browser: give them the local browser.")
+    return {"config": pretty(prof["config_abs"]), "email": me["email"],
+            "local": {"name": LOCAL_BROWSER, "servers": local, "taken": LOCAL_BROWSER in servers and LOCAL_BROWSER not in local,
+                      "command": " ".join([LOCAL_BROWSER_CONF["command"]] + LOCAL_BROWSER_CONF["args"]),
+                      "npx": bool(find_tool("npx")),
+                      "elsewhere": [o["label"] for o in everyone if o["id"] != pid and has_local_browser(o["id"])]},
+            "chrome": {"on": me["chrome"], "profiles": [{"id": o["id"], "label": o["label"], "email": o["email"]} for o in chrome]},
+            "warnings": warnings}
+
+
+def has_local_browser(pid):
+    cfg = read_json(profile(pid)["config_abs"], {}) or {}
+    return isinstance(cfg, dict) and any(is_playwright(c) for c in (cfg.get("mcpServers") or {}).values())
+
+
+def npx_note():
+    return "" if find_tool("npx") else " npx was not found on this computer: install Node.js (nodejs.org) so Claude Code can start it."
+
+
+def op_local_browser(pid):
+    prof = profile(pid)
+    cfg = load_claude_json(prof)
+    servers = mcp_table(cfg, "user", create=True)
+    if any(is_playwright(c) for c in servers.values()):
+        raise ApiError(f"{prof['label']} already has the local browser")
+    if LOCAL_BROWSER in servers:
+        raise ApiError(f"{prof['label']} already has another MCP server called {LOCAL_BROWSER}: rename it first")
+    bk = Backup("browser-local", f"Add the local browser ({prof['label']})")
+    bk.copy(prof["config_abs"], "claude.json")
+    servers[LOCAL_BROWSER] = json.loads(json.dumps(LOCAL_BROWSER_CONF))
+    write_json(prof["config_abs"], cfg)
+    return {"message": f"Local browser added to {prof['label']} for every project: Claude Code starts its own Chrome "
+                       "on this computer when a session needs a browser." + npx_note() + session_hint(prof),
+            "backup": bk.close()}
+
+
+def local_browser_all_plan():
+    plan = add_everywhere_plan(LOCAL_BROWSER)
+    apply, skip = [], list(plan["skip"])
+    for t in plan["apply"]:
+        if has_local_browser(t["id"]):
+            skip.append({"id": t["id"], "label": t["label"], "reason": "already has the local browser"})
+        else:
+            apply.append(t)
+    for s in skip:  # a server called playwright that is the local browser is not an obstacle
+        if s["reason"] == f"already has a server called {LOCAL_BROWSER}" and has_local_browser(s["id"]):
+            s["reason"] = "already has the local browser"
+    return {"name": LOCAL_BROWSER, "from": "cc-profiles", "apply": apply, "skip": skip}
+
+
+def op_local_browser_all():
+    plan = local_browser_all_plan()
+    if not plan["apply"]:
+        raise no_targets(plan)
+    bk = Backup("browser-local-all", "Add the local browser to every profile")
+    add_everywhere(plan, LOCAL_BROWSER, LOCAL_BROWSER_CONF, bk)
+    return {"message": plan_message("Local browser added", plan) + npx_note(), "backup": bk.close()}
+
+
+def chrome_off(prof, bk):
+    cfg = load_claude_json(prof)
+    bk.copy(prof["config_abs"], f"claude-{prof['id']}.json")
+    cfg[CHROME_KEY] = False  # what /chrome writes when Enabled by default is turned off
+    write_json(prof["config_abs"], cfg)
+
+
+def op_chrome_off(pid):
+    prof = profile(pid)
+    if load_claude_json(prof).get(CHROME_KEY) is not True:
+        raise ApiError(f"Claude in Chrome already does not connect at start in {prof['label']}")
+    bk = Backup("browser-chrome-off", f"Claude in Chrome no longer connects at start ({prof['label']})")
+    chrome_off(prof, bk)
+    return {"message": f"Claude in Chrome no longer connects at start in {prof['label']}: start a session with "
+                       f"claude --chrome when you want it." + session_hint(prof), "backup": bk.close()}
+
+
+def chrome_off_all_plan():
+    apply, skip = [], []
+    for o in browser_profiles():
+        (apply if o["chrome"] else skip).append(
+            {"id": o["id"], "label": o["label"], "detail": "Enabled by default turned off"} if o["chrome"]
+            else {"id": o["id"], "label": o["label"], "reason": "does not connect at start"})
+    return {"apply": apply, "skip": skip}
+
+
+def op_chrome_off_all():
+    plan = chrome_off_all_plan()
+    if not plan["apply"]:
+        raise no_targets(plan)
+    bk = Backup("browser-chrome-off-all", "Claude in Chrome no longer connects at start in any profile")
+    for t in plan["apply"]:
+        chrome_off(profile(t["id"]), bk)
+        bk.note(f"{t['label']}: {t['detail']}")
+    return {"message": plan_message("Claude in Chrome no longer connects at start", plan), "backup": bk.close()}
 
 
 # claude.ai connectors belong to the account, not to the profile: every profile signed in with

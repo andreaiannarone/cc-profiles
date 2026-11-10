@@ -14,7 +14,8 @@ async function loadExt(pid) {
   try {
     if (tab === "skills") x.skills = await api("/api/skills?profile=" + x.profile);
     else if (tab === "agents") x.agents = await api("/api/agents?profile=" + x.profile);
-    else [x.mcp, x.conn] = await Promise.all([api("/api/mcp?profile=" + x.profile), api("/api/connectors?profile=" + x.profile)]);
+    else [x.mcp, x.conn, x.browser] = await Promise.all([api("/api/mcp?profile=" + x.profile), api("/api/connectors?profile=" + x.profile),
+      api("/api/browser?profile=" + x.profile)]);
   } catch (e) {
     // "Not found" means the page is newer than the running server: the page is read from disk at every load
     x.error = e.message === "Not found" ? "This page is newer than the running cc-profiles server: run cc-profiles restart (or /cc-profiles restart in Claude Code), then reload the page." : e.message;
@@ -111,7 +112,9 @@ function renderMcp(head) {
         ${m.env.length || m.headers.length ? `<div class="m">${m.env.length ? `env: ${m.env.map(esc).join(", ")}` : ""}${m.env.length && m.headers.length ? " · " : ""}${m.headers.length ? `headers: ${m.headers.map(esc).join(", ")}` : ""}</div>` : ""}</div>
       <div class="acts"><button class="btn small" data-mcpedit="${i}">Edit…</button><button class="btn small" data-mcpcopy="${i}">Copy to…</button><button class="btn small" data-mcpall="${i}">Copy to all…</button>
         <button class="btn small danger" data-mcpdel="${i}">Delete</button></div></div>`).join("") || `<div class="empty">No MCP servers configured in this profile.</div>`}</div>
+    ${browserSection()}
     ${connectorsSection()}`;
+  bindBrowser();
 
   $("#mcpnew").onclick = () => editMcp(null);
   const setConn = (path, body, cb) => run(() => api(path, { profile: x.profile, ...body })).then(() => loadExt(), () => { cb.checked = !cb.checked; });
@@ -140,6 +143,58 @@ function renderMcp(head) {
     if (!(await confirmBox(`Remove ${m.name}?`, `It is removed from <code>${esc(x.mcp.config)}</code> (${esc(scopeLabel(m.scope))}). The file goes to the backup first.`, "Remove", "danger"))) return;
     try { await run(() => api("/api/mcp/delete", { profile: x.profile, scope: m.scope, name: m.name })); } catch {}
     loadExt();
+  });
+}
+// A browser for Claude: the local one (Playwright's MCP server, a Chrome started on this computer)
+// or Claude in Chrome, which reaches Claude Code through the claude.ai account. cc-profiles turns
+// Chrome at start off, never on: Claude Code asks for consent in /chrome.
+function browserSection() {
+  const b = S.ext.browser, prof = S.profiles.find(p => p.id === S.ext.profile);
+  if (!b) return "";
+  const l = b.local, c = b.chrome, name = esc(prof?.label || "");
+  const added = l.servers.length > 0;
+  const others = c.profiles.filter(o => o.id !== S.ext.profile);
+  return `<section id="browser" aria-label="Browser for Claude"><div class="ext-head"><h2>Browser for Claude</h2><span class="hint">How Claude Code opens web pages in ${name}: a browser of its own on this computer, or your Chrome through the claude.ai account.</span></div>
+    ${b.warnings.map(w => `<p class="hint browser-warn"><span class="badge b-warn">Check</span> ${esc(w)}</p>`).join("")}
+    <div class="table">
+      <div class="prow"><div class="txt">
+        <div class="t">Local browser ${added ? `<span class="badge b-none">added</span>` : `<span class="badge b-none">not added</span>`}</div>
+        <div class="m">A Chrome that Claude Code starts on this computer, with a clean profile thrown away when it closes: nothing goes through the account, so it never drives someone else's browser. Sites need a new sign-in there.</div>
+        <div class="mcp-target">${esc(l.command)}${added && l.servers[0] !== l.name ? ` · as <code>${esc(l.servers[0])}</code>` : ""}</div>
+        ${!l.npx ? `<div class="m"><span class="badge b-warn">npx missing</span> Claude Code starts it with <code>npx</code>: install Node.js from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>.</div>` : ""}
+        ${l.taken ? `<div class="m">This profile already has another MCP server called <code>${esc(l.name)}</code>: rename it above to add the local browser.</div>` : ""}</div>
+      <div class="acts">${added ? "" : `<button class="btn small" id="br-add" ${l.taken ? "disabled" : ""}>Add</button>`}<button class="btn small" id="br-add-all">Add to all…</button></div></div>
+      <div class="prow"><div class="txt">
+        <div class="t">Claude in Chrome at start ${c.on ? `<span class="badge b-none">on</span>` : `<span class="badge b-none">off</span>`}</div>
+        <div class="m">The Chrome extension, with your signed-in sites. It reaches Claude Code through the claude.ai account${b.email ? ` <b>${esc(b.email)}</b>` : ""}: any Chrome signed in to it, on any computer, can be the one Claude drives.
+          ${c.on ? "Turned off, it connects only in sessions started with <code>claude --chrome</code>." : "Turn it on in Claude Code with <code>/chrome</code>, which asks for your consent."}</div>
+        ${others.length ? `<div class="m">Also on at start in ${others.map(o => `<b>${esc(o.label)}</b>${o.email ? ` (${esc(o.email)})` : ""}`).join(", ")}.</div>` : ""}</div>
+      <div class="acts">${c.on ? `<button class="btn small" id="br-chrome-off">Turn off</button>` : ""}${c.profiles.length ? `<button class="btn small" id="br-chrome-off-all">Turn off in all…</button>` : ""}</div></div>
+    </div></section>`;
+}
+function bindBrowser() {
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), name = esc(prof?.label || "");
+  $("#br-add")?.addEventListener("click", async () => {
+    if (!(await confirmBox(`Add the local browser to ${name}?`,
+        `<code>${esc(x.browser.local.name)}</code> is added to <code>${esc(x.browser.config)}</code> for every project, like <code>claude mcp add</code> does: <code>${esc(x.browser.local.command)}</code>. The file goes to the backup first.`, "Add"))) return;
+    try { await run(() => api("/api/browser/local", { profile: x.profile })); } catch { return; }
+    loadExt();
+  });
+  $("#br-add-all")?.addEventListener("click", async () => {
+    if (await applyAll("Add the local browser to every profile?", "/api/browser/local/all/preview",
+        `<code>${esc(x.browser.local.name)}</code> (<code>${esc(x.browser.local.command)}</code>) is added for every project to each profile that does not have it.`,
+        "Add to all", () => api("/api/browser/local/all", {}))) loadExt();
+  });
+  $("#br-chrome-off")?.addEventListener("click", async () => {
+    if (!(await confirmBox(`Turn off Claude in Chrome at start in ${name}?`,
+        `Sessions in ${name} no longer connect to Chrome by themselves: <code>claude --chrome</code> still does. It is <b>Enabled by default</b> in <code>/chrome</code>, <code>claudeInChromeDefaultEnabled</code> in <code>${esc(x.browser.config)}</code>, which goes to the backup first.`, "Turn off"))) return;
+    try { await run(() => api("/api/browser/chrome-off", { profile: x.profile })); } catch { return; }
+    loadExt();
+  });
+  $("#br-chrome-off-all")?.addEventListener("click", async () => {
+    if (await applyAll("Turn off Claude in Chrome at start everywhere?", "/api/browser/chrome-off/all/preview",
+        "No profile connects to Chrome by itself any more: <code>claude --chrome</code> still does.",
+        "Turn off in all", () => api("/api/browser/chrome-off/all", {}))) loadExt();
   });
 }
 function connCheckText(c) {

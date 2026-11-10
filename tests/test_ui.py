@@ -374,6 +374,32 @@ def test_claude_ai_connectors_switches(page_on_sandbox):
     assert errors == []
 
 
+def test_browser_for_claude(page_on_sandbox):
+    """Skills and MCP servers → Browser for Claude: the local browser added, Chrome at start turned off."""
+    page, errors = page_on_sandbox
+    open_tab(page, "mcp")
+    page.wait_for_selector("#br-add")
+    text = page.inner_text("#main")
+    assert "Browser for Claude" in text and "npx @playwright/mcp@latest --isolated" in text
+    assert "2 claude.ai accounts" in text and "Also on at start in Work (sam@acme.example)" in text
+    page.click("#br-add")
+    page.click('.modal button:has-text("Add")')
+    page.wait_for_selector(".toast")
+    # the tab reloads: wait for the section again, now without Add (not for the loading state in between)
+    page.wait_for_function("() => document.querySelector('#br-add-all') && !document.querySelector('#br-add')")
+    assert "playwright" in page.inner_text("#main .table")  # listed with the MCP servers too
+    page.click("#br-chrome-off")
+    page.click('.modal button:has-text("Turn off")')
+    page.wait_for_function("() => document.querySelector('#br-add-all') && !document.querySelector('#br-chrome-off')")
+    text = page.inner_text("#main")
+    assert "2 claude.ai accounts" not in text and "Turn it on in Claude Code with /chrome" in text
+    page.click("#br-chrome-off-all")  # Work still has it on
+    page.wait_for_selector('.modal :text("Changes 1 profile")')
+    page.click('.modal button:has-text("Turn off in all")')
+    page.wait_for_function("() => document.querySelector('#br-add-all') && !document.querySelector('#br-chrome-off-all')")
+    assert errors == []
+
+
 def test_github_account_per_profile(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "profiles")

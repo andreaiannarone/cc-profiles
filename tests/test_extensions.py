@@ -92,6 +92,63 @@ def test_mcp_servers_are_managed_and_undoable(home, app_factory):
     assert home.snapshot() == before
 
 
+def test_a_local_browser_instead_of_claude_in_chrome(home, app_factory):
+    """Claude in Chrome reaches Claude Code through the account; the local browser (Playwright's MCP
+    server) runs on this computer. Added to one profile or to all, Chrome turned off at start, undone."""
+    basic_home(home)
+    home.profile("client")
+    home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"}, "claudeInChromeDefaultEnabled": True,
+                               "projects": {}})
+    home.json(".claude-work/.claude.json", {"oauthAccount": {"emailAddress": "work@example.com"},
+                                            "claudeInChromeDefaultEnabled": True, "mcpServers": {"playwright": {"command": "uvx", "args": ["other"]}}})
+    home.json(".claude-client/.claude.json", {"oauthAccount": {"emailAddress": "me@example.com"}})
+    before = home.snapshot()
+    app = app_factory()
+
+    st = app.get("/api/browser?profile=default")
+    assert st["chrome"]["on"] and [p["id"] for p in st["chrome"]["profiles"]] == ["default", "work"]
+    assert st["email"] == "me@example.com" and st["local"]["servers"] == [] and not st["local"]["taken"]
+    assert "@playwright/mcp@latest --isolated" in st["local"]["command"]
+    # Chrome at start in profiles of two accounts: the extension serves one of them
+    assert "2 claude.ai accounts" in st["warnings"][0] and "me@example.com, work@example.com" in st["warnings"][0]
+    assert app.get("/api/browser?profile=client")["warnings"] == []  # Chrome is off there
+    assert app.get("/api/browser?profile=work")["local"]["taken"]  # a server called playwright that is not it
+
+    r = app.post("/api/browser/local", {"profile": "default"})
+    assert "Local browser added to Default" in r["message"] and r["backup"]
+    cfg = json.loads(home.path(".claude.json").read_text())
+    assert cfg["mcpServers"]["playwright"] == {"type": "stdio", "command": "npx", "args": ["@playwright/mcp@latest", "--isolated"]}
+    assert cfg["oauthAccount"]  # the rest of the file is kept
+    assert app.get("/api/browser?profile=default")["local"]["servers"] == ["playwright"]
+    assert "already has the local browser" in app.post_error("/api/browser/local", {"profile": "default"})
+    assert "rename it first" in app.post_error("/api/browser/local", {"profile": "work"})
+
+    plan = app.get("/api/browser/local/all/preview")
+    assert [a["id"] for a in plan["apply"]] == ["client"]
+    assert {s["id"]: s["reason"] for s in plan["skip"]} == {
+        "default": "already has the local browser", "work": "already has a server called playwright"}
+    assert "in 1 profile, 2 skipped" in app.post("/api/browser/local/all", {})["message"]
+    assert json.loads(home.path(".claude-client/.claude.json").read_text())["mcpServers"]["playwright"]["command"] == "npx"
+    assert "No profile to change" in app.post_error("/api/browser/local/all", {})
+    assert app.get("/api/browser?profile=work")["local"]["elsewhere"] == ["Default", "Client"]
+
+    r = app.post("/api/browser/chrome-off", {"profile": "default"})
+    assert "no longer connects at start in Default" in r["message"] and "claude --chrome" in r["message"]
+    assert json.loads(home.path(".claude.json").read_text())["claudeInChromeDefaultEnabled"] is False
+    assert "already does not connect" in app.post_error("/api/browser/chrome-off", {"profile": "default"})
+    assert app.get("/api/browser?profile=work")["warnings"] == []  # one account left with Chrome at start
+    plan = app.get("/api/browser/chrome-off/all/preview")
+    assert [a["id"] for a in plan["apply"]] == ["work"] and len(plan["skip"]) == 2
+    app.post("/api/browser/chrome-off/all", {})
+    assert json.loads(home.path(".claude-work/.claude.json").read_text())["claudeInChromeDefaultEnabled"] is False
+    assert "No profile to change" in app.post_error("/api/browser/chrome-off/all", {})
+    # cc-profiles never turns it on: that needs the user's consent in /chrome
+    assert app.request("/api/browser/chrome-on", {"profile": "default"})[0] == 404
+
+    app.restore_all()
+    assert home.snapshot() == before
+
+
 def test_claude_ai_connectors_can_be_kept_out_of_a_profile(home, app_factory):
     basic_home(home)
     home.json(".claude.json", {"oauthAccount": {"emailAddress": "me@example.com"},
