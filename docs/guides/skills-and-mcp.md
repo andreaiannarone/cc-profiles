@@ -28,7 +28,7 @@ Skills that come from plugins are not listed here: manage them with `/plugin` in
 
 <picture>
   <source media="not all" srcset="../assets/screenshots/mcp-light.jpg">
-  <img src="../assets/screenshots/mcp-dark.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL, and the claude.ai connectors with a switch each" width="1440" height="900" loading="lazy">
+  <img src="../assets/screenshots/mcp-dark.jpg" alt="The MCP tab: the MCP servers of the Default profile, for all projects and for one project, with their type and command or URL, and below them the Browser for Claude section" width="1440" height="900" loading="lazy">
 </picture>
 
 The tab lists the servers configured in the profile's `.claude.json` (for the default profile, `~/.claude.json`):
@@ -54,6 +54,11 @@ Claude Code keeps `.claude.json` in memory while it runs. Close open sessions in
 ## Browser for Claude
 
 Under the MCP servers, **Browser for Claude** says how Claude Code opens web pages in the profile, and lets you choose:
+
+<picture>
+  <source media="not all" srcset="../assets/screenshots/browser-light.jpg">
+  <img src="../assets/screenshots/browser-dark.jpg" alt="The Browser for Claude section of the MCP tab: the local browser, not added yet, with Add and Add to all, and Claude in Chrome at start, on, with Turn off and Turn off in all, under a warning that Chrome connects at start in profiles of two claude.ai accounts" width="1440" height="312" loading="lazy">
+</picture>
 
 - **Local browser**: [Playwright's MCP server](https://github.com/microsoft/playwright-mcp), added as `playwright` with `npx @playwright/mcp@latest --isolated`. Claude Code starts a Chrome of its own on this computer when a session needs a browser, with a clean profile kept in memory and thrown away when it closes. Nothing goes through your claude.ai account, so it can never drive someone else's browser; sites you need must be signed in to there. **Add** puts it in this profile for every project, **Add to all…** in every profile that lacks it. It needs Node.js (`npx`): the section says so when it is missing. It is then an ordinary MCP server in the list above, to edit or delete.
 - **Claude in Chrome at start**: the Chrome extension, with the sites you are signed in to. It reaches Claude Code through Anthropic's bridge, by account: any Chrome signed in to the account, on any computer, can be the one a session drives, so people who share an account can end up driving each other's browser. **Turn off** clears **Enabled by default** of `/chrome` (`claudeInChromeDefaultEnabled` in the profile's `.claude.json`): sessions then connect to Chrome only when started with `claude --chrome`. **Turn off in all…** does it in every profile. cc-profiles never turns it on: Claude Code asks for your consent first, so do that with `/chrome`.

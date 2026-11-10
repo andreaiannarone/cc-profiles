@@ -154,7 +154,7 @@ function browserSection() {
   const l = b.local, c = b.chrome, name = esc(prof?.label || "");
   const added = l.servers.length > 0;
   const others = c.profiles.filter(o => o.id !== S.ext.profile);
-  return `<div class="ext-head"><h2>Browser for Claude</h2><span class="hint">How Claude Code opens web pages in ${name}: a browser of its own on this computer, or your Chrome through the claude.ai account.</span></div>
+  return `<section id="browser" aria-label="Browser for Claude"><div class="ext-head"><h2>Browser for Claude</h2><span class="hint">How Claude Code opens web pages in ${name}: a browser of its own on this computer, or your Chrome through the claude.ai account.</span></div>
     ${b.warnings.map(w => `<p class="hint browser-warn"><span class="badge b-warn">Check</span> ${esc(w)}</p>`).join("")}
     <div class="table">
       <div class="prow"><div class="txt">
@@ -170,7 +170,7 @@ function browserSection() {
           ${c.on ? "Turned off, it connects only in sessions started with <code>claude --chrome</code>." : "Turn it on in Claude Code with <code>/chrome</code>, which asks for your consent."}</div>
         ${others.length ? `<div class="m">Also on at start in ${others.map(o => `<b>${esc(o.label)}</b>${o.email ? ` (${esc(o.email)})` : ""}`).join(", ")}.</div>` : ""}</div>
       <div class="acts">${c.on ? `<button class="btn small" id="br-chrome-off">Turn off</button>` : ""}${c.profiles.length ? `<button class="btn small" id="br-chrome-off-all">Turn off in all…</button>` : ""}</div></div>
-    </div>`;
+    </div></section>`;
 }
 function bindBrowser() {
   const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), name = esc(prof?.label || "");

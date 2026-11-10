@@ -91,6 +91,14 @@ class Shooter:
         self.page.screenshot(path=str(path), type="jpeg", quality=82, clip=clip) if str(path).endswith(".jpg") \
             else self.page.screenshot(path=str(path), clip=clip)
 
+    def section(self, selector, path):
+        """One part of the tab, scrolled into view, with a margin of the page around it."""
+        self.settle()
+        box = self.page.locator(selector).bounding_box()
+        y = self.js("return window.scrollY;")
+        self.page.screenshot(path=str(path), type="jpeg", quality=82, full_page=True,
+                             clip={"x": 0, "y": y + box["y"] - 16, "width": VIEW["width"], "height": box["height"] + 32})
+
     def dialog(self, path):
         """Only the open dialog, then close it."""
         self.settle()
@@ -152,6 +160,7 @@ def gallery(s, theme):
     s.tab("mcp")
     s.js("await loadExt('default');")
     s.shot(crop=True, path=SHOTS / f"mcp-{theme}.jpg")
+    s.section("#browser", SHOTS / f"browser-{theme}.jpg")  # Browser for Claude, below the servers
     s.tab("compare")
     s.shot(crop=True, path=SHOTS / f"compare-{theme}.jpg")
     s.tab("settings")
