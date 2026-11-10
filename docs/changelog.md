@@ -3,6 +3,11 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.4] - 2026-11-10
+
+**Added**
+- **Browser for Claude**, in Skills and MCP servers: add a **local browser** (Playwright's MCP server, `npx @playwright/mcp@latest --isolated`) to a profile or to all of them, a Chrome that Claude Code starts on this computer with a clean profile, so nothing goes through the claude.ai account; and turn off **Claude in Chrome at start** (Enabled by default in `/chrome`) in a profile or in all. Claude in Chrome reaches Claude Code through the account, so people sharing one can drive each other's browser; the section explains it, and warns when Chrome connects at start in profiles of more than one account, since the extension serves one at a time.
+
 ## [0.7.3] - 2026-11-08
 
 **Changed**
@@ -445,6 +450,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.0...v0.7.1
