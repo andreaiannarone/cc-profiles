@@ -1,6 +1,18 @@
 {
  "releases": [
   {
+   "version": "0.7.4",
+   "date": "2026-11-10",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Browser for Claude**, in Skills and MCP servers: add a **local browser** (Playwright's MCP server, `npx @playwright/mcp@latest --isolated`) to a profile or to all of them, a Chrome that Claude Code starts on this computer with a clean profile, so nothing goes through the claude.ai account; and turn off **Claude in Chrome at start** (Enabled by default in `/chrome`) in a profile or in all. Claude in Chrome reaches Claude Code through the account, so people sharing one can drive each other's browser; the section explains it, and warns when Chrome connects at start in profiles of more than one account, since the extension serves one at a time."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.3",
    "date": "2026-11-08",
    "sections": [
@@ -172,25 +184,6 @@
      "title": "Fixed",
      "items": [
       "Profiles tab at phone width: the buttons go under the profile instead of squeezing its text into a narrow column."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.4",
-   "date": "2026-10-31",
-   "sections": [
-    {
-     "title": "Changed",
-     "items": [
-      "The dialog to delete a profile is clearer: a red **Delete profile** button, one choice between deleting everything and moving its conversations, memories and history to a profile picked from a list, and **Delete it anyway** when a session is still open in it."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "**Check for updates** could keep saying there was no new version for a few minutes after a release, because PyPI's cache answered the previous one: the check now asks PyPI past its cache.",
-      "Memories: closing **Move memory…** right after picking another profile no longer causes a page error."
      ]
     }
    ]
