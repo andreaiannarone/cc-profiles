@@ -527,5 +527,49 @@ def session_hint(prof):
         f" New Claude Code sessions in {prof['label']} will use it."
 
 
+# The PATH of a new terminal, which is what "your terminal cannot find it" is about. The server's
+# own PATH is not it: started by the Mac app (the Finder, the Dock, Open at Login) it gets macOS's
+# minimal /usr/bin:/bin:/usr/sbin:/sbin, without the lines of ~/.zshrc. So ask the user's login
+# shell, interactive as in a terminal, for its PATH: a few hundred milliseconds, kept a minute.
+# CC_PROFILES_SHELL picks the shell (tests); when it cannot answer, the server's PATH is used.
+SHELL_PATH_MARK = "__cc_profiles_path__"
+_shell_path = {"at": 0.0, "dirs": None}
+
+
+def login_shell():
+    shell = os.environ.get("CC_PROFILES_SHELL")
+    if not shell:
+        try:
+            import pwd
+            shell = pwd.getpwuid(os.getuid()).pw_shell
+        except (ImportError, KeyError):
+            shell = None
+    return shell or os.environ.get("SHELL") or "/bin/sh"
+
+
+def terminal_path():
+    """The folders of the PATH a new terminal gets."""
+    if _shell_path["dirs"] is not None and time.time() - _shell_path["at"] < 60:
+        return _shell_path["dirs"]
+    dirs = None
+    try:
+        out = subprocess.run([login_shell(), "-ilc", f'printf "\\n{SHELL_PATH_MARK}%s\\n" "$PATH"'],
+                             capture_output=True, text=True, timeout=5, stdin=subprocess.DEVNULL).stdout
+        m = re.search(SHELL_PATH_MARK + r"(.*)", out)
+        if m and m.group(1).strip():
+            dirs = m.group(1).strip().split(":")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if dirs is None:
+        dirs = os.environ.get("PATH", "").split(":")
+    _shell_path.update(at=time.time(), dirs=dirs)
+    return dirs
+
+
+def in_terminal_path(name):
+    """Whether a new terminal finds the program `name`."""
+    return bool(shutil.which(name, path=":".join(terminal_path())))
+
+
 def find_tool(name):
     return shutil.which(name, path=tool_env()["PATH"])
