@@ -68,6 +68,11 @@ function toast(msg, sub, err, action) {
   t.addEventListener("focusin", () => clearTimeout(timer)); t.addEventListener("focusout", wait);
   wait();
 }
+// A click anywhere else in the page takes Undo away: it is for right after the operation, and
+// once you have moved on it could undo something you no longer have in mind.
+document.addEventListener("pointerdown", e => {
+  if (!e.target.closest?.(".toast[data-undo]")) document.querySelectorAll("#toasts .toast[data-undo]").forEach(x => x.remove());
+}, true);
 // An operation's result, with Undo when it wrote a backup: Undo restores it, like Backups → Restore
 async function run(fn) {
   try {

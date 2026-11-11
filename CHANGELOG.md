@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Fixed
-- **Undo could undo the wrong operation.** A message with Undo stays on screen while the pointer is on it, so after two changes in a row two of them could be stacked, and Undo on the older one put back the files of an operation that was no longer the last. Now only the last operation has Undo: a new change takes the previous message with Undo away. The button names what it undoes (**Undo: GitHub settings of Work**), and if something else was done in the meantime, in another tab or by cc-profiles itself, it asks first, with the same warning as Backups → **Restore**.
+- **Undo could undo the wrong operation.** A message with Undo stays on screen while the pointer is on it, so after two changes in a row two of them could be stacked, and Undo on the older one put back the files of an operation that was no longer the last. Now only the last operation has Undo, and only until you move on: a click anywhere else in the page, or the next change, takes the message with Undo away. The button names what it undoes (**Undo: GitHub settings of Work**), and if something else was done in the meantime, in another tab or by cc-profiles itself, it asks first, with the same warning as Backups → **Restore**.
 
 ### Added
 - Profiles → GitHub shows, under each profile's fields, who its commits go out as now, with a ✓ when the email is the account's address, and a warning with **Use &lt;account&gt;'s** when it is not: an identity changed by mistake shows up there instead of in the history of your projects.
