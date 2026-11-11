@@ -287,6 +287,38 @@ def test_install_script_options():
     assert subprocess.run(["sh", script, "--nope"], capture_output=True).returncode == 2
 
 
+def test_install_script_installs_uv_when_there_is_no_installer(tmp_path):
+    """A new Mac has none of pipx, uv or Homebrew: install.sh installs uv first (here from a fake
+    installer, served by a fake curl), then cc-profiles with it, using uv's own Python."""
+    home, tools = tmp_path / "home", tmp_path / "tools"
+    (home / ".local" / "bin").mkdir(parents=True)
+    tools.mkdir()
+    log = tmp_path / "log"
+    uv_installer = tmp_path / "uv-install.sh"
+    uv_installer.write_text(f"""cat > "$HOME/.local/bin/uv" <<'UV'
+#!/bin/sh
+echo "uv $* managed=$UV_MANAGED_PYTHON" >> {log}
+[ "$1 $2" = "tool install" ] || exit 0
+printf '#!/bin/sh\\necho "cc-profiles $*" >> {log}\\n[ "$1" = --version ] && echo "cc-profiles 9.9.9"\\nexit 0\\n' > "$HOME/.local/bin/cc-profiles"
+chmod +x "$HOME/.local/bin/cc-profiles"
+UV
+chmod +x "$HOME/.local/bin/uv"
+""")
+    curl = tools / "curl"
+    curl.write_text(f'#!/bin/sh\necho "curl $*" >> {log}\ncat {uv_installer}\n')
+    curl.chmod(0o755)
+    env = {"HOME": str(home), "PATH": f"{tools}:/usr/bin:/bin", "CC_PROFILES_TOOL_DIRS": "",
+           "CC_PROFILES_UV_INSTALLER": "https://example.invalid/uv.sh"}
+    r = subprocess.run(["sh", str(SRC.parent / "install.sh")], env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = log.read_text().splitlines()
+    assert lines[0] == "curl -LsSf https://example.invalid/uv.sh"
+    assert "uv tool install --force --reinstall cc-profiles managed=1" in lines
+    assert "cc-profiles install-command" in lines
+    assert "installing uv" in r.stdout and "cc-profiles 9.9.9 is installed" in r.stdout
+    assert "Open a new terminal" in r.stdout and "ensurepath" not in r.stdout
+
+
 def test_version_command(home):
     out = run_cli(home, "--version").stdout
     assert out.startswith("cc-profiles ")

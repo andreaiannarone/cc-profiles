@@ -13,7 +13,7 @@
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 ```
 
-The script installs cc-profiles with `pipx` or `uv`, whichever you have, or with Homebrew when you have neither (uv and Homebrew bring their own Python; pipx needs Python 3.9 or later). Then it adds the `/cc-profiles` command to Claude Code (see [Open it from Claude Code](#open-it-from-claude-code)) and, on macOS, the [Mac app](mac-app.md).
+The script installs cc-profiles with `pipx` or `uv`, whichever you have, or with Homebrew when you have neither (uv and Homebrew bring their own Python; pipx needs Python 3.9 or later). With none of the three, as on a new Mac, it first installs uv with [uv's official installer](https://docs.astral.sh/uv/getting-started/installation/), in `~/.local/bin`, and installs cc-profiles with it; nothing else is needed, not even Python or Apple's developer tools. Then it adds the `/cc-profiles` command to Claude Code (see [Open it from Claude Code](#open-it-from-claude-code)) and, on macOS, the [Mac app](mac-app.md).
 
 Run it again to update. It updates with the tool that installed cc-profiles, so you never end up with two copies, rebuilds an environment broken by a Python update, and restarts cc-profiles if it is running (then reload the page). It never uses `sudo`.
 

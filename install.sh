@@ -5,9 +5,10 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 #
-# Running it again updates cc-profiles, with the tool that installed it (pipx, uv or Homebrew),
-# and restarts it if it is running. It never uses sudo; besides your home folder it writes
-# only through Homebrew, when that is the only installer you have.
+# It installs with pipx, uv or Homebrew, whichever you have; with none of them (a new Mac), it
+# installs uv first, with uv's official installer, in ~/.local/bin. Running it again updates
+# cc-profiles, with the tool that installed it, and restarts it if it is running. It never uses
+# sudo; besides your home folder it writes only through Homebrew, when that is the installer you have.
 set -eu
 
 SOURCE="${CC_PROFILES_SOURCE:-cc-profiles}"
@@ -53,8 +54,9 @@ case "$(uname -s)" in
 esac
 
 # Look for tools also where installers put them: a fresh terminal may not have these folders yet.
+# (CC_PROFILES_TOOL_DIRS replaces the last two, for tests.)
 ORIG_PATH="$PATH"
-PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin"
+PATH="$PATH:$HOME/.local/bin:${CC_PROFILES_TOOL_DIRS-/opt/homebrew/bin:/usr/local/bin}"
 export PATH
 
 has() { command -v "$1" >/dev/null 2>&1; }
@@ -65,6 +67,7 @@ esac
 
 # Update with the tool that installed it: another one would add a second copy.
 METHOD=""
+NEW_UV=0
 if [ "$SOURCE" = cc-profiles ] && has brew && brew list --formula cc-profiles >/dev/null 2>&1; then
     METHOD=brew
 elif has pipx && pipx list --short 2>/dev/null | grep -q '^cc-profiles '; then
@@ -78,7 +81,19 @@ elif has uv; then
 elif [ "$SOURCE" = cc-profiles ] && has brew; then
     METHOD=brew
 else
-    fail "pipx, uv or Homebrew is required. Install one of them (macOS: brew install pipx; Linux: python3 -m pip install --user pipx; uv: https://docs.astral.sh/uv/), then run this script again."
+    # none of them, as on a new Mac: uv, from its official installer, needs neither sudo nor Python
+    UV_INSTALLER="${CC_PROFILES_UV_INSTALLER:-https://astral.sh/uv/install.sh}"
+    has curl || fail "pipx, uv or Homebrew is required, and curl to install uv. Install one of them (uv: https://docs.astral.sh/uv/), then run this script again."
+    say "No pipx, uv or Homebrew found: installing uv (https://docs.astral.sh/uv/) in ~/.local/bin first…"
+    # with the PATH you started with, so that it adds ~/.local/bin to your shell's startup files
+    curl -LsSf "$UV_INSTALLER" | PATH="$ORIG_PATH" sh \
+        || fail "uv could not be installed. Install pipx, uv or Homebrew yourself (uv: https://docs.astral.sh/uv/), then run this script again."
+    has uv || fail "uv was installed but its command was not found. Open a new terminal, then run this script again."
+    # uv's own Python: asking for the system one on a Mac without the developer tools opens their installer
+    UV_MANAGED_PYTHON=1
+    export UV_MANAGED_PYTHON
+    METHOD=uv
+    NEW_UV=1
 fi
 
 if [ "$METHOD" = pipx ]; then  # uv and Homebrew bring their own Python
@@ -156,5 +171,9 @@ if [ "$ADD_COMMAND" = 1 ]; then
 fi
 case ":$ORIG_PATH:" in
     *":$(dirname "$BIN"):"*) ;;
-    *) say "Note: $(dirname "$BIN") is not in your PATH yet. Run: pipx ensurepath (or: uv tool update-shell), then open a new terminal." ;;
+    *) if [ "$NEW_UV" = 1 ]; then
+           say "Open a new terminal to use cc-profiles and uv there: $(dirname "$BIN") is in your PATH from then on."
+       else
+           say "Note: $(dirname "$BIN") is not in your PATH yet. Run: pipx ensurepath (or: uv tool update-shell), then open a new terminal."
+       fi ;;
 esac

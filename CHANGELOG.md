@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- `install.sh` stopped on a new Mac, with "pipx, uv or Homebrew is required". With none of them it now installs uv first, with uv's official installer, in `~/.local/bin` (no `sudo`), and installs cc-profiles with it, on uv's own Python: neither Python nor Apple's developer tools are needed.
+
 ## [0.7.5] - 2026-11-11
 
 ### Fixed
