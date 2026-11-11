@@ -5,10 +5,15 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 #
-# Running it again updates cc-profiles, with the tool that installed it (pipx, uv or Homebrew),
-# and restarts it if it is running. It never uses sudo; besides your home folder it writes
-# only through Homebrew, when that is the only installer you have.
+# It installs with pipx, uv or Homebrew, whichever you have; with none of them (a new Mac), it
+# installs uv first, with uv's official installer, in ~/.local/bin. Running it again updates
+# cc-profiles, with the tool that installed it, and restarts it if it is running. It never uses
+# sudo; besides your home folder it writes only through Homebrew, when that is the installer you have.
+#
+# Everything runs from main(), called on the last line: a download cut short runs nothing.
 set -eu
+
+main() {
 
 SOURCE="${CC_PROFILES_SOURCE:-cc-profiles}"
 ADD_COMMAND=1
@@ -52,9 +57,15 @@ case "$(uname -s)" in
     *) fail "cc-profiles supports macOS and Linux only for now." ;;
 esac
 
+# sudo keeps your HOME on macOS: everything would land there owned by root
+if [ "$(id -u)" = 0 ] && [ -n "${SUDO_USER:-}" ]; then
+    fail "Run this script without sudo: it installs cc-profiles in your home folder and never needs it."
+fi
+
 # Look for tools also where installers put them: a fresh terminal may not have these folders yet.
+# (CC_PROFILES_TOOL_DIRS replaces the last two, for tests.)
 ORIG_PATH="$PATH"
-PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin"
+PATH="$PATH:$HOME/.local/bin:${CC_PROFILES_TOOL_DIRS-/opt/homebrew/bin:/usr/local/bin}"
 export PATH
 
 has() { command -v "$1" >/dev/null 2>&1; }
@@ -65,6 +76,7 @@ esac
 
 # Update with the tool that installed it: another one would add a second copy.
 METHOD=""
+NEW_UV=0
 if [ "$SOURCE" = cc-profiles ] && has brew && brew list --formula cc-profiles >/dev/null 2>&1; then
     METHOD=brew
 elif has pipx && pipx list --short 2>/dev/null | grep -q '^cc-profiles '; then
@@ -78,7 +90,16 @@ elif has uv; then
 elif [ "$SOURCE" = cc-profiles ] && has brew; then
     METHOD=brew
 else
-    fail "pipx, uv or Homebrew is required. Install one of them (macOS: brew install pipx; Linux: python3 -m pip install --user pipx; uv: https://docs.astral.sh/uv/), then run this script again."
+    # none of them, as on a new Mac: uv, from its official installer, needs neither sudo nor Python
+    UV_INSTALLER="${CC_PROFILES_UV_INSTALLER:-https://astral.sh/uv/install.sh}"
+    has curl || fail "pipx, uv or Homebrew is required, and curl to install uv. Install one of them (uv: https://docs.astral.sh/uv/), then run this script again."
+    say "No pipx, uv or Homebrew found: installing uv (https://docs.astral.sh/uv/) in ~/.local/bin first…"
+    # with the PATH you started with, so that it adds ~/.local/bin to your shell's startup files
+    curl -LsSf "$UV_INSTALLER" | PATH="$ORIG_PATH" sh \
+        || fail "uv could not be installed. Install pipx, uv or Homebrew yourself (uv: https://docs.astral.sh/uv/), then run this script again."
+    has uv || fail "uv was installed but its command was not found. Open a new terminal, then run this script again."
+    METHOD=uv
+    NEW_UV=1
 fi
 
 if [ "$METHOD" = pipx ]; then  # uv and Homebrew bring their own Python
@@ -87,7 +108,23 @@ if [ "$METHOD" = pipx ]; then  # uv and Homebrew bring their own Python
         || fail "Python 3.9 or later is required, found $(python3 --version 2>&1)."
 fi
 
-version() { cc-profiles --version 2>/dev/null | awk '{print $2}' || true; }
+if [ "$METHOD" = uv ] && [ -z "${UV_PYTHON:-}${UV_NO_MANAGED_PYTHON:-}" ]; then
+    # uv's own Python: Homebrew's goes away with its updates and breaks the environment, and asking
+    # for the system one on a Mac without the developer tools opens their installer
+    UV_MANAGED_PYTHON=1
+    export UV_MANAGED_PYTHON
+fi
+
+# Where this installer puts the command: another copy may come first in the PATH.
+case "$METHOD" in
+    pipx) BIN_DIR="$(pipx environment --value PIPX_BIN_DIR 2>/dev/null || true)" ;;
+    uv) BIN_DIR="$(uv tool dir --bin 2>/dev/null || true)" ;;
+    brew) BIN_DIR="$(brew --prefix 2>/dev/null || true)/bin" ;;
+esac
+[ -n "$BIN_DIR" ] && [ "$BIN_DIR" != /bin ] || BIN_DIR="$HOME/.local/bin"
+BIN="$BIN_DIR/cc-profiles"
+
+version() { "$BIN" --version 2>/dev/null | awk '{print $2}' || true; }
 OLD="$(version)"
 
 case "$METHOD" in
@@ -107,9 +144,8 @@ case "$METHOD" in
         fi ;;
 esac
 
-BIN="$(command -v cc-profiles 2>/dev/null || true)"
-[ -n "$BIN" ] || BIN="$HOME/.local/bin/cc-profiles"
-[ -x "$BIN" ] || fail "cc-profiles was installed but its command was not found. Run: pipx ensurepath (or: uv tool update-shell), open a new terminal, then run this script again."
+[ -x "$BIN" ] || BIN="$(command -v cc-profiles 2>/dev/null || true)"
+[ -n "$BIN" ] && [ -x "$BIN" ] || fail "cc-profiles was installed but its command was not found. Run: pipx ensurepath (or: uv tool update-shell), open a new terminal, then run this script again."
 
 if [ "$ADD_COMMAND" = 1 ]; then
     say ""
@@ -151,10 +187,31 @@ elif [ "$OLD" = "$NEW" ]; then
 else
     say "Done: cc-profiles is updated from $OLD to $NEW."
 fi
-if [ "$ADD_COMMAND" = 1 ]; then
+if [ "$(uname -s)" = Darwin ] && [ -d "$HOME/Applications/cc-profiles.app" ]; then
+    say "Open it from your Applications folder (cc-profiles), or run: cc-profiles"
+fi
+if ! has claude && [ ! -x "$HOME/.claude/local/claude" ]; then
+    say "Claude Code is not installed yet: cc-profiles can install it (Health and About), or run:"
+    say "  curl -fsSL https://claude.ai/install.sh | bash"
+elif [ "$ADD_COMMAND" = 1 ]; then
     say "Type /cc-profiles inside Claude Code to open it."
+fi
+
+# Another copy found first by your terminal would run instead of this one.
+FIRST="$(PATH="$ORIG_PATH" command -v cc-profiles 2>/dev/null || true)"
+if [ -n "$FIRST" ] && [ "$FIRST" != "$BIN" ]; then
+    say ""
+    say "Note: your terminal runs another copy of cc-profiles, $FIRST ($("$FIRST" --version 2>/dev/null || echo "unknown version")), before $BIN."
+    say "Remove the one you do not use (cc-profiles uninstall, run with its full path), or put $(dirname "$BIN") first in your PATH."
 fi
 case ":$ORIG_PATH:" in
     *":$(dirname "$BIN"):"*) ;;
-    *) say "Note: $(dirname "$BIN") is not in your PATH yet. Run: pipx ensurepath (or: uv tool update-shell), then open a new terminal." ;;
+    *) if [ "$NEW_UV" = 1 ]; then
+           say "Open a new terminal to use cc-profiles and uv there: $(dirname "$BIN") is in your PATH from then on."
+       else
+           say "Note: $(dirname "$BIN") is not in your PATH yet. Run: pipx ensurepath (or: uv tool update-shell), then open a new terminal."
+       fi ;;
 esac
+}
+
+main "$@"

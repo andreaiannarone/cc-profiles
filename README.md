@@ -64,7 +64,7 @@ Install with a single command:
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh
 ```
 
-The script installs cc-profiles with `pipx` or `uv`, whichever you have (Homebrew when you have neither), adds a `/cc-profiles` command to Claude Code in every profile and, on macOS, the [Mac app](https://cc-profiles.andreaia.com/mac-app.html). It never uses `sudo`; [read it](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) first if you like. Run it again to update: it uses the tool that installed cc-profiles, and restarts cc-profiles if it is running. `--no-app` skips the Mac app. To install the app without touching your profiles:
+The script installs cc-profiles with `pipx` or `uv`, whichever you have (Homebrew when you have neither; with none of the three, as on a new Mac, it installs uv first), adds a `/cc-profiles` command to Claude Code in every profile and, on macOS, the [Mac app](https://cc-profiles.andreaia.com/mac-app.html). It never uses `sudo`; [read it](https://github.com/andreaiannarone/cc-profiles/blob/main/install.sh) first if you like. Run it again to update: it uses the tool that installed cc-profiles, and restarts cc-profiles if it is running. `--no-app` skips the Mac app. To install the app without touching your profiles:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/andreaiannarone/cc-profiles/main/install.sh | sh -s -- --no-command

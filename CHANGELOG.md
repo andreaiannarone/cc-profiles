@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- `install.sh` stopped on a new Mac, with "pipx, uv or Homebrew is required". With none of them it now installs uv first, with uv's official installer, in `~/.local/bin` (no `sudo`), and installs cc-profiles with it, on uv's own Python: neither Python nor Apple's developer tools are needed.
+- `install.sh` with uv installs cc-profiles on uv's own Python, which Homebrew updates cannot remove (`UV_PYTHON` still chooses another).
+- `install.sh` said which version it installed or updated from by asking the first `cc-profiles` in the `PATH`, which could be another, older copy: it now asks the copy it installed, and warns when your terminal would run another one first.
+
+### Changed
+- `install.sh` refuses to run with `sudo` (on macOS it would fill your home folder with files owned by root), runs nothing if its download was cut short, says how to open the Mac app, and, when Claude Code is not installed, how to install it.
+
 ## [0.7.5] - 2026-11-11
 
 ### Fixed

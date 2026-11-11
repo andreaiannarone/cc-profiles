@@ -287,6 +287,93 @@ def test_install_script_options():
     assert subprocess.run(["sh", script, "--nope"], capture_output=True).returncode == 2
 
 
+def new_machine(tmp_path):
+    """A home with none of pipx, uv or Homebrew, and a fake curl serving a fake uv installer: the
+    uv it installs logs its calls and installs a fake cc-profiles (9.9.9) that logs its own."""
+    home, tools, log = tmp_path / "home", tmp_path / "tools", tmp_path / "log"
+    (home / ".local" / "bin").mkdir(parents=True)
+    tools.mkdir()
+    uv_installer = tmp_path / "uv-install.sh"
+    uv_installer.write_text(f"""cat > "$HOME/.local/bin/uv" <<'UV'
+#!/bin/sh
+echo "uv $* managed=$UV_MANAGED_PYTHON" >> {log}
+case "$1 $2" in
+  "tool dir") echo "$HOME/.local/bin" ;;
+  "tool list") [ -x "$HOME/.local/bin/cc-profiles" ] && echo "cc-profiles v9.9.9" ;;
+  "tool install")
+    printf '#!/bin/sh\\necho "cc-profiles $*" >> {log}\\n[ "$1" = --version ] && echo "cc-profiles 9.9.9"\\nexit 0\\n' > "$HOME/.local/bin/cc-profiles"
+    chmod +x "$HOME/.local/bin/cc-profiles" ;;
+esac
+exit 0
+UV
+chmod +x "$HOME/.local/bin/uv"
+""")
+    fake_tool(tools, "curl", f'echo "curl $*" >> {log}\ncat {uv_installer}')
+    env = {"HOME": str(home), "PATH": f"{tools}:/usr/bin:/bin", "CC_PROFILES_TOOL_DIRS": "",
+           "CC_PROFILES_UV_INSTALLER": "https://example.invalid/uv.sh"}
+    return home, tools, log, env
+
+
+def fake_tool(folder, name, body):
+    tool = folder / name
+    tool.write_text(f"#!/bin/sh\n{body}\n")
+    tool.chmod(0o755)
+
+
+def run_install(env, *args):
+    return subprocess.run(["sh", str(SRC.parent / "install.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
+
+
+def test_install_script_installs_uv_when_there_is_no_installer(tmp_path):
+    """A new Mac has none of pipx, uv or Homebrew, nor Claude Code: install.sh installs uv first,
+    then cc-profiles with it, on uv's own Python, and says how to get Claude Code."""
+    home, tools, log, env = new_machine(tmp_path)
+    r = run_install(env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = log.read_text().splitlines()
+    assert lines[0] == "curl -LsSf https://example.invalid/uv.sh"
+    assert "uv tool install --force --reinstall cc-profiles managed=1" in lines
+    assert "cc-profiles install-command" in lines
+    assert "installing uv" in r.stdout and "cc-profiles 9.9.9 is installed" in r.stdout
+    assert "Open a new terminal" in r.stdout and "ensurepath" not in r.stdout
+    assert "Claude Code is not installed yet" in r.stdout and "Type /cc-profiles" not in r.stdout
+
+    # again, with Claude Code there: an update with the same uv, still on its own Python
+    fake_tool(home / ".local" / "bin", "claude", "exit 0")
+    log.write_text("")
+    r = run_install(env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = log.read_text().splitlines()
+    assert not any(line.startswith("curl") for line in lines)
+    assert "uv tool install --force --reinstall cc-profiles managed=1" in lines
+    assert "is up to date" in r.stdout and "Type /cc-profiles inside Claude Code" in r.stdout
+    # unless you chose a Python for uv
+    log.write_text("")
+    assert run_install({**env, "UV_PYTHON": "3.12"}).returncode == 0
+    assert "uv tool install --force --reinstall cc-profiles managed=" in log.read_text().splitlines()
+
+
+def test_install_script_warns_about_another_copy_first_in_the_path(tmp_path):
+    home, tools, log, env = new_machine(tmp_path)
+    fake_tool(tools, "cc-profiles", 'echo "cc-profiles 0.1.0"')  # an old pip install, say
+    r = run_install(env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "cc-profiles 9.9.9 is installed" in r.stdout  # the new copy's version, not the old one's
+    assert f"another copy of cc-profiles, {tools / 'cc-profiles'} (cc-profiles 0.1.0)" in r.stdout
+    assert str(home / ".local" / "bin" / "cc-profiles") in r.stdout
+
+
+def test_install_script_refuses_sudo_and_runs_nothing_when_cut_short(tmp_path):
+    home, tools, log, env = new_machine(tmp_path)
+    fake_tool(tools, "id", "echo 0")
+    r = run_install({**env, "SUDO_USER": "someone"})
+    assert r.returncode == 1 and "without sudo" in r.stderr and not log.exists()
+    # a download that stopped halfway, piped to sh: a syntax error, before anything ran
+    text = (SRC.parent / "install.sh").read_text()
+    r = subprocess.run(["sh", "-s"], input=text[: len(text) // 2], env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode != 0 and not log.exists() and not r.stdout
+
+
 def test_version_command(home):
     out = run_cli(home, "--version").stdout
     assert out.startswith("cc-profiles ")
