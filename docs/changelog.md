@@ -3,6 +3,14 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.7] - 2026-11-11
+
+**Fixed**
+- **Undo could undo the wrong operation.** A message with Undo stays on screen while the pointer is on it, so after two changes in a row two of them could be stacked, and Undo on the older one put back the files of an operation that was no longer the last. Now only the last operation has Undo, and only until you move on: a click anywhere else in the page, or the next change, takes the message with Undo away. The button names what it undoes (**Undo: GitHub settings of Work**), and if something else was done in the meantime, in another tab or by cc-profiles itself, it asks first, with the same warning as Backups → **Restore**.
+
+**Added**
+- Profiles → GitHub shows, under each profile's fields, who its commits go out as now, with a ✓ when the email is the account's address, and a warning with **Use &lt;account&gt;'s** when it is not: an identity changed by mistake shows up there instead of in the history of your projects.
+
 ## [0.7.6] - 2026-11-11
 
 **Fixed**
@@ -465,6 +473,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.3...v0.7.4
