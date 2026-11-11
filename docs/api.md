@@ -9,7 +9,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 - The `Host` header must be `127.0.0.1:<port>` or `localhost:<port>`.
 - GET requests only read. POST requests take a JSON body and run one at a time.
 - Errors return a non-2xx status and `{"error": "message"}`.
-- Write operations return `{"message": "...", "backup": "~/.cc-profiles/backups/…"}`.
+- Write operations return `{"message": "...", "backup": "~/.cc-profiles/backups/…", "backup_title": "…"}` (the title is what Undo shows).
 - `profile` is a profile `id`; `project` is a folder name under `projects/` (for example `-Users-me-code-api`).
 
 ## Read

@@ -154,6 +154,9 @@ textarea.rawtext { width: min(760px, 80vw); min-height: 420px; font-family: var(
 .ghtable tr.changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ghid { display: flex; gap: 6px; }
 .ghid input { min-width: 0; flex: 1; }
+.ghnow { margin-top: 6px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }  /* who the commits go out as now */
+.ghnow b { color: var(--text); font-weight: 600; }
+.ghnow.warn { color: var(--text); } .ghnow .btn { margin-left: 4px; }
 .cmdrow { display: flex; gap: 8px; align-items: center; }
 .cmdrow pre { flex: 1; margin: 0; }
 .conn-all { font-size: 13px; color: var(--muted); align-self: center; }
@@ -505,6 +508,7 @@ pre.diff .f { color: var(--muted); }
 .toast.err { background: var(--err-soft); border-color: var(--err); }
 .toast small { display: block; color: var(--muted); margin-top: 2px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 .toast.act { display: flex; gap: 12px; align-items: center; } .toast.act > div { flex: 1; min-width: 0; }  /* the result of an operation, with Undo */
+.toast.act .btn { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }  /* Undo: <what it undoes> */
 /* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
 .useg { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
 .useg .seg { min-width: 0; }

@@ -425,6 +425,13 @@ def test_github_account_per_profile(page_on_sandbox):
     page.wait_for_function("() => document.querySelector('#gh-bar')?.hidden")
     page.wait_for_function("() => document.querySelector('[data-ghname=\"work\"]')?.value === 'Me At Work'")
     assert y - 150 < page.evaluate("window.scrollY") <= y  # in place (the save bar is gone), not back to the top
+    # who the commits go out as, in plain sight, and a warning when it is not the account's address
+    now = page.inner_text('[data-ghrow="work"] .ghnow')
+    assert "Commits go out as Me At Work <me@work.example>" in now and "not me-personal" in now
+    page.click('[data-ghuse="work"]')
+    assert page.input_value('[data-ghemail="work"]') == "me-personal@users.noreply.github.com" and page.is_visible("#gh-bar")
+    page.click("#gh-save")
+    page.wait_for_function("() => document.querySelector('[data-ghrow=\"work\"] .ghnow:not(.warn)')?.textContent.includes('✓ me-personal')")
     # another account: the sign-in command for the profile's own folder
     page.select_option('[data-ghacc="work"]', "+")
     page.wait_for_selector("#gh-cmd")
@@ -516,6 +523,42 @@ def test_undo_in_the_result_of_an_operation(page_on_sandbox):
     page.wait_for_function("() => [...document.querySelectorAll('.toast')].some(t => t.textContent.includes('Restored'))")
     assert page.evaluate(read) == saved
     page.wait_for_function("s => document.querySelector('#mtext')?.value === s", arg=saved)  # the editor shows the file again
+    assert errors == []
+
+
+def test_undo_is_only_for_the_last_operation(page_on_sandbox):
+    """Undo says what it undoes; a newer operation takes the older Undo away (even with the pointer
+    on it), and undoing an operation that is no longer the last asks first, like Backups → Restore."""
+    page, errors = page_on_sandbox
+    open_tab(page, "memories")
+    page.click(".plist button")
+    page.click("[data-mfile]")
+    page.wait_for_selector("#mtext")
+    page.fill("#mtext", page.input_value("#mtext") + "\nFirst.")
+    page.click("#msave")
+    page.wait_for_selector(".toast[data-undo] button")
+    first = page.inner_text(".toast[data-undo] button")
+    assert first.startswith("Undo: ") and len(first) > len("Undo: ")
+    first_backup = page.inner_text(".toast[data-undo] small")
+    page.hover(".toast[data-undo]")  # kept on screen by the pointer
+    page.fill("#mtext", page.input_value("#mtext") + "\nSecond.")
+    page.click("#msave")
+    page.wait_for_function("b => [...document.querySelectorAll('.toast[data-undo] small')].some(x => x.textContent !== b)", arg=first_backup)
+    assert page.locator(".toast[data-undo]").count() == 1  # only the last one: the first is gone
+    # another operation done elsewhere (another tab): Undo asks before undoing an older one
+    page.evaluate("api('/api/memory/save', {profile: S.mem.profile, project: S.mem.project, file: S.mem.file, content: document.querySelector('#mtext').value + '\\nThird.'})")
+    page.click(".toast[data-undo] button")
+    page.wait_for_selector(".modal")
+    assert "not the last operation" in page.inner_text(".modal") and "1 newer operation has not been undone yet" in page.inner_text(".modal")
+    page.keyboard.press("Escape")
+    # a click anywhere else takes Undo away; a click on the toast itself does not
+    page.fill("#mtext", page.input_value("#mtext") + "\nFourth.")
+    page.click("#msave")
+    page.wait_for_selector(".toast[data-undo]")
+    page.click(".toast[data-undo] div")
+    assert page.locator(".toast[data-undo]").count() == 1
+    page.click("header .sub")
+    page.wait_for_selector(".toast[data-undo]", state="detached", timeout=2000)
     assert errors == []
 
 

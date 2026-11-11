@@ -9,7 +9,9 @@ Every operation that changes files creates a backup in `~/.cc-profiles/backups/<
 
 ## Undo right away
 
-The message after every change shows its backup and an **Undo** button: it does the same as **Restore** on that backup in this tab, without looking for it. The message stays 12 seconds, and as long as the pointer or the keyboard focus is on it.
+The message after every change shows its backup and an **Undo: &lt;operation&gt;** button, which names what it undoes: it does the same as **Restore** on that backup in this tab, without looking for it. The message stays 7 seconds, and as long as the pointer or the keyboard focus is on it.
+
+Only the last operation has Undo, and only until you move on: a click anywhere else in the page takes it away, and so does the next change, even when the pointer keeps the message on screen, so you cannot undo an older operation by mistake. If something else was done in the meantime (in another tab, or by cc-profiles itself), Undo asks first, with the same warning as **Restore** about the newer operations not undone yet.
 
 ## What a backup contains
 

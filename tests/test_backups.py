@@ -49,6 +49,7 @@ def test_apply_a_setting_to_all_profiles_is_undone_by_one_restore(home, app_fact
     assert json.loads(home.path(".claude/settings.json").read_text())["language"] == "Italiano"
     assert json.loads(home.path(".claude-solo/settings.json").read_text())["language"] == "Italiano"
     assert home.path(".claude-lab/settings.json").is_symlink()
+    assert r["backup_title"] == app.get("/api/backups")[0]["title"]  # what Undo says it undoes
     assert "No profile to change" in app.post_error("/api/settings/field/all", {"profile": "work", "key": "language"})
     restore_newest(app)
     assert home.snapshot() == before

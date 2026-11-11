@@ -50,12 +50,16 @@ async function waitForRestart(hint) {
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
 }
-// action: { label, run } adds a button. A toast stays while the pointer or the focus is on it.
+// action: { label, run, title?, undo? } adds a button. A toast stays while the pointer or the focus is on it.
+// Only the last operation has Undo: a new one takes the toasts with Undo of the older ones away, so a
+// toast kept on screen by the pointer can never undo something else than what the newest one says.
 function toast(msg, sub, err, action) {
+  if (action?.undo) document.querySelectorAll("#toasts .toast[data-undo]").forEach(x => x.remove());
   const t = document.createElement("div");
   t.className = "toast" + (err ? " err" : "") + (action ? " act" : "");
+  if (action?.undo) t.dataset.undo = "1";
   t.setAttribute("role", err ? "alert" : "status");
-  t.innerHTML = `<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>${action ? `<button class="btn small">${esc(action.label)}</button>` : ""}`;
+  t.innerHTML = `<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>${action ? `<button class="btn small"${action.title ? ` title="${esc(action.title)}"` : ""}>${esc(action.label)}</button>` : ""}`;
   if (action) $("button", t).onclick = () => { t.remove(); action.run(); };
   $("#toasts").append(t);
   let timer;
@@ -64,17 +68,37 @@ function toast(msg, sub, err, action) {
   t.addEventListener("focusin", () => clearTimeout(timer)); t.addEventListener("focusout", wait);
   wait();
 }
+// A click anywhere else in the page takes Undo away: it is for right after the operation, and
+// once you have moved on it could undo something you no longer have in mind.
+document.addEventListener("pointerdown", e => {
+  if (!e.target.closest?.(".toast[data-undo]")) document.querySelectorAll("#toasts .toast[data-undo]").forEach(x => x.remove());
+}, true);
 // An operation's result, with Undo when it wrote a backup: Undo restores it, like Backups → Restore
 async function run(fn) {
   try {
     const r = await fn();
-    if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : "", false,
-      r.backup ? { label: "Undo", run: () => undoBackup(r.backup) } : undefined);
+    if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : "", false, r.backup ? {
+      label: r.backup_title ? "Undo: " + r.backup_title : "Undo", title: r.backup_title ? "Undo " + r.backup_title : "",
+      undo: true, run: () => undoBackup(r.backup, r.backup_title) } : undefined);
     return r;
   } catch (e) { toast(e.message, "", true); throw e; }
 }
-async function undoBackup(backup) {
-  const r = await run(() => api("/api/backups/restore", { name: backup.split("/").pop() })).catch(() => null);
+// The operations done after backup b and not undone yet (restores excluded): undoing b first may
+// put back files they changed since. Backups → Restore and Undo both warn about them.
+function newerOperations(list, b) {
+  return list.filter(x => x.created > b.created && x.restorable && !x.title.startsWith("Before restoring"));
+}
+function newerWarning(newer) {
+  return newer.length ? `<span class="issue">${plural(newer.length, "newer operation has", "newer operations have")} not been undone yet (${newer.slice(0, 3).map(x => esc(x.title)).join(" · ")}${newer.length > 3 ? "…" : ""}). If they touched the same files, undo them first, newest first.</span>` : "";
+}
+async function undoBackup(backup, title) {
+  const name = backup.split("/").pop();
+  // something else may have been done since this toast appeared, here, in another tab or by cc-profiles
+  const list = await api("/api/backups").catch(() => []), b = list.find(x => x.name === name);
+  const newer = b ? newerOperations(list, b) : [];
+  if (newer.length && !(await confirmBox(`Undo ${title || "this operation"}?`,
+    `<b>${esc(title || name)}</b> is not the last operation.<br><br>${newerWarning(newer)}`, "Undo anyway"))) return;
+  const r = await run(() => api("/api/backups/restore", { name })).catch(() => null);
   if (r?.problems?.length) toast("Steps not restored: " + r.problems.slice(0, 3).join(" · "), "", true);
   if (r) await reloadTab();
 }

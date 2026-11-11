@@ -384,8 +384,8 @@ async function pruneBackups() {
 }
 async function restoreBackup(name) {
   const b = S.backups.find(x => x.name === name);
-  const newer = S.backups.filter(x => x.created > b.created && x.restorable && !x.title.startsWith("Before restoring"));
-  const warn = newer.length ? `<br><br><span class="issue">${plural(newer.length, "newer operation has", "newer operations have")} not been undone yet (${newer.slice(0, 3).map(x => esc(x.title)).join(" · ")}${newer.length > 3 ? "…" : ""}). If they touched the same files, undo them first, newest first.</span>` : "";
+  const newer = newerOperations(S.backups, b);
+  const warn = newer.length ? "<br><br>" + newerWarning(newer) : "";
   // what it puts back, from the journal: the same steps as Show changes
   const c = b.steps ? await api(`/api/backups/changes?name=${encodeURIComponent(name)}`).catch(() => null) : null;
   const steps = c ? `<br><br>${plural(c.steps.length, "step", "steps")} to undo${c.files_changed ? `, ${plural(c.files_changed, "file", "files")} different from the backup now` : ""}:
