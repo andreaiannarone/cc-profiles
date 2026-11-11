@@ -46,7 +46,7 @@ from .settings import (
 )
 from .statusline import get_statusline, op_statusline, op_statusline_all, statusline_all_plan, statusline_preview
 from .health import candidates, health
-from .backups import (backup_auto, backup_changes, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
+from .backups import (backup_auto, backup_changes, backup_title, list_backups, op_backup_auto, op_backup_delete, op_backup_keep,
                       op_backup_prune, op_restore)
 from .info import about
 from .folders import list_folders, pick_folder
@@ -464,7 +464,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(404, {"error": "Not found"})
             with _lock:
                 check_profile_folders(b)
-                self._json(200, routes[self.path]())
+                answer = routes[self.path]()
+                if isinstance(answer, dict) and answer.get("backup") and "backup_title" not in answer:
+                    answer["backup_title"] = backup_title(answer["backup"])  # Undo says what it undoes
+                self._json(200, answer)
         except ApiError as e:
             self._json(e.status, {"error": self._failed(str(e))})
         except KeyError as e:

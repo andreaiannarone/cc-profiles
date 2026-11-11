@@ -234,6 +234,16 @@ def backup_changes(name):
             "max_lines": DIFF_MAX_LINES, "max_bytes": DIFF_MAX_BYTES}
 
 
+def backup_title(backup):
+    """The title of a backup named by the path an operation answers with, so that Undo can say
+    what it undoes; None when it cannot be read."""
+    try:
+        man = read_json(os.path.join(backup_path(str(backup).rstrip("/").split("/")[-1]), "manifest.json"))
+    except ApiError:
+        return None
+    return (man or {}).get("title")
+
+
 def op_restore(name):
     d = backup_path(name)
     man = read_json(os.path.join(d, "manifest.json"))

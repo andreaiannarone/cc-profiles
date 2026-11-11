@@ -207,7 +207,8 @@ function githubHtml() {
   const rows = g.profiles.map(p => `<tr data-ghrow="${p.id}" class="${ghChanged(p) ? "changed" : ""}"><td>${esc(p.label)}</td><td>${account(p)}</td>
       <td class="path"><code>${esc(p.dir)}</code>${p.default ? ` <span class="hint">(also your terminal)</span>` : ""}</td>
       <td><div class="ghid"><input class="text" data-ghname="${p.id}" value="${esc(ghVal(p, "name"))}" placeholder="${esc(p.suggest?.name || "Name (required)")}" aria-label="Commit name in ${esc(p.label)}">
-        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="${esc(p.suggest?.email || "Email (required)")}" aria-label="Commit email in ${esc(p.label)}"></div></td></tr>`).join("");
+        <input class="text" data-ghemail="${p.id}" value="${esc(ghVal(p, "email"))}" placeholder="${esc(p.suggest?.email || "Email (required)")}" aria-label="Commit email in ${esc(p.label)}"></div>
+        ${ghIdentityHtml(p)}</td></tr>`).join("");
   return `<h2 class="section-title">GitHub</h2>
     <div class="ext-head" style="margin-top:0"><span class="hint">Each profile has its own GitHub CLI folder: <code>gh</code> and <code>git push</code> in its Claude Code sessions use the account picked here, and its commits carry the name and email written here. Left empty, they are filled in from its account: the name of its GitHub profile and its <code>…@users.noreply.github.com</code> address, which GitHub links to the account. Tokens stay in the system keychain.</span></div>
     ${g.gh ? "" : `<div class="notice"><div class="txt"><b>The GitHub CLI is not installed</b><span>Install it with <code>brew install gh</code>, then sign in with <code>gh auth login</code>.</span></div></div>`}
@@ -216,6 +217,18 @@ function githubHtml() {
     <div class="table ghtable"><table><thead><tr><th>Profile</th><th>GitHub account</th><th>Folder</th><th>Commits by</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="savebar" id="gh-bar" hidden><span id="gh-count"></span><span class="grow"></span><button class="btn" id="gh-cancel">Cancel</button><button class="btn primary" id="gh-save">Save changes</button></div>
     ${githubAccountsHtml()}`;
+}
+// Who the commits of a profile go out as now (the saved values), and whether that is its account:
+// an identity changed by mistake shows up here instead of in the history of every project.
+function ghIdentityHtml(p) {
+  if (!p.name || !p.email) return "";
+  const who = `<b>${esc(p.name)}</b> &lt;${esc(p.email)}&gt;`;
+  const owner = (/^(?:\d+\+)?([^@+]+)@users\.noreply\.github\.com$/i.exec(p.email) || [])[1];
+  if (!p.user || !p.suggest || p.email.toLowerCase() === p.suggest.email.toLowerCase())
+    return `<div class="ghnow">Commits go out as ${who}${p.user && p.suggest ? ` <span class="okmark">✓ ${esc(p.user)}</span>` : ""}</div>`;
+  const whose = owner ? `the address of <b>${esc(owner)}</b>, not of ${esc(p.user)}` : `not the address of ${esc(p.user)}, its account`;
+  return `<div class="ghnow warn"><span class="badge b-warn">not ${esc(p.user)}</span> Commits go out as ${who}: ${whose}.
+    <button class="btn small" data-ghuse="${p.id}">Use ${esc(p.user)}'s</button></div>`;
 }
 function ghMark() {
   const g = S.github; if (!g) return;
@@ -288,6 +301,11 @@ function wireGithub() {
     const p = prof(sel.dataset.ghacc);
     if (sel.value === "+") { sel.value = ghVal(p, "user"); return signInAnother(p); }
     draft(p.id, "user", sel.value);
+  });
+  document.querySelectorAll("[data-ghuse]").forEach(b => b.onclick = () => {  // into the fields: Save changes writes it
+    const p = prof(b.dataset.ghuse);
+    $(`[data-ghname="${p.id}"]`).value = p.suggest.name; $(`[data-ghemail="${p.id}"]`).value = p.suggest.email;
+    draft(p.id, "name", p.suggest.name); draft(p.id, "email", p.suggest.email);
   });
   document.querySelectorAll("[data-ghname]").forEach(i => i.oninput = () => draft(i.dataset.ghname, "name", i.value.trim()));
   document.querySelectorAll("[data-ghemail]").forEach(i => i.oninput = () => draft(i.dataset.ghemail, "email", i.value.trim()));
