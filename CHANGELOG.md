@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-11-11
+
 ### Fixed
 - `install.sh` stopped on a new Mac, with "pipx, uv or Homebrew is required". With none of them it now installs uv first, with uv's official installer, in `~/.local/bin` (no `sudo`), and installs cc-profiles with it, on uv's own Python: neither Python nor Apple's developer tools are needed.
 - `install.sh` with uv installs cc-profiles on uv's own Python, which Homebrew updates cannot remove (`UV_PYTHON` still chooses another).
@@ -465,7 +467,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...HEAD
+[0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.2...v0.7.3
