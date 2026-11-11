@@ -1,6 +1,26 @@
 {
  "releases": [
   {
+   "version": "0.7.6",
+   "date": "2026-11-11",
+   "sections": [
+    {
+     "title": "Fixed",
+     "items": [
+      "`install.sh` stopped on a new Mac, with \"pipx, uv or Homebrew is required\". With none of them it now installs uv first, with uv's official installer, in `~/.local/bin` (no `sudo`), and installs cc-profiles with it, on uv's own Python: neither Python nor Apple's developer tools are needed.",
+      "`install.sh` with uv installs cc-profiles on uv's own Python, which Homebrew updates cannot remove (`UV_PYTHON` still chooses another).",
+      "`install.sh` said which version it installed or updated from by asking the first `cc-profiles` in the `PATH`, which could be another, older copy: it now asks the copy it installed, and warns when your terminal would run another one first."
+     ]
+    },
+    {
+     "title": "Changed",
+     "items": [
+      "`install.sh` refuses to run with `sudo` (on macOS it would fill your home folder with files owned by root), runs nothing if its download was cut short, says how to open the Mac app, and, when Claude Code is not installed, how to install it."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.5",
    "date": "2026-11-11",
    "sections": [
@@ -157,27 +177,6 @@
       "Placeholders in text fields are readable (WCAG AA contrast) in both themes.",
       "Settings no longer scrolls sideways at phone width.",
       "Memories: **also show projects without memories** has a larger checkbox, and its whole label can be clicked."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.6",
-   "date": "2026-11-01",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "Settings: a **Voice** group for Claude Code's voice mode (`voice` in `settings.json`, the same as `/voice`): **Voice mode** on or off, **How to talk** (hold to talk, or tap to start and stop) and **Send on release**. It works with the claude.ai sign-in only. Settings checked against Claude Code 2.1.316.",
-      "Profiles tab: **Claude accounts**, above the profiles, with a card for each claude.ai account they are signed in to: name, email, organization and role, plan (such as Max 5× or Team), member and subscribed since, extra usage, the plan's usage limits (moved here from the profile rows), and the profiles using it, with those whose sign-in is gone and need `/login` again. Profiles signed in to no account are listed below.",
-      "Each account card shows when its limits were checked, with **Refresh** to ask claude.ai again; the bars take the card's whole width.",
-      "About panel: **cc-profiles settings**, under the cc-profiles card and apart from Claude Code's settings, gathers the app's own choices: the theme, **Plan limits** (the plan's usage limits as what is used or what is left), the terminal for Open in Terminal and the daily update check."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "Profiles → **GitHub**: every profile now has a commit identity. Left empty, **Commits by** is filled in from the profile's GitHub account: the name of its GitHub profile and its `…@users.noreply.github.com` address, which GitHub links to the account (your git config when there is no account). Profiles without one get it when cc-profiles starts, and an identity taken from the account follows it when you pick another account. Every change goes to the backup."
      ]
     }
    ]

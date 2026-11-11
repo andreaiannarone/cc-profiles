@@ -3,6 +3,16 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.6] - 2026-11-11
+
+**Fixed**
+- `install.sh` stopped on a new Mac, with "pipx, uv or Homebrew is required". With none of them it now installs uv first, with uv's official installer, in `~/.local/bin` (no `sudo`), and installs cc-profiles with it, on uv's own Python: neither Python nor Apple's developer tools are needed.
+- `install.sh` with uv installs cc-profiles on uv's own Python, which Homebrew updates cannot remove (`UV_PYTHON` still chooses another).
+- `install.sh` said which version it installed or updated from by asking the first `cc-profiles` in the `PATH`, which could be another, older copy: it now asks the copy it installed, and warns when your terminal would run another one first.
+
+**Changed**
+- `install.sh` refuses to run with `sudo` (on macOS it would fill your home folder with files owned by root), runs nothing if its download was cut short, says how to open the Mac app, and, when Claude Code is not installed, how to install it.
+
 ## [0.7.5] - 2026-11-11
 
 **Fixed**
@@ -455,6 +465,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.2...v0.7.3
