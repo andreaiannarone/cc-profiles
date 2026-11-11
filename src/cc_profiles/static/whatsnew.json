@@ -1,6 +1,18 @@
 {
  "releases": [
   {
+   "version": "0.7.5",
+   "date": "2026-11-11",
+   "sections": [
+    {
+     "title": "Fixed",
+     "items": [
+      "Opened from the Mac app, cc-profiles said \"Claude Code is installed, but your terminal cannot find it\" although the terminal found it: apps opened from the Finder or the Dock get a minimal `PATH` from macOS, without the lines of `~/.zshrc`, and cc-profiles looked there. It now asks your login shell for the `PATH` a new terminal gets. The same went for the note that `~/.local/bin` is not in your `PATH` after creating or importing a profile."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.4",
    "date": "2026-11-10",
    "sections": [
@@ -166,24 +178,6 @@
      "title": "Changed",
      "items": [
       "Profiles → **GitHub**: every profile now has a commit identity. Left empty, **Commits by** is filled in from the profile's GitHub account: the name of its GitHub profile and its `…@users.noreply.github.com` address, which GitHub links to the account (your git config when there is no account). Profiles without one get it when cc-profiles starts, and an identity taken from the account follows it when you pick another account. Every change goes to the backup."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.5",
-   "date": "2026-11-01",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**Plan usage limits** in the Profiles tab: under the account of each profile signed in to claude.ai, how much of the 5-hour window and of the week is used (and of a single model's weekly limit, when the plan has one), with the time each resets; orange from 75 %, red from 90 %. cc-profiles asks claude.ai the way Claude Code's `/usage` does, with the profile's own sign-in, which it only reads: the token is never stored, shown or refreshed."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "Profiles tab at phone width: the buttons go under the profile instead of squeezing its text into a narrow column."
      ]
     }
    ]
