@@ -502,13 +502,26 @@ pre.diff .f { color: var(--muted); }
 .ext-head h2 { margin: 0; font-size: 15px; }
 .linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .linkbtn:hover { text-decoration: underline; }
-.toasts { position: fixed; bottom: 18px; right: 18px; display: grid; gap: 8px; z-index: 20; max-width: min(440px, calc(100vw - 36px)); }
-/* in the colors of the theme in use, like a panel */
-.toast { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+.toasts { position: fixed; bottom: 20px; right: 20px; display: grid; gap: 10px; z-index: 20; width: max-content; max-width: min(460px, calc(100vw - 32px)); }
+/* a panel lifted off the page: icon, message, the action (Undo) and a close button */
+.toast { display: flex; align-items: center; gap: 14px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  padding: 14px 14px 14px 18px; border-radius: 14px; font-size: 14.5px; line-height: 1.45;
+  box-shadow: 0 18px 50px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.12); animation: toast-in .18s ease-out; }
 .toast.err { background: var(--err-soft); border-color: var(--err); }
-.toast small { display: block; color: var(--muted); margin-top: 2px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
-.toast.act { display: flex; gap: 12px; align-items: center; } .toast.act > div { flex: 1; min-width: 0; }  /* the result of an operation, with Undo */
-.toast.act .btn { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }  /* Undo: <what it undoes> */
+.toast .ticon { flex: none; width: 20px; height: 20px; }
+.toast.err .ticon { color: var(--err); }
+.toast .tmsg { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast .tmsg small { display: block; color: var(--muted); margin-top: 2px; font-size: 13px; }
+.toast .tact { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--text); color: var(--bg); border: 0; border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
+.toast .tact:hover { opacity: .88; }
+.toast .tclose { flex: none; align-self: flex-start; width: 30px; height: 30px; margin: -4px -4px 0 0; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; padding: 0; }
+.toast .tclose svg { width: 16px; height: 16px; }
+.toast .tclose:hover { color: var(--text); background: var(--panel-2); }
+.toast.err .tclose { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 /* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
 .useg { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
 .useg .seg { min-width: 0; }

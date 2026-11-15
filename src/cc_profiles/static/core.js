@@ -50,7 +50,12 @@ async function waitForRestart(hint) {
   }
   bg.querySelector(".hint").textContent = "cc-profiles did not come back: start it again with cc-profiles open.";
 }
-// action: { label, run, title?, undo? } adds a button. A toast stays while the pointer or the focus is on it.
+// action: { label, run, title?, detail?, undo? } adds a button (detail: the message's tooltip, the backup's
+// path). Every toast has an icon and a close button. It stays while the pointer or the focus is on it.
+const TOAST_ICON = {
+  ok: '<svg class="ticon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>',
+  err: '<svg class="ticon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>' };
 // Only the last operation has Undo: a new one takes the toasts with Undo of the older ones away, so a
 // toast kept on screen by the pointer can never undo something else than what the newest one says.
 function toast(msg, sub, err, action) {
@@ -59,8 +64,11 @@ function toast(msg, sub, err, action) {
   t.className = "toast" + (err ? " err" : "") + (action ? " act" : "");
   if (action?.undo) t.dataset.undo = "1";
   t.setAttribute("role", err ? "alert" : "status");
-  t.innerHTML = `<div>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>${action ? `<button class="btn small"${action.title ? ` title="${esc(action.title)}"` : ""}>${esc(action.label)}</button>` : ""}`;
-  if (action) $("button", t).onclick = () => { t.remove(); action.run(); };
+  t.innerHTML = `${err ? TOAST_ICON.err : TOAST_ICON.ok}<div class="tmsg"${action?.detail ? ` title="${esc(action.detail)}"` : ""}>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>`
+    + (action ? `<button class="tact"${action.title ? ` title="${esc(action.title)}" aria-label="${esc(action.title)}"` : ""}>${esc(action.label)}</button>` : "")
+    + `<button class="tclose" aria-label="Close">${TOAST_ICON.close}</button>`;
+  if (action) $(".tact", t).onclick = () => { t.remove(); action.run(); };
+  $(".tclose", t).onclick = () => t.remove();
   $("#toasts").append(t);
   let timer;
   const wait = () => { clearTimeout(timer); timer = setTimeout(() => t.remove(), err ? 6000 : action ? 7000 : 3500); };
@@ -77,8 +85,8 @@ document.addEventListener("pointerdown", e => {
 async function run(fn) {
   try {
     const r = await fn();
-    if (r?.message) toast(r.message, r.backup ? "backup: " + r.backup : "", false, r.backup ? {
-      label: r.backup_title ? "Undo: " + r.backup_title : "Undo", title: r.backup_title ? "Undo " + r.backup_title : "",
+    if (r?.message) toast(r.message, "", false, r.backup ? { detail: "Backup: " + r.backup,
+      label: "Undo", title: r.backup_title ? "Undo " + r.backup_title : "",
       undo: true, run: () => undoBackup(r.backup, r.backup_title) } : undefined);
     return r;
   } catch (e) { toast(e.message, "", true); throw e; }

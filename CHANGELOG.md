@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Messages at the bottom right are easier to see: a panel lifted off the page, with an icon, larger text, a solid **Undo** button and a close button (×). The backup's path moved to the message's tooltip, and Undo's tooltip names the operation it undoes.
+
 ## [0.7.7] - 2026-11-11
 
 ### Fixed

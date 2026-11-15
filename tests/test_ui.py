@@ -536,18 +536,20 @@ def test_undo_is_only_for_the_last_operation(page_on_sandbox):
     page.wait_for_selector("#mtext")
     page.fill("#mtext", page.input_value("#mtext") + "\nFirst.")
     page.click("#msave")
-    page.wait_for_selector(".toast[data-undo] button")
-    first = page.inner_text(".toast[data-undo] button")
-    assert first.startswith("Undo: ") and len(first) > len("Undo: ")
-    first_backup = page.inner_text(".toast[data-undo] small")
+    page.wait_for_selector(".toast[data-undo] .tact")
+    assert page.inner_text(".toast[data-undo] .tact") == "Undo"
+    first = page.get_attribute(".toast[data-undo] .tact", "aria-label")  # names what it undoes
+    assert first.startswith("Undo Edit memory ")
+    first_backup = page.get_attribute(".toast[data-undo] .tmsg", "title")
+    assert first_backup.startswith("Backup: ~/.cc-profiles/backups/")
     page.hover(".toast[data-undo]")  # kept on screen by the pointer
     page.fill("#mtext", page.input_value("#mtext") + "\nSecond.")
     page.click("#msave")
-    page.wait_for_function("b => [...document.querySelectorAll('.toast[data-undo] small')].some(x => x.textContent !== b)", arg=first_backup)
+    page.wait_for_function("b => [...document.querySelectorAll('.toast[data-undo] .tmsg')].some(x => x.title !== b)", arg=first_backup)
     assert page.locator(".toast[data-undo]").count() == 1  # only the last one: the first is gone
     # another operation done elsewhere (another tab): Undo asks before undoing an older one
     page.evaluate("api('/api/memory/save', {profile: S.mem.profile, project: S.mem.project, file: S.mem.file, content: document.querySelector('#mtext').value + '\\nThird.'})")
-    page.click(".toast[data-undo] button")
+    page.click(".toast[data-undo] .tact")
     page.wait_for_selector(".modal")
     assert "not the last operation" in page.inner_text(".modal") and "1 newer operation has not been undone yet" in page.inner_text(".modal")
     page.keyboard.press("Escape")
@@ -555,10 +557,14 @@ def test_undo_is_only_for_the_last_operation(page_on_sandbox):
     page.fill("#mtext", page.input_value("#mtext") + "\nFourth.")
     page.click("#msave")
     page.wait_for_selector(".toast[data-undo]")
-    page.click(".toast[data-undo] div")
+    page.click(".toast[data-undo] .tmsg")
     assert page.locator(".toast[data-undo]").count() == 1
     page.click("header .sub")
     page.wait_for_selector(".toast[data-undo]", state="detached", timeout=2000)
+    # every toast closes with its close button
+    page.evaluate("toast('Something to close')")
+    page.click(".toast .tclose")
+    assert page.locator(".toast").count() == 0
     assert errors == []
 
 
