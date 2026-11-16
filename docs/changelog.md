@@ -3,6 +3,15 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.8] - 2026-11-16
+
+**Added**
+- **Artifacts** in Settings → Replies: turn off the pages Claude Code publishes to claude.ai, in one profile or, with **Apply to all**, in every one (`"enableArtifact": false` in `settings.json`, the switch of Claude Code's `/config`).
+
+**Changed**
+- Messages at the bottom right are easier to see: one width for all, a panel lifted off the page, with an icon, a solid **Undo** button and a close button (×) on one line. The backup's path moved to the message's tooltip, and Undo's tooltip names the operation it undoes.
+- A click elsewhere in the page no longer hides the message with Undo: it goes away by itself, with its close button, or at the next change.
+
 ## [0.7.7] - 2026-11-11
 
 **Fixed**
@@ -473,6 +482,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.4...v0.7.5
