@@ -502,8 +502,7 @@ pre.diff .f { color: var(--muted); }
 .ext-head h2 { margin: 0; font-size: 15px; }
 .linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .linkbtn:hover { text-decoration: underline; }
-/* bottom center: the bars with Save, Cancel and Delete are at the bottom right, and must stay reachable */
-.toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; width: min(480px, calc(100vw - 32px)); }
+.toasts { position: fixed; bottom: 20px; right: 20px; display: grid; gap: 8px; z-index: 20; width: min(480px, calc(100vw - 32px)); }
 /* a panel lifted off the page: icon, message, the action (Undo) and a close button, all on one axis */
 .toast { display: flex; align-items: center; gap: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
   padding: 10px 10px 10px 16px; min-height: 52px; border-radius: 12px; font-size: 14px; line-height: 1.45;
