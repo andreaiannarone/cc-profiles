@@ -498,6 +498,72 @@ function renderHealth() {
           <button class="btn small" data-hrelink="${esc(o.name)}" data-prof="${h.id}">Relink…</button>
           <button class="btn small" data-hmerge="${esc(o.name)}" data-prof="${h.id}">Merge into…</button>
           <button class="btn small danger" data-hdel="${esc(o.name)}" data-prof="${h.id}">Delete</button></div></div>`).join("") || `<div class="hint">None. ✓</div>`}
-    </div>`).join("")}</div>`;
+    </div>`).join("")}</div>
+    ${diskSection()}`;
   $("#rehealth").onclick = () => loadHealth(true);
+  bindDisk();
+  if (!S.disk || (!S.disk.data && !S.disk.loading)) loadDisk();
+}
+// ---------- disk space ----------
+// One profile at a time: what fills its folder, and what has been untouched for the chosen days.
+// Freeing moves the old items into one backup: the space comes back when that backup is deleted.
+const DISK_PICK = ["file-history", "session-env", "todos", "shell-snapshots", "debug", "paste-cache", "image-cache"];
+async function loadDisk(pid, days) {
+  const old = S.disk || {};
+  pid = pid || old.profile || S.profiles[0]?.id;
+  const same = pid === old.profile;
+  S.disk = { profile: pid, days: days ?? (same ? old.days : null), data: same ? old.data : null, picked: old.picked || DISK_PICK, loading: true };
+  if (!same) renderDisk();  // the same profile keeps its numbers on screen until the new ones arrive
+  try {
+    S.disk.data = await api(`/api/storage?profile=${encodeURIComponent(pid)}${S.disk.days ? "&days=" + S.disk.days : ""}`);
+    S.disk.days = S.disk.data.days; S.disk.error = null;
+  } catch (e) { S.disk.error = e.message; }
+  S.disk.loading = false;
+  renderDisk();
+}
+function renderDisk() {
+  const sec = $("#disk-sec");
+  if (!sec?.isConnected || S.tab !== "health") return;
+  sec.outerHTML = diskSection();
+  bindDisk();
+}
+function diskSection() {
+  const k = S.disk;
+  const seg = `<div class="seg" style="max-width:360px" role="group" aria-label="Profile">${S.profiles.map(p => `<button data-diskprof="${p.id}" class="${k?.profile === p.id ? "on" : ""}" aria-pressed="${k?.profile === p.id}">${esc(p.label)}</button>`).join("")}</div>`;
+  const head = `<div class="h"><h2>Disk space</h2><span class="hint">What fills a profile's folder, and what can go. Nothing is deleted: it goes to a backup first.</span></div>`;
+  if (!k?.data) return `<section class="sec" id="disk-sec" style="margin-top:20px">${head}<div class="b">${seg}<div class="empty">${k?.error ? esc(k.error) : LOADER}</div></div></section>`;
+  const d = k.data, picked = d.categories.filter(c => k.picked.includes(c.id) && c.old_count && !c.shared);
+  const n = picked.reduce((a, c) => a + c.old_count, 0), bytes = picked.reduce((a, c) => a + c.old_size, 0);
+  return `<section class="sec" id="disk-sec" style="margin-top:20px">${head}<div class="b">
+    <div class="row" style="margin-bottom:10px">${seg}<span class="hint"><code>${esc(d.dir)}</code>: ${size(d.total)} in all</span></div>
+    <div class="table" tabindex="0" role="region" aria-label="Disk space by kind"><table><thead><tr><th></th><th>What</th><th class="r">Size</th><th class="r">Untouched for ${esc(d.days)}+ days</th></tr></thead><tbody>
+      ${d.categories.map(c => `<tr class="${c.old_count ? "" : "dim"}"><td><input type="checkbox" data-diskcat="${c.id}" aria-label="${esc(c.label)}" ${k.picked.includes(c.id) && c.old_count ? "checked" : ""} ${c.old_count && !c.shared ? "" : "disabled"}></td>
+        <td><b>${esc(c.label)}</b> <code class="hint">${esc(c.where)}</code><div class="hint">${c.shared ? "A link to another profile's folder: clean it up there." : esc(c.desc)}</div></td>
+        <td class="r">${c.count ? `${size(c.size)} <span class="hint">· ${c.count}</span>` : `<span class="hint">—</span>`}</td>
+        <td class="r">${c.old_count ? `${size(c.old_size)} <span class="hint">· ${c.old_count}</span>` : `<span class="hint">—</span>`}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="hint" style="margin-top:8px">Claude Code deletes conversations older than ${esc(d.cleanup_days ?? d.default_cleanup_days)} days by itself when it starts: change it in Settings → <b>Keep conversations for</b>. Backups are deleted after ${esc(d.keep_days)} days.</div>
+    <div class="row-end"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Untouched for at least <input class="text" type="number" min="1" step="1" id="disk-days" value="${esc(d.days)}" style="width:80px" aria-label="Days"> days</label>
+      <span class="grow"></span><button class="btn primary" id="disk-free" ${n ? "" : "disabled"}>${n ? `Move ${size(bytes)} to a backup…` : "Nothing to free"}</button></div>
+  </div></section>`;
+}
+function bindDisk() {
+  const k = S.disk;
+  document.querySelectorAll("[data-diskprof]").forEach(b => b.onclick = () => { if (b.dataset.diskprof !== k?.profile) loadDisk(b.dataset.diskprof); });
+  if (!k?.data) return;
+  document.querySelectorAll("[data-diskcat]").forEach(c => c.onchange = () => {
+    k.picked = c.checked ? [...k.picked, c.dataset.diskcat] : k.picked.filter(x => x !== c.dataset.diskcat);
+    renderDisk(); $(`[data-diskcat="${c.dataset.diskcat}"]`)?.focus();
+  });
+  $("#disk-days").onchange = e => { const v = parseInt(e.target.value, 10); if (v >= 1 && v !== k.days) loadDisk(k.profile, v); };
+  $("#disk-free").onclick = async () => {
+    const d = k.data, cats = d.categories.filter(c => k.picked.includes(c.id) && c.old_count && !c.shared);
+    const conv = cats.some(c => c.id === "conversations");
+    if (!(await confirmBox(`Free space in ${label(k.profile)}?`,
+        `<ul class="plan">${cats.map(c => `<li><b>${esc(c.label)}</b>: ${plural(c.old_count, "item", "items")}, ${size(c.old_size)}</li>`).join("")}</ul>
+        ${conv ? `<div class="danger-box" style="margin-top:10px">Conversations untouched for ${esc(d.days)}+ days can no longer be resumed or read. Their memories and the prompt history stay.</div>` : ""}
+        <div style="margin-top:10px">Everything goes to one backup, so Undo puts it back. The space comes back when that backup is deleted in Backups, or by itself after ${esc(d.keep_days)} days.</div>`, "Move to a backup"))) return;
+    try { await run(() => api("/api/storage/clean", { profile: k.profile, days: d.days, categories: cats.map(c => c.id) })); } catch {}
+    loadDisk(k.profile);
+  };
 }

@@ -36,6 +36,9 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/agents` | `profile` | `{agents: [{name, title, description, model, color, tools, disallowed, effort, valid, linked, lines}], dir, shared, plugins, options, tools, schema_version}`: the profile's subagents; `plugins` the read-only ones of installed plugins (with `plugin`); `options` the dropdowns' values |
 | `GET /api/agents/file` | `profile`, `name` | `{content, fields, prompt, valid, other}`: the whole file, the form's fields, the instructions, and the other keys of the frontmatter |
 | `GET /api/agents/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
+| `GET /api/commands` | `profile` | `{commands: [{name, slash, description, fallback, hint, model, tools, linked, managed}], dir, shared, plugins, template}`: the profile's slash commands (`name` is the path under `commands/` without `.md`, `slash` how it is typed); `fallback` the prompt's first line when there is no description; `managed` marks `/cc-profiles`; `plugins` the read-only ones of installed plugins |
+| `GET /api/commands/file` | `profile`, `name` | the command's summary plus `content`, the whole file |
+| `GET /api/commands/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp` | `profile` | `{servers: [{name, scope, type, target, env, headers}], config, projects}`; `env` and `headers` list names only |
 | `GET /api/browser` | `profile` | `{config, email, local: {name, servers, taken, command, npx, elsewhere}, chrome: {on, profiles}, warnings}`: the local browser (Playwright's MCP server; `servers` are this profile's servers running it, `taken` a server called `playwright` that is something else, `elsewhere` the other profiles that have it) and Claude in Chrome at start (`claudeInChromeDefaultEnabled`; `profiles` every profile where it is on, with its account). `warnings` when Chrome is on at start in profiles of more than one account |
 | `GET /api/connectors` | `profile` | `{connectors: [{name, rule, blocked, where, seen, on_account}], all_off, url, check, errors}`: the claude.ai connectors of the profile. `rule` is the deny rule for the whole connector, `where` the settings files that have it, `seen` whether it is in `claudeAiMcpEverConnected`, `on_account` what the last check found (`null` before one); `all_off` lists the files with `disableClaudeAiConnectors: true` |
@@ -56,6 +59,10 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/statusline` | `profile` | `{value, source, mode: off\|builtin\|custom, parts, separator, colors, limits, script, script_is_other, jq, separators, brackets, parts_available}`; `limits` is `used` or `left`, and the limit pieces of `parts_available` also have a `sample_left` |
 | `GET /api/statusline/preview` | `profile`, `parts` (comma-separated `id:brackets`), `separator`, `colors` (`1` or `0`), `limits` (`used` or `left`) | `{text, script}`: what the built-in script prints on sample data (its own sample conversation, never a file of yours), and the script |
 | `GET /api/statusline/all/preview` | `profile` | `{from, mode, apply, skip}` |
+| `GET /api/hooks` | `profile` | `{hooks: [{file, event, matcher, group, index, fp, type, text, timeout, async, status, other}], files, plugins, disabled, disabled_in, events: [{name, desc, matchers}], schema_version}`: the hooks of `settings.json` (`file: settings`) and `settings.local.json` (`local`); `group`, `index` and `fp` (a fingerprint of the hook) name one in a write; `other` lists its keys the form does not show; `plugins` the read-only ones of installed plugins |
+| `GET /api/hooks/copy-all/preview` | `profile`, `file`, `event`, `group`, `index`, `fp` | `{event, matcher, text, from, apply, skip}` |
+| `GET /api/keybindings` | `profile` | `{path, exists, shared, error, warnings, rows: [{context, key, action}], raw, contexts, others: [{id, label, count, same}], schema_version}`: `keybindings.json`, its shortcuts, and how many each other profile sets |
+| `GET /api/keybindings/copy-all/preview` | `profile` | `{from, apply, skip}` |
 | `GET /api/settings/permissions/all/preview` | `list` (`allow`, `ask`, `deny`), `rule` | `{list, rule, apply, skip}` |
 | `GET /api/skills/copy-all/preview` | `profile`, `name` | `{name, from, apply, skip}` |
 | `GET /api/mcp/copy-all/preview` | `profile`, `scope`, `name` | `{name, from, apply, skip}` |
@@ -68,6 +75,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/search` | `q` (2 characters or more) | `{q, results: {projects, memories, skills, mcp, claude_md}, counts, truncated}`; each result has `kind`, `profile`, `title`, `snippet {text, at, len}` and `open` (what to open). Never includes MCP env or header values |
 | `GET /api/compare` | `a`, `b` (profile ids) | `{a, b, settings, permissions: {a, b, diff}, skills, mcp, claude_md, plugins}`: differences between two profiles, read-only |
 | `GET /api/health` | `fresh` (`1` to search the candidate folders again) | checks and orphan projects for every profile (runs `claude auth status`) |
+| `GET /api/storage` | `profile`, `days` (optional: the profile's `cleanupPeriodDays`, or 30) | `{profile, dir, days, total, cleanup_days, default_cleanup_days, keep_days, categories: [{id, label, where, desc, size, count, old_size, old_count, shared}]}`: what fills the profile's folder, and what has been untouched for `days` |
 | `GET /api/about` | | Claude Code, per-profile account/usage/contents, app info |
 | `GET /api/update` | | `{current, latest, newer, kind, command, can_update, manual}`: asks PyPI, only when called (Check for updates), and keeps the answer |
 | `GET /api/macapp` | | the [Mac app](mac-app.md): `{supported: false}` outside macOS, else `{supported, state, path, port}`, `state` being `missing`, `current`, `outdated` (another version, or another port than this server) or `foreign` (an app cc-profiles did not create) |
@@ -109,6 +117,10 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/agents/copy` | `profile`, `name`, `to` |
 | `POST /api/agents/copy-all` | `profile`, `name`: to every profile that lacks it, one backup |
 | `POST /api/agents/delete` | `profile`, `name` |
+| `POST /api/commands/save` | `profile`, `name`, `content`, `new` (true to create) |
+| `POST /api/commands/copy` | `profile`, `name`, `to` |
+| `POST /api/commands/copy-all` | `profile`, `name`: to every profile that lacks it, one backup |
+| `POST /api/commands/delete` | `profile`, `name` |
 | `POST /api/mcp/save` | `profile`, `scope`, `name`, `config` (object), `old_name` (to rename or edit) |
 | `POST /api/mcp/copy` | `profile`, `scope`, `name`, `to` (added to the target's user scope) |
 | `POST /api/mcp/copy-all` | `profile`, `scope`, `name`: to every profile that lacks it, one backup |
@@ -136,6 +148,15 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/settings/fields` | `profile`, `values` (`{key: value}`): several fields at once, all checked first, one backup |
 | `POST /api/statusline` | `profile`, `mode` (`off`, `builtin`, `custom`), `parts`, `separator`, `colors`, `limits` (`used`, the default, or `left`), `command`, `padding`, `refreshInterval`, `hideVimModeIndicator` |
 | `POST /api/statusline/all` | `profile`: its status line goes to every other profile, one backup |
+| `POST /api/hooks/save` | `profile`, `hook` (`event`, `matcher`, `command`, `timeout`, `async`, `statusMessage`, `file`: `settings` or `local`), `at` (`file`, `event`, `group`, `index`, `fp` of the hook to edit; without it, adds one). A changed file answers 409 |
+| `POST /api/hooks/delete` | `profile`, `at` |
+| `POST /api/hooks/copy` | `profile`, `at`, `to`: into its `settings.json` |
+| `POST /api/hooks/copy-all` | `profile`, `at`: to every profile that does not run it, one backup |
+| `POST /api/keybindings/save` | `profile`, `content`: the whole file, checked first |
+| `POST /api/keybindings/delete` | `profile`: back to Claude Code's default shortcuts |
+| `POST /api/keybindings/copy` | `profile`, `to`: replaces that profile's file |
+| `POST /api/keybindings/copy-all` | `profile`: to every other profile, one backup |
+| `POST /api/storage/clean` | `profile`, `days`, `categories` (ids from `GET /api/storage`): what has been untouched for `days` goes into one backup; the answer adds `freed` (bytes) |
 | `POST /api/settings/permissions/all` | `list`, `rule`: added to `settings.json` of every profile, one backup |
 | `POST /api/settings/raw` | `profile`, `file` (`settings` or `local`), `content` (JSON text) |
 | `POST /api/settings/claude-md` | `profile`, `content` |

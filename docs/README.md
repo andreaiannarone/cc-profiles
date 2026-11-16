@@ -34,13 +34,14 @@ Source code, issues and releases are on [GitHub](https://github.com/andreaiannar
    - [Profile by folder](guides/profile-by-folder.md): `claude` starts in the profile of the folder you are in
    - [Skills and MCP servers](guides/skills-and-mcp.md): browse, create, edit, copy and delete skills and MCP servers
    - [Agents](guides/agents.md): create, edit, copy and delete subagents, with a form for their model, tools and instructions
+   - [Commands](guides/commands.md): create, edit, copy and delete custom slash commands
    - [Search and compare](guides/search-and-compare.md): search every profile at once, compare two profiles side by side
    - [Plugins](guides/plugins.md): see the installed plugins and turn them on or off
    - [Export and import](guides/export-import.md): move a profile to another computer
-   - [Settings](guides/settings.md): the `/config` settings, `CLAUDE.md`, permissions, raw JSON
+   - [Settings](guides/settings.md): the `/config` settings, hooks, keyboard shortcuts, `CLAUDE.md`, permissions, raw JSON
    - [Status line](status-line.md): build the line under Claude Code's prompt, or write your own
    - [Backups](guides/backups.md): what gets saved and how restoring works
-   - [Health and About](guides/health.md): checks, orphan projects, installing Claude Code
+   - [Health and About](guides/health.md): checks, orphan projects, disk space, installing Claude Code
 7. [Configuration reference](configuration.md): `config.json`, command line, environment variables
 8. [Troubleshooting](troubleshooting.md)
 9. [Glossary](glossary.md), [Privacy](privacy.md), [Uninstall](uninstall.md), [What's new](changelog.md)

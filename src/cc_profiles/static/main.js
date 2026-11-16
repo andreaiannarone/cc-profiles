@@ -21,7 +21,7 @@ function layoutTabs() {
   more.hidden = true;  // measured without the More button, which would take room of its own
   more.hidden = row.scrollWidth <= row.clientWidth;
   if (more.hidden) { menu.replaceChildren(); return; }
-  const gap = 8, avail = nav.clientWidth - more.offsetWidth - gap, w = b => b.offsetWidth + gap;
+  const gap = 4, avail = nav.clientWidth - more.offsetWidth - 8, w = b => b.offsetWidth + gap;  // gaps: 4px in the row, 8px before More
   const active = TAB_BUTTONS.find(b => b.classList.contains("on"));
   let used = active ? w(active) : 0, full = false;
   const keep = new Set(active ? [active] : []);
@@ -43,7 +43,7 @@ document.addEventListener("click", e => { if (!e.target.closest(".more")) showMo
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#moremenu").hidden) { showMore(false); $("#tabs-more").focus(); } });
 new ResizeObserver(() => layoutTabs()).observe($("#tabs"));
 // g then a letter: the tab's initial, or a distinctive letter when the initial is taken
-const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["u", "usage"], ["s", "skills"], ["a", "agents"], ["x", "mcp"], ["l", "plugins"],
+const GO_KEYS = [["p", "projects"], ["m", "memories"], ["c", "conversations"], ["u", "usage"], ["s", "skills"], ["a", "agents"], ["d", "commands"], ["x", "mcp"], ["l", "plugins"],
                  ["r", "profiles"], ["o", "compare"], ["b", "backups"], ["h", "health"], ["t", "settings"]];
 function showKeys() {
   const name = tab => $(`#tabs button[data-tab="${tab}"] .tl`).textContent;
@@ -130,7 +130,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.hmerge) { await doMerge(byName(t.dataset.hmerge), t.dataset.prof); return S.tab === "health" && loadHealth(); }
   if (t.dataset.hdel) { await doDelete(byName(t.dataset.hdel), t.dataset.prof); return S.tab === "health" && loadHealth(); }
 });
-const openCard = c => c.dataset.agent ? openAgent(c.dataset.agent) : c.dataset.skill ? openSkill(c.dataset.skill)
+const openCard = c => c.dataset.agent ? openAgent(c.dataset.agent) : c.dataset.cmd ? openCommand(c.dataset.cmd) : c.dataset.skill ? openSkill(c.dataset.skill)
   : c.dataset.mfile ? openMemFile(c.dataset.mfile) : null;  // plugin agents are read-only
 document.addEventListener("click", e => { const c = e.target.closest(".mcard"); if (c) openCard(c); });
 document.addEventListener("keydown", e => { const c = e.target.closest?.(".mcard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(c); } });

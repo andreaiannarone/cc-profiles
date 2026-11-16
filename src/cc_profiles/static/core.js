@@ -5,7 +5,7 @@
 const S = { tab: "projects", profiles: [], projects: [], filter: "issues", q: "",
             mem: { profile: null, project: null, all: false, q: "", list: null, file: null, projects: [] },
             conv: { profile: null, project: null, projects: [], list: null, session: null, view: null, q: "" },
-            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, agents: null, agent: null, mcp: null, conn: null, error: null, skill: null, content: "", files: [], q: "" } };
+            health: null, plug: { profile: null, data: null, error: null }, ext: { profile: null, skills: null, agents: null, agent: null, commands: null, cmd: null, mcp: null, conn: null, error: null, skill: null, content: "", files: [], q: "" } };
 
 // ---------- helpers ----------
 /** @type {(s: string, el?: ParentNode) => any} */
