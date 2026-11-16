@@ -1,6 +1,25 @@
 {
  "releases": [
   {
+   "version": "0.7.8",
+   "date": "2026-11-16",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Artifacts** in Settings → Replies: turn off the pages Claude Code publishes to claude.ai, in one profile or, with **Apply to all**, in every one (`\"enableArtifact\": false` in `settings.json`, the switch of Claude Code's `/config`)."
+     ]
+    },
+    {
+     "title": "Changed",
+     "items": [
+      "Messages at the bottom right are easier to see: one width for all, a panel lifted off the page, with an icon, a solid **Undo** button and a close button (×) on one line. The backup's path moved to the message's tooltip, and Undo's tooltip names the operation it undoes.",
+      "A click elsewhere in the page no longer hides the message with Undo: it goes away by itself, with its close button, or at the next change."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.7",
    "date": "2026-11-11",
    "sections": [
@@ -124,34 +143,6 @@
      "title": "Changed",
      "items": [
       "`/cc-profiles` (and the plugin's `/cc-profiles:open`), when cc-profiles is not installed, suggests `pipx`, `uv` or Homebrew instead of a `curl … | sh` line. The plugin has an icon and a link to its repository, for the Claude plugin directory."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.6.8",
-   "date": "2026-11-02",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "**Automatic export**, in the About panel: every profile exported every day or every week, conversations included and never the login, into `iCloud Drive/cc-profiles exports` (or `~/.cc-profiles/exports`), keeping the last 3 of each. Off until you turn it on; **Export now** runs it at once, and the panel shows the last and next export.",
-      "A profile whose folder is gone can be put back from its latest export: **Restore from export…** in the Profiles tab, with Undo. The Mac app sends a notification when a profile's folder disappears."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "**Import profile…** takes archives up to 2 GB: an export of a profile with its conversations easily passes the old 500 MB limit, which refused it.",
-      "A GitHub account renamed after signing in: the GitHub CLI keeps the old name, which may now belong to someone else. cc-profiles asks `gh` whose account it really is, suggests the commit identity of that account (not of whoever has the old name now), and the GitHub table says **renamed** with the new name and **Sign in again…**.",
-      "A new profile made from a base commits as its own GitHub account: the commit identity copied from a base signed in to another account is replaced by the new account's, and the message says so. A profile without an identity gets its account's right away, instead of at the next start.",
-      "A profile whose folder was removed outside cc-profiles: the Profiles tab marks it **folder missing** and says to put the folder back or delete the profile, which still works. Every change that involves it is refused with that message, before anything is written: it no longer fails halfway with a `FileNotFoundError`, leaves an incomplete backup or creates loose folders where the profile was, and the checks at start no longer leave a failed backup each time."
-     ]
-    },
-    {
-     "title": "Changed",
-     "items": [
-      "Messages in the bottom right corner close sooner: after 3.5 seconds, 7 with **Undo**, 6 for errors (they were 6, 12 and 9). They still stay while the pointer or the focus is on them."
      ]
     }
    ]

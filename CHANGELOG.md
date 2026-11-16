@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-11-16
+
 ### Added
 - **Artifacts** in Settings → Replies: turn off the pages Claude Code publishes to claude.ai, in one profile or, with **Apply to all**, in every one (`"enableArtifact": false` in `settings.json`, the switch of Claude Code's `/config`).
 
@@ -482,7 +484,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.4...v0.7.5
