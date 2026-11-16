@@ -3,6 +3,18 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.7.9] - 2026-11-16
+
+**Added**
+- **Commands**, a new tab next to Agents: the custom slash commands of each profile (`commands/review.md` is `/review`, `commands/git/commit.md` is `/git:commit`). Create one, edit its file, copy it to another profile or to all, delete it; `/cc-profiles` and the commands of plugins are shown read-only.
+- **Hooks** in Settings: the commands Claude Code runs on its own events, a row each, from `settings.json` and `settings.local.json`. Add one with the event, the matcher, the command, a timeout and a status message, edit it (keys the form does not show are kept), copy it to another profile or to all, delete it. Plugin hooks are listed read-only, and **Turn off all hooks** (`disableAllHooks`) is a switch in General.
+- **Keyboard shortcuts** in Settings: the shortcuts of `keybindings.json`, the file `/keybindings` opens, listed and edited as JSON, checked as Claude Code checks it, and copied to another profile or to all.
+- **Disk space** in Health: what fills a profile's folder (conversations, file snapshots, task lists, shell snapshots, debug logs, pasted text and images), and what has been untouched for a number of days, moved into a backup with one button. **Keep conversations for (days)** (`cleanupPeriodDays`) is in Settings → General.
+
+**Changed**
+- The settings options were checked against Claude Code 2.1.325.
+- The tabs sit a little closer together, so all fourteen fit in one row on a wide window.
+
 ## [0.7.8] - 2026-11-16
 
 **Added**
@@ -482,6 +494,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
