@@ -16,6 +16,10 @@ cc-profiles reads and writes files that Claude Code does not document as a publi
 │       ├── MEMORY.md            index
 │       └── <memory>.md
 ├── file-history/<sessionId>/    file snapshots of a conversation
+├── session-env/<sessionId>/     a session's environment
+├── todos/<sessionId>-agent-…    a session's task lists
+├── shell-snapshots/  debug/  paste-cache/  image-cache/
+├── keybindings.json             keyboard shortcuts (/keybindings)
 ├── skills/  plugins/  agents/  commands/  output-styles/
 └── .credentials.json            login (on some systems; never copied)
 ```
@@ -84,6 +88,34 @@ The body…
 ```
 
 cc-profiles finds index lines by the `(file.md)` link.
+
+## Hooks
+
+The `hooks` key of `settings.json` and `settings.local.json`: an event, then groups with an optional `matcher`, then the hooks of each group.
+
+```json
+{ "hooks": { "PostToolUse": [ { "matcher": "Edit|Write", "hooks": [ { "type": "command", "command": "npx prettier --write", "timeout": 30 } ] } ] } }
+```
+
+A hook's `type` is `command`, `prompt`, `agent`, `http` or `mcp_tool`. A command hook also takes `async`, `statusMessage`, `shell`, `args`, `once` and more; cc-profiles edits `command`, `timeout`, `async` and `statusMessage` and keeps the rest. The events are `HOOK_EVENTS` in `hooks.py`, checked against `HOOKS_SCHEMA_VERSION`. `"disableAllHooks": true` turns off every hook, plugins' included, and the status line. A plugin's hooks are in its `hooks/hooks.json`, in the same shape.
+
+## Slash commands
+
+`commands/<name>.md` is `/<name>`, and a subfolder adds a namespace: `commands/git/commit.md` is `/git:commit`. The file is the prompt, with optional frontmatter (`description`, `argument-hint`, `allowed-tools`, `model`); `$ARGUMENTS` is what is typed after the command. A plugin's commands are `/<plugin>:<name>`. cc-profiles' own `/cc-profiles` carries the line `# managed by cc-profiles`.
+
+## Keyboard shortcuts
+
+`keybindings.json` in the profile folder:
+
+```json
+{ "bindings": [ { "context": "Chat", "bindings": { "ctrl+e": "chat:externalEditor", "ctrl+g": "command:review", "ctrl+u": null } } ] }
+```
+
+A block per context, `null` to unbind a key, `command:<name>` to run a slash command (Chat context only). The contexts are `CONTEXTS` in `keybindings.py`.
+
+## Old files
+
+At start, Claude Code deletes conversations older than `cleanupPeriodDays` (30 when unset). File snapshots, session environments and task lists are named after a session id. Once the session's conversation is gone, Health → Disk space counts them as orphans.
 
 ## Settings schema
 
