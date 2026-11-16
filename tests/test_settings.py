@@ -77,6 +77,11 @@ def test_settings_write_where_the_value_lives(home, app_factory):
     assert json.loads(home.path(".claude/settings.json").read_text())["alwaysThinkingEnabled"] is False
     app.post(P, {"profile": "default", "key": "alwaysThinkingEnabled", "value": True})
     assert "alwaysThinkingEnabled" not in json.loads(home.path(".claude/settings.json").read_text())
+    # Artifacts off is "enableArtifact": false in the profile's settings.json; on, the key goes away
+    app.post(P, {"profile": "work", "key": "enableArtifact", "value": False})
+    assert json.loads(home.path(".claude-work/settings.json").read_text())["enableArtifact"] is False
+    app.post(P, {"profile": "work", "key": "enableArtifact", "value": True})
+    assert "enableArtifact" not in json.loads(home.path(".claude-work/settings.json").read_text())
     # theme lives where a file has it: settings.local.json here, .claude.json otherwise
     app.post(P, {"profile": "work", "key": "theme", "value": "dark"})
     assert json.loads(home.path(".claude-work/settings.local.json").read_text()) == {"theme": "dark"}

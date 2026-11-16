@@ -70,6 +70,8 @@ SETTING_FIELDS = [
                  ("auto", "Auto"), ("dontAsk", "Don't ask")]},
     dict(_ON, group="Replies", key="useAutoModeDuringPlan", label="Use auto mode during plan",
          help="Plan mode runs with auto mode's permissions"),
+    dict(_ON, group="Replies", key="enableArtifact", label="Artifacts", drop_default=True,
+         help="Claude can publish pages to claude.ai; off, it never does"),
     # interface
     {"group": "Interface", "key": "theme", "type": "select", "default": "dark", "label": "Theme", "file": "global", "also_settings": True,
      "help": "Colors of the terminal UI; custom themes (custom:…) are kept",

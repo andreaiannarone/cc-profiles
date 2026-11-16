@@ -27,6 +27,7 @@ The same settings as the `/config` panel of Claude Code, in five groups, with co
 | Rewind code (checkpoints) | `fileCheckpointingEnabled` ¹ | on/off, on by default |
 | Default permission mode | `permissions.defaultMode` | `default`, `plan`, `acceptEdits`, `auto`, `dontAsk` |
 | Use auto mode during plan | `useAutoModeDuringPlan` | on/off, on by default |
+| Artifacts | `enableArtifact` | on/off, on by default: off, Claude never publishes pages to claude.ai |
 | **Interface** | | |
 | Theme | `theme` ² | `auto`, `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, `light-ansi` |
 | Show tips | `spinnerTipsEnabled` | on/off, on by default |
@@ -63,7 +64,7 @@ The same settings as the `/config` panel of Claude Code, in five groups, with co
 ¹ Kept in the profile's `.claude.json`, as `/config` does, not in `settings.json`. Claude Code re-reads that file before it writes it, so a change made here is not lost; an open session picks it up when it restarts.
 ² Edited where a settings file already has it, otherwise in `.claude.json`, as `/config` does.
 
-Settings that `/config` turns on by removing the key (Thinking mode, Prompt suggestions, Session recap) are removed here too when you turn them on. The model is picked with `/model` in Claude Code, so it is not listed here. Effort level, the renderer and the days to keep conversations are not in `/config`. Edit any of them in the advanced editor.
+Settings that `/config` turns on by removing the key (Thinking mode, Prompt suggestions, Session recap, Artifacts) are removed here too when you turn them on. The model is picked with `/model` in Claude Code, so it is not listed here. Effort level, the renderer and the days to keep conversations are not in `/config`. Edit any of them in the advanced editor.
 
 Dropdowns list the values the Claude Code settings schema accepts. They were checked against the version shown in the tab. A value already in your file that is not in the list stays selectable as *(current value)*, so nothing is lost.
 
