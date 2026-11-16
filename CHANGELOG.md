@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-11-16
+
 ### Added
 - **Commands**, a new tab next to Agents: the custom slash commands of each profile (`commands/review.md` is `/review`, `commands/git/commit.md` is `/git:commit`). Create one, edit its file, copy it to another profile or to all, delete it; `/cc-profiles` and the commands of plugins are shown read-only.
 - **Hooks** in Settings: the commands Claude Code runs on its own events, a row each, from `settings.json` and `settings.local.json`. Add one with the event, the matcher, the command, a timeout and a status message, edit it (keys the form does not show are kept), copy it to another profile or to all, delete it. Plugin hooks are listed read-only, and **Turn off all hooks** (`disableAllHooks`) is a switch in General.
@@ -494,7 +496,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...HEAD
+[0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.5...v0.7.6
