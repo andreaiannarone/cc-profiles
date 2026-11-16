@@ -52,6 +52,12 @@ from .info import about
 from .folders import list_folders, pick_folder
 from .agents import (agent_all_plan, agent_read, list_agents, op_agent_copy, op_agent_copy_all, op_agent_delete,
                      op_agent_save, op_agent_save_raw)
+from .hooks import hook_all_plan, list_hooks, op_hook_copy, op_hook_copy_all, op_hook_delete, op_hook_save
+from .slashcommands import (command_copy_plan, command_read, list_commands, op_command_copy, op_command_copy_all,
+                            op_command_delete, op_command_save)
+from .keybindings import (get_keybindings, keybindings_all_plan, op_keybindings_copy, op_keybindings_copy_all,
+                          op_keybindings_delete, op_keybindings_save)
+from .storage import get_storage, op_storage_clean
 from .github import (github_state, op_github_account, op_github_identity, op_github_remove, op_github_save,
                      op_github_setup)
 from .extensions import (
@@ -109,6 +115,7 @@ from .updater import check_update, op_update, op_update_check, unexpected_error,
 # ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
+HOOK_AT = ("file", "event", "group", "index", "fp")  # how the page names a hook in a GET
 STATIC_TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
 
 
@@ -352,6 +359,14 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/agents": lambda: list_agents(q["profile"]),
                 "/api/agents/file": lambda: agent_read(q["profile"], q["name"]),
                 "/api/agents/copy-all/preview": lambda: agent_all_plan(q["profile"], q["name"]),
+                "/api/hooks": lambda: list_hooks(q["profile"]),
+                "/api/hooks/copy-all/preview": lambda: hook_all_plan(q["profile"], {k: q.get(k) for k in HOOK_AT}),
+                "/api/commands": lambda: list_commands(q["profile"]),
+                "/api/commands/file": lambda: command_read(q["profile"], q["name"]),
+                "/api/commands/copy-all/preview": lambda: command_copy_plan(q["profile"], q["name"]),
+                "/api/keybindings": lambda: get_keybindings(q["profile"]),
+                "/api/keybindings/copy-all/preview": lambda: keybindings_all_plan(q["profile"]),
+                "/api/storage": lambda: get_storage(q["profile"], q.get("days")),
                 "/api/skills/file": lambda: skill_read(q["profile"], q["name"]),
                 "/api/mcp": lambda: list_mcp(q["profile"]),
                 "/api/connectors": lambda: list_connectors(q["profile"]),
@@ -430,6 +445,19 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/agents/delete": lambda: op_agent_delete(b["profile"], b["name"]),
                 "/api/agents/copy": lambda: op_agent_copy(b["profile"], b["name"], b["to"]),
                 "/api/agents/copy-all": lambda: op_agent_copy_all(b["profile"], b["name"]),
+                "/api/hooks/save": lambda: op_hook_save(b["profile"], b.get("hook"), b.get("at")),
+                "/api/hooks/delete": lambda: op_hook_delete(b["profile"], b["at"]),
+                "/api/hooks/copy": lambda: op_hook_copy(b["profile"], b["at"], b["to"]),
+                "/api/hooks/copy-all": lambda: op_hook_copy_all(b["profile"], b["at"]),
+                "/api/commands/save": lambda: op_command_save(b["profile"], b["name"], b.get("content"), bool(b.get("new"))),
+                "/api/commands/delete": lambda: op_command_delete(b["profile"], b["name"]),
+                "/api/commands/copy": lambda: op_command_copy(b["profile"], b["name"], b["to"]),
+                "/api/commands/copy-all": lambda: op_command_copy_all(b["profile"], b["name"]),
+                "/api/keybindings/save": lambda: op_keybindings_save(b["profile"], b.get("content")),
+                "/api/keybindings/delete": lambda: op_keybindings_delete(b["profile"]),
+                "/api/keybindings/copy": lambda: op_keybindings_copy(b["profile"], b["to"]),
+                "/api/keybindings/copy-all": lambda: op_keybindings_copy_all(b["profile"]),
+                "/api/storage/clean": lambda: op_storage_clean(b["profile"], b.get("days"), b.get("categories")),
                 "/api/skills/copy": lambda: op_skill_copy(b["profile"], b["name"], b["to"]),
                 "/api/skills/copy-all": lambda: op_skill_copy_all(b["profile"], b["name"]),
                 "/api/mcp/save": lambda: op_mcp_save(b["profile"], b["scope"], b["name"], b["config"],

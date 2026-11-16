@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Andrea Iannarone
-// Skills, MCP servers and claude.ai connectors, agents.
+// Skills, MCP servers and claude.ai connectors, agents, slash commands.
 
 // ---------- skills and MCP servers ----------
-const EXT_TABS = ["skills", "agents", "mcp"];
+const EXT_TABS = ["skills", "agents", "commands", "mcp"];
 async function loadExt(pid) {
   const x = S.ext, tab = S.tab;
-  if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; x.agent = null; }
+  if (pid && pid !== x.profile) { x.profile = pid; x.skill = null; x.agent = null; x.cmd = null; }
   x.profile = x.profile || S.profiles[0]?.id;
   x.error = null;
-  if (tab === "skills") x.skills = null; else if (tab === "agents") x.agents = null; else x.mcp = null;
+  if (tab === "skills") x.skills = null; else if (tab === "agents") x.agents = null; else if (tab === "commands") x.commands = null; else x.mcp = null;
   renderExt();
   try {
     if (tab === "skills") x.skills = await api("/api/skills?profile=" + x.profile);
     else if (tab === "agents") x.agents = await api("/api/agents?profile=" + x.profile);
+    else if (tab === "commands") x.commands = await api("/api/commands?profile=" + x.profile);
     else [x.mcp, x.conn, x.browser] = await Promise.all([api("/api/mcp?profile=" + x.profile), api("/api/connectors?profile=" + x.profile),
       api("/api/browser?profile=" + x.profile)]);
   } catch (e) {
@@ -23,6 +24,7 @@ async function loadExt(pid) {
   }
   if (x.skills && x.skill && !x.skills.skills.some(k => k.name === x.skill)) x.skill = null;
   if (x.agents && x.agent && x.agent.name && !x.agents.agents.some(a => a.name === x.agent.name)) x.agent = null;
+  if (x.commands && x.cmd && !x.cmd.isNew && !x.commands.commands.some(c => c.name === x.cmd.name)) x.cmd = null;
   renderExt();
   if (tab === "mcp") checkConnectors(false);
 }
@@ -55,12 +57,12 @@ async function pickProfile(title, sub, pid, okLabel) {
 const scopeLabel = s => s === "user" ? "All projects" : basename(s);
 function renderExt() {
   if (!EXT_TABS.includes(S.tab)) return;
-  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = S.tab === "skills" ? x.skills : S.tab === "agents" ? x.agents : x.mcp;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = { skills: x.skills, agents: x.agents, commands: x.commands }[S.tab] || x.mcp;
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
   if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }
-  if (!data) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading ${S.tab === "skills" ? "skills" : S.tab === "agents" ? "agents" : "MCP servers"}…</div>`; return; }
-  return S.tab === "skills" ? renderSkills(head) : S.tab === "agents" ? renderAgents(head) : renderMcp(head);
+  if (!data) { $("#main").innerHTML = `${head}<div class="empty">${LOADER} Loading ${{ skills: "skills", agents: "agents", commands: "commands" }[S.tab] || "MCP servers"}…</div>`; return; }
+  return S.tab === "skills" ? renderSkills(head) : S.tab === "agents" ? renderAgents(head) : S.tab === "commands" ? renderCommands(head) : renderMcp(head);
 }
 function renderSkills(head) {
   const x = S.ext;
@@ -321,6 +323,73 @@ function bindAgentEditor(a) {
     x.agents = await api("/api/agents?profile=" + x.profile);
     await openAgent(a.name);
   });
+}
+// ---------- slash commands ----------
+// commands/<name>.md, a subfolder for a namespace (/folder:name). The open command below the
+// cards, as its whole file. /cc-profiles is cc-profiles' own: shown, never edited here.
+function commandCard(c, cur) {
+  const ro = !!c.plugin;
+  return `<div class="mcard ${ro ? "ro" : ""} ${!ro && cur?.name === c.name ? "on" : ""}" ${ro ? "" : `data-cmd="${esc(c.name)}" tabindex="0" role="button"`}>
+    <div class="t"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</div>
+    <div class="d">${esc(c.description || c.fallback) || "No description"}</div>
+    <div class="abadges">${c.plugin ? `<span class="badge b-shared">${esc(c.plugin)}</span>` : ""}${c.managed ? `<span class="badge b-shared" title="Kept up to date by cc-profiles at every start">cc-profiles</span>` : ""}${c.model ? `<span class="badge b-none">${esc(c.model)}</span>` : ""}${c.tools ? `<span class="badge b-none" title="${esc(c.tools)}">allowed tools</span>` : ""}${c.linked ? `<span class="badge b-none" title="A link to a file elsewhere">linked</span>` : ""}</div></div>`;
+}
+function renderCommands(head) {
+  const x = S.ext, d = x.commands, q = x.q.toLowerCase(), cur = x.cmd;
+  const list = d.commands.filter(c => !q || (c.slash + " " + c.description + " " + c.fallback).toLowerCase().includes(q));
+  $("#main").innerHTML = `${head}
+    <div class="ext-head" style="margin-top:0"><h2>Commands</h2><span class="hint"><code>${esc(d.dir)}</code> · ${plural(d.commands.length, "command", "commands")}: type <code>/name</code> in Claude Code to send its prompt${d.shared ? ` · <span class="shared-note">${esc(d.shared)}: a change here applies there too</span>` : ""}</span>
+      <input class="search" style="margin:0" placeholder="Filter commands…" value="${esc(x.q)}" id="extq" aria-label="Filter commands">
+      <button class="btn primary" id="scnew">New command…</button></div>
+    <div class="cards skgrid">${list.map(c => commandCard(c, cur)).join("") || `<div class="empty">${d.commands.length ? "No commands match the filter." : "No commands in this profile yet: New command… creates one."}</div>`}</div>
+    ${cur ? commandEditorHtml(cur) : ""}
+    ${d.plugins.length ? `<div class="ext-head"><h2>From plugins</h2><span class="hint">read-only: the plugin installs and updates them</span></div>
+      <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}`;
+  $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
+  $("#scnew").onclick = () => { x.cmd = { isNew: true, name: "", content: d.template }; renderExt(); $("#sc-name")?.focus(); };
+  if (cur) bindCommandEditor(cur);
+}
+async function openCommand(name) {
+  const x = S.ext;
+  try { x.cmd = await api(`/api/commands/file?profile=${x.profile}&name=${encodeURIComponent(name)}`); }
+  catch (e) { toast(e.message, "", true); return; }
+  renderExt();
+  $(".editor")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function commandEditorHtml(c) {
+  const d = S.ext.commands;
+  return `<div class="editor">
+    <div class="hint" style="margin-bottom:10px">${c.isNew ? `New command: saved in <code>${esc(d.dir)}</code>` : `<code>${esc(d.dir)}/${esc(c.name)}.md</code>, run as <code>${esc(c.slash)}</code>`}${c.managed ? ". cc-profiles' own command, kept up to date at every start: shown, not edited." : ""}</div>
+    ${c.isNew ? `<label class="f" style="margin-bottom:10px">Name: <code>review</code> is /review, <code>git/commit</code> is /git:commit<input class="text" id="sc-name" placeholder="e.g. review" autocomplete="off" spellcheck="false"></label>` : ""}
+    <label class="f">The file: optional frontmatter (<code>description</code>, <code>argument-hint</code>, <code>allowed-tools</code>, <code>model</code>), then the prompt. <code>$ARGUMENTS</code> is what you type after the command, <code>$1</code> and <code>$2</code> its words.
+      <textarea id="sc-body" class="rawtext" spellcheck="false" ${c.managed ? "readonly" : ""}>${esc(c.content)}</textarea></label>
+    <div class="row"><span class="grow">${c.isNew ? "Saving creates the file." : c.managed ? "" : "Saving keeps a copy of the previous version."}</span>
+      ${c.isNew ? `<button class="btn" id="sccancel">Cancel</button><button class="btn primary" id="scsave">Create command</button>`
+        : c.managed ? `<button class="btn" id="sccancel">Close</button>`
+        : `<button class="btn danger" id="scdel">Delete</button><button class="btn" id="sccopy">Copy to…</button><button class="btn" id="scall">Copy to all…</button><button class="btn primary" id="scsave">Save</button>`}</div></div>`;
+}
+function bindCommandEditor(c) {
+  const x = S.ext;
+  $("#sccancel") && ($("#sccancel").onclick = () => { x.cmd = null; renderExt(); });
+  $("#scsave") && ($("#scsave").onclick = async () => {
+    const name = c.isNew ? $("#sc-name").value.trim().replace(/^\//, "").replace(/:/g, "/") : c.name;
+    try { await run(() => api("/api/commands/save", { profile: x.profile, name, content: $("#sc-body").value, new: !!c.isNew })); } catch { return; }
+    x.commands = await api("/api/commands?profile=" + x.profile);
+    await openCommand(name);
+  });
+  $("#scdel") && ($("#scdel").onclick = async () => {
+    if (!(await confirmBox(`Delete ${c.slash}?`, `<code>${esc(c.name)}.md</code> goes to the backup.${x.commands.shared ? ` The commands are ${esc(x.commands.shared)}: it disappears there too.` : ""}`, "Delete", "danger"))) return;
+    try { await run(() => api("/api/commands/delete", { profile: x.profile, name: c.name })); } catch { return; }
+    x.cmd = null; loadExt();
+  });
+  $("#sccopy") && ($("#sccopy").onclick = async () => {
+    const to = await pickProfile("Copy command", `<code>${esc(c.slash)}</code> is copied as it is now (save your changes first).`, x.profile, "Copy");
+    if (to) { try { await run(() => api("/api/commands/copy", { profile: x.profile, name: c.name, to })); } catch {} }
+  });
+  $("#scall") && ($("#scall").onclick = () => applyAll(`Copy ${c.slash} to every profile?`,
+    `/api/commands/copy-all/preview?profile=${encodeURIComponent(x.profile)}&name=${encodeURIComponent(c.name)}`,
+    `<code>${esc(c.slash)}</code> is copied, as it is now, to every profile that does not have a command with this name.`,
+    "Copy to all", () => api("/api/commands/copy-all", { profile: x.profile, name: c.name })));
 }
 async function newSkill() {
   const x = S.ext;

@@ -25,7 +25,7 @@ from .core import (
 # Dropdown options come from the settings schema inside the Claude Code binary
 # (version SCHEMA_VERSION): where the schema only accepts some values there is a
 # dropdown, where it accepts any string a free text field.
-SCHEMA_VERSION = "2.1.316"
+SCHEMA_VERSION = "2.1.325"
 # Built-in output styles and their descriptions, as in the Claude Code binary. "default"
 # is left out: it is the same as no value ("— default —" in the UI); field_options()
 # still lists it when a profile has it set explicitly.
@@ -139,6 +139,12 @@ SETTING_FIELDS = [
     {"group": "Commits and pull requests", "key": "includeCoAuthoredBy", "type": "bool", "label": "Co-authored-by in commits",
      "deprecated": True, "only_if_set": True,
      "help": "Replaced by Commit attribution and Pull request attribution: remove it with ×"},
+    # storage and hooks: not in /config
+    {"group": "Storage and hooks", "key": "cleanupPeriodDays", "type": "number", "default": 30,
+     "label": "Keep conversations for (days)",
+     "help": "Claude Code deletes conversations older than this when it starts; 30 when empty"},
+    dict(_OFF, group="Storage and hooks", key="disableAllHooks", label="Turn off all hooks", drop_default=True,
+         help="Hooks from settings files and plugins, and the status line, stop running"),
 ]
 FIELD_BY_KEY = {fd["key"]: fd for fd in SETTING_FIELDS}
 GLOBAL_FIELDS = {"autoUpdates": "bool"}  # the only .claude.json keys the app edits

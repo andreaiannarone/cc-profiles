@@ -11,7 +11,7 @@ If a file is [shared](../concepts.md#sharing), a *shared with …* label warns t
 
 ## General
 
-The same settings as the `/config` panel of Claude Code, in five groups, with commit and pull request attribution as on/off switches.
+The same settings as the `/config` panel of Claude Code, in groups, plus two that `/config` does not have, with commit and pull request attribution as on/off switches.
 
 | Setting | Key | Control |
 |---|---|---|
@@ -60,11 +60,14 @@ The same settings as the `/config` panel of Claude Code, in five groups, with co
 | Commit attribution | `attribution.commit` | on/off, on by default: off saves an empty text (no attribution), on removes the key; a custom text counts as on and is kept |
 | Pull request attribution | `attribution.pr` | on/off, the same way |
 | Co-authored-by in commits | `includeCoAuthoredBy` | shown only while a profile has it: deprecated by Claude Code, remove it with × |
+| **Storage and hooks** (not in `/config`) | | |
+| Keep conversations for (days) | `cleanupPeriodDays` | a whole number, 1 or more: Claude Code deletes older conversations when it starts; 30 when empty |
+| Turn off all hooks | `disableAllHooks` | on/off: no hook runs, from settings files or plugins, and neither does the status line |
 
 ¹ Kept in the profile's `.claude.json`, as `/config` does, not in `settings.json`. Claude Code re-reads that file before it writes it, so a change made here is not lost; an open session picks it up when it restarts.
 ² Edited where a settings file already has it, otherwise in `.claude.json`, as `/config` does.
 
-Settings that `/config` turns on by removing the key (Thinking mode, Prompt suggestions, Session recap, Artifacts) are removed here too when you turn them on. The model is picked with `/model` in Claude Code, so it is not listed here. Effort level, the renderer and the days to keep conversations are not in `/config`. Edit any of them in the advanced editor.
+Settings that `/config` turns on by removing the key (Thinking mode, Prompt suggestions, Session recap, Artifacts) are removed here too when you turn them on, and so is **Turn off all hooks** when you turn it off. The model is picked with `/model` in Claude Code, so it is not listed here. Effort level and the renderer are not in `/config` either: edit them in the advanced editor.
 
 Dropdowns list the values the Claude Code settings schema accepts. They were checked against the version shown in the tab. A value already in your file that is not in the list stays selectable as *(current value)*, so nothing is lost.
 
@@ -111,6 +114,35 @@ mcp__claude_ai_Gmail
 Other keys of `permissions` (such as `defaultMode`) are preserved. Rules in `settings.local.json` are shown as a count; edit them in the advanced editor.
 
 **Add a rule to every profile…** adds one rule to one list (`allow`, `ask` or `deny`) in the `settings.json` of every profile. The confirmation lists the profiles that change and the ones skipped: those that already have the rule in that list, those sharing `settings.json` with a profile already changed, and those whose `settings.json` has an error. If a profile has the same rule in another list, the confirmation says so. One backup covers every profile.
+
+## Hooks
+
+Hooks are commands Claude Code runs on its own events: a formatter after every edit (`PostToolUse`), a notification when Claude needs you (`Notification`), a check before a session starts (`SessionStart`). The **Hooks** section lists those of `settings.json` and `settings.local.json`, one row each: the event, the matcher (*every* when empty), what it runs, its timeout, and the file it is in.
+
+- **Add hook…** asks for the event (the list comes from Claude Code, with what each one is for), the matcher (suggestions follow the event: tool names for the tool events, `startup`, `resume`, `clear` and `compact` for `SessionStart`), the command, an optional timeout and status message, whether it runs in the background, and the file. A new hook joins the group with the same matcher, or starts a new one.
+- **Edit** changes a command hook. Keys the form does not show (such as `shell` or `args`) stay as written. Changing the event, the matcher or the file moves the hook, and an event or a file left without hooks loses its `hooks` key.
+- **Copy to…** and **Copy to all…** add the hook to the other profiles' `settings.json`. Profiles that already run the same hook for that event and matcher are skipped, and so are those sharing `settings.json` with a profile already changed. One backup covers every profile.
+- **Delete** removes it. The file goes to the backup first.
+
+Other hook types (`prompt`, `agent`, `http`, `mcp_tool`) are listed, copied and deleted here, and edited in the advanced editor. Hooks that installed plugins bring (their `hooks/hooks.json`) are listed under **From plugins**, read-only.
+
+If the file changed after the page loaded it, for example because you edited it in an editor, an edit or a delete is refused with *reload and try again* instead of touching the wrong hook. cc-profiles never runs a hook. When **Turn off all hooks** is on, the section says so: none of them runs.
+
+## Keyboard shortcuts
+
+`keybindings.json` in the profile folder holds the shortcuts that `/keybindings` edits in Claude Code. The section lists the shortcuts it sets (context, keys, action, or *unbound* for `null`) and edits the file as JSON:
+
+```json
+{
+  "bindings": [
+    { "context": "Chat", "bindings": { "ctrl+e": "chat:externalEditor", "ctrl+g": "command:review", "ctrl+u": null } }
+  ]
+}
+```
+
+The file is checked as Claude Code checks it. A missing `bindings` list or an action that is not text or `null` cannot be saved. An unknown context, or a `command:` binding outside the Chat context, is saved with a warning, since Claude Code ignores only that binding. Without the file, Claude Code's default shortcuts apply, and saving creates it.
+
+**Copy to…** and **Apply to all…** give other profiles this profile's saved file, replacing theirs (each one goes to the backup). **Remove file** goes back to the default shortcuts. Under the editor, each other profile shows how many shortcuts it sets, or *the same*.
 
 ## Advanced editor
 

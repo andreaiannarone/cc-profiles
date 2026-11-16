@@ -22,6 +22,10 @@ from .mods import *  # noqa: F401,F403
 from .github import *  # noqa: F401,F403
 from .folders import *  # noqa: F401,F403
 from .conversations import *  # noqa: F401,F403
+from .hooks import *  # noqa: F401,F403
+from .slashcommands import *  # noqa: F401,F403
+from .keybindings import *  # noqa: F401,F403
+from .storage import *  # noqa: F401,F403
 from .usage import *  # noqa: F401,F403
 from .quota import *  # noqa: F401,F403
 from .search import *  # noqa: F401,F403

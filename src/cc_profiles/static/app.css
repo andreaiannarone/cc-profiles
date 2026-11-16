@@ -172,9 +172,9 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 /* navigation: an underline nav like GitHub's, under the profile cards. Tabs that do not
    fit the window move into the More menu; the active tab always stays in the row. */
 nav.tabs { display: flex; align-items: center; gap: 8px; box-shadow: inset 0 -1px 0 var(--line); margin: -8px 0 20px; }
-.tabrow { display: flex; gap: 8px; min-width: 0; overflow: hidden; }
-nav.tabs button[data-tab], #tabs-more { position: relative; display: flex; align-items: center; gap: 8px; height: 32px; margin: 8px 0;
-  padding: 0 8px; background: none; border: 0; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 550; white-space: nowrap; }
+.tabrow { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+nav.tabs button[data-tab], #tabs-more { position: relative; display: flex; align-items: center; gap: 6px; height: 32px; margin: 8px 0;
+  padding: 0 6px; background: none; border: 0; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 550; white-space: nowrap; }
 nav.tabs button[data-tab]:hover, #tabs-more:hover, #tabs-more[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
 nav.tabs button.on { color: var(--text); }
 .tabrow button.on::after, #tabs-more.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 2px; border-radius: 2px; background: var(--accent); }
@@ -586,3 +586,10 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
   .pcard.add { min-height: 0; }
 }
 .browser-warn { margin: 0 0 8px; }
+
+/* Settings → Hooks; Health → Disk space */
+.hkrun code { display: inline-block; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.hkopts { display: grid; grid-template-columns: 110px 1fr 180px; gap: 10px; }
+@media (max-width: 640px) { .hkopts { grid-template-columns: 1fr; } }
+#disk-sec tr.dim td { color: var(--muted); }
+#disk-sec td .hint { font-size: 12.5px; }

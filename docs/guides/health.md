@@ -4,7 +4,7 @@
 
 <picture>
   <source media="not all" srcset="../assets/screenshots/health-light.jpg">
-  <img src="../assets/screenshots/health-dark.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink, Merge into and Delete" width="1440" height="864" loading="lazy">
+  <img src="../assets/screenshots/health-dark.jpg" alt="The Health tab: the checks of each profile, and a project whose folder is gone with Relink, Merge into and Delete" width="1440" height="900" loading="lazy">
 </picture>
 
 The **Health** tab checks every profile:
@@ -20,6 +20,22 @@ The **Health** tab checks every profile:
 | Open session | warning only: a `claude` process is running in the profile, or one of its conversations was written in the last 2 minutes |
 
 Below the checks, **Projects whose folder is gone** lists the [orphan projects](projects.md#orphan-projects) of the profile, with one-click **Relink to …** buttons for the candidate folders found, plus **Relink…**, **Merge into…** (into another project of the profile) and **Delete**.
+
+### Disk space
+
+Below the checks, **Disk space** shows what fills one profile's folder (pick it at the top of the section), and what has been untouched for a number of days: 30, or the profile's **Keep conversations for** setting when it has one.
+
+| Row | What it holds |
+|---|---|
+| Conversations | `projects/*/*.jsonl`, with each conversation's subagent replies, file snapshots, session environment and task lists. Memories and the prompt history stay. |
+| File snapshots | `file-history/` of conversations that no longer exist |
+| Session environments | `session-env/` of conversations that no longer exist |
+| Task lists | `todos/` of conversations that no longer exist |
+| Shell snapshots | `shell-snapshots/`: your shell's setup, saved at the start of each session |
+| Debug logs | `debug/`, written with `--debug` |
+| Pasted text, Pasted images | `paste-cache/`, `image-cache/` |
+
+Tick what to clean up and press **Move … to a backup…**. Conversations are not ticked at first: an old conversation can no longer be resumed or read once it is gone, and the confirmation says so. Nothing is deleted. Everything goes into one backup, so **Undo** puts it back, and the space comes back when that backup is deleted in [Backups](backups.md), or by itself after the backup cleanup's days (90 by default). Only items untouched for at least one day are ever offered, so an open session is never touched. A folder that is a link to another profile's is cleaned up from that profile.
 
 Health runs `claude auth status` once per profile, so it takes a few seconds. **Run the checks again** refreshes it. The list of projects whose folder is gone also updates by itself when you come back to the page, for example after renaming a folder.
 

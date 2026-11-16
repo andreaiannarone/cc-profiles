@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Andrea Iannarone
-// Settings, status line, theme.
+// Settings, status line, hooks, keyboard shortcuts, theme.
 
 // ---------- settings ----------
 // Reloading the same profile keeps the page where it is: no spinner, same scroll.
@@ -8,8 +8,9 @@ async function loadSettings(pid) {
   const same = S.set?.profile === pid && S.set.data, y = window.scrollY;
   if (!same) { S.set = { profile: pid, data: null, rawFile: S.set?.rawFile || "settings", draft: {} }; renderSettings(); }
   try {
-    const [data, sl] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid)]);
-    Object.assign(S.set, { data, sl, draft: same ? S.set.draft || {} : {} });
+    const [data, sl, hooks, keys] = await Promise.all([api("/api/settings?profile=" + pid), api("/api/statusline?profile=" + pid),
+      api("/api/hooks?profile=" + pid), api("/api/keybindings?profile=" + pid)]);
+    Object.assign(S.set, { data, sl, hooks, keys, draft: same ? S.set.draft || {} : {} });
     slDraft();
   } catch (e) { toast(e.message, "", true); }
   renderSettings();
@@ -276,6 +277,10 @@ function renderSettings() {
         <div class="row-end"><span class="grow">deny wins over ask, which wins over allow.</span><button class="btn" id="perm-all">Add a rule to every profile…</button><button class="btn primary" id="perm-save">Save permissions</button></div></div>
     </section>
 
+    ${hooksSection()}
+
+    ${keysSection()}
+
     <section class="sec"><div class="h"><h2>Advanced editor</h2><span class="hint">Hooks, environment variables (<code>env</code>) and everything else. The JSON is checked before saving.</span></div>
       <div class="b"><div class="seg" style="max-width:420px;margin-bottom:10px">${["settings", "local"].map(k => `<button data-rawfile="${k}" class="${st.rawFile === k ? "on" : ""}">${k === "settings" ? "settings.json" : "settings.local.json"}</button>`).join("")}</div>
         <textarea class="code" id="raw-text" spellcheck="false" style="min-height:340px" aria-label="Raw JSON">${esc(d.files[st.rawFile].raw)}</textarea>
@@ -293,6 +298,8 @@ function renderSettings() {
 function bindSettings() {
   const st = S.set, d = st.data, pid = st.profile;
   bindStatusLine();
+  bindHooks();
+  bindKeys();
   const set = (f, r) => { st.draft[f.key] = r; genMark(); };
   document.querySelectorAll("[data-sfield]").forEach(el => {
     const f = d.fields.find(x => x.key === el.dataset.sfield);
@@ -368,6 +375,131 @@ function bindSettings() {
   $("#raw-format").onclick = () => { if (check()) { raw.value = JSON.stringify(JSON.parse(raw.value), null, 2) + "\n"; } };
   $("#raw-save").onclick = async () => { if (!check()) return; try { await run(() => api("/api/settings/raw", { profile: pid, file: st.rawFile, content: raw.value })); } catch {} loadSettings(pid); };
   $("#g-auto").onchange = async e => { try { await run(() => api("/api/settings/global", { profile: pid, key: "autoUpdates", value: e.target.checked })); } catch {} loadSettings(pid); };
+}
+
+// ---------- hooks ----------
+// The hooks of settings.json and settings.local.json, a row each. A hook is sent back with where
+// it was and its fingerprint, so a file changed since the page loaded it is never edited blindly.
+const hookAt = h => ({ file: h.file, event: h.event, group: h.group, index: h.index, fp: h.fp });
+const hookQuery = h => Object.entries(hookAt(h)).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+function hookRow(h, i) {
+  const ro = !!h.plugin;
+  return `<tr><td><code>${esc(h.event)}</code></td><td>${h.matcher ? `<code>${esc(h.matcher)}</code>` : `<span class="hint">every</span>`}</td>
+    <td class="hkrun"><code title="${esc(h.text)}">${esc(h.text)}</code>${h.type !== "command" ? ` <span class="badge b-none">${esc(h.type)}</span>` : ""}${h.timeout ? ` <span class="hint">${esc(h.timeout)} s</span>` : ""}${h.async ? ` <span class="badge b-none" title="Runs in the background, without blocking">async</span>` : ""}</td>
+    <td>${ro ? `<span class="badge b-shared">${esc(h.plugin)}</span>` : srcBadge(h.file)}</td>
+    <td class="r">${ro ? "" : `${h.type === "command" ? `<button class="btn small" data-hkedit="${i}">Edit</button>` : ""}<button class="btn small" data-hkcopy="${i}">Copy to…</button><button class="btn small" data-hkall="${i}">Copy to all…</button><button class="btn small danger" data-hkdel="${i}" aria-label="Delete the ${esc(h.event)} hook">Delete</button>`}</td></tr>`;
+}
+function hooksSection() {
+  const h = S.set.hooks;
+  if (!h) return "";
+  const errs = Object.entries(h.files).filter(([, f]) => f.error).map(([, f]) => `<code>${esc(f.path)}</code>: ${esc(f.error)}`);
+  return `<section class="sec" id="hk-sec"><div class="h"><h2>Hooks</h2><span class="hint">Commands Claude Code runs on its own events, e.g. a formatter after every edit. Events checked against Claude Code ${esc(h.schema_version)}; cc-profiles never runs them.</span></div>
+    <div class="b">
+      ${h.disabled ? `<div class="danger-box" style="margin-bottom:10px">All hooks are off in ${esc(h.disabled_in)} (<b>Turn off all hooks</b>, in General): none of these runs.</div>` : ""}
+      ${errs.length ? `<div class="danger-box" style="margin-bottom:10px">${errs.join("<br>")}: fix it in the advanced editor.</div>` : ""}
+      ${h.hooks.length ? `<div class="table"><table><thead><tr><th>Event</th><th>Matcher</th><th>Runs</th><th>File</th><th></th></tr></thead><tbody>${h.hooks.map(hookRow).join("")}</tbody></table></div>`
+        : `<div class="hint">No hooks in this profile.</div>`}
+      ${h.plugins.length ? `<h3 class="sgroup">From plugins <span class="hint">read-only: the plugin manages them</span></h3><div class="table"><table><tbody>${h.plugins.map(hookRow).join("")}</tbody></table></div>` : ""}
+      <div class="row-end"><span class="grow hint">Other hook types (prompt, agent, http) and extra keys are kept as they are: edit them in the advanced editor.</span><button class="btn primary" id="hk-add">Add hook…</button></div>
+    </div></section>`;
+}
+// The form, again with what was typed when the server refuses it
+async function hookDialog(title, v) {
+  const h = S.set.hooks, ev = name => h.events.find(e => e.name === name);
+  for (;;) {
+    const p = modal({ title, sub: "Claude Code runs the command with the event's data as JSON on stdin. Exit code 2 blocks the action and shows Claude what the command printed.",
+      body: `<div class="form">
+        <label class="f">Event<select id="hk-event">${h.events.map(e => `<option value="${esc(e.name)}" ${e.name === v.event ? "selected" : ""}>${esc(e.name)}: ${esc(e.desc)}</option>`).join("")}</select></label>
+        <label class="f">Matcher: a tool name or a pattern such as Edit|Write; empty runs it every time<input class="text" id="hk-matcher" list="hk-matchers" value="${esc(v.matcher || "")}" autocomplete="off" spellcheck="false"></label>
+        <datalist id="hk-matchers"></datalist>
+        <label class="f">Command<textarea class="text" id="hk-command" rows="3" spellcheck="false" placeholder="e.g. npx prettier --write &quot;$(jq -r .tool_input.file_path)&quot;">${esc(v.command || "")}</textarea></label>
+        <div class="hkopts"><label class="f">Timeout (s)<input class="text" id="hk-timeout" type="number" min="1" step="1" value="${esc(v.timeout ?? "")}" placeholder="60"></label>
+          <label class="f">Status message<input class="text" id="hk-status" value="${esc(v.statusMessage || "")}" placeholder="shown while it runs"></label>
+          <label class="f">File<select id="hk-file">${["settings", "local"].map(k => `<option value="${k}" ${k === (v.file || "settings") ? "selected" : ""}>${k === "settings" ? "settings.json" : "settings.local.json"}</option>`).join("")}</select></label></div>
+        <label class="c"><input type="checkbox" id="hk-async" ${v.async ? "checked" : ""}> Run in the background, without waiting for it</label></div>`,
+      actions: [{ label: "Save hook", kind: "primary", value: "ok" }] });
+    const bg = [...document.querySelectorAll(".modal-bg")].pop();
+    const fill = () => { $("#hk-matchers", bg).innerHTML = (ev($("#hk-event", bg).value)?.matchers || []).map(m => `<option value="${esc(m)}">`).join(""); };
+    $("#hk-event", bg).onchange = fill; fill();
+    const res = await p;
+    if (!res) return null;
+    const g = id => $(id, res.el);
+    v = { ...v, event: g("#hk-event").value, matcher: g("#hk-matcher").value.trim(), command: g("#hk-command").value.trim(),
+          timeout: g("#hk-timeout").value, statusMessage: g("#hk-status").value.trim(), file: g("#hk-file").value, async: g("#hk-async").checked };
+    try { await run(() => api("/api/hooks/save", { profile: S.set.profile, hook: v, at: v.at || null })); return true; } catch {}
+  }
+}
+function bindHooks() {
+  const st = S.set, h = st.hooks, pid = st.profile;
+  if (!h || !$("#hk-sec")) return;
+  const reload = async () => { st.hooks = await api("/api/hooks?profile=" + pid); const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
+  $("#hk-add").onclick = async () => { if (await hookDialog("Add a hook", { event: "PostToolUse", matcher: "Edit|Write" })) reload(); };
+  document.querySelectorAll("[data-hkedit]").forEach(b => b.onclick = async () => {
+    const x = h.hooks[+b.dataset.hkedit];
+    if (await hookDialog(`Edit the ${x.event} hook`, { event: x.event, matcher: x.matcher, command: x.text, timeout: x.timeout, statusMessage: x.status, file: x.file, async: x.async, at: hookAt(x) })) reload();
+  });
+  document.querySelectorAll("[data-hkdel]").forEach(b => b.onclick = async () => {
+    const x = h.hooks[+b.dataset.hkdel];
+    if (!(await confirmBox(`Delete the ${x.event} hook?`, `<code>${esc(x.text)}</code> stops running. The file goes to the backup first.`, "Delete", "danger"))) return;
+    try { await run(() => api("/api/hooks/delete", { profile: pid, at: hookAt(x) })); } catch {}
+    reload();
+  });
+  document.querySelectorAll("[data-hkcopy]").forEach(b => b.onclick = async () => {
+    const x = h.hooks[+b.dataset.hkcopy];
+    const to = await pickProfile("Copy hook", `<code>${esc(x.event)}</code>: <code>${esc(x.text)}</code> goes into the other profile's <code>settings.json</code>.`, pid, "Copy");
+    if (to) { try { await run(() => api("/api/hooks/copy", { profile: pid, at: hookAt(x), to })); } catch {} }
+  });
+  document.querySelectorAll("[data-hkall]").forEach(b => b.onclick = () => {
+    const x = h.hooks[+b.dataset.hkall];
+    applyAll(`Copy the ${x.event} hook to every profile?`, `/api/hooks/copy-all/preview?profile=${encodeURIComponent(pid)}&${hookQuery(x)}`,
+      `<code>${esc(x.text)}</code> goes into <code>settings.json</code> of every profile that does not run it yet.`,
+      "Copy to all", () => api("/api/hooks/copy-all", { profile: pid, at: hookAt(x) }));
+  });
+}
+
+// ---------- keyboard shortcuts ----------
+// keybindings.json, edited whole as JSON, with the shortcuts it sets listed above it.
+function keysSection() {
+  const k = S.set.keys;
+  if (!k) return "";
+  const others = k.others.filter(o => o.count || !o.same);
+  return `<section class="sec" id="kb-sec"><div class="h"><h2>Keyboard shortcuts</h2><span class="hint"><code>${esc(k.path)}</code>, the file <code>/keybindings</code> opens in Claude Code${k.exists ? "" : " · does not exist yet: Claude Code's default shortcuts apply, saving creates it"}</span>${k.shared ? `<span class="shared-note">shared with ${esc(S.profiles[0].label)}</span>` : ""}</div>
+    <div class="b">
+      ${k.error ? `<div class="danger-box" style="margin-bottom:10px">${esc(k.error)}: Claude Code ignores the file until it is fixed.</div>` : ""}
+      ${k.warnings.length ? `<div class="danger-box" style="margin-bottom:10px">${k.warnings.map(esc).join("<br>")}</div>` : ""}
+      ${k.rows.length ? `<div class="table" tabindex="0" role="region" aria-label="Shortcuts in the file"><table><thead><tr><th>Context</th><th>Keys</th><th>Action</th></tr></thead><tbody>${k.rows.map(r => `<tr><td>${esc(r.context)}</td><td><kbd>${esc(r.key)}</kbd></td><td>${r.action === null ? `<span class="hint">unbound</span>` : `<code>${esc(r.action)}</code>`}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      <textarea class="code" id="kb-text" spellcheck="false" style="min-height:160px;margin-top:10px" aria-label="keybindings.json">${esc(k.raw)}</textarea>
+      <div class="hint" style="margin-top:6px">A block per context, <code>"key": "action"</code> in it; <code>null</code> unbinds a key, <code>"command:review"</code> runs <code>/review</code> (Chat context only). Contexts: ${k.contexts.map(c => `<code>${esc(c)}</code>`).join(", ")}.</div>
+      ${others.length ? `<div class="hint" style="margin-top:6px">${others.map(o => `${esc(o.label)}: ${o.same ? "the same" : plural(o.count, "shortcut", "shortcuts")}`).join(" · ")}</div>` : ""}
+      <div class="row-end"><span class="grow" id="kb-status" aria-live="polite"></span>
+        ${k.exists ? `<button class="btn danger" id="kb-del">Remove file</button><button class="btn" id="kb-copy">Copy to…</button><button class="btn" id="kb-all">Apply to all…</button>` : ""}
+        <button class="btn" id="kb-format">Format</button><button class="btn primary" id="kb-save">Save shortcuts</button></div>
+    </div></section>`;
+}
+function bindKeys() {
+  const st = S.set, pid = st.profile;
+  if (!st.keys || !$("#kb-sec")) return;
+  const reload = async () => { st.keys = await api("/api/keybindings?profile=" + pid); const y = window.scrollY; renderSettings(); window.scrollTo(0, y); };
+  const raw = $("#kb-text"), status = $("#kb-status");
+  const check = () => { try { const v = JSON.parse(raw.value); if (!v || !Array.isArray(v.bindings)) throw new Error('needs a "bindings" list'); status.textContent = "Valid JSON"; status.style.color = "var(--ok)"; return true; }
+    catch (e) { status.textContent = e.message; status.style.color = "var(--err)"; return false; } };
+  raw.oninput = check;
+  $("#kb-format").onclick = () => { if (check()) raw.value = JSON.stringify(JSON.parse(raw.value), null, 2) + "\n"; };
+  $("#kb-save").onclick = async () => { if (!check()) return; try { await run(() => api("/api/keybindings/save", { profile: pid, content: raw.value })); } catch { return; } reload(); };
+  $("#kb-del") && ($("#kb-del").onclick = async () => {
+    if (!(await confirmBox("Remove keybindings.json?", `${esc(label(pid))} goes back to Claude Code's default shortcuts. The file goes to the backup.`, "Remove", "danger"))) return;
+    try { await run(() => api("/api/keybindings/delete", { profile: pid })); } catch {}
+    reload();
+  });
+  $("#kb-copy") && ($("#kb-copy").onclick = async () => {
+    const to = await pickProfile("Copy keyboard shortcuts", "The saved <code>keybindings.json</code> replaces the other profile's: its own goes to the backup.", pid, "Copy");
+    if (to) { try { await run(() => api("/api/keybindings/copy", { profile: pid, to })); } catch {} reload(); }
+  });
+  $("#kb-all") && ($("#kb-all").onclick = async () => {
+    if (await applyAll("Use these shortcuts in every profile?", `/api/keybindings/copy-all/preview?profile=${encodeURIComponent(pid)}`,
+        `The <code>keybindings.json</code> saved in ${esc(label(pid))} replaces every other profile's.`, "Apply to all",
+        () => api("/api/keybindings/copy-all", { profile: pid }))) reload();
+  });
 }
 
 // ---------- theme ----------

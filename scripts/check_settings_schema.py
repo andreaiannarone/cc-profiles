@@ -61,6 +61,7 @@ CONFIG_IDS = {
     "precomputeCompactionEnabled": "precomputeCompactionEnabled",
     "idleCompaction": "idleCompaction",
     "timestamps": None,
+    "clawdFileProgress": None,  # @internal: Clawd carrying a file to or from a connector, cosmetic
     "timeFormat": "timeFormat",
     "permissionMode": "permissions.defaultMode",
     "worktreeBaseRef": "worktree.baseRef",

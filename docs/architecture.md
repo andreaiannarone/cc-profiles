@@ -25,9 +25,12 @@ The code is one module per area. Each module imports only from the ones above it
 | `sharing.py` | symlinks to the source profile, with a preview |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `statusline.py` | the status line cc-profiles writes for a profile (a `sh` script reading Claude Code's JSON with `jq`), its presets and preview, applied to one profile or to all |
+| `hooks.py` | hooks of `settings.json` and `settings.local.json`: listed (plugin hooks read-only), a command hook added, edited (other keys kept) or moved, any hook deleted or copied to one profile or to all; a hook is named by its place and a fingerprint, so a changed file is never edited blindly |
+| `keybindings.py` | `keybindings.json`: listed, checked as Claude Code checks it, saved whole, removed, copied to one profile or to all |
 | `github.py` | a GitHub account per profile: GitHub CLI folders and their user, `GH_CONFIG_DIR` and the commit identity in the profile's `env`, and a folder of its own for each new profile |
 | `health.py` | profile summaries, candidate folders, health checks |
 | `backups.py` | list, what a backup changed (steps and diffs, read-only), restore (journal replayed backwards), delete, prune, automatic cleanup (`backup_keep_days`, 90 days by default), kept backups |
+| `storage.py` | disk space of a profile by kind (conversations and what goes with them, caches, logs), and what has been untouched for some days moved into a backup |
 | `info.py` | the About panel |
 | `extensions.py` | skills and MCP servers, copied to one profile or to all; the browser for Claude (the local one, Playwright's MCP server, and Claude in Chrome at start, only ever turned off); claude.ai connectors kept out of a profile, and checked against the account with `claude mcp list` |
 | `agents.py` | subagents: the frontmatter fields checked against Claude Code's schema (`AGENT_SCHEMA_VERSION`), create, edit (other keys kept), rename, copy to one profile or to all, delete; plugin agents read-only |
@@ -37,6 +40,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `mods.py` | Claude Code mods recognised among the installed plugins, and what each one does, read from its source (read-only) |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
+| `slashcommands.py` | custom slash commands (`commands/**/*.md`, a subfolder for a namespace): create, edit, copy to one profile or to all, delete; `/cc-profiles` and plugin commands read-only |
 | `macapp.py` | `cc-profiles install-app`: the Mac app in `~/Applications`, put together from `app/main.swift` (compiled into the package by `scripts/build_app.py`), its Info.plist, launch.json and icon (drawn in Python); kept up to date at every start |
 | `terminal.py` | Open in Terminal: a project's folder in a new terminal window with Claude Code in a profile, through a script that deletes itself. Terminal, iTerm or Ghostty on macOS; on Linux, in a graphical session, a fixed list of terminal programs found on the `PATH` (`LINUX_TERMINALS`) |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |

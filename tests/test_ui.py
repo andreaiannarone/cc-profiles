@@ -131,7 +131,7 @@ def test_tabs_that_do_not_fit_go_into_the_more_menu(page_on_sandbox):
     assert page.evaluate("document.documentElement.scrollWidth") <= 375  # nothing scrolls sideways
     page.set_viewport_size({"width": 1440, "height": 900})
     page.wait_for_selector("#tabs-more", state="hidden")
-    assert len(row()) == 13
+    assert len(row()) == 14
     assert errors == []
 
 
@@ -486,6 +486,76 @@ def test_agents_tab(page_on_sandbox):
     page.click("#agraw")
     assert "name: test-writer" in page.input_value("#agrawtext")
     page.keyboard.press("Escape")
+    assert errors == []
+
+
+def test_commands_tab(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "commands")
+    page.click("#scnew")
+    page.fill("#sc-name", "/git:commit")  # typed as in Claude Code: the folder and the file
+    page.fill("#sc-body", "---\ndescription: Commit the staged changes\n---\nCommit them.\n")
+    page.click("#scsave")
+    page.wait_for_selector('[data-cmd="git/commit"].on')
+    assert "/git:commit" in page.inner_text('[data-cmd="git/commit"]')
+    assert "Commit the staged changes" in page.inner_text('[data-cmd="git/commit"]')
+    assert "run as /git:commit" in page.inner_text(".editor")
+    page.click("#scdel")
+    page.click(".modal .btn.danger")
+    page.wait_for_selector('[data-cmd="git/commit"]', state="detached")
+    assert errors == []
+
+
+def test_hooks_and_keyboard_shortcuts_in_settings(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "settings")
+    page.wait_for_selector("#hk-add")
+    page.click("#hk-add")
+    page.wait_for_selector("#hk-command")
+    assert page.input_value("#hk-event") == "PostToolUse"
+    assert "Edit|Write" in page.inner_html("#hk-matchers")  # suggestions for the event
+    page.select_option("#hk-event", "SessionStart")
+    assert "startup" in page.inner_html("#hk-matchers")
+    page.click(".modal .btn.primary")  # no command: refused, and the dialog comes back as it was
+    page.wait_for_selector(".toast.err")
+    page.wait_for_selector("#hk-command")
+    assert page.input_value("#hk-event") == "SessionStart"
+    page.fill("#hk-command", "echo started")
+    page.fill("#hk-timeout", "5")
+    page.click(".modal .btn.primary")
+    page.wait_for_selector("[data-hkedit]")
+    assert "echo started" in page.inner_text("#hk-sec") and "5 s" in page.inner_text("#hk-sec")
+    page.click("[data-hkedit]")
+    page.fill("#hk-command", "echo hello")
+    page.click(".modal .btn.primary")
+    page.wait_for_function("() => document.querySelector('#hk-sec').textContent.includes('echo hello')")
+    page.click("[data-hkdel]")
+    page.click(".modal .btn.danger")
+    page.wait_for_selector("[data-hkedit]", state="detached")
+
+    assert "does not exist yet" in page.inner_text("#kb-sec")
+    page.fill("#kb-text", "[]")
+    page.dispatch_event("#kb-text", "input")
+    assert "bindings" in page.inner_text("#kb-status")
+    page.fill("#kb-text", '{"bindings": [{"context": "Chat", "bindings": {"ctrl+e": "chat:externalEditor"}}]}')
+    page.click("#kb-save")
+    page.wait_for_selector("#kb-del")
+    assert "chat:externalEditor" in page.inner_text("#kb-sec table")
+    assert [e for e in errors if "400" not in e] == [] and len(errors) == 1  # the hook refused on purpose
+
+
+def test_disk_space_in_health(page_on_sandbox):
+    page, errors = page_on_sandbox
+    open_tab(page, "health")
+    page.wait_for_selector("#disk-free")
+    assert page.locator("#disk-sec tbody tr").count() == 8
+    assert page.input_value("#disk-days") == "30"
+    page.fill("#disk-days", "100000")
+    page.dispatch_event("#disk-days", "change")
+    page.wait_for_function("() => document.querySelector('#disk-free')?.disabled")
+    assert page.inner_text("#disk-free") == "Nothing to free"
+    page.click('[data-diskprof="work"]')
+    page.wait_for_selector('[data-diskprof="work"].on')
     assert errors == []
 
 
