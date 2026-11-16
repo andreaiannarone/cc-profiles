@@ -502,24 +502,25 @@ pre.diff .f { color: var(--muted); }
 .ext-head h2 { margin: 0; font-size: 15px; }
 .linkbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .linkbtn:hover { text-decoration: underline; }
-.toasts { position: fixed; bottom: 20px; right: 20px; display: grid; gap: 10px; z-index: 20; width: max-content; max-width: min(460px, calc(100vw - 32px)); }
-/* a panel lifted off the page: icon, message, the action (Undo) and a close button */
-.toast { display: flex; align-items: center; gap: 14px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
-  padding: 14px 14px 14px 18px; border-radius: 14px; font-size: 14.5px; line-height: 1.45;
+/* bottom center: the bars with Save, Cancel and Delete are at the bottom right, and must stay reachable */
+.toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; width: min(480px, calc(100vw - 32px)); }
+/* a panel lifted off the page: icon, message, the action (Undo) and a close button, all on one axis */
+.toast { display: flex; align-items: center; gap: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  padding: 10px 10px 10px 16px; min-height: 52px; border-radius: 12px; font-size: 14px; line-height: 1.45;
   box-shadow: 0 18px 50px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.12); animation: toast-in .18s ease-out; }
 .toast.err { background: var(--err-soft); border-color: var(--err); }
-.toast .ticon { flex: none; width: 20px; height: 20px; }
+.toast .ticon { flex: none; width: 18px; height: 18px; }
 .toast.err .ticon { color: var(--err); }
 .toast .tmsg { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.toast .tmsg small { display: block; color: var(--muted); margin-top: 2px; font-size: 13px; }
-.toast .tact { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  background: var(--text); color: var(--bg); border: 0; border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
+.toast .tmsg small { display: block; color: var(--muted); margin-top: 1px; font-size: 12.5px; }
+.toast .tact { flex: none; background: var(--text); color: var(--bg); border: 0; border-radius: 7px; padding: 6px 12px;
+  font: inherit; font-size: 13.5px; font-weight: 550; cursor: pointer; }
 .toast .tact:hover { opacity: .88; }
-.toast .tclose { flex: none; align-self: flex-start; width: 22px; height: 22px; margin: -2px -2px 0 0; display: grid; place-items: center;
-  border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; padding: 0; }
-.toast .tclose svg { width: 12px; height: 12px; }
+.toast .tclose { flex: none; width: 28px; height: 28px; margin-left: -4px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
+.toast .tclose svg { width: 14px; height: 14px; }
 .toast .tclose:hover { color: var(--text); background: var(--panel-2); }
-.toast.err .tclose { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+.toast.err .tclose:hover { background: color-mix(in srgb, var(--err) 14%, transparent); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 /* usage tab: summary cards, a bar chart per day (inline SVG) and tables */
