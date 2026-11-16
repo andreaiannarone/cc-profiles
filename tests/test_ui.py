@@ -553,14 +553,15 @@ def test_undo_is_only_for_the_last_operation(page_on_sandbox):
     page.wait_for_selector(".modal")
     assert "not the last operation" in page.inner_text(".modal") and "1 newer operation has not been undone yet" in page.inner_text(".modal")
     page.keyboard.press("Escape")
-    # a click anywhere else takes Undo away; a click on the toast itself does not
+    # a click elsewhere leaves it; its close button takes it away
     page.fill("#mtext", page.input_value("#mtext") + "\nFourth.")
     page.click("#msave")
     page.wait_for_selector(".toast[data-undo]")
-    page.click(".toast[data-undo] .tmsg")
-    assert page.locator(".toast[data-undo]").count() == 1
+    page.hover(".toast[data-undo]")
     page.click("header .sub")
-    page.wait_for_selector(".toast[data-undo]", state="detached", timeout=2000)
+    assert page.locator(".toast[data-undo]").count() == 1
+    page.click(".toast[data-undo] .tclose")
+    assert page.locator(".toast[data-undo]").count() == 0
     # every toast closes with its close button
     page.evaluate("toast('Something to close')")
     page.click(".toast .tclose")

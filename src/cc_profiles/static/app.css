@@ -515,9 +515,9 @@ pre.diff .f { color: var(--muted); }
 .toast .tact { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   background: var(--text); color: var(--bg); border: 0; border-radius: 8px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
 .toast .tact:hover { opacity: .88; }
-.toast .tclose { flex: none; align-self: flex-start; width: 30px; height: 30px; margin: -4px -4px 0 0; display: grid; place-items: center;
+.toast .tclose { flex: none; align-self: flex-start; width: 22px; height: 22px; margin: -2px -2px 0 0; display: grid; place-items: center;
   border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; padding: 0; }
-.toast .tclose svg { width: 16px; height: 16px; }
+.toast .tclose svg { width: 12px; height: 12px; }
 .toast .tclose:hover { color: var(--text); background: var(--panel-2); }
 .toast.err .tclose { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
