@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Artifacts** in Settings → Replies: turn off the pages Claude Code publishes to claude.ai, in one profile or, with **Apply to all**, in every one (`"enableArtifact": false` in `settings.json`, the switch of Claude Code's `/config`).
+
 ### Changed
 - Messages at the bottom right are easier to see: one width for all, a panel lifted off the page, with an icon, a solid **Undo** button and a close button (×) on one line. The backup's path moved to the message's tooltip, and Undo's tooltip names the operation it undoes.
 - A click elsewhere in the page no longer hides the message with Undo: it goes away by itself, with its close button, or at the next change.

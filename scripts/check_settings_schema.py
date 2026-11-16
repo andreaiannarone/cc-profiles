@@ -53,7 +53,7 @@ CONFIG_IDS = {
     "workflows": None,
     "workflowKeywordTriggerEnabled": None,
     "workflowSizeGuideline": None,
-    "artifacts": None,
+    "artifacts": "enableArtifact",
     "verbose": "verbose",
     "progressBar": "terminalProgressBarEnabled",
     "showStatusInTerminalTab": None,
