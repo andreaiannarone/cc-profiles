@@ -11,6 +11,7 @@ from .sharing import primary, share_state
 from .settings import no_targets, plan_message
 from .agents import entry_value, split_agent, unquote
 from .info import claude_binary, claude_version
+from .claudebinary import read_installed
 
 # ---------------------------------------------------------------------------
 # Custom slash commands
@@ -63,7 +64,7 @@ BUILTIN_COMMANDS = [
         ("context", "[all]", "Show what fills the context", []),
         ("autocompact", "[auto|<tokens>]", "Set how full the context gets before auto-summarizing", []),
         ("output-style", "[style]", "List output styles or switch to one", []),
-        ("focus", "", "Toggle focus view: just your prompt, summary, and response", []),
+        ("focus", "[on|off]", "Toggle focus view: just your prompt, summary, and response", []),
     ]),
     ("Settings", [
         ("config", "[key=value]", "Open settings", ["settings"]),
@@ -100,7 +101,7 @@ BUILTIN_COMMANDS = [
         ("logout", "", "Sign out from your Anthropic account", []),
         ("upgrade", "", "Upgrade your plan for higher rate limits and more Opus", []),
         ("insights", "", "Generate a report analyzing your Claude Code sessions", []),
-        ("doctor", "", "Health-check your setup and fix issues: installation, unused extensions, duplicated or bloated memory files, slow hooks, updates, permissions", ["checkup"]),
+        ("doctor", "[prompt-audit [<path>]]", "Health-check your setup and fix issues: installation, unused extensions, duplicated or bloated memory files, slow hooks, updates, permissions", ["checkup"]),
         ("help", "[command]", "Show help and available commands", []),
         ("powerup", "", "Learn Claude Code features in short lessons", []),
         ("release-notes", "", "View release notes", []),
@@ -119,13 +120,33 @@ BUILTIN_SKILLS = [
     ("debug", "[issue description]", "Turn on debug logging and investigate problems"),
     ("fewer-permission-prompts", "", "Pre-approve safe read-only commands based on your usage"),
     ("loop", "[interval] [prompt]", "Repeat a prompt or command on an interval (e.g. /loop 5m /foo)"),
-    ("run", "", "Launch this project's app to see your change working"),
-    ("run-skill-generator", "", "Create a skill that knows how to run this project's app"),
+    ("run", "", "Launch this project\u2019s app to see your change working"),
+    ("run-skill-generator", "", "Create a skill that knows how to run this project\u2019s app"),
     ("schedule", "", "Create and manage routines: cloud agents on a schedule"),
     ("security-review", "", "Complete a security review of the pending changes on the current branch"),
     ("simplify", "[<target>]", "Clean up the changed code without changing behavior"),
     ("update-config", "", "Change settings: hooks, permissions, environment variables"),
 ]
+
+
+# Claude Code's own commands and skills known and deliberately not shown: internal, for one
+# kind of setup or account (Bedrock, Vertex, cloud sessions, Slack, Design…), or removed.
+# Read from the binary, any other new one is shown under NEW_GROUP; scripts/check_settings_schema.py
+# reports it, to sort it into BUILTIN_COMMANDS / BUILTIN_SKILLS or here.
+BUILTIN_LEFT_OUT = {
+    "agents", "artifacts", "auto-mode-setup", "autofix-pr", "brief", "cd", "cloud-plugins", "color", "daemon",
+    "design-consent", "design-login", "design-revoke", "desktop", "extra-usage", "heapdump", "import", "install",
+    "install-slack-app", "list-agents", "mobile", "passes", "pause-memory", "pro-trial-expired", "project", "radio",
+    "rate-limit-options", "remote-control", "remote-env", "schedule", "session", "setup-bedrock", "setup-vertex",
+    "stickers", "stop", "team-onboarding", "teleport", "ultraplan", "ultrareview", "usage-credits", "use-case",
+    "web-setup", "wellbeing", "workflow-launch-exec", "workflows",
+}
+SKILLS_LEFT_OUT = {
+    "artifact-capabilities", "artifact-design", "artifact-diagramming", "commit", "cowork-plugin", "dataviz", "design",
+    "design-sync", "explain-usage", "keybindings-help", "pr", "send-to-project", "setup-claude", "verify",
+    "workflow-authoring",
+}
+NEW_GROUP = "New in your version"
 
 
 def skill_entry(folder, slash_name, source):
@@ -161,7 +182,6 @@ def skill_commands(prof):
                 item = skill_entry(os.path.join(sroot, n), f"{plugin.split('@')[0]}:{n}", plugin)
                 if item:
                     out.append(item)
-    out += [{"slash": "/" + n, "hint": hint, "description": desc, "source": "builtin"} for n, hint, desc in BUILTIN_SKILLS]
     return out
 
 
@@ -183,9 +203,38 @@ def installed_claude():
     return _installed[key]
 
 
-def builtin_commands():
-    return [{"name": n, "slash": "/" + n, "hint": hint, "description": desc, "aliases": ["/" + a for a in aliases],
-             "group": group} for group, items in BUILTIN_COMMANDS for n, hint, desc, aliases in items]
+def builtin():
+    """(commands, skills, version, source): Claude Code's own commands and bundled skills, read
+    from the installed binary (source "installed"), or this list when it cannot be read ("list").
+    From the binary: what this list knows and the binary still has, with the binary's texts
+    where they are plain strings; what is new (and not left out on purpose) under NEW_GROUP."""
+    info = read_installed([(n, d) for n, _, d in BUILTIN_SKILLS])
+    def cmd(n, hint, desc, aliases, group):
+        return {"name": n, "slash": "/" + n, "hint": hint, "description": desc, "aliases": ["/" + a for a in aliases],
+                "group": group}
+
+    def skill(n, hint, desc):
+        return {"slash": "/" + n, "hint": hint, "description": desc, "source": "builtin"}
+    if not info:
+        return ([cmd(n, h, d, a, g) for g, items in BUILTIN_COMMANDS for n, h, d, a in items],
+                [skill(*s) for s in BUILTIN_SKILLS], BUILTIN_COMMANDS_VERSION, "list")
+    found = dict(info["skills"], **info["commands"])
+    known_cmds = {n for _, items in BUILTIN_COMMANDS for n, *_ in items}
+    known_skills = {n for n, *_ in BUILTIN_SKILLS}
+    cmds = [cmd(n, found[n]["hint"] or "", found[n]["description"] or d, found[n]["aliases"] or a, g)
+            for g, items in BUILTIN_COMMANDS for n, h, d, a in items if n in found]
+    cmds += [cmd(n, c["hint"] or "", c["description"] or "", c["aliases"], NEW_GROUP)
+             for n, c in sorted(info["commands"].items())
+             if n not in known_cmds and n not in BUILTIN_LEFT_OUT and not c["hidden"]]
+    skills = []
+    for n, h, d in BUILTIN_SKILLS:
+        if n in info["skills"]:
+            skills.append(skill(n, info["skills"][n]["hint"] or "", info["skills"][n]["description"] or d))
+        elif n in info["present"]:
+            skills.append(skill(n, h, d))
+    skills += [skill(n, c["hint"] or "", c["description"] or "") for n, c in sorted(info["skills"].items())
+               if n not in known_skills | known_cmds | SKILLS_LEFT_OUT and c["user"] and not c["hidden"]]
+    return cmds, skills, info["version"] or installed_claude(), "installed"
 
 
 def commands_dir(prof):
@@ -284,6 +333,7 @@ def plugin_commands(prof):
 
 def list_commands(pid):
     prof = profile(pid)
+    cmds, skills, version, source = builtin()
     items = []
     for n in command_names(prof):
         path = command_path(prof, n)
@@ -292,8 +342,8 @@ def list_commands(pid):
         except OSError:
             continue
     return {"commands": items, "dir": pretty(commands_dir(prof)), "shared": commands_note(prof),
-            "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": builtin_commands(), "skills": skill_commands(prof),
-            "builtin_version": BUILTIN_COMMANDS_VERSION, "installed_version": installed_claude()}
+            "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": cmds, "skills": skill_commands(prof) + skills,
+            "builtin_version": version, "builtin_source": source, "installed_version": installed_claude()}
 
 
 def command_read(pid, name):

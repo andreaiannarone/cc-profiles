@@ -51,7 +51,9 @@ Every skill you can type as a command is listed under **Skills**, read-only, in 
 
 Below your commands and the plugins' ones, **Built into Claude Code** lists Claude Code's own commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in five groups: Conversation, Model and context, Settings, Extensions, Account and help. Each row shows the command with what to type after it, what it does in Claude Code's own words, and its other names (`/cost` and `/stats` open `/usage`). The filter at the top applies to them too.
 
-The list comes from the Claude Code version named in the section's header, next to the version you have installed: when they differ, a few commands may have changed until cc-profiles is updated. Some commands appear only with some accounts or setups (`/upgrade` with a claude.ai plan, `/chrome` with Claude in Chrome). Commands for one kind of setup only, like Amazon Bedrock or cloud sessions, are left out. The skills that come with Claude Code are in the Skills section above. The weekly schema check reports the commands a new Claude Code version adds or removes.
+cc-profiles reads the list from the Claude Code you have installed, so it follows its updates: the section's header names that version. Commands Claude Code adds after this version of cc-profiles appear under **New in your version**, and the ones it removes disappear. Some descriptions depend on the setup and cannot be read from Claude Code: those show cc-profiles' own text. If Claude Code is not installed or cannot be read, the section shows the list cc-profiles comes with, and says which version that is.
+
+Some commands appear only with some accounts or setups (`/upgrade` with a claude.ai plan, `/chrome` with Claude in Chrome). Commands for one kind of setup only, like Amazon Bedrock or cloud sessions, are left out. The skills that come with Claude Code are in the Skills section above, read from Claude Code the same way.
 
 ## Copy and delete
 

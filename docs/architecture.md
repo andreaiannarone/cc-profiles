@@ -40,7 +40,8 @@ The code is one module per area. Each module imports only from the ones above it
 | `mods.py` | Claude Code mods recognised among the installed plugins, and what each one does, read from its source (read-only) |
 | `search.py` | global search and profile comparison (read-only) |
 | `command.py` | the `/cc-profiles` command file |
-| `slashcommands.py` | custom slash commands (`commands/**/*.md`, a subfolder for a namespace): create, edit, copy to one profile or to all, delete; `/cc-profiles` and plugin commands read-only |
+| `claudebinary.py` | Claude Code's own slash commands and bundled skills, read from the installed binary (mapped, not loaded) and kept in `~/.cc-profiles/claude-commands.json` until it changes (read-only) |
+| `slashcommands.py` | custom slash commands (`commands/**/*.md`, a subfolder for a namespace): create, edit, copy to one profile or to all, delete; `/cc-profiles` and plugin commands read-only; Claude Code's own commands and skills (`BUILTIN_COMMANDS`, `BUILTIN_SKILLS`: groups, and the fallback when the binary cannot be read) |
 | `macapp.py` | `cc-profiles install-app`: the Mac app in `~/Applications`, put together from `app/main.swift` (compiled into the package by `scripts/build_app.py`), its Info.plist, launch.json and icon (drawn in Python); kept up to date at every start |
 | `terminal.py` | Open in Terminal: a project's folder in a new terminal window with Claude Code in a profile, through a script that deletes itself. Terminal, iTerm or Ghostty on macOS; on Linux, in a graphical session, a fixed list of terminal programs found on the `PATH` (`LINUX_TERMINALS`) |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |

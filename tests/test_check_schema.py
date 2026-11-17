@@ -13,7 +13,7 @@ spec.loader.exec_module(chk)
 
 sys.path.insert(0, str(ROOT / "src"))
 from cc_profiles.settings import SETTING_FIELDS  # noqa: E402
-from cc_profiles.slashcommands import BUILTIN_COMMANDS  # noqa: E402
+from cc_profiles.slashcommands import BUILTIN_COMMANDS, BUILTIN_SKILLS  # noqa: E402
 
 
 def values(fd):
@@ -37,10 +37,21 @@ def schema_snippet(fd, override=None):
     return "o()"
 
 
-def command_objects(extra=(), drop=()):
-    """Claude Code's command definitions, in the shapes the binary uses: type first or later,
-    nested objects and getters in between, and /doctor without a type."""
+def command_objects(extra=(), drop=(), extra_skills=(), drop_skills=()):
+    """Claude Code's command and bundled skill definitions, in the shapes the binary uses: type
+    first or later, nested objects and getters in between, /doctor registered as a skill, a
+    skill's name held in a variable defined earlier, and one written as a Markdown file."""
     out = []
+    for i, (n, hint, desc) in enumerate(BUILTIN_SKILLS + [(n, "", "New") for n in extra_skills]):
+        if n in drop_skills:
+            continue
+        if n == "security-review":
+            out.append(f"\\ndescription: {desc}\\nYou are a senior security engineer")
+        elif i % 2:
+            out.append(f'var Sk{i}="{n}";function f{i}(){{wd({{name:Sk{i},menuDescription:"{desc}",userInvocable:!0}})}}')
+        else:
+            out.append(f'function g{i}(){{wd({{name:"{n}",menuDescription:"{desc}",argumentHint:"{hint}",userInvocable:!0}})}}')
+    out.append('function k(){wd({name:"keybindings-help",description:"x",userInvocable:!1})}')
     for n in [n for _, items in BUILTIN_COMMANDS for n, *_ in items if n not in drop] + list(extra):
         if n == "doctor":
             out.append(f'function Yo(){{wd({{name:"{n}",aliases:["checkup"],requires:{{workspace:!0}},menuDescription:"Check",description:"x"}})}}')
@@ -128,10 +139,14 @@ def test_matching_binary_reports_no_differences(tmp_path):
 
 
 def test_reports_new_and_removed_slash_commands(tmp_path):
-    r = run(fake_binary(tmp_path / "claude", commands=command_objects(extra=["teleport", "brand-new"], drop=["recap", "doctor"])))
+    r = run(fake_binary(tmp_path / "claude", commands=command_objects(
+        extra=["teleport", "brand-new"], drop=["recap", "doctor"], extra_skills=["verify", "fresh-skill"],
+        drop_skills=["simplify", "security-review"])))
     assert r.returncode == 1
     assert "New command `/brand-new`" in r.stdout and "teleport" not in r.stdout  # left out on purpose
     assert "Command `/recap` is gone" in r.stdout and "Command `/doctor` is gone" in r.stdout
+    assert "New skill `/fresh-skill`" in r.stdout and "verify" not in r.stdout and "keybindings-help" not in r.stdout
+    assert "Skill `/simplify` is gone" in r.stdout and "Skill `/security-review` is gone" in r.stdout
 
 
 def test_reports_enum_changes_through_named_and_spread_lists(tmp_path):
