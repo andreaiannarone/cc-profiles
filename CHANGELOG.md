@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-17
+
 ### Added
 - Commands → **Built into Claude Code**: Claude Code's own slash commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in groups, with what each does and its other names. Above them, **Skills** lists every skill you can type as a command: the profile's, the plugins' (`/plugin:skill`) and the ones that come with Claude Code (`/simplify`, `/code-review`, `/loop`…). Both are read from the Claude Code you have installed, so they follow its updates: what a new version adds appears under **New in your version** (with the list cc-profiles comes with as a fallback). The filter at the top applies to all of them, and the weekly schema check reports the commands a new Claude Code version adds or removes.
 
@@ -503,7 +505,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7

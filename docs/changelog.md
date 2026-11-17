@@ -3,6 +3,15 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.8.0] - 2026-11-17
+
+**Added**
+- Commands → **Built into Claude Code**: Claude Code's own slash commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in groups, with what each does and its other names. Above them, **Skills** lists every skill you can type as a command: the profile's, the plugins' (`/plugin:skill`) and the ones that come with Claude Code (`/simplify`, `/code-review`, `/loop`…). Both are read from the Claude Code you have installed, so they follow its updates: what a new version adds appears under **New in your version** (with the list cc-profiles comes with as a fallback). The filter at the top applies to all of them, and the weekly schema check reports the commands a new Claude Code version adds or removes.
+
+**Fixed**
+- Going from MCP to Commands, Skills or Agents left the page stuck: the new tab was drawn with MCP's data before its own arrived, and stopped on the error.
+- Settings → Hooks: the hooks of plugins are in the same table as the others, under a **From plugins** row, with their columns lined up, instead of in a second table under an all-caps heading.
+
 ## [0.7.9] - 2026-11-16
 
 **Added**
@@ -494,6 +503,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.6...v0.7.7
