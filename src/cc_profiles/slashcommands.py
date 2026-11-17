@@ -20,7 +20,7 @@ from .agents import entry_value, split_agent, unquote
 # The editor edits the whole file. /cc-profiles (COMMAND_MARK) is cc-profiles' own, kept
 # up to date at start: shown, never edited or deleted here. Plugins bring commands of their own.
 SEGMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
-FRONT_KEYS = ("description", "argument-hint", "allowed-tools", "model", "disable-model-invocation")
+FRONT_KEYS = ("description", "argument-hint", "allowed-tools", "model", "disable-model-invocation", "user-invocable")
 NEW_COMMAND = "---\ndescription: \nargument-hint: \n---\n\n$ARGUMENTS\n"
 
 
@@ -108,6 +108,62 @@ BUILTIN_COMMANDS = [
         ("bug", "[report]", "Report a bug or share your session", ["share"]),
     ]),
 ]
+# The skills that come with Claude Code and can be typed as a command, with their menu text
+# from the binary (BUILTIN_COMMANDS_VERSION). Others are internal or only for some accounts.
+BUILTIN_SKILLS = [
+    ("batch", "<instruction>", "Plan a large change; background agents each open a PR"),
+    ("claude-api", "", "Build and debug apps that use the Claude API"),
+    ("claude-in-chrome", "", "Let Claude browse and interact with pages in your Chrome"),
+    ("code-review", "", "Review the current diff or a PR for bugs and cleanups"),
+    ("debug", "[issue description]", "Turn on debug logging and investigate problems"),
+    ("fewer-permission-prompts", "", "Pre-approve safe read-only commands based on your usage"),
+    ("loop", "[interval] [prompt]", "Repeat a prompt or command on an interval (e.g. /loop 5m /foo)"),
+    ("run", "", "Launch this project's app to see your change working"),
+    ("run-skill-generator", "", "Create a skill that knows how to run this project's app"),
+    ("schedule", "", "Create and manage routines: cloud agents on a schedule"),
+    ("security-review", "", "Complete a security review of the pending changes on the current branch"),
+    ("simplify", "[<target>]", "Clean up the changed code without changing behavior"),
+    ("update-config", "", "Change settings: hooks, permissions, environment variables"),
+]
+
+
+def skill_entry(folder, slash_name, source):
+    """A skill as it appears among the commands, or None when it cannot be typed (user-invocable: false)."""
+    try:
+        text = open(os.path.join(folder, "SKILL.md"), errors="replace").read(8000)
+    except OSError:
+        return None
+    f = front(text)
+    if f.get("user-invocable", "").strip().lower() == "false":
+        return None
+    return {"slash": "/" + slash_name, "hint": f.get("argument-hint", ""), "source": source,
+            "description": f.get("description", "") or f.get("fallback", "")}
+
+
+def skill_commands(prof):
+    """Every skill that can be typed as /name: the profile's own, the plugins' (/plugin:name), and
+    the ones that come with Claude Code. Read-only here: the Skills tab edits the profile's."""
+    out = []
+    root = os.path.join(prof["dir_abs"], "skills")
+    for n in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+        if not n.startswith("."):
+            item = skill_entry(os.path.join(root, n), n, "profile")
+            if item:
+                out.append(item)
+    inst = read_json(os.path.join(prof["dir_abs"], "plugins", "installed_plugins.json"), {}) or {}
+    for plugin, installs in sorted((inst.get("plugins") or {}).items() if isinstance(inst.get("plugins"), dict) else []):
+        installs = [installs] if isinstance(installs, dict) else (installs or [])
+        path = (installs[0] if installs and isinstance(installs[0], dict) else {}).get("installPath") or ""
+        sroot = os.path.join(path, "skills") if path else ""
+        for n in sorted(os.listdir(sroot)) if sroot and os.path.isdir(sroot) else []:
+            if not n.startswith("."):
+                item = skill_entry(os.path.join(sroot, n), f"{plugin.split('@')[0]}:{n}", plugin)
+                if item:
+                    out.append(item)
+    out += [{"slash": "/" + n, "hint": hint, "description": desc, "source": "builtin"} for n, hint, desc in BUILTIN_SKILLS]
+    return out
+
+
 def builtin_commands():
     return [{"name": n, "slash": "/" + n, "hint": hint, "description": desc, "aliases": ["/" + a for a in aliases],
              "group": group} for group, items in BUILTIN_COMMANDS for n, hint, desc, aliases in items]
@@ -217,7 +273,7 @@ def list_commands(pid):
         except OSError:
             continue
     return {"commands": items, "dir": pretty(commands_dir(prof)), "shared": commands_note(prof),
-            "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": builtin_commands(),
+            "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": builtin_commands(), "skills": skill_commands(prof),
             "builtin_version": BUILTIN_COMMANDS_VERSION}
 
 

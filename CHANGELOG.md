@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
-- Commands → **Built into Claude Code**: Claude Code's own slash commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in groups, with what each does and its other names. The filter at the top applies to them too, and the weekly schema check reports the commands a new Claude Code version adds or removes.
+- Commands → **Built into Claude Code**: Claude Code's own slash commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in groups, with what each does and its other names. Above them, **Skills** lists every skill you can type as a command: the profile's, the plugins' (`/plugin:skill`) and the ones that come with Claude Code (`/simplify`, `/code-review`, `/loop`…). The filter at the top applies to all of them, and the weekly schema check reports the commands a new Claude Code version adds or removes.
 
 ### Fixed
 - Going from MCP to Commands, Skills or Agents left the page stuck: the new tab was drawn with MCP's data before its own arrived, and stopped on the error.

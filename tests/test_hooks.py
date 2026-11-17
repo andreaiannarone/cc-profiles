@@ -112,6 +112,9 @@ def test_commands_are_managed_and_undoable(home, app_factory):
     home.write(".claude/plugins/installed_plugins.json", json.dumps({"plugins": {"kit@market": [
         {"installPath": str(home.path("plugin-kit"))}]}}))
     home.write("plugin-kit/commands/ship.md", "---\ndescription: Ship it\n---\nShip.\n")
+    home.write("plugin-kit/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Deploy the app\nargument-hint: [env]\n---\nGo.\n")
+    home.write(".claude/skills/notes/SKILL.md", "---\nname: notes\ndescription: Take notes\n---\nWrite.\n")
+    home.write(".claude/skills/background/SKILL.md", "---\nname: background\ndescription: Only for Claude\nuser-invocable: false\n---\nx\n")
     before = home.snapshot()
     app = app_factory()
 
@@ -124,6 +127,11 @@ def test_commands_are_managed_and_undoable(home, app_factory):
     builtin = {c["slash"]: c for c in d["builtin"]}
     assert builtin["/usage"]["aliases"] == ["/cost", "/stats"] and builtin["/compact"]["group"] == "Conversation"
     assert d["builtin_version"] and len(builtin) == len(d["builtin"]) > 50
+    # skills typed as commands: the profile's (not those marked user-invocable: false), the plugins', Claude Code's
+    skills = {c["slash"]: c for c in d["skills"]}
+    assert skills["/notes"]["source"] == "profile" and "/background" not in skills
+    assert (skills["/kit:deploy"]["source"], skills["/kit:deploy"]["hint"]) == ("kit@market", "[env]")
+    assert skills["/simplify"]["source"] == "builtin"
     assert app.get("/api/commands/file?profile=default&name=review")["content"].startswith("---\ndescription: Review")
 
     app.post("/api/commands/save", {"profile": "default", "name": "git/commit", "new": True,

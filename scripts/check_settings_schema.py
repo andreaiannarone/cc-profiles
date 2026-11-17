@@ -445,7 +445,7 @@ BUILTIN_LEFT_OUT = {
     "rate-limit-options", "remote-control", "remote-env", "schedule", "session", "setup-bedrock", "setup-vertex",
     "stickers", "stop", "team-onboarding", "teleport", "ultraplan", "ultrareview", "usage-credits", "use-case",
     "web-setup", "wellbeing", "workflow-launch-exec", "workflows",
-    # skills that come with Claude Code (/skills lists them); /doctor, one of them, is in BUILTIN_COMMANDS
+    # skills that come with Claude Code: BUILTIN_SKILLS lists those anyone can type; /doctor is in BUILTIN_COMMANDS
     "batch", "claude-api", "claude-in-chrome", "debug", "fewer-permission-prompts", "run", "run-skill-generator",
     "update-config",
 }

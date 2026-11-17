@@ -493,6 +493,10 @@ def test_commands_tab(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "commands")
     assert "Free up context" in page.inner_text("tr:has(code:text-is('/compact'))")  # Claude Code's own, read-only
+    assert "Claude Code" in page.inner_text("tr:has(code:text-is('/simplify'))")  # a skill that comes with Claude Code
+    page.click("#cmd-skills")
+    page.wait_for_selector("#tabs button[data-tab='skills'].on", state="attached")
+    open_tab(page, "commands")
     page.fill("#extq", "rewind")
     page.wait_for_function("() => document.querySelectorAll('tr:has(td.cmdname)').length === 1")
     page.fill("#extq", "")

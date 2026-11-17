@@ -345,16 +345,33 @@ function renderCommands(head) {
     ${cur ? commandEditorHtml(cur) : ""}
     ${d.plugins.length ? `<div class="ext-head"><h2>From plugins</h2><span class="hint">read-only: the plugin installs and updates them</span></div>
       <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}
+    ${skillCommands(d, q)}
     ${builtinCommands(d, q)}`;
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#scnew").onclick = () => { x.cmd = { isNew: true, name: "", content: d.template }; renderExt(); $("#sc-name")?.focus(); };
+  const go = $("#cmd-skills");
+  if (go) go.onclick = e => { e.preventDefault(); $(`#tabs button[data-tab="skills"]`).click(); };
   if (cur) bindCommandEditor(cur);
+}
+// Skills typed as /name: the profile's, the plugins', Claude Code's; read-only here
+function skillCommands(d, q) {
+  const match = c => !q || [c.slash, c.description, c.source].join(" ").toLowerCase().includes(q);
+  const list = d.skills.filter(match);
+  const groups = [["This profile", c => c.source === "profile"], ["From plugins", c => c.source !== "profile" && c.source !== "builtin"],
+    ["Built into Claude Code", c => c.source === "builtin"]];
+  return `<div class="ext-head"><h2>Skills</h2><span class="hint">${plural(d.skills.length, "skill", "skills")} you can type as a command, read-only here: the <a href="#" id="cmd-skills">Skills</a> tab edits this profile's. Claude Code can also use them by itself when they fit the request.</span></div>
+    ${list.length ? `<div class="table" tabindex="0" role="region" aria-label="Skills you can type as a command"><table><thead><tr><th>Command</th><th>What it does</th><th>From</th></tr></thead><tbody>
+      ${groups.map(([g, f]) => { const rows = list.filter(f); return rows.length ? `<tr class="cmdgroup"><td colspan="3"><b>${g}</b></td></tr>${rows.map(c => `<tr>
+        <td class="cmdname"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</td>
+        <td>${esc(c.description) || `<span class="hint">No description</span>`}</td>
+        <td>${c.source === "profile" ? "skills/" : c.source === "builtin" ? "Claude Code" : `<span class="badge b-shared">${esc(c.source)}</span>`}</td></tr>`).join("")}` : ""; }).join("")}
+    </tbody></table></div>` : `<div class="empty">No skills match the filter.</div>`}`;
 }
 // Claude Code's own commands, read-only, in groups; the filter above applies to them too
 function builtinCommands(d, q) {
   const match = c => !q || [c.slash, c.description, ...c.aliases].join(" ").toLowerCase().includes(q);
   const list = d.builtin.filter(match), groups = [...new Set(list.map(c => c.group))];
-  return `<div class="ext-head"><h2>Built into Claude Code</h2><span class="hint">${plural(d.builtin.length, "command", "commands")} of Claude Code ${esc(d.builtin_version)}, read-only. Some appear only with some accounts or setups; the skills that come with Claude Code are in <code>/skills</code>.</span></div>
+  return `<div class="ext-head"><h2>Built into Claude Code</h2><span class="hint">${plural(d.builtin.length, "command", "commands")} of Claude Code ${esc(d.builtin_version)}, read-only. Some appear only with some accounts or setups.</span></div>
     ${list.length ? `<div class="table" tabindex="0" role="region" aria-label="Commands built into Claude Code"><table><thead><tr><th>Command</th><th>What it does</th><th>Also</th></tr></thead><tbody>
       ${groups.map(g => `<tr class="cmdgroup"><td colspan="3"><b>${esc(g)}</b></td></tr>${list.filter(c => c.group === g).map(c => `<tr>
         <td class="cmdname"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</td>
