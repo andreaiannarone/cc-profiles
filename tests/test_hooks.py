@@ -113,6 +113,8 @@ def test_commands_are_managed_and_undoable(home, app_factory):
         {"installPath": str(home.path("plugin-kit"))}]}}))
     home.write("plugin-kit/commands/ship.md", "---\ndescription: Ship it\n---\nShip.\n")
     home.write("plugin-kit/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Deploy the app\nargument-hint: [env]\n---\nGo.\n")
+    home.write(".local/bin/claude", '#!/bin/sh\necho "9.9.1 (Claude Code)"\n')
+    home.path(".local/bin/claude").chmod(0o755)
     home.write(".claude/skills/notes/SKILL.md", "---\nname: notes\ndescription: Take notes\n---\nWrite.\n")
     home.write(".claude/skills/background/SKILL.md", "---\nname: background\ndescription: Only for Claude\nuser-invocable: false\n---\nx\n")
     before = home.snapshot()
@@ -127,6 +129,7 @@ def test_commands_are_managed_and_undoable(home, app_factory):
     builtin = {c["slash"]: c for c in d["builtin"]}
     assert builtin["/usage"]["aliases"] == ["/cost", "/stats"] and builtin["/compact"]["group"] == "Conversation"
     assert d["builtin_version"] and len(builtin) == len(d["builtin"]) > 50
+    assert d["installed_version"] == "9.9.1"  # the installed Claude Code, to compare with builtin_version
     # skills typed as commands: the profile's (not those marked user-invocable: false), the plugins', Claude Code's
     skills = {c["slash"]: c for c in d["skills"]}
     assert skills["/notes"]["source"] == "profile" and "/background" not in skills

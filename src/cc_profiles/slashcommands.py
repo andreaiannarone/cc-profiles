@@ -10,6 +10,7 @@ from .command import COMMAND_MARK
 from .sharing import primary, share_state
 from .settings import no_targets, plan_message
 from .agents import entry_value, split_agent, unquote
+from .info import claude_binary, claude_version
 
 # ---------------------------------------------------------------------------
 # Custom slash commands
@@ -164,6 +165,24 @@ def skill_commands(prof):
     return out
 
 
+_installed = {}
+
+
+def installed_claude():
+    """The installed Claude Code's version, asked once per binary (a new version is a new file)."""
+    b = claude_binary()
+    if not b:
+        return None
+    try:
+        key = (b, os.stat(b).st_mtime)
+    except OSError:
+        return None
+    if key not in _installed:
+        _installed.clear()
+        _installed[key] = claude_version()
+    return _installed[key]
+
+
 def builtin_commands():
     return [{"name": n, "slash": "/" + n, "hint": hint, "description": desc, "aliases": ["/" + a for a in aliases],
              "group": group} for group, items in BUILTIN_COMMANDS for n, hint, desc, aliases in items]
@@ -274,7 +293,7 @@ def list_commands(pid):
             continue
     return {"commands": items, "dir": pretty(commands_dir(prof)), "shared": commands_note(prof),
             "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": builtin_commands(), "skills": skill_commands(prof),
-            "builtin_version": BUILTIN_COMMANDS_VERSION}
+            "builtin_version": BUILTIN_COMMANDS_VERSION, "installed_version": installed_claude()}
 
 
 def command_read(pid, name):
