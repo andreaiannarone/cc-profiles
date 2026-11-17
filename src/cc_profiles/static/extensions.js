@@ -57,7 +57,7 @@ async function pickProfile(title, sub, pid, okLabel) {
 const scopeLabel = s => s === "user" ? "All projects" : basename(s);
 function renderExt() {
   if (!EXT_TABS.includes(S.tab)) return;
-  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = { skills: x.skills, agents: x.agents, commands: x.commands }[S.tab] || x.mcp;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = { skills: x.skills, agents: x.agents, commands: x.commands, mcp: x.mcp }[S.tab];
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
   if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }
@@ -344,10 +344,39 @@ function renderCommands(head) {
     <div class="cards skgrid">${list.map(c => commandCard(c, cur)).join("") || `<div class="empty">${d.commands.length ? "No commands match the filter." : "No commands in this profile yet: New command… creates one."}</div>`}</div>
     ${cur ? commandEditorHtml(cur) : ""}
     ${d.plugins.length ? `<div class="ext-head"><h2>From plugins</h2><span class="hint">read-only: the plugin installs and updates them</span></div>
-      <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}`;
+      <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}
+    ${skillCommands(d, q)}
+    ${builtinCommands(d, q)}`;
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#scnew").onclick = () => { x.cmd = { isNew: true, name: "", content: d.template }; renderExt(); $("#sc-name")?.focus(); };
+  const go = $("#cmd-skills");
+  if (go) go.onclick = e => { e.preventDefault(); $(`#tabs button[data-tab="skills"]`).click(); };
   if (cur) bindCommandEditor(cur);
+}
+// Skills typed as /name: the profile's, the plugins', Claude Code's; read-only here
+function skillCommands(d, q) {
+  const match = c => !q || [c.slash, c.description, c.source].join(" ").toLowerCase().includes(q);
+  const list = d.skills.filter(match);
+  const groups = [["This profile", c => c.source === "profile"], ["From plugins", c => c.source !== "profile" && c.source !== "builtin"],
+    ["Built into Claude Code", c => c.source === "builtin"]];
+  return `<div class="ext-head"><h2>Skills</h2><span class="hint">${plural(d.skills.length, "skill", "skills")} you can type as a command, read-only here: the <a href="#" id="cmd-skills">Skills</a> tab edits this profile's. Claude Code can also use them by itself when they fit the request.</span></div>
+    ${list.length ? `<div class="table" tabindex="0" role="region" aria-label="Skills you can type as a command"><table><thead><tr><th>Command</th><th>What it does</th><th>From</th></tr></thead><tbody>
+      ${groups.map(([g, f]) => { const rows = list.filter(f); return rows.length ? `<tr class="cmdgroup"><td colspan="3"><b>${g}</b></td></tr>${rows.map(c => `<tr>
+        <td class="cmdname"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</td>
+        <td>${esc(c.description) || `<span class="hint">No description</span>`}</td>
+        <td>${c.source === "profile" ? "skills/" : c.source === "builtin" ? "Claude Code" : `<span class="badge b-shared">${esc(c.source)}</span>`}</td></tr>`).join("")}` : ""; }).join("")}
+    </tbody></table></div>` : `<div class="empty">No skills match the filter.</div>`}`;
+}
+// Claude Code's own commands, read-only, in groups; the filter above applies to them too
+function builtinCommands(d, q) {
+  const match = c => !q || [c.slash, c.description, ...c.aliases].join(" ").toLowerCase().includes(q);
+  const list = d.builtin.filter(match), groups = [...new Set(list.map(c => c.group))];
+  return `<div class="ext-head"><h2>Built into Claude Code</h2><span class="hint">${plural(d.builtin.length, "command", "commands")}, read-only. ${d.builtin_source === "installed" ? `Read from your Claude Code ${esc(d.builtin_version)}, so they follow its updates. ` : !d.installed_version ? `Claude Code was not found: this is the list of Claude Code ${esc(d.builtin_version)}. ` : `<span class="warn-note">Your Claude Code ${esc(d.installed_version)} could not be read: this is the list of ${esc(d.builtin_version)}, and some commands may differ.</span> `}Some appear only with some accounts or setups.</span></div>
+    ${list.length ? `<div class="table" tabindex="0" role="region" aria-label="Commands built into Claude Code"><table><thead><tr><th>Command</th><th>What it does</th><th>Also</th></tr></thead><tbody>
+      ${groups.map(g => `<tr class="cmdgroup"><td colspan="3"><b>${esc(g)}</b></td></tr>${list.filter(c => c.group === g).map(c => `<tr>
+        <td class="cmdname"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</td>
+        <td>${esc(c.description)}</td><td>${c.aliases.map(a => `<code>${esc(a)}</code>`).join(" ")}</td></tr>`).join("")}`).join("")}
+    </tbody></table></div>` : `<div class="empty">No built-in commands match the filter.</div>`}`;
 }
 async function openCommand(name) {
   const x = S.ext;

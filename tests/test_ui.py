@@ -492,6 +492,14 @@ def test_agents_tab(page_on_sandbox):
 def test_commands_tab(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "commands")
+    assert "Free up context" in page.inner_text("tr:has(code:text-is('/compact'))")  # Claude Code's own, read-only
+    assert "Claude Code" in page.inner_text("tr:has(code:text-is('/simplify'))")  # a skill that comes with Claude Code
+    page.click("#cmd-skills")
+    page.wait_for_selector("#tabs button[data-tab='skills'].on", state="attached")
+    open_tab(page, "commands")
+    page.fill("#extq", "rewind")
+    page.wait_for_function("() => document.querySelectorAll('tr:has(td.cmdname)').length === 1")
+    page.fill("#extq", "")
     page.click("#scnew")
     page.fill("#sc-name", "/git:commit")  # typed as in Claude Code: the folder and the file
     page.fill("#sc-body", "---\ndescription: Commit the staged changes\n---\nCommit them.\n")
@@ -503,6 +511,17 @@ def test_commands_tab(page_on_sandbox):
     page.click("#scdel")
     page.click(".modal .btn.danger")
     page.wait_for_selector('[data-cmd="git/commit"]', state="detached")
+    assert errors == []
+
+
+def test_switching_between_extension_tabs(page_on_sandbox):
+    """Each tab waits for its own data: coming from MCP, whose data is loaded, used to draw
+    the next tab with MCP's data and stop there."""
+    page, errors = page_on_sandbox
+    for tab, ready in (("mcp", "#mcpnew, .ext-head"), ("commands", "#scnew"), ("mcp", ".ext-head"), ("agents", "#agnew"),
+                       ("mcp", ".ext-head"), ("skills", "#sknew"), ("commands", "#scnew")):
+        open_tab(page, tab)
+        page.wait_for_selector(ready)
     assert errors == []
 
 

@@ -13,6 +13,7 @@ spec.loader.exec_module(chk)
 
 sys.path.insert(0, str(ROOT / "src"))
 from cc_profiles.settings import SETTING_FIELDS  # noqa: E402
+from cc_profiles.slashcommands import BUILTIN_COMMANDS, BUILTIN_SKILLS  # noqa: E402
 
 
 def values(fd):
@@ -36,9 +37,37 @@ def schema_snippet(fd, override=None):
     return "o()"
 
 
-def fake_binary(path, schema=None, drop=(), panel_extra=(), panel_drop=(), panel_options=None):
+def command_objects(extra=(), drop=(), extra_skills=(), drop_skills=()):
+    """Claude Code's command and bundled skill definitions, in the shapes the binary uses: type
+    first or later, nested objects and getters in between, /doctor registered as a skill, a
+    skill's name held in a variable defined earlier, and one written as a Markdown file."""
+    out = []
+    for i, (n, hint, desc) in enumerate(BUILTIN_SKILLS + [(n, "", "New") for n in extra_skills]):
+        if n in drop_skills:
+            continue
+        if n == "security-review":
+            out.append(f"\\ndescription: {desc}\\nYou are a senior security engineer")
+        elif i % 2:
+            out.append(f'var Sk{i}="{n}";function f{i}(){{wd({{name:Sk{i},menuDescription:"{desc}",userInvocable:!0}})}}')
+        else:
+            out.append(f'function g{i}(){{wd({{name:"{n}",menuDescription:"{desc}",argumentHint:"{hint}",userInvocable:!0}})}}')
+    out.append('function k(){wd({name:"keybindings-help",description:"x",userInvocable:!1})}')
+    for n in [n for _, items in BUILTIN_COMMANDS for n, *_ in items if n not in drop] + list(extra):
+        if n == "doctor":
+            out.append(f'function Yo(){{wd({{name:"{n}",aliases:["checkup"],requires:{{workspace:!0}},menuDescription:"Check",description:"x"}})}}')
+        elif n == "chrome":
+            out.append(f'var p={{name:"{n}",description:"Open",isEnabled:()=>!ge(),policyGate:{{policy:"a"}},type:"local-jsx"}};')
+        else:
+            out.append(f'var c={{type:"local",name:"{n}",get description(){{return"A {{b}}"}},load:()=>import("/x.js")}};')
+    # not commands: a CLI option, and a skill's own fields
+    out.append('{name:"init",type:"boolean",description:p.Init},{name:"plugins",type:"list"}')
+    return "".join(out).encode()
+
+
+def fake_binary(path, schema=None, drop=(), panel_extra=(), panel_drop=(), panel_options=None, commands=None):
     """schema: {key: zod expression} overrides; drop: keys left out of the schema;
-    panel_*: items added to or removed from /config, or their options replaced."""
+    panel_*: items added to or removed from /config, or their options replaced; commands: the
+    slash command definitions (all of BUILTIN_COMMANDS by default)."""
     schema, panel_options = schema or {}, panel_options or {}
     parts = [b"\x7fELF\x00\x01junk\x00", b'var Q={VERSION:"9.9.9",BUILD_TIME:"x"};\x00',
              b',effortLevel:()=>j(["low","medium","high"]).optional().catch(void 0).describe("Effort"),',
@@ -92,6 +121,7 @@ def fake_binary(path, schema=None, drop=(), panel_extra=(), panel_drop=(), panel
         else:
             items.append(f'...k("flag")?[{item}]:[]' if iid == "verbose" else item)
     parts.append(("".join(before) + "let Oe=1,Pe=[" + ",".join(items) + "];return Pe}").encode())
+    parts.append(command_objects() if commands is None else commands)
     parts.append(b"\x00trailing junk [ ( {")
     path.write_bytes(b"".join(parts))
     return path
@@ -106,6 +136,17 @@ def test_matching_binary_reports_no_differences(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     assert "Claude Code **9.9.9**" in r.stdout
     assert "No differences" in r.stdout
+
+
+def test_reports_new_and_removed_slash_commands(tmp_path):
+    r = run(fake_binary(tmp_path / "claude", commands=command_objects(
+        extra=["teleport", "brand-new"], drop=["recap", "doctor"], extra_skills=["verify", "fresh-skill"],
+        drop_skills=["simplify", "security-review"])))
+    assert r.returncode == 1
+    assert "New command `/brand-new`" in r.stdout and "teleport" not in r.stdout  # left out on purpose
+    assert "Command `/recap` is gone" in r.stdout and "Command `/doctor` is gone" in r.stdout
+    assert "New skill `/fresh-skill`" in r.stdout and "verify" not in r.stdout and "keybindings-help" not in r.stdout
+    assert "Skill `/simplify` is gone" in r.stdout and "Skill `/security-review` is gone" in r.stdout
 
 
 def test_reports_enum_changes_through_named_and_spread_lists(tmp_path):

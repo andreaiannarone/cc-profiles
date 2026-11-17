@@ -397,9 +397,10 @@ function hooksSection() {
     <div class="b">
       ${h.disabled ? `<div class="danger-box" style="margin-bottom:10px">All hooks are off in ${esc(h.disabled_in)} (<b>Turn off all hooks</b>, in General): none of these runs.</div>` : ""}
       ${errs.length ? `<div class="danger-box" style="margin-bottom:10px">${errs.join("<br>")}: fix it in the advanced editor.</div>` : ""}
-      ${h.hooks.length ? `<div class="table"><table><thead><tr><th>Event</th><th>Matcher</th><th>Runs</th><th>File</th><th></th></tr></thead><tbody>${h.hooks.map(hookRow).join("")}</tbody></table></div>`
-        : `<div class="hint">No hooks in this profile.</div>`}
-      ${h.plugins.length ? `<h3 class="sgroup">From plugins <span class="hint">read-only: the plugin manages them</span></h3><div class="table"><table><tbody>${h.plugins.map(hookRow).join("")}</tbody></table></div>` : ""}
+      ${h.hooks.length || h.plugins.length ? `<div class="table"><table><thead><tr><th>Event</th><th>Matcher</th><th>Runs</th><th>File</th><th></th></tr></thead><tbody>
+        ${h.hooks.map(hookRow).join("") || `<tr><td colspan="5" class="hint">No hooks of this profile.</td></tr>`}
+        ${h.plugins.length ? `<tr class="hkgroup"><td colspan="5"><b>From plugins</b> <span class="hint">· read-only, the plugin manages them</span></td></tr>${h.plugins.map(hookRow).join("")}` : ""}
+      </tbody></table></div>` : `<div class="hint">No hooks in this profile.</div>`}
       <div class="row-end"><span class="grow hint">Other hook types (prompt, agent, http) and extra keys are kept as they are: edit them in the advanced editor.</span><button class="btn primary" id="hk-add">Add hook…</button></div>
     </div></section>`;
 }

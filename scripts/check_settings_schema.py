@@ -22,6 +22,12 @@ Fields with "file": "global" live in .claude.json, not in the settings schema: t
 are checked against the items of the /config panel instead (`{id:"...",label:...}`).
 CONFIG_IDS maps every /config item this project knows to its SETTING_FIELDS key
 (None: known, deliberately not in the Settings tab), so new and removed items show up.
+
+The same report lists Claude Code's own slash commands and bundled skills that BUILTIN_COMMANDS
+and BUILTIN_SKILLS (slashcommands.py) do not know yet, and the ones they list that are gone.
+The Commands tab reads them from the installed binary itself (claudebinary.py, the same parser),
+but uses these lists for groups and as a fallback. Those left out on purpose (internal, or for
+one kind of setup only) are in BUILTIN_LEFT_OUT and SKILLS_LEFT_OUT.
 """
 
 import argparse
@@ -431,12 +437,28 @@ def check(data, fields):
     return problems, ok, new_items, gone_items
 
 
-def report(path, version, schema_version, fields, problems, ok, new_items, gone_items):
+def check_builtin(data):
+    """(new commands, gone commands, new skills, gone skills) of the binary, compared with
+    BUILTIN_COMMANDS and BUILTIN_SKILLS (shown when the installed binary cannot be read, and
+    sorting what it has into groups); BUILTIN_LEFT_OUT and SKILLS_LEFT_OUT are left out on purpose."""
+    from cc_profiles.claudebinary import parse
+    from cc_profiles.slashcommands import BUILTIN_COMMANDS, BUILTIN_LEFT_OUT, BUILTIN_SKILLS, SKILLS_LEFT_OUT
+    cmds = {n for _, items in BUILTIN_COMMANDS for n, *_ in items}
+    skills = {n for n, *_ in BUILTIN_SKILLS}
+    info = parse(data, [(n, d) for n, _, d in BUILTIN_SKILLS])
+    found = set(info["commands"]) | set(info["skills"])
+    user_skills = {n for n, s in info["skills"].items() if s["user"] and not s["hidden"]}
+    return (sorted(set(info["commands"]) - cmds - BUILTIN_LEFT_OUT), sorted(cmds - found),
+            sorted(user_skills - skills - cmds - SKILLS_LEFT_OUT), sorted(skills - found - set(info["present"])))
+
+
+def report(path, version, schema_version, fields, problems, ok, new_items, gone_items, cmds=((), (), (), ())):
+    new_cmds, gone_cmds, new_skills, gone_skills = cmds
     labels = {fd["key"]: fd["label"] for fd in fields}
     lines = ["# Claude Code settings schema check", "",
              f"Claude Code **{version or 'unknown version'}** (`{path}`), compared with `SETTING_FIELDS` "
              f"(last checked against {schema_version}).", ""]
-    differs = bool(problems or new_items or gone_items)
+    differs = bool(problems or new_items or gone_items or any(cmds))
     if not differs:
         lines += ["No differences: every field and every /config item matches.", ""]
     if problems:
@@ -449,6 +471,15 @@ def report(path, version, schema_version, fields, problems, ok, new_items, gone_
                   for i, label in new_items]
         lines += [f"- Item `{i}` is gone" + (f" (it edits `{CONFIG_IDS[i]}`)" if CONFIG_IDS[i] else "")
                   for i in gone_items]
+        lines.append("")
+    if any(cmds):
+        lines += ["## Slash commands and bundled skills", ""]
+        lines += [f"- New command `/{n}`: add it to `BUILTIN_COMMANDS` in `slashcommands.py`, or to `BUILTIN_LEFT_OUT`"
+                  for n in new_cmds]
+        lines += [f"- Command `/{n}` is gone: remove it from `BUILTIN_COMMANDS`" for n in gone_cmds]
+        lines += [f"- New skill `/{n}`: add it to `BUILTIN_SKILLS` in `slashcommands.py`, or to `SKILLS_LEFT_OUT`"
+                  for n in new_skills]
+        lines += [f"- Skill `/{n}` is gone: remove it from `BUILTIN_SKILLS`" for n in gone_skills]
         lines.append("")
     lines += [f"Unchanged: {len(ok)} of {len(fields)} fields.", ""]
     if differs:
@@ -471,10 +502,11 @@ def main(argv=None):
         data = f.read()
     try:
         problems, ok, new_items, gone_items = check(data, SETTING_FIELDS)
+        cmds = check_builtin(data)
     except SchemaError as e:
         print(f"{e} The binary's layout changed: update scripts/check_settings_schema.py.", file=sys.stderr)
         return 2
-    text, differs = report(path, find_version(data), SCHEMA_VERSION, SETTING_FIELDS, problems, ok, new_items, gone_items)
+    text, differs = report(path, find_version(data), SCHEMA_VERSION, SETTING_FIELDS, problems, ok, new_items, gone_items, cmds)
     print(text)
     if args.output:
         with open(args.output, "w") as f:

@@ -112,6 +112,11 @@ def test_commands_are_managed_and_undoable(home, app_factory):
     home.write(".claude/plugins/installed_plugins.json", json.dumps({"plugins": {"kit@market": [
         {"installPath": str(home.path("plugin-kit"))}]}}))
     home.write("plugin-kit/commands/ship.md", "---\ndescription: Ship it\n---\nShip.\n")
+    home.write("plugin-kit/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Deploy the app\nargument-hint: [env]\n---\nGo.\n")
+    home.write(".local/bin/claude", '#!/bin/sh\necho "9.9.1 (Claude Code)"\n')
+    home.path(".local/bin/claude").chmod(0o755)
+    home.write(".claude/skills/notes/SKILL.md", "---\nname: notes\ndescription: Take notes\n---\nWrite.\n")
+    home.write(".claude/skills/background/SKILL.md", "---\nname: background\ndescription: Only for Claude\nuser-invocable: false\n---\nx\n")
     before = home.snapshot()
     app = app_factory()
 
@@ -121,6 +126,15 @@ def test_commands_are_managed_and_undoable(home, app_factory):
         ("/frontend:test", "", "Run the frontend tests", "", False),
         ("/review", "Review the diff", "", "[file]", False)]
     assert [(c["slash"], c["plugin"]) for c in d["plugins"]] == [("/kit:ship", "kit@market")]
+    builtin = {c["slash"]: c for c in d["builtin"]}
+    assert builtin["/usage"]["aliases"] == ["/cost", "/stats"] and builtin["/compact"]["group"] == "Conversation"
+    assert d["builtin_version"] and len(builtin) == len(d["builtin"]) > 50
+    assert d["installed_version"] == "9.9.1"  # the installed Claude Code, to compare with builtin_version
+    # skills typed as commands: the profile's (not those marked user-invocable: false), the plugins', Claude Code's
+    skills = {c["slash"]: c for c in d["skills"]}
+    assert skills["/notes"]["source"] == "profile" and "/background" not in skills
+    assert (skills["/kit:deploy"]["source"], skills["/kit:deploy"]["hint"]) == ("kit@market", "[env]")
+    assert skills["/simplify"]["source"] == "builtin"
     assert app.get("/api/commands/file?profile=default&name=review")["content"].startswith("---\ndescription: Review")
 
     app.post("/api/commands/save", {"profile": "default", "name": "git/commit", "new": True,
@@ -187,3 +201,32 @@ def test_keybindings_are_checked_copied_and_undoable(home, app_factory):
 
     app.restore_all()
     assert home.snapshot() == before
+
+
+def test_built_in_commands_come_from_the_installed_claude_code(home, app_factory):
+    from test_check_schema import command_objects
+    basic_home(home)
+    script = (b'#!/bin/sh\necho "9.9.2 (Claude Code)"\nexit 0\n' + b'var Q={VERSION:"9.9.2"};'
+              + command_objects(extra=["brand-new"], drop=["recap"], extra_skills=["fresh-skill", "verify"],
+                                drop_skills=["loop"]))
+    claude = home.path(".local/bin/claude")
+    claude.parent.mkdir(parents=True, exist_ok=True)
+    claude.write_bytes(script)
+    claude.chmod(0o755)
+    app = app_factory()
+
+    d = app.get("/api/commands?profile=default")
+    assert (d["builtin_source"], d["builtin_version"], d["installed_version"]) == ("installed", "9.9.2", "9.9.2")
+    cmds = {c["slash"]: c for c in d["builtin"]}
+    assert "/recap" not in cmds and cmds["/brand-new"]["group"] == "New in your version"
+    assert "/teleport" not in cmds  # left out on purpose
+    assert cmds["/compact"]["group"] == "Conversation" and cmds["/compact"]["description"].startswith("Free up")
+    skills = {c["slash"] for c in d["skills"] if c["source"] == "builtin"}
+    assert "/fresh-skill" in skills and "/simplify" in skills and "/security-review" in skills
+    assert "/loop" not in skills and "/verify" not in skills
+
+    # a binary that does not look like Claude Code: the list in cc-profiles
+    claude.write_bytes(b'#!/bin/sh\necho "9.9.3 (Claude Code)"\n')
+    claude.chmod(0o755)
+    d = app.get("/api/commands?profile=default")
+    assert d["builtin_source"] == "list" and "/recap" in {c["slash"] for c in d["builtin"]}
