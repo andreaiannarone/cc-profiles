@@ -593,3 +593,4 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
 @media (max-width: 640px) { .hkopts { grid-template-columns: 1fr; } }
 #disk-sec tr.dim td { color: var(--muted); }
 #disk-sec td .hint { font-size: 12.5px; }
+#hk-sec tr.hkgroup td { background: var(--panel-2); padding-top: 10px; padding-bottom: 10px; }

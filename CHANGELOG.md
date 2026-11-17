@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- Settings → Hooks: the hooks of plugins are in the same table as the others, under a **From plugins** row, with their columns lined up, instead of in a second table under an all-caps heading.
+
 ## [0.7.9] - 2026-11-16
 
 ### Added
