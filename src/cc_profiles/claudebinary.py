@@ -29,6 +29,7 @@ NAME = re.compile(rb'name:"([a-z][a-z0-9-]*)"')
 SKILL_CALL = re.compile(rb'wd\(\{name:([A-Za-z_$][\w$]*),')
 COMMAND_TYPE = re.compile(rb'\s*"(?:local|local-jsx|prompt)"')
 STRING = re.compile(rb'\s*"((?:[^"\\\n]|\\.)*)"\s*$')
+ITEM = re.compile(rb'"[a-z0-9-]*"')
 VAR_WINDOW = 64 * 1024 * 1024
 VERSION = re.compile(rb'VERSION:"(\d+\.\d+\.\d+)"')
 _memo = {}
@@ -77,8 +78,14 @@ def literal(text):
 
 
 def string_list(text):
-    m = re.match(rb'\s*\[((?:\s*"[a-z0-9-]*"\s*,?)*)\]\s*$', text or b"")
-    return [s.decode() for s in re.findall(rb'"([a-z0-9-]*)"', m.group(1))] if m else []
+    """["a","b"] as a list, or [] for anything else (a variable, a call…)."""
+    text = (text or b"").strip()
+    if not (text.startswith(b"[") and text.endswith(b"]")):
+        return []
+    items = [i.strip() for i in text[1:-1].split(b",") if i.strip()]
+    if not all(ITEM.fullmatch(i) for i in items):
+        return []
+    return [i[1:-1].decode() for i in items]
 
 
 def add(target, name, keys):
