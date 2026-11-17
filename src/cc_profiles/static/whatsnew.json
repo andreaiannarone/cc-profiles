@@ -1,6 +1,25 @@
 {
  "releases": [
   {
+   "version": "0.8.0",
+   "date": "2026-11-17",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "Commands → **Built into Claude Code**: Claude Code's own slash commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in groups, with what each does and its other names. Above them, **Skills** lists every skill you can type as a command: the profile's, the plugins' (`/plugin:skill`) and the ones that come with Claude Code (`/simplify`, `/code-review`, `/loop`…). Both are read from the Claude Code you have installed, so they follow its updates: what a new version adds appears under **New in your version** (with the list cc-profiles comes with as a fallback). The filter at the top applies to all of them, and the weekly schema check reports the commands a new Claude Code version adds or removes."
+     ]
+    },
+    {
+     "title": "Fixed",
+     "items": [
+      "Going from MCP to Commands, Skills or Agents left the page stuck: the new tab was drawn with MCP's data before its own arrived, and stopped on the error.",
+      "Settings → Hooks: the hooks of plugins are in the same table as the others, under a **From plugins** row, with their columns lined up, instead of in a second table under an all-caps heading."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.7.9",
    "date": "2026-11-16",
    "sections": [
@@ -141,18 +160,6 @@
      "title": "Changed",
      "items": [
       "The plugin's listing shows its name as cc-profiles, in lowercase, with keywords to find it."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.7.0",
-   "date": "2026-11-08",
-   "sections": [
-    {
-     "title": "Changed",
-     "items": [
-      "The plugin's description says what cc-profiles does and that it needs the cc-profiles app, installed with pipx, uv or Homebrew: the plugin only opens it."
      ]
     }
    ]
