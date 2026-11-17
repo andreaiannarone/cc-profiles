@@ -57,7 +57,7 @@ async function pickProfile(title, sub, pid, okLabel) {
 const scopeLabel = s => s === "user" ? "All projects" : basename(s);
 function renderExt() {
   if (!EXT_TABS.includes(S.tab)) return;
-  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = { skills: x.skills, agents: x.agents, commands: x.commands }[S.tab] || x.mcp;
+  const x = S.ext, prof = S.profiles.find(p => p.id === x.profile), data = { skills: x.skills, agents: x.agents, commands: x.commands, mcp: x.mcp }[S.tab];
   const seg = `<div class="seg" style="max-width:360px">${S.profiles.map(p => `<button data-extprof="${p.id}" class="${x.profile === p.id ? "on" : ""}">${esc(p.label)}</button>`).join("")}</div>`;
   const head = `<div class="toolbar">${seg}<span class="hint">${prof?.email ? `Signed in as <b>${esc(prof.email)}</b>` : "Not signed in"}. Changes apply from the next Claude Code session in this profile; every change goes to the backup.</span></div>`;
   if (x.error) { $("#main").innerHTML = `${head}<div class="empty">${esc(x.error)}</div>`; return; }

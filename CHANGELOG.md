@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Fixed
+- Going from MCP to Commands, Skills or Agents left the page stuck: the new tab was drawn with MCP's data before its own arrived, and stopped on the error.
 - Settings → Hooks: the hooks of plugins are in the same table as the others, under a **From plugins** row, with their columns lined up, instead of in a second table under an all-caps heading.
 
 ## [0.7.9] - 2026-11-16

@@ -506,6 +506,17 @@ def test_commands_tab(page_on_sandbox):
     assert errors == []
 
 
+def test_switching_between_extension_tabs(page_on_sandbox):
+    """Each tab waits for its own data: coming from MCP, whose data is loaded, used to draw
+    the next tab with MCP's data and stop there."""
+    page, errors = page_on_sandbox
+    for tab, ready in (("mcp", "#mcpnew, .ext-head"), ("commands", "#scnew"), ("mcp", ".ext-head"), ("agents", "#agnew"),
+                       ("mcp", ".ext-head"), ("skills", "#sknew"), ("commands", "#scnew")):
+        open_tab(page, tab)
+        page.wait_for_selector(ready)
+    assert errors == []
+
+
 def test_hooks_and_keyboard_shortcuts_in_settings(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "settings")
