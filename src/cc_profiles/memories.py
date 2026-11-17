@@ -98,6 +98,9 @@ def check_memory_share(pid, name, from_pid):
     if prof["id"] == holder["id"]:
         raise ApiError("Pick another profile to share the memory with")
     project_dir(holder, name)
+    for p in (prof, holder):
+        if os.path.islink(os.path.join(p["dir_abs"], "projects", name)):
+            raise ApiError(f"{p['label']} shares the whole project with another profile, memory included")
     if memory_holder(holder, name):
         raise ApiError(f"{holder['label']} uses the memory of another profile: share it from there")
     md = os.path.join(holder["dir_abs"], "projects", name, "memory")

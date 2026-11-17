@@ -77,13 +77,17 @@ def owner_session(name):
 
 def conversations(prof):
     """session id → [paths]: the conversation file, its folder of subagent replies, and the
-    file snapshots, session environment and task lists of the same session."""
+    file snapshots, session environment and task lists of the same session. A session of a
+    shared project (another profile's folder) maps to None: its files here are not orphans."""
     d = prof["dir_abs"]
-    out = {}
+    out, linked = {}, set()
     projects = os.path.join(d, "projects")
     for p in entries(projects):
         pd = os.path.join(projects, p)
-        if os.path.islink(pd) or not os.path.isdir(pd):
+        if os.path.islink(pd):  # another profile's project (shared): its owner cleans it, but the
+            linked.update(f[:-6] for f in entries(pd) if f.endswith(".jsonl"))  # snapshots here stay
+            continue
+        if not os.path.isdir(pd):
             continue
         for f in entries(pd):
             if f.endswith(".jsonl"):
@@ -99,6 +103,7 @@ def conversations(prof):
         for n in entries(folder):
             if owner_session(n) in out:
                 out[owner_session(n)].append(os.path.join(folder, n))
+    out.update({sid: None for sid in linked if sid not in out})
     return out
 
 
@@ -106,7 +111,7 @@ def items(prof):
     """category → list of (label, [paths]): what each category holds, as units that go together."""
     d = prof["dir_abs"]
     convs = conversations(prof)
-    out = {"conversations": [(sid, paths) for sid, paths in sorted(convs.items())]}
+    out = {"conversations": [(sid, paths) for sid, paths in sorted(convs.items()) if paths is not None]}
     for cat in CAT_IDS[1:]:
         folder = os.path.join(d, cat)
         if os.path.islink(folder):

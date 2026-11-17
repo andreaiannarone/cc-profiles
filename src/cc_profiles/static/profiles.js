@@ -157,6 +157,8 @@ function renderSharing() {
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h2>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h2>
+      <div class="share"><div class="txt"><b>Everything</b><div>Skills, agents, commands, plugins, CLAUDE.md and every project, conversations included: only the account stays different</div></div>
+        <button class="btn small primary" data-pall="${p.id}">Share everything…</button></div>
       ${p.items.map(it => `<div class="share">
         <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
@@ -167,6 +169,7 @@ function renderSharing() {
   $("#ptemplates").onclick = manageTemplates;
   wireByFolder();
   wireGithub();
+  document.querySelectorAll("[data-pall]").forEach(b => b.onclick = () => shareEverything(b.dataset.pall));
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
     const on = cb.checked;
@@ -181,6 +184,27 @@ function renderSharing() {
   });
 }
 const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
+
+// Share everything: the profile keeps only its account (and settings.json, with its GitHub account)
+async function shareEverything(pid) {
+  let p;
+  try { p = await api(`/api/sharing/everything/preview?profile=${encodeURIComponent(pid)}`); } catch (e) { return toast(e.message, "", true); }
+  const items = p.items.filter(i => i.action === "share"), projects = p.projects.filter(r => r.action === "share");
+  const done = p.items.filter(i => i.action === "already").length + p.projects.filter(r => r.action === "already").length;
+  const skipped = p.projects.filter(r => r.action === "skip");
+  if (!items.length && !projects.length) return toast(`${p.profile} already shares everything it can with ${p.source}`, skipped.length ? `${plural(skipped.length, "project", "projects")} cannot be shared: ${skipped.map(r => r.pretty + " (" + r.reason + ")").join(", ")}` : "");
+  const li = x => `<li>${x}</li>`;
+  const body = `<p>${esc(p.profile)} will use the same files as ${esc(p.source)}: what changes in one profile, the other sees too. Only the account stays different, with <code>settings.json</code> (its GitHub account and commit identity).</p>
+    ${items.length ? `<div class="section-title">Settings and extensions</div><ul>${items.map(i => li(`<b>${esc(i.item)}</b>${i.join.length ? ` · ${plural(i.join.length, "item", "items")} only ${esc(p.profile)} has ${i.join.length === 1 ? "moves" : "move"} to ${esc(p.source)}` : ""}${i.backup.length ? ` · <span class="issue">${i.backup.length === 1 && i.backup[0] === i.item ? "its own copy" : esc(i.backup.join(", ")) + ` (${esc(p.source)} has ${i.backup.length === 1 ? "it" : "them"} too)`} goes to the backup</span>` : ""}`)).join("")}</ul>` : ""}
+    ${projects.length ? `<div class="section-title">Projects</div><ul>${projects.map(r => li(`<code>${esc(r.pretty)}</code>${r.joins ? ` · ${plural(r.joins, "conversation", "conversations")} of ${esc(p.profile)} join` : ""}${r.holder !== p.source ? ` · held by ${esc(r.holder)}` : ""}`)).join("")}</ul>` : ""}
+    ${skipped.length ? `<p class="hint">Not shared: ${skipped.map(r => `<code>${esc(r.pretty)}</code> (${esc(r.reason)})`).join(", ")}.</p>` : ""}
+    ${done ? `<p class="hint">${plural(done, "item is", "items are")} shared already.</p>` : ""}
+    <p class="hint">Projects opened later in one profile only are not shared by themselves: use Share everything again. Do not use one conversation from two profiles at the same time. Everything goes to one backup, so one Restore undoes it.</p>
+    ${p.active ? `<div class="danger-box">A Claude Code session is open in ${esc(p.profile)} or ${esc(p.source)}: close it first, so it does not write into files while they move.</div>` : ""}`;
+  if (!(await confirmBox(`Share everything between ${p.profile} and ${p.source}?`, body, "Share everything"))) return;
+  try { await run(() => api("/api/sharing/everything", { profile: pid })); } catch { return; }
+  loadSharing();
+}
 
 // ---------- a GitHub account per profile ----------
 // Every profile has its own GitHub CLI folder; the menu picks which signed-in account is active there.

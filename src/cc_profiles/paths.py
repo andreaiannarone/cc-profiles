@@ -209,9 +209,33 @@ def memory_holder(prof, name, profs=None):
     real = os.path.realpath(md)
     for p in profs or profiles():
         other = os.path.join(p["dir_abs"], "projects", name, "memory")
+        if (p["id"] != prof["id"] and not os.path.islink(other) and not os.path.islink(os.path.dirname(other))
+                and os.path.realpath(other) == real):
+            return p
+    return None
+
+
+# Shared project: a profile's projects/<name> can be a relative link to the same project's folder
+# in another profile (the holder, whose folder is real), so both see the same conversations and
+# memories, and /resume in one finds those of the other. As with memory, never a link to a link.
+def project_holder(prof, name, profs=None):
+    """The profile whose project folder this profile's projects/<name> links to, or None."""
+    d = os.path.join(prof["dir_abs"], "projects", name)
+    if not os.path.islink(d):
+        return None
+    real = os.path.realpath(d)
+    for p in profs or profiles():
+        other = os.path.join(p["dir_abs"], "projects", name)
         if p["id"] != prof["id"] and not os.path.islink(other) and os.path.realpath(other) == real:
             return p
     return None
+
+
+def project_sharers(prof, name, profs=None):
+    """The profiles whose projects/<name> links to this profile's."""
+    profs = profs or profiles()
+    return [p for p in profs if p["id"] != prof["id"]
+            and (project_holder(p, name, profs) or {}).get("id") == prof["id"]]
 
 
 def memory_sharers(prof, name, profs=None):

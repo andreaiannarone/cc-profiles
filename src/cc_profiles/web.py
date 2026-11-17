@@ -19,7 +19,8 @@ from urllib.parse import urlparse
 from . import __version__
 from . import core
 from .core import ApiError, STATIC_DIR, TOKEN, _lock, abort_open_backups, check_profile_folders
-from .projects import list_projects, merge_plan, move_plan, op_delete, op_merge, op_move, op_relink, op_rule
+from .projects import (list_projects, merge_plan, move_plan, op_delete, op_merge, op_move, op_project_share, op_relink,
+                       op_rule, project_share_plan)
 from .memories import (
     memory_list,
     memory_projects,
@@ -30,7 +31,7 @@ from .memories import (
     op_memory_save,
     op_memory_share,
 )
-from .sharing import list_sharing, op_share, share_plan
+from .sharing import everything_plan, list_sharing, op_share, op_share_everything, share_plan
 from .settings import (
     get_settings,
     op_claude_md,
@@ -109,7 +110,7 @@ from .editprofile import delete_plan, op_delete_profile, op_update_profile
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
 from .macapp import app_status, op_install_app
-from .terminal import op_open_terminal, op_set_terminal, terminal_status
+from .terminal import continue_plan, op_conversation_continue, op_open_terminal, op_set_terminal, terminal_status
 from .updater import check_update, op_update, op_update_check, unexpected_error, update_status, whats_new
 
 # ---------------------------------------------------------------------------
@@ -315,6 +316,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/list": lambda: memory_list(q["profile"], q["project"]),
                 "/api/memory/file": lambda: memory_read(q["profile"], q["project"], q["file"]),
                 "/api/memory/share-plan": lambda: memory_share_plan(q["profile"], q["project"], q["from"]),
+                "/api/projects/share-plan": lambda: project_share_plan(q["profile"], q["project"], q["from"]),
+                "/api/conversations/continue-plan": lambda: continue_plan(q["profile"], q["project"], q["session"], q["to"]),
                 "/api/conversations/projects": lambda: conversation_projects(q["profile"]),
                 "/api/conversations": lambda: list_conversations(q["profile"], q["project"]),
                 "/api/conversations/view": lambda: conversation_view(q["profile"], q["project"], q["session"]),
@@ -330,6 +333,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/projects/move/preview": lambda: move_plan(q["project"], q["from"], q["to"]),
                 "/api/sharing": lambda: list_sharing(),
                 "/api/sharing/preview": lambda: share_plan(q["profile"], q["item"], q["shared"] == "1"),
+                "/api/sharing/everything/preview": lambda: everything_plan(q["profile"]),
                 "/api/profiles/delete/preview": lambda: delete_plan(q["id"], q.get("merge_into") or None),
                 "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
                 "/api/statusline": lambda: get_statusline(q["profile"]),
@@ -405,8 +409,12 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/memory/move": lambda: op_memory_move(b["profile"], b["project"], b["file"],
                                                            b["to_profile"], b["to_project"]),
                 "/api/memory/delete": lambda: op_memory_delete(b["profile"], b["project"], b["file"]),
+                "/api/sharing/everything": lambda: op_share_everything(b["profile"]),
                 "/api/memory/share": lambda: op_memory_share(b["profile"], b["project"], b.get("from"), bool(b["shared"])),
                 "/api/conversations/move": lambda: op_conversation_move(b["profile"], b["project"], b["session"], b["to"]),
+                "/api/conversations/continue": lambda: op_conversation_continue(b["profile"], b["project"], b["session"], b["to"],
+                                                                                 bool(b.get("share"))),
+                "/api/projects/share": lambda: op_project_share(b["profile"], b["project"], b.get("from"), bool(b["shared"])),
                 "/api/conversations/delete": lambda: op_conversation_delete(b["profile"], b["project"], b["session"]),
                 "/api/backups/restore": lambda: op_restore(b["name"]),
                 "/api/backups/delete": lambda: op_backup_delete(b["name"]),

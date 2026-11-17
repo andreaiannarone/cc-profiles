@@ -25,7 +25,8 @@ from .core import (
     write_json,
     write_text,
 )
-from .paths import classify, history_lines, memory_files, memory_holder, memory_sharers, path_index, project_folders
+from .paths import (classify, history_lines, memory_files, memory_holder, memory_sharers, path_index, project_folders,
+                    project_holder, project_sharers)
 
 # ---------------------------------------------------------------------------
 # Projects
@@ -47,6 +48,9 @@ def list_projects():
             holder = memory_holder(p, name, profs)
             if holder:
                 row["in"][p["id"]]["mem_from"] = holder["id"]
+            owner = project_holder(p, name, profs) if os.path.islink(d) else None
+            if owner:
+                row["in"][p["id"]]["from"] = owner["id"]
     ids = [p["id"] for p in profs]
     rules = load_config()["rules"]
     labels = {p["id"]: p["label"] for p in profs}
@@ -60,7 +64,7 @@ def list_projects():
             issues.append({"kind": "orphan", "text": "folder not found on disk" if path else "unknown path"})
         if expected in ids:
             for pid, st in row["in"].items():
-                if pid != expected and (st["conv"] or (st["mem"] and not st.get("mem_from"))):
+                if pid != expected and not st.get("from") and (st["conv"] or (st["mem"] and not st.get("mem_from"))):
                     issues.append({"kind": "profile", "from": pid, "to": expected,
                                    "text": f"also in {labels[pid]}, but belongs to {labels[expected]}"})
         if expected is None:
@@ -139,7 +143,16 @@ def merge_dir(src, dst, bk, label):
 
 
 def check_memory_users(prof, name, doing):
-    """Refuse to take away a project whose memory other profiles use (their links would break)."""
+    """Refuse to take away a project whose memory or whole folder other profiles use (their
+    links would break), or one that is itself another profile's (shared project)."""
+    holder = project_holder(prof, name)
+    if holder and doing != "delete":
+        raise ApiError(f"Cannot {doing} this project in {prof['label']}: it is {holder['label']}'s, shared "
+                       f"(shared project). Do it in {holder['label']}, or stop sharing it in {prof['label']} first")
+    users = project_sharers(prof, name)
+    if users:
+        raise ApiError(f"Cannot {doing} this project: {' and '.join(p['label'] for p in users)} "
+                       f"{'uses' if len(users) == 1 else 'use'} it (shared project). Stop sharing it there first")
     users = memory_sharers(prof, name)
     if users:
         raise ApiError(f"Cannot {doing} this project: {' and '.join(p['label'] for p in users)} "
@@ -328,7 +341,12 @@ def op_delete(name, pid):
     prof = profile(pid)
     S = project_dir(prof, name)
     check_memory_users(prof, name, "delete")
+    holder = project_holder(prof, name)
     bk = Backup(f"delete-{pid}", f"Delete {pretty(path_index().get(name)) or name} from {prof['label']}")
+    if holder:  # shared: only the link goes, the conversations stay in the holder's folder
+        bk.stash(S, f"project-link-{name}")
+        return {"message": f"{prof['label']} no longer uses this project: its conversations stay in "
+                           f"{holder['label']}.", "backup": bk.close()}
     for sid in sessions_of(S):
         bk.stash(os.path.join(prof["dir_abs"], "file-history", sid), f"file-history-{sid}")
     bk.stash(S, f"project-{name}")
@@ -395,6 +413,88 @@ def op_merge(name, pid, target):
     r = op_relink(name, pid, path, f"Merge {pretty(old) or name} into {pretty(path)} ({prof['label']})")
     r["message"] = r["message"].replace("Linked to", "Merged into", 1)
     return r
+
+
+# ---------------------------------------------------------------------------
+# Shared project: a profile uses another profile's folder of the same project
+# ---------------------------------------------------------------------------
+def check_project_share(pid, name, from_pid):
+    """(profile that will use the project, holder, the holder's folder, the profile's folder)."""
+    prof, holder = profile(pid), profile(from_pid)
+    if prof["id"] == holder["id"]:
+        raise ApiError("Pick another profile to share the project with")
+    hd = project_dir(holder, name)
+    if os.path.islink(hd):
+        raise ApiError(f"{holder['label']} uses this project from another profile: share it from there")
+    mine = project_dir(prof, name, must_exist=False)
+    if os.path.islink(mine):
+        if os.path.realpath(mine) == os.path.realpath(hd):
+            raise ApiError(f"{prof['label']} already uses this project")
+        raise ApiError(f"{prof['label']} uses this project from another profile: stop sharing it there first")
+    if os.path.lexists(mine) and not os.path.isdir(mine):
+        raise ApiError(f"{pretty(mine)} is not a folder")
+    users = project_sharers(prof, name) + memory_sharers(prof, name)
+    if users:
+        raise ApiError(f"{' and '.join(sorted({p['label'] for p in users}))} use{'s' if len(users) == 1 else ''} "
+                       f"this project of {prof['label']}, or its memory: share it from {prof['label']} instead, "
+                       "or stop sharing it there first")
+    return prof, holder, hd, mine
+
+
+def project_share_plan(pid, name, from_pid):
+    """What sharing would do to the profile's own folder of the project, without doing it."""
+    prof, holder, hd, mine = check_project_share(pid, name, from_pid)
+    own = sorted(os.listdir(mine)) if os.path.isdir(mine) else []
+    convs = [e for e in own if e.endswith(".jsonl")]
+    mems = memory_files(mine, fresh=True) if not os.path.islink(os.path.join(mine, "memory")) else []
+    theirs = set(memory_files(hd, fresh=True))
+    clash = [e for e in own if e != "memory" and os.path.lexists(os.path.join(hd, e))]
+    clash += [f"memory/{m}" for m in mems if m in theirs]
+    return {"profile": prof["label"], "from": holder["label"], "conversations": len(convs),
+            "memories": len([m for m in mems if m not in theirs]), "conflicts": clash,
+            "theirs": len(sessions_of(hd)), "active": bool(active_session(prof) or active_session(holder))}
+
+
+def share_project_into(prof, holder, name, bk):
+    """Inside an open backup: prof's projects/<name> becomes a link to the holder's folder; what
+    prof had there joins it first (conversations, memories; a clash goes to the backup)."""
+    hd, mine = project_dir(holder, name), project_dir(prof, name, must_exist=False)
+    joined = 0
+    if os.path.isdir(mine):
+        joined = merge_dir(mine, hd, bk, "share")
+        if os.path.lexists(mine):  # anything merge_dir could not move
+            bk.stash(mine, "project-own")
+    else:
+        bk.mkdir(os.path.dirname(mine))
+    os.symlink(os.path.relpath(hd, os.path.dirname(mine)), mine)
+    bk.created(mine)
+    if joined:
+        bk.note(f"{joined} conversations of {prof['label']} joined {holder['label']}'s")
+    return joined
+
+
+def op_project_share(pid, name, from_pid=None, on=True):
+    """pid uses (on) the folder of the project in from_pid, or gets its own copy again (off)."""
+    where = pretty(path_index().get(name)) or name
+    if not on:
+        prof = profile(pid)
+        mine = project_dir(prof, name)
+        holder = project_holder(prof, name)
+        if not holder:
+            raise ApiError(f"This project in {prof['label']} is not shared")
+        bk = Backup("project-share", f"{where}: {prof['label']} separated from {holder['label']}")
+        real = os.path.realpath(mine)
+        bk.stash(mine, "project-link")  # the link: restoring puts it back
+        shutil.copytree(real, mine, symlinks=True)
+        bk.created(mine)
+        return {"message": f"{prof['label']} now has its own copy of this project: new conversations no longer "
+                           f"reach {holder['label']}.", "backup": bk.close()}
+    prof, holder, hd, mine = check_project_share(pid, name, from_pid)
+    bk = Backup("project-share", f"{where}: {prof['label']} uses {holder['label']}'s")
+    joined = share_project_into(prof, holder, name, bk)
+    msg = f"{prof['label']} now shares {where} with {holder['label']}: the same conversations and memories in both"
+    msg += f"; {joined} of its conversations joined them." if joined else "."
+    return {"message": msg + " Do not use one conversation from two profiles at the same time.", "backup": bk.close()}
 
 
 def op_rule(match, prof_id, exact=False):

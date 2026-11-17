@@ -33,6 +33,12 @@ If a Claude Code session is open in either profile, the confirmation says so: Cl
 
 If the target profile already has something with the same name, the target's version is kept and the incoming one goes to the backup. Index lines of `MEMORY.md` are merged. Prompts already present in the target history (same text and timestamp) are not duplicated.
 
+## Share a project with another profile
+
+**Manage → Share with …** lets a second profile use the same folder of a project: its `projects/<name>` becomes a link to the first profile's, so both list the same conversations and memories, new ones included, and `/resume` in one finds the conversations started in the other. It is the way to work on one project with two accounts. What the second profile had there joins first (a conversation or memory with the same name goes to the backup). The prompt history (arrow up) and the project's settings in `.claude.json` stay in each profile.
+
+The table shows *shared from …* and *shared with …* under the numbers. While a project is shared, it cannot be moved, relinked or merged, in either profile; **Remove from …** in the profile that links drops only the link, and **Stop sharing in …** gives that profile its own copy. Do not use one conversation from two profiles at the same time: both sessions would write into it.
+
 ## Orphan projects
 
 A project is an **orphan** when its folder no longer exists on disk, usually because you moved or renamed it. Claude Code then stops showing its history, because it looks for the folder under its new name.

@@ -15,7 +15,7 @@ from .core import (
     profile,
     write_json,
 )
-from .paths import history_lines, memory_files, memory_sharers, path_index, project_folders
+from .paths import history_lines, memory_files, memory_sharers, path_index, project_folders, project_sharers
 from .projects import move_history, move_plan, move_project_into
 from .sharing import primary
 from .launchers import (
@@ -86,7 +86,12 @@ def check_delete(pid, merge_into):
     dst = profile(merge_into) if merge_into else None
     if dst and dst["id"] == pid:
         raise ApiError("A profile cannot be merged into itself")
-    users = {u["label"] for name, _, _ in project_folders(prof, conversations=False) for u in memory_sharers(prof, name)}
+    names = [name for name, _, _ in project_folders(prof, conversations=False)]
+    users = {u["label"] for name in names for u in project_sharers(prof, name)}
+    if users:
+        raise ApiError(f"{' and '.join(sorted(users))} {'uses' if len(users) == 1 else 'use'} projects of "
+                       f"{prof['label']} (shared project): stop sharing them in the Projects tab first")
+    users = {u["label"] for name in names for u in memory_sharers(prof, name)}
     if users:
         raise ApiError(f"{' and '.join(sorted(users))} {'uses' if len(users) == 1 else 'use'} the memory of projects "
                        f"in {prof['label']} (shared memory): separate it in the Memories tab first")
@@ -98,6 +103,8 @@ def mergeable_projects(prof, fresh=False):
     The merge itself passes fresh=True: a write never trusts the caches."""
     out = []
     for d in sorted(glob.glob(os.path.join(prof["dir_abs"], "projects", "*", ""))):
+        if os.path.islink(d.rstrip("/")):
+            continue  # another profile's project (shared): it stays there
         if glob.glob(os.path.join(d, "*.jsonl")) or memory_files(d, fresh=fresh):
             out.append(os.path.basename(d.rstrip("/")))
     return out
