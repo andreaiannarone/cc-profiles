@@ -492,6 +492,10 @@ def test_agents_tab(page_on_sandbox):
 def test_commands_tab(page_on_sandbox):
     page, errors = page_on_sandbox
     open_tab(page, "commands")
+    assert "Free up context" in page.inner_text("tr:has(code:text-is('/compact'))")  # Claude Code's own, read-only
+    page.fill("#extq", "rewind")
+    page.wait_for_function("() => document.querySelectorAll('tr:has(td.cmdname)').length === 1")
+    page.fill("#extq", "")
     page.click("#scnew")
     page.fill("#sc-name", "/git:commit")  # typed as in Claude Code: the folder and the file
     page.fill("#sc-body", "---\ndescription: Commit the staged changes\n---\nCommit them.\n")

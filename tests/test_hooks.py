@@ -121,6 +121,9 @@ def test_commands_are_managed_and_undoable(home, app_factory):
         ("/frontend:test", "", "Run the frontend tests", "", False),
         ("/review", "Review the diff", "", "[file]", False)]
     assert [(c["slash"], c["plugin"]) for c in d["plugins"]] == [("/kit:ship", "kit@market")]
+    builtin = {c["slash"]: c for c in d["builtin"]}
+    assert builtin["/usage"]["aliases"] == ["/cost", "/stats"] and builtin["/compact"]["group"] == "Conversation"
+    assert d["builtin_version"] and len(builtin) == len(d["builtin"]) > 50
     assert app.get("/api/commands/file?profile=default&name=review")["content"].startswith("---\ndescription: Review")
 
     app.post("/api/commands/save", {"profile": "default", "name": "git/commit", "new": True,

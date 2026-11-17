@@ -24,6 +24,95 @@ FRONT_KEYS = ("description", "argument-hint", "allowed-tools", "model", "disable
 NEW_COMMAND = "---\ndescription: \nargument-hint: \n---\n\n$ARGUMENTS\n"
 
 
+# Claude Code's own commands, shown read-only. From the command definitions inside the Claude
+# Code binary (BUILTIN_COMMANDS_VERSION), with their descriptions as written there; the few
+# whose description depends on the setup carry a plain one. Internal ones, and those for one
+# kind of setup only (Bedrock, Vertex, cloud sessions…), are left out: scripts/check_settings_schema.py
+# knows them (BUILTIN_LEFT_OUT) and reports only the commands a new version adds or removes.
+# (name, argument hint, description, aliases)
+BUILTIN_COMMANDS_VERSION = "2.1.326"
+BUILTIN_COMMANDS = [
+    ("Conversation", [
+        ("clear", "[name]", "Start a new session with empty context; previous session stays on disk (resumable with /resume)", ["reset", "new"]),
+        ("compact", "<optional custom summarization instructions>", "Free up context by summarizing the conversation so far", []),
+        ("resume", "", "Resume a previous session", ["continue"]),
+        ("rename", "[name]", "Rename the current conversation", ["name"]),
+        ("branch", "[name]", "Create a branch of the current conversation at this point", []),
+        ("rewind", "", "Restore earlier code, conversation, or both", ["checkpoint", "undo"]),
+        ("export", "[filename]", "Export this session to a file or clipboard", []),
+        ("copy", "", "Copy the last response to clipboard (/copy 2 for the one before)", []),
+        ("btw", "[question]", "Ask a side question without interrupting Claude", []),
+        ("recap", "", "Generate a one-line session recap now", []),
+        ("goal", "[<condition> | clear]", "Set a goal Claude checks before stopping", []),
+        ("plan", "[open|<description>]", "Turn on plan mode or view the plan", []),
+        ("diff", "", "View uncommitted changes and per-turn diffs", []),
+        ("add-dir", "<path>", "Add a working directory", []),
+        ("background", "[prompt]", "Send this session to the background and free the terminal", ["bg"]),
+        ("fork", "<directive>", "Start a background agent with the full conversation", []),
+        ("subtask", "<task>", "Send a subagent off with your full context; its result comes back here", []),
+        ("tasks", "", "View and manage everything running in the background", ["bashes"]),
+        ("restart", "", "Restart Claude Code and keep this session", ["update"]),
+        ("exit", "", "Exit the CLI", ["quit"]),
+    ]),
+    ("Model and context", [
+        ("model", "<model>", "Set the AI model for Claude Code", []),
+        ("effort", "", "Set the model's effort level", []),
+        ("fast", "[on|off]", "Toggle fast mode", []),
+        ("advisor", "", "Let Claude consult a stronger model at key moments", []),
+        ("context", "[all]", "Show what fills the context", []),
+        ("autocompact", "[auto|<tokens>]", "Set how full the context gets before auto-summarizing", []),
+        ("output-style", "[style]", "List output styles or switch to one", []),
+        ("focus", "", "Toggle focus view: just your prompt, summary, and response", []),
+    ]),
+    ("Settings", [
+        ("config", "[key=value]", "Open settings", ["settings"]),
+        ("permissions", "", "Manage allow and deny tool permission rules", ["allowed-tools"]),
+        ("hooks", "", "View hook configurations for tool events", []),
+        ("keybindings", "", "Open your keyboard shortcuts file", []),
+        ("statusline", "", "Set up Claude Code's status line UI", []),
+        ("memory", "", "Edit CLAUDE.md files and memory settings", []),
+        ("init", "", "Initialize a new CLAUDE.md file with codebase documentation", []),
+        ("theme", "", "Change the theme", []),
+        ("tui", "[default|fullscreen]", "Set the terminal UI renderer (default | fullscreen)", []),
+        ("terminal-setup", "", "Check the terminal's setup for Shift+Enter newlines", []),
+        ("scroll-speed", "", "Adjust mouse wheel scroll speed", []),
+        ("voice", "[hold|tap|off]", "Toggle voice mode", []),
+        ("privacy-settings", "", "View and update your privacy settings", []),
+        ("sandbox", "", "Turn the sandbox for Bash commands on or off, and see its state", []),
+    ]),
+    ("Extensions", [
+        ("mcp", "[reconnect|enable|disable [<server>|all]]", "Manage MCP servers", []),
+        ("plugin", "", "Manage Claude Code plugins", ["plugins", "marketplace"]),
+        ("reload-plugins", "[--force]", "Activate pending plugin changes in the current session", []),
+        ("skills", "", "List available skills", []),
+        ("reload-skills", "", "Pick up skills added or changed on disk during this session", []),
+        ("skill-doctor", "", "Show which loaded skills are unused and costing context", []),
+        ("loops", "", "List, create, and delete loops", []),
+        ("ide", "[open]", "Manage IDE integrations and show status", []),
+        ("chrome", "", "Open Claude in Chrome settings", []),
+        ("install-github-app", "", "Set up Claude GitHub Actions for a repository", []),
+    ]),
+    ("Account and help", [
+        ("usage", "", "Show session cost, plan usage, and activity stats", ["cost", "stats"]),
+        ("status", "", "Show version, account, model, MCP servers and setup warnings", []),
+        ("login", "", "Sign in with your Anthropic account", []),
+        ("logout", "", "Sign out from your Anthropic account", []),
+        ("upgrade", "", "Upgrade your plan for higher rate limits and more Opus", []),
+        ("insights", "", "Generate a report analyzing your Claude Code sessions", []),
+        ("doctor", "", "Health-check your setup and fix issues: installation, unused extensions, duplicated or bloated memory files, slow hooks, updates, permissions", ["checkup"]),
+        ("help", "[command]", "Show help and available commands", []),
+        ("powerup", "", "Learn Claude Code features in short lessons", []),
+        ("release-notes", "", "View release notes", []),
+        ("version", "", "Show this session's version (autoupdate may have a newer one)", []),
+        ("feedback", "[report]", "Send feedback to Anthropic or report a bug", []),
+        ("bug", "[report]", "Report a bug or share your session", ["share"]),
+    ]),
+]
+def builtin_commands():
+    return [{"name": n, "slash": "/" + n, "hint": hint, "description": desc, "aliases": ["/" + a for a in aliases],
+             "group": group} for group, items in BUILTIN_COMMANDS for n, hint, desc, aliases in items]
+
+
 def commands_dir(prof):
     return os.path.join(prof["dir_abs"], "commands")
 
@@ -128,7 +217,8 @@ def list_commands(pid):
         except OSError:
             continue
     return {"commands": items, "dir": pretty(commands_dir(prof)), "shared": commands_note(prof),
-            "plugins": plugin_commands(prof), "template": NEW_COMMAND}
+            "plugins": plugin_commands(prof), "template": NEW_COMMAND, "builtin": builtin_commands(),
+            "builtin_version": BUILTIN_COMMANDS_VERSION}
 
 
 def command_read(pid, name):

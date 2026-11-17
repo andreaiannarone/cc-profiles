@@ -344,10 +344,22 @@ function renderCommands(head) {
     <div class="cards skgrid">${list.map(c => commandCard(c, cur)).join("") || `<div class="empty">${d.commands.length ? "No commands match the filter." : "No commands in this profile yet: New command… creates one."}</div>`}</div>
     ${cur ? commandEditorHtml(cur) : ""}
     ${d.plugins.length ? `<div class="ext-head"><h2>From plugins</h2><span class="hint">read-only: the plugin installs and updates them</span></div>
-      <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}`;
+      <div class="cards skgrid">${d.plugins.map(c => commandCard(c, null)).join("")}</div>` : ""}
+    ${builtinCommands(d, q)}`;
   $("#extq").oninput = e => { x.q = e.target.value; const pos = e.target.selectionStart; renderExt(); const i = $("#extq"); i.focus(); i.setSelectionRange(pos, pos); };
   $("#scnew").onclick = () => { x.cmd = { isNew: true, name: "", content: d.template }; renderExt(); $("#sc-name")?.focus(); };
   if (cur) bindCommandEditor(cur);
+}
+// Claude Code's own commands, read-only, in groups; the filter above applies to them too
+function builtinCommands(d, q) {
+  const match = c => !q || [c.slash, c.description, ...c.aliases].join(" ").toLowerCase().includes(q);
+  const list = d.builtin.filter(match), groups = [...new Set(list.map(c => c.group))];
+  return `<div class="ext-head"><h2>Built into Claude Code</h2><span class="hint">${plural(d.builtin.length, "command", "commands")} of Claude Code ${esc(d.builtin_version)}, read-only. Some appear only with some accounts or setups; the skills that come with Claude Code are in <code>/skills</code>.</span></div>
+    ${list.length ? `<div class="table" tabindex="0" role="region" aria-label="Commands built into Claude Code"><table><thead><tr><th>Command</th><th>What it does</th><th>Also</th></tr></thead><tbody>
+      ${groups.map(g => `<tr class="cmdgroup"><td colspan="3"><b>${esc(g)}</b></td></tr>${list.filter(c => c.group === g).map(c => `<tr>
+        <td class="cmdname"><code>${esc(c.slash)}</code>${c.hint ? ` <span class="hint">${esc(c.hint)}</span>` : ""}</td>
+        <td>${esc(c.description)}</td><td>${c.aliases.map(a => `<code>${esc(a)}</code>`).join(" ")}</td></tr>`).join("")}`).join("")}
+    </tbody></table></div>` : `<div class="empty">No built-in commands match the filter.</div>`}`;
 }
 async function openCommand(name) {
   const x = S.ext;

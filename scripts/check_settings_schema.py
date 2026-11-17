@@ -22,6 +22,10 @@ Fields with "file": "global" live in .claude.json, not in the settings schema: t
 are checked against the items of the /config panel instead (`{id:"...",label:...}`).
 CONFIG_IDS maps every /config item this project knows to its SETTING_FIELDS key
 (None: known, deliberately not in the Settings tab), so new and removed items show up.
+
+The same report lists Claude Code's own slash commands that BUILTIN_COMMANDS (shown in the
+Commands tab) does not know yet, and the ones it lists that are gone. Commands left out on
+purpose (internal, or for one kind of setup only) are in BUILTIN_LEFT_OUT.
 """
 
 import argparse
@@ -431,12 +435,80 @@ def check(data, fields):
     return problems, ok, new_items, gone_items
 
 
-def report(path, version, schema_version, fields, problems, ok, new_items, gone_items):
+# Claude Code's own commands known and deliberately not in BUILTIN_COMMANDS: internal, for
+# one kind of setup or account (Bedrock, Vertex, cloud sessions, Slack, Design…), removed, or
+# bundled skills rather than commands.
+BUILTIN_LEFT_OUT = {
+    "agents", "artifacts", "auto-mode-setup", "autofix-pr", "brief", "cd", "cloud-plugins", "color", "daemon",
+    "design-consent", "design-login", "design-revoke", "desktop", "extra-usage", "heapdump", "import", "install",
+    "install-slack-app", "list-agents", "mobile", "passes", "pause-memory", "pro-trial-expired", "project", "radio",
+    "rate-limit-options", "remote-control", "remote-env", "schedule", "session", "setup-bedrock", "setup-vertex",
+    "stickers", "stop", "team-onboarding", "teleport", "ultraplan", "ultrareview", "usage-credits", "use-case",
+    "web-setup", "wellbeing", "workflow-launch-exec", "workflows",
+    # skills that come with Claude Code (/skills lists them); /doctor, one of them, is in BUILTIN_COMMANDS
+    "batch", "claude-api", "claude-in-chrome", "debug", "fewer-permission-prompts", "run", "run-skill-generator",
+    "update-config",
+}
+COMMAND_TYPE = re.compile(rb'^\s*type:"(?:local|local-jsx|prompt)"')
+
+
+def object_keys(data, start):
+    """The text of each top-level key of the object opening at start, as {key: text after the colon}."""
+    out, depth, i, key_at = {}, 0, start, start + 1
+    while i < len(data) and i < start + 8000:
+        c = data[i:i + 1]
+        if c in (b'"', b"'", b"`"):
+            j = i + 1
+            while j < len(data) and data[j:j + 1] != c:
+                j += 2 if data[j:j + 1] == b"\\" else 1
+            i = j + 1
+            continue
+        if c in (b"{", b"[", b"("):
+            depth += 1
+        elif c in (b"}", b"]", b")"):
+            depth -= 1
+            if depth == 0:
+                break
+        if depth == 1 and c == b",":
+            m = re.match(rb"\s*([A-Za-z_$][\w$]*)\s*:", data[key_at:i])
+            if m:
+                out[m.group(1).decode()] = data[key_at + m.end():i]
+            key_at = i + 1
+        i += 1
+    m = re.match(rb"\s*([A-Za-z_$][\w$]*)\s*:", data[key_at:i])
+    if m:
+        out[m.group(1).decode()] = data[key_at + m.end():i]
+    return out
+
+
+def builtin_names(data):
+    """Names of the slash commands defined in the binary: objects with a name and a command type (or a menu description)."""
+    names = set()
+    for m in re.finditer(rb'name:"([a-z][a-z0-9-]*)"', data):
+        start = data.rfind(b"{", max(0, m.start() - 2000), m.start())
+        if start < 0:
+            continue
+        keys = object_keys(data, start)
+        command = COMMAND_TYPE.match(b"type:" + keys.get("type", b"")) or "menuDescription" in keys  # /doctor has no type
+        if keys.get("name", b"").startswith(b'"' + m.group(1) + b'"') and command:
+            names.add(m.group(1).decode())
+    return names
+
+
+def check_builtin(data):
+    """(new, gone): commands of the binary BUILTIN_COMMANDS does not know, and listed ones not found."""
+    from cc_profiles.slashcommands import BUILTIN_COMMANDS
+    listed = {n for _, items in BUILTIN_COMMANDS for n, *_ in items}
+    found = builtin_names(data)
+    return sorted(found - listed - BUILTIN_LEFT_OUT), sorted(listed - found)
+
+
+def report(path, version, schema_version, fields, problems, ok, new_items, gone_items, new_cmds=(), gone_cmds=()):
     labels = {fd["key"]: fd["label"] for fd in fields}
     lines = ["# Claude Code settings schema check", "",
              f"Claude Code **{version or 'unknown version'}** (`{path}`), compared with `SETTING_FIELDS` "
              f"(last checked against {schema_version}).", ""]
-    differs = bool(problems or new_items or gone_items)
+    differs = bool(problems or new_items or gone_items or new_cmds or gone_cmds)
     if not differs:
         lines += ["No differences: every field and every /config item matches.", ""]
     if problems:
@@ -449,6 +521,12 @@ def report(path, version, schema_version, fields, problems, ok, new_items, gone_
                   for i, label in new_items]
         lines += [f"- Item `{i}` is gone" + (f" (it edits `{CONFIG_IDS[i]}`)" if CONFIG_IDS[i] else "")
                   for i in gone_items]
+        lines.append("")
+    if new_cmds or gone_cmds:
+        lines += ["## Slash commands", ""]
+        lines += [f"- New command `/{n}`: add it to `BUILTIN_COMMANDS` in `slashcommands.py`, or to `BUILTIN_LEFT_OUT`"
+                  for n in new_cmds]
+        lines += [f"- Command `/{n}` is gone: remove it from `BUILTIN_COMMANDS`" for n in gone_cmds]
         lines.append("")
     lines += [f"Unchanged: {len(ok)} of {len(fields)} fields.", ""]
     if differs:
@@ -471,10 +549,12 @@ def main(argv=None):
         data = f.read()
     try:
         problems, ok, new_items, gone_items = check(data, SETTING_FIELDS)
+        new_cmds, gone_cmds = check_builtin(data)
     except SchemaError as e:
         print(f"{e} The binary's layout changed: update scripts/check_settings_schema.py.", file=sys.stderr)
         return 2
-    text, differs = report(path, find_version(data), SCHEMA_VERSION, SETTING_FIELDS, problems, ok, new_items, gone_items)
+    text, differs = report(path, find_version(data), SCHEMA_VERSION, SETTING_FIELDS, problems, ok, new_items, gone_items,
+                           new_cmds, gone_cmds)
     print(text)
     if args.output:
         with open(args.output, "w") as f:

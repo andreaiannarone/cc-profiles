@@ -594,3 +594,7 @@ th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; white-space:
 #disk-sec tr.dim td { color: var(--muted); }
 #disk-sec td .hint { font-size: 12.5px; }
 #hk-sec tr.hkgroup td { background: var(--panel-2); padding-top: 10px; padding-bottom: 10px; }
+/* Commands → Built into Claude Code */
+tr.cmdgroup td { background: var(--panel-2); padding-top: 10px; padding-bottom: 10px; }
+td.cmdname { white-space: nowrap; }
+td.cmdname .hint { white-space: normal; }

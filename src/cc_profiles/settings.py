@@ -25,7 +25,7 @@ from .core import (
 # Dropdown options come from the settings schema inside the Claude Code binary
 # (version SCHEMA_VERSION): where the schema only accepts some values there is a
 # dropdown, where it accepts any string a free text field.
-SCHEMA_VERSION = "2.1.325"
+SCHEMA_VERSION = "2.1.326"
 # Built-in output styles and their descriptions, as in the Claude Code binary. "default"
 # is left out: it is the same as no value ("— default —" in the UI); field_options()
 # still lists it when a profile has it set explicitly.

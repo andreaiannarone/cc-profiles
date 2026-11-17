@@ -43,6 +43,12 @@ Each card shows the command as you type it, its argument hint, its description (
 
 Commands that installed plugins bring are listed below, under **From plugins**, as `/plugin:name`. They are read-only: the plugin installs and updates them.
 
+## Built into Claude Code
+
+Below your commands and the plugins' ones, **Built into Claude Code** lists Claude Code's own commands (`/compact`, `/model`, `/rewind`, `/usage`…), read-only, in five groups: Conversation, Model and context, Settings, Extensions, Account and help. Each row shows the command with what to type after it, what it does in Claude Code's own words, and its other names (`/cost` and `/stats` open `/usage`). The filter at the top applies to them too.
+
+The list comes from the Claude Code version named in the section's header. Some commands appear only with some accounts or setups (`/upgrade` with a claude.ai plan, `/chrome` with Claude in Chrome). Commands for one kind of setup only, like Amazon Bedrock or cloud sessions, are left out. So are the skills that come with Claude Code: `/skills` lists them. The weekly schema check reports the commands a new Claude Code version adds or removes.
+
 ## Copy and delete
 
 - **Copy to…** copies the saved file to another profile, unless that profile already has a command with the same name.
