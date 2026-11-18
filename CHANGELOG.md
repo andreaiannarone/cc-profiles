@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-18
+
 ### Added
 - **Shared projects**: Projects → Manage → **Share with …** lets two profiles use the same folder of a project, so they see the same conversations and memories, live, and `/resume` in one finds those started in the other. Work on one project with two accounts. **Stop sharing** gives a profile its own copy again; moving, relinking and merging are refused while a project is shared.
 - **Continue in…** in Conversations: the same conversation, in a terminal, with Claude Code in another profile (another account) and `--resume`, for when one account reaches its limits. It shares the project first if needed, and links the conversation's file snapshots for `/rewind`.
@@ -514,7 +516,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8

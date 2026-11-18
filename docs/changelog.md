@@ -3,6 +3,17 @@
 
 Every release of cc-profiles, newest first. To update, use **Update to …** in the app (see [Health and About](guides/health.md)) or run the [install script](getting-started.md#install) again.
 
+## [0.8.1] - 2026-11-18
+
+**Added**
+- **Shared projects**: Projects → Manage → **Share with …** lets two profiles use the same folder of a project, so they see the same conversations and memories, live, and `/resume` in one finds those started in the other. Work on one project with two accounts. **Stop sharing** gives a profile its own copy again; moving, relinking and merging are refused while a project is shared.
+- **Continue in…** in Conversations: the same conversation, in a terminal, with Claude Code in another profile (another account) and `--resume`, for when one account reaches its limits. It shares the project first if needed, and links the conversation's file snapshots for `/rewind`.
+- **Share everything…** in Profiles → Sharing: a profile uses another profile's skills, agents, commands, plugins, `CLAUDE.md` and every project, so only its Claude account differs. The other profile can be the source or any one. What only it has joins the other first. **Also settings.json** shares permissions, hooks, plugins and model too, with the GitHub account: ticked by itself when both profiles use the same GitHub account. One backup undoes all of it.
+
+**Fixed**
+- Projects → Manage: the **Choose** buttons had the same colour as their rows in the dark theme, so they barely showed. They now take the card's colour, a shade apart, in both themes.
+- MCP → claude.ai connectors: a blocked connector the account no longer has (removed on claude.ai, or come with a copied `settings.json`) stayed listed, and taking it off needed two steps (turn it on, then Forget). **Forget** now does it in one, deny rule included, once Check now has confirmed it is gone from the account.
+
 ## [0.8.0] - 2026-11-17
 
 **Added**
@@ -503,6 +514,7 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
+[0.8.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.7...v0.7.8
