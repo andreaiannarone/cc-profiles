@@ -50,7 +50,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `autoexport.py` | automatic exports of every profile (daily or weekly, the last 3 of each kept) into iCloud Drive or `~/.cc-profiles/exports`, in a background thread; a profile whose folder is gone restored from its latest export |
 | `templates.py` | profile templates: an export without projects in `~/.cc-profiles/templates/`, used to create new profiles |
 | `plugins.py` | installed plugins, enable and disable, copy to another profile |
-| `editprofile.py` | rename, change command, delete with optional merge, with a preview |
+| `editprofile.py` | rename, change command, rename the folder (paths in its files, launcher, links of other profiles), delete with optional merge, with a preview |
 | `installer.py` | official Claude Code install methods, background job with live log |
 | `updater.py` | check for updates on PyPI, update and restart |
 | `selfinstall.py` | `cc-profiles uninstall` and `reinstall`: what cc-profiles added to Claude Code, and the fixed package commands per install kind |

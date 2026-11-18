@@ -59,7 +59,9 @@ Saving, deleting and creating a profile from a template each have a backup. A de
 - **Name**: updates the UI and the status line right away.
 - **Command**: renames the launcher, or rewrites the alias if the profile was set up with a shell alias before. The source profile's command is `claude` and cannot change. A command that already exists as another program is refused.
 
-The **folder never changes**: the profile's files store absolute paths to it, so renaming it would break them.
+- **Folder**: `~/.claude-noa` becomes `~/.claude-clienti`. While you type, the dialog says what follows: the paths Claude Code wrote into the profile's files (`settings.local.json`, `plugins/*.json`, `.claude.json`), the launcher or alias, `config.json`, and the links of other profiles into it (shared items, projects, memories). It is refused while a Claude Code session is open in the profile, and for the source profile, whose folder is where Claude Code looks by default. Afterwards log in again with `/login`: macOS keeps the login in the keychain under a name made from the folder's path, and cc-profiles never copies a login. One Restore puts the old folder back.
+
+Never rename a profile's folder in the Finder: the paths in its files, its command and the links of other profiles would still point to the old name.
 
 ## Delete a profile
 

@@ -479,3 +479,51 @@ def test_about_lists_profile_contents(home, app_factory):
     contents = app_factory().get("/api/about")["profiles"][0]["contents"]
     assert contents["Skills"] == ["hello"] and contents["Subagents"] == ["reviewer"]
     assert contents["Slash commands"] == []
+
+
+def test_rename_a_profile_folder(home, app_factory):
+    """~/.claude-work becomes ~/.claude-job: the paths in its files, its alias, config.json and the
+    links of other profiles into it follow; one Restore puts everything back."""
+    basic_home(home)
+    home.write(".zshrc", "# Claude Code: work profile\nalias claude-work='CLAUDE_CONFIG_DIR=~/.claude-work claude'\n")
+    work = home.path(".claude-work")
+    home.json(".claude-work/settings.local.json", {"statusLine": {"command": f"sh {work}/statusline.sh"},
+                                                   "env": {"X": "~/.claude-work/x", "Y": f"{work}-other/y"}})
+    home.json(".claude-work/plugins/installed_plugins.json", {"plugins": {"p": [{"installPath": f"{work}/plugins/cache/p"}]}})
+    home.profile("client")
+    name = san(home.path("code/work/api"))
+    home.path(".claude-client/projects").mkdir(exist_ok=True)
+    os.symlink(f"../../.claude-work/projects/{name}", home.path(f".claude-client/projects/{name}"))
+    for f in work.glob("projects/*/*.jsonl"):
+        os.utime(f, (time.time() - 3600, time.time() - 3600))  # no session open
+    before = home.snapshot()
+    app = app_factory()
+
+    assert "lowercase" in app.post_error("/api/profiles/rename-folder", {"id": "work", "name": "Job!"})
+    assert "source profile" in app.post_error("/api/profiles/rename-folder", {"id": "default", "name": "x"})
+    assert "already exists" in app.post_error("/api/profiles/rename-folder", {"id": "work", "name": "client"})
+    p = app.get("/api/profiles/rename-folder/preview?id=work&name=.claude-job")
+    assert p["to"] == "~/.claude-job" and p["links"] == ["Client"]
+    assert sorted(p["files"]) == ["plugins/installed_plugins.json", "settings.local.json"]
+
+    r = app.post("/api/profiles/rename-folder", {"id": "work", "name": "job"})
+    assert "/login" in r["message"]
+    job = home.path(".claude-job")
+    assert not work.exists() and job.is_dir()
+    local = json.loads((job / "settings.local.json").read_text())
+    assert local["statusLine"]["command"] == f"sh {job}/statusline.sh"
+    assert local["env"] == {"X": "~/.claude-job/x", "Y": f"{work}-other/y"}  # another folder is left alone
+    assert str(job) in (job / "plugins/installed_plugins.json").read_text()
+    assert "CLAUDE_CONFIG_DIR=~/.claude-job" in home.path(".zshrc").read_text()
+    link = home.path(f".claude-client/projects/{name}")
+    assert os.readlink(link) == f"../../.claude-job/projects/{name}" and (link / "s-api-work.jsonl").exists()
+    prof = next(x for x in app.get("/api/profiles") if x["id"] == "work")
+    assert prof["dir"] == "~/.claude-job" and prof["conv"] == 1
+    # a profile with a launcher: the launcher follows
+    app.post("/api/profiles/create", {"label": "Temp", "id": "temp", "base": "", "include_projects": False, "share": []})
+    app.post("/api/profiles/rename-folder", {"id": "temp", "name": "tmp"})
+    assert 'CLAUDE_CONFIG_DIR="$HOME/.claude-tmp"' in home.path(".local/bin/claude-temp").read_text()
+    assert next(x for x in app.get("/api/profiles") if x["id"] == "temp")["dir"] == "~/.claude-tmp"
+
+    app.restore_all()
+    assert home.snapshot() == before
