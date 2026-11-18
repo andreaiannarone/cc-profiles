@@ -20,9 +20,9 @@ The code is one module per area. Each module imports only from the ones above it
 | `core.py` | paths and constants, `san()`, atomic `write_text()`, `cached_read()`, config loading and first-run detection, `Backup` and failed-operation handling, tool lookup, settings files, running sessions |
 | `folders.py` | Choose…: the system's folder dialog (`osascript`, `zenity`, `kdialog`) and the folder listing of the page's own browser (read-only) |
 | `paths.py` | rules, `path_index()` (folder name → real path), `resolve_on_disk()`, shared memory links (`memory_holder()`, `memory_sharers()`) |
-| `projects.py` | list, move (with preview), relink, delete, rules |
+| `projects.py` | list, move (with preview), relink, delete, rules; a project's whole folder shared with another profile (a link to the holder's) |
 | `memories.py` | list, read, save, move, delete; a project's memory shared between profiles (a link to the holder's), with a preview |
-| `sharing.py` | symlinks to the source profile, with a preview |
+| `sharing.py` | symlinks to the source profile, with a preview; Share everything (every item but `settings.json`, and every project) |
 | `settings.py` | schema-checked fields (`SETTING_FIELDS`, `SCHEMA_VERSION`), permissions, raw JSON, `CLAUDE.md`; a value or a rule applied to every profile |
 | `statusline.py` | the status line cc-profiles writes for a profile (a `sh` script reading Claude Code's JSON with `jq`), its presets and preview, applied to one profile or to all |
 | `hooks.py` | hooks of `settings.json` and `settings.local.json`: listed (plugin hooks read-only), a command hook added, edited (other keys kept) or moved, any hook deleted or copied to one profile or to all; a hook is named by its place and a fingerprint, so a changed file is never edited blindly |
@@ -43,7 +43,7 @@ The code is one module per area. Each module imports only from the ones above it
 | `claudebinary.py` | Claude Code's own slash commands and bundled skills, read from the installed binary (mapped, not loaded) and kept in `~/.cc-profiles/claude-commands.json` until it changes (read-only) |
 | `slashcommands.py` | custom slash commands (`commands/**/*.md`, a subfolder for a namespace): create, edit, copy to one profile or to all, delete; `/cc-profiles` and plugin commands read-only; Claude Code's own commands and skills (`BUILTIN_COMMANDS`, `BUILTIN_SKILLS`: groups, and the fallback when the binary cannot be read) |
 | `macapp.py` | `cc-profiles install-app`: the Mac app in `~/Applications`, put together from `app/main.swift` (compiled into the package by `scripts/build_app.py`), its Info.plist, launch.json and icon (drawn in Python); kept up to date at every start |
-| `terminal.py` | Open in Terminal: a project's folder in a new terminal window with Claude Code in a profile, through a script that deletes itself. Terminal, iTerm or Ghostty on macOS; on Linux, in a graphical session, a fixed list of terminal programs found on the `PATH` (`LINUX_TERMINALS`) |
+| `terminal.py` | Continue in… (a conversation resumed in another profile, its project shared first if needed); Open in Terminal: a project's folder in a new terminal window with Claude Code in a profile, through a script that deletes itself. Terminal, iTerm or Ghostty on macOS; on Linux, in a graphical session, a fixed list of terminal programs found on the `PATH` (`LINUX_TERMINALS`) |
 | `launchers.py` | `~/.local/bin` scripts, legacy shell aliases, and the profile by folder line in the shell rc files |
 | `newprofile.py` | copy or create, never copying credentials |
 | `transfer.py` | export and import of a profile as a `.zip` |

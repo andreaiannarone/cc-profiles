@@ -12,7 +12,9 @@ import time
 from .byfolder import pick
 from .core import (CONFIG_FILE, DATA_DIR, HOME, ApiError, Backup, find_tool, load_config, pretty, profile, profiles,
                    tool_env, write_json, write_text)
-from .projects import list_projects
+from .conversations import conversation_path
+from .paths import path_index, project_holder
+from .projects import check_project_share, list_projects, share_project_into
 
 # ---------------------------------------------------------------------------
 # Open in Terminal
@@ -103,14 +105,15 @@ def op_set_terminal(name):
     return {"message": f"Projects open in {name}.", "backup": bk.close()}
 
 
-def launch_script(folder, prof):
-    """The script that starts Claude Code in the profile, in the folder."""
+def launch_script(folder, prof, resume=None):
+    """The script that starts Claude Code in the profile, in the folder; with resume, in that
+    conversation (a session id: letters, digits, dots, dashes, underscores; checked by the caller)."""
     default = os.path.realpath(prof["dir_abs"]) == os.path.realpath(os.path.join(HOME, ".claude"))
     env = "unset CLAUDE_CONFIG_DIR" if default else f"export CLAUDE_CONFIG_DIR={shlex.quote(prof['dir_abs'])}"
     shell = '"${SHELL:-/bin/zsh}"' if platform() == "darwin" else '"${SHELL:-/bin/bash}"'
     return (f"#!/bin/sh\n# cc-profiles: Claude Code in {prof['label']}, in {pretty(folder)}\n"
             f'rm -f "$0"\ncd {shlex.quote(folder)} || exit 1\n{env}\n'
-            f"exec {shell} -lic 'command claude; exec {shell} -l'\n")
+            f"exec {shell} -lic 'command claude{' --resume ' + resume if resume else ''}; exec {shell} -l'\n")
 
 
 def folder_profile(path, row=None):
@@ -124,7 +127,7 @@ def folder_profile(path, row=None):
     return (known or ids or ["default"])[0]
 
 
-def op_open_terminal(project, pid, path=None):
+def op_open_terminal(project, pid, path=None, resume=None):
     """POST /api/terminal/open: a project's folder, or any folder (`path`, from the Mac app's
     Finder menu), in the chosen terminal with Claude Code in pid (picked as folder_profile()
     does when empty)."""
@@ -157,7 +160,7 @@ def op_open_terminal(project, pid, path=None):
             os.unlink(p)
     ext = ".sh" if linux else ".command"
     script = os.path.join(SCRIPT_DIR, f"claude-{prof['id']}-{int(time.time() * 1000)}{ext}")
-    write_text(script, launch_script(folder, prof))
+    write_text(script, launch_script(folder, prof, resume))
     os.chmod(script, 0o700)
     if linux:
         cmd = [apps[name]] + LINUX_TERMINALS[name][1] + [script]
@@ -165,7 +168,8 @@ def op_open_terminal(project, pid, path=None):
         cmd = ["/usr/bin/open", "-na", apps[name], "--args", "-e", script]
     else:
         cmd = ["/usr/bin/open", "-a", apps[name], script]
-    msg = f"Opening {pretty(folder)} in {name}, with Claude Code in {prof['label']}."
+    msg = f"Opening {pretty(folder)} in {name}, with Claude Code in {prof['label']}" + (
+        ", in the same conversation." if resume else ".")
     if os.environ.get("CC_PROFILES_TERMINAL_DRYRUN"):  # tests: the script is written, nothing opens
         return {"message": msg, "command": cmd, "script": script, "profile": prof["id"]}
     if linux:  # some terminals keep running until their window closes: wait a second at most
@@ -186,3 +190,67 @@ def op_open_terminal(project, pid, path=None):
     if r.returncode:
         raise ApiError(f"{name} did not open: {(r.stderr or r.stdout).strip()}")
     return {"message": msg, "profile": prof["id"]}
+
+
+# ---------------------------------------------------------------------------
+# Continue a conversation in another profile (another account)
+# ---------------------------------------------------------------------------
+# The target profile must see the conversation: the project is shared first when it is not
+# (the target's projects/<name> becomes a link to the folder that holds it), and the file
+# snapshots of the session are linked too, for /rewind. Then a terminal opens in the project's
+# folder with `claude --resume <session>` in the target profile.
+def continue_plan(pid, name, session, to):
+    """What continuing in `to` needs: whether the project is shared already, and with whom."""
+    src, dst = profile(pid), profile(to)
+    if src["id"] == dst["id"]:
+        raise ApiError("Pick another profile")
+    f = conversation_path(src, name, session)
+    holder = project_holder(src, name) or src
+    mine = os.path.join(dst["dir_abs"], "projects", name)
+    shared = os.path.isdir(mine) and os.path.realpath(mine) == os.path.realpath(os.path.dirname(f))
+    return {"shared": shared, "holder": holder["id"], "holder_label": holder["label"],
+            "recent": time.time() - os.path.getmtime(f) < 120}
+
+
+def op_conversation_continue(pid, name, session, to, share=False):
+    if not supported():
+        raise ApiError("Opening a terminal works on macOS, and on Linux in a graphical session")
+    src, dst = profile(pid), profile(to)
+    plan = continue_plan(pid, name, session, to)
+    holder = profile(plan["holder"])
+    folder = path_index().get(name)
+    if not folder or not os.path.isdir(folder):
+        raise ApiError(f"Folder does not exist: {pretty(folder) or name}. Relink the project first")
+    steps, bk = [], None
+    if not plan["shared"]:
+        if not share:
+            raise ApiError(f"{dst['label']} does not share this project with {holder['label']}: share it first")
+        if dst["id"] != holder["id"]:
+            check_project_share(dst["id"], name, holder["id"])
+        else:  # the target holds the folder others use: it cannot become a link
+            raise ApiError(f"{src['label']} uses this project from {dst['label']} already: reload the page")
+        where = pretty(path_index().get(name)) or name
+        bk = Backup("project-share", f"{where}: {dst['label']} uses {holder['label']}'s, to continue a conversation")
+        joined = share_project_into(dst, holder, name, bk)
+        steps.append(f"{dst['label']} now shares this project with {holder['label']}"
+                     + (f" ({joined} of its conversations joined)" if joined else ""))
+    a = os.path.join(src["dir_abs"], "file-history", session)
+    b = os.path.join(dst["dir_abs"], "file-history", session)
+    if os.path.isdir(a) and not os.path.lexists(b):
+        if bk is None:
+            bk = Backup("continue", f"File snapshots of conversation {session[:8]}: {dst['label']} uses {src['label']}'s")
+        bk.mkdir(os.path.dirname(b))
+        real = os.path.realpath(a)
+        os.symlink(os.path.relpath(real, os.path.dirname(b)), b)
+        bk.created(b)
+        steps.append("its file snapshots are linked, for /rewind")
+    backup = bk.close() if bk else None
+    r = op_open_terminal(name, dst["id"], resume=session)
+    msg = r["message"]
+    if steps:
+        msg = "; ".join(steps) + ". " + msg
+    if plan["recent"]:
+        msg += (f" It was written in the last 2 minutes: if it is still open in {src['label']}, close it there,"
+                " so the two sessions do not write into it at once.")
+    r.update(message=msg, backup=backup)
+    return r

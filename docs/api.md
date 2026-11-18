@@ -22,6 +22,8 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/memory/projects` | `profile` | the profile's projects with memory and conversation counts |
 | `GET /api/memory/list` | `profile`, `project` | memories with name, type, description, `indexed`; `missing` index entries; `sharing`: `from` (the profile whose memory this one uses), `with` (the profiles using this one's), `others` |
 | `GET /api/memory/file` | `profile`, `project`, `file` | `{content}` |
+| `GET /api/projects/share-plan` | `profile`, `project`, `from` | what sharing `from`'s folder of the project with `profile` does: `conversations` and `memories` of its own that join, `conflicts`, `theirs` (conversations already there), `active` |
+| `GET /api/conversations/continue-plan` | `profile`, `project`, `session`, `to` | `{shared, holder, holder_label, recent}`: whether `to` sees the conversation already, who holds the project's folder, and whether it was written in the last 2 minutes |
 | `GET /api/memory/share-plan` | `profile`, `project`, `from` | what sharing `from`'s memory with `profile` does to its own memories: `join`, `conflicts` |
 | `GET /api/conversations/projects` | `profile` | the profile's projects that have conversations, with `count` |
 | `GET /api/conversations` | `profile`, `project` | `{conversations: [{session, title, prompts, replies, first, last, mtime, size, snapshots}], path}`, newest first |
@@ -47,13 +49,14 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/folders/pick` | `start`, `prompt` | opens the system's folder dialog and waits: `{native: true, cancelled, path, exists}`, or `{native: false, start}` when there is none here. Read-only |
 | `GET /api/github` | | `{gh, git_uses_gh, accounts, profiles: [{id, label, dir, user, users, set_up, shared, default, name, email, suggest}], account_list: [{user, folders, used_by, insecure}], accounts_dir}`: each profile's GitHub CLI folder and active account, its commit identity and `suggest`, the one of its account (`{name, email}`, or `null` without an account or a git config), and every account signed in on the computer. Only user names are read from `hosts.yml`, never a token |
 | `GET /api/mcp/server` | `profile`, `scope` (`user` or a project path), `name` | `{config}`: the full server entry, values included |
-| `GET /api/sharing` | | for each secondary profile, the state of every shareable item |
+| `GET /api/sharing` | | for each secondary profile, the state of every shareable item; `linked` names the profile an item links to when it is not the source |
 | `GET /api/plugins` | `profile` | `{plugins: [{name, plugin, marketplace, version, installed, path, is_installed, scopes, projects, enabled, source, mod}], marketplaces, dir, shared}`; `mod` is `null` for a plugin that is not a mod, else `{features, commands, events: [{name, label}], reach}` read from its source |
 | `GET /api/profiles/export` | `id`, `projects` (`1` to include conversations) | a `.zip` download (not JSON): `profile/…`, `claude.json`, `home-memory/…`, `cc-profiles-export.json`; never login credentials |
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/projects/merge/preview` | `project`, `profile`, `into` (another project of the same profile, on disk) | `{from, into, conversations, memories, prompts, conflicts}`: what merging would move, and the files the target already has. Changes nothing |
 | `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
 | `GET /api/profiles/delete/preview` | `id`, `merge_into` (optional) | `{items: [{action, item, from, to}], projects, conversations, memories, prompts, settings, active, folder, config, into}`: what deleting would do; `action` is `move`, `merge`, `conflict`, `stash` (goes to the backup) or `edit` (a line or entry removed from a file). Changes nothing |
+| `GET /api/sharing/everything/preview` | `profile`, `to` (default: the source profile), `settings` (`1`: settings.json too) | `{profile, source, items: [{item, action, join, backup}], projects: [{name, pretty, action, reason, holder, joins, new}], active}`; `action` is `share`, `already` or `skip`. Changes nothing |
 | `GET /api/sharing/preview` | `profile`, `item`, `shared` (`1` to share, `0` to separate) | `{items: [{action, item, from, to}], source, profile, only_own}`; `action` is `create` (made empty in the source), `stash`, `only-here` (only the own copy has it), `link` or `copy`. Changes nothing |
 | `GET /api/settings/field/all/preview` | `profile`, `key` | `{key, label, value, shown, from, apply: [{id, label, detail}], skip: [{id, label, reason}]}`: which profiles applying the value would change |
 | `GET /api/statusline` | `profile` | `{value, source, mode: off\|builtin\|custom, parts, separator, colors, limits, script, script_is_other, jq, separators, brackets, parts_available}`; `limits` is `used` or `left`, and the limit pieces of `parts_available` also have a `sample_left` |
@@ -104,6 +107,8 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/memory/save` | `profile`, `project`, `file`, `content` |
 | `POST /api/memory/move` | `profile`, `project`, `file`, `to_profile`, `to_project` |
 | `POST /api/memory/delete` | `profile`, `project`, `file` |
+| `POST /api/projects/share` | `profile`, `project`, `from`, `shared` (`false`: `profile` gets its own copy again, `from` not needed) |
+| `POST /api/conversations/continue` | `profile`, `project`, `session`, `to`, `share` (bool: share the project first when `to` does not see it): links the file snapshots, opens a terminal with `claude --resume` in `to` |
 | `POST /api/memory/share` | `profile`, `project`, `from`, `shared` (`false` separates: `from` not needed) |
 | `POST /api/conversations/move` | `profile`, `project`, `session`, `to`: one conversation and its file snapshots |
 | `POST /api/conversations/delete` | `profile`, `project`, `session` |
@@ -138,6 +143,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/github/identity` | `profile`, `name`, `email` (both, or both empty for the one of its account): `GIT_AUTHOR_*` and `GIT_COMMITTER_*` in the profile's `env` |
 | `POST /api/github/setup` | `profile`: gives it its own GitHub CLI folder now (the server does it at start) |
 | `POST /api/github/remove` | `user`: takes an account no profile uses off every folder; its keychain token stays |
+| `POST /api/sharing/everything` | `profile`, `to` (default: the source profile), `settings` (bool): every shareable item (`settings.json` only with `settings`), and every project of the two profiles |
 | `POST /api/sharing` | `profile`, `item`, `shared` (bool) |
 | `POST /api/plugins/enable` | `profile`, `plugin` (`name@marketplace`), `enabled` (bool): writes `enabledPlugins` where the value lives |
 | `POST /api/plugins/copy` | `profile`, `plugin`, `to`: copies a plugin installed for every project, with its marketplace, to another profile and enables it there |

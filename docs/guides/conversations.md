@@ -31,6 +31,12 @@ Click a conversation to read it below the list: your prompts, Claude's replies a
 
 The prompt history (`history.jsonl`), the project's memories and its settings stay where they are. Moving is refused when the other profile already has a conversation with the same id.
 
+## Continue in another profile
+
+**Continue in…** opens the conversation in a terminal (the one chosen in the About panel), in the project's folder, with Claude Code in the profile you pick and `--resume`: the same conversation, with that profile's account. Use it when one account reaches its plan's limits, or to go on with the work account.
+
+The other profile must see the conversation: if it does not share the project yet, cc-profiles asks first and [shares it](projects.md#share-a-project-with-another-profile). The file snapshots of the conversation are linked too, so `/rewind` works. If the conversation was written in the last 2 minutes, close it in the first profile before going on, so the two sessions do not write into it at once.
+
 ## Delete
 
 **Delete** moves the conversation and its file snapshots to the backup: restore it from the [Backups](backups.md) tab.

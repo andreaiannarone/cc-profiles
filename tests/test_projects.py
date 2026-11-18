@@ -534,3 +534,133 @@ def test_a_shared_memory_follows_its_project(home, app_factory):
     assert "Personal uses the memory of projects in Work" in app.post_error("/api/profiles/delete", {"id": "work"})
     app.restore_all()
     assert home.snapshot() == before
+
+
+# --- shared project -----------------------------------------------------------------------
+def test_shared_project_between_profiles(home, app_factory):
+    """Work uses Default's folder of a project through a link: its own conversations join it, both
+    profiles list the same conversations, nothing moves or relinks it from under the other, and
+    stopping gives Work its own copy. Continue in… shares it with a profile that does not have it
+    yet, links the session's file snapshots and opens a terminal with --resume. All undoable."""
+    basic_home(home)
+    home.profile("personal")
+    home.path("Applications/iTerm.app").mkdir(parents=True)
+    before = home.snapshot()
+    app = app_factory(CC_PROFILES_TERMINAL_DRYRUN="1", CC_PROFILES_TERMINAL_PLATFORM="darwin")
+    app.post("/api/terminal", {"terminal": "iTerm"})
+    api = san(home.path("code/work/api"))
+    q = f"project={api}"
+    default_d, work_d = home.path(f".claude/projects/{api}"), home.path(f".claude-work/projects/{api}")
+
+    plan = app.get(f"/api/projects/share-plan?profile=work&{q}&from=default")
+    assert (plan["conversations"], plan["theirs"], plan["conflicts"]) == (1, 1, [])
+    msg = app.post("/api/projects/share", {"profile": "work", "project": api, "from": "default", "shared": True})["message"]
+    assert "1 of its conversations joined them" in msg and "at the same time" in msg
+    assert work_d.is_symlink() and os.readlink(work_d) == f"../../.claude/projects/{api}"
+    assert sorted(f for f in os.listdir(default_d) if f.endswith(".jsonl")) == ["s-api-work.jsonl", "s-api.jsonl"]
+    assert home.path(".claude-work/file-history/s-api-work").is_dir()  # snapshots stay in their profile
+    work_convs = {c["session"] for c in app.get(f"/api/conversations?profile=work&{q}")["conversations"]}
+    assert work_convs == {"s-api", "s-api-work"}
+    row = next(r for r in app.get("/api/projects") if r["name"] == api)
+    assert row["in"]["work"]["from"] == "default" and "from" not in row["in"]["default"]
+    assert not [i for i in row["issues"] if i["kind"] == "profile" and i["from"] == "work"]
+
+    # nothing takes the folder from under the other profile
+    assert "Work uses it (shared project)" in app.post_error("/api/projects/move", {"project": api, "from": "default", "to": "personal"})
+    assert "it is Default's, shared" in app.post_error("/api/projects/move", {"project": api, "from": "work", "to": "personal"})
+    assert "Cannot relink" in app.post_error("/api/projects/relink", {"project": api, "profile": "work", "path": str(home.path("code"))})
+    assert "shares the whole project" in app.post_error(
+        "/api/memory/share", {"profile": "personal", "project": api, "from": "work", "shared": True})
+    assert "already uses this project" in app.post_error(
+        "/api/projects/share", {"profile": "work", "project": api, "from": "default", "shared": True})
+    # the files of Default's sessions in Work are not offered as old leftovers
+    cats = {c["id"]: c for c in app.get("/api/storage?profile=work&days=1")["categories"]}
+    assert cats["file-history"]["count"] == 0 and cats["conversations"]["count"] == 0
+
+    # Continue in Personal, which does not have the project: shared on the way, snapshots linked
+    p = app.get(f"/api/conversations/continue-plan?profile=default&{q}&session=s-api&to=personal")
+    assert (p["shared"], p["holder"], p["recent"]) == (False, "default", False)
+    assert "share it first" in app.post_error("/api/conversations/continue",
+                                              {"profile": "default", "project": api, "session": "s-api", "to": "personal"})
+    r = app.post("/api/conversations/continue", {"profile": "default", "project": api, "session": "s-api",
+                                                 "to": "personal", "share": True})
+    assert r["backup"] and "Personal now shares this project with Default" in r["message"]
+    assert home.path(f".claude-personal/projects/{api}").is_symlink()
+    assert os.path.realpath(home.path(".claude-personal/file-history/s-api")) == os.path.realpath(home.path(".claude/file-history/s-api"))
+    text = open(r["script"]).read()
+    assert "command claude --resume s-api;" in text and f"export CLAUDE_CONFIG_DIR={home.path('.claude-personal')}" in text
+    # from a profile that shares it, back to the holder: nothing to share, only the snapshots
+    r = app.post("/api/conversations/continue", {"profile": "work", "project": api, "session": "s-api-work", "to": "default"})
+    assert home.path(".claude/file-history/s-api-work").is_symlink() and "unset CLAUDE_CONFIG_DIR" in open(r["script"]).read()
+
+    # stopping: Personal gets its own copy; removing it from Work drops only the link
+    app.post("/api/projects/share", {"profile": "personal", "project": api, "shared": False})
+    personal_d = home.path(f".claude-personal/projects/{api}")
+    assert not personal_d.is_symlink() and sorted(os.listdir(personal_d)) == sorted(os.listdir(default_d))
+    assert "is not shared" in app.post_error("/api/projects/share", {"profile": "personal", "project": api, "shared": False})
+    assert "stay in Default" in app.post("/api/projects/delete", {"project": api, "profile": "work"})["message"]
+    assert not os.path.lexists(work_d) and (default_d / "s-api-work.jsonl").exists()
+
+    shutil.rmtree(home.path(".cc-profiles/terminal"))  # scripts a terminal would run and delete
+    app.restore_all()
+    assert home.snapshot() == before
+
+
+def test_share_everything_leaves_only_the_account_different(home, app_factory):
+    """Share everything: every item but settings.json, and every project of both profiles. What only
+    Work has joins Default's (skills, conversations); a clash and its own CLAUDE.md go to the backup.
+    One backup undoes it all."""
+    basic_home(home)
+    home.write(".claude/skills/review/SKILL.md", "---\nname: review\ndescription: Default's\n---\n")
+    home.write(".claude-work/skills/review/SKILL.md", "---\nname: review\ndescription: Work's\n---\n")
+    home.write(".claude-work/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: only Work\n---\n")
+    home.write(".claude-work/CLAUDE.md", "Work's instructions\n")
+    home.write(".claude-work/settings.json", '{"env": {"GH_CONFIG_DIR": "/x"}}\n')
+    home.conversation("work", "code/work/cli", "s-cli")
+    home.profile("client")
+    home.write(".claude-client/settings.json", '{"model": "haiku"}\n')
+    home.conversation("client", "code/client/site", "s-site")
+    before = home.snapshot()
+    app = app_factory()
+    api, cli, blog = (san(home.path(p)) for p in ("code/work/api", "code/work/cli", "code/personal/blog"))
+
+    assert "source profile" in app.post_error("/api/sharing/everything", {"profile": "default"})
+    p = app.get("/api/sharing/everything/preview?profile=work")
+    items = {i["item"]: i for i in p["items"]}
+    assert items["settings.json"]["action"] == "skip" and items["skills"]["join"] == ["deploy"] and items["skills"]["backup"] == ["review"]
+    assert items["CLAUDE.md"]["backup"] == ["CLAUDE.md"]
+    projects = {r["name"]: r for r in p["projects"]}
+    assert {n: r["action"] for n, r in projects.items() if n in (api, cli, blog)} == {api: "share", cli: "share", blog: "share"}
+    assert projects[api]["joins"] == 1 and projects[cli]["new"]
+
+    msg = app.post("/api/sharing/everything", {"profile": "work"})["message"]
+    assert "4 projects" in msg and "settings.json stays its own" in msg
+    w = home.path(".claude-work")
+    for item in ("skills", "agents", "commands", "plugins", "CLAUDE.md"):
+        assert (w / item).is_symlink(), item
+    assert not (w / "settings.json").is_symlink()
+    assert sorted(os.listdir(home.path(".claude/skills"))) == ["deploy", "review"]
+    assert "Default's" in home.path(".claude/skills/review/SKILL.md").read_text()
+    for name in (api, cli, blog):
+        assert (w / "projects" / name).is_symlink() and home.path(f".claude/projects/{name}").is_dir()
+    assert (home.path(f".claude/projects/{cli}") / "s-cli.jsonl").exists()
+    assert "already shares everything" in app.post_error("/api/sharing/everything", {"profile": "work"})
+
+    # with another profile than the source, settings.json too: links lead to the real files, never to a link
+    p = app.get("/api/sharing/everything/preview?profile=client&to=work&settings=1")
+    assert p["target"] == "Work" and {i["item"]: i["action"] for i in p["items"]}["settings.json"] == "share"
+    app.post("/api/sharing/everything", {"profile": "client", "to": "work", "settings": True})
+    c = home.path(".claude-client")
+    assert os.path.realpath(c / "skills") == os.path.realpath(home.path(".claude/skills"))  # Work's is a link to Default's
+    assert os.readlink(c / "skills") == "../.claude/skills"
+    assert os.path.realpath(c / "settings.json") == os.path.realpath(w / "settings.json") and not (w / "settings.json").is_symlink()
+    site = san(home.path("code/client/site"))
+    assert (c / "projects" / site).is_symlink() and home.path(f".claude-work/projects/{site}/s-site.jsonl").exists()
+    sharing = {x["id"]: {i["item"]: i for i in x["items"]} for x in app.get("/api/sharing")}
+    assert sharing["client"]["settings.json"]["linked"] == "Work" and sharing["client"]["skills"]["shared"]
+    assert "Client uses settings.json of Work" in app.post_error("/api/profiles/delete", {"id": "work"})
+    app.post("/api/sharing", {"profile": "client", "item": "settings.json", "shared": False})  # separating: a copy of Work's
+    assert not (c / "settings.json").is_symlink() and "GH_CONFIG_DIR" in (c / "settings.json").read_text()
+
+    app.restore_all()
+    assert home.snapshot() == before

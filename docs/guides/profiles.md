@@ -96,6 +96,18 @@ Turning a switch **on** replaces the profile's own copy with a link. The old cop
 
 Both confirmations have **Show the files and folders it touches**: the own copy that goes to the backup, each item only that copy has, the link and its target, and what is created in the source profile when it does not have the item yet; when separating, the link that goes to the backup and the files copied in its place.
 
+### Share everything
+
+**Share everything…**, at the top of each profile's card, makes the profile differ from another one only by its Claude account. Pick the other profile in **With**: the source profile, or any other one. One confirmation lists what happens, and one backup holds all of it, so one **Restore** undoes it:
+
+- `skills`, `plugins`, `agents`, `commands` and `CLAUDE.md` become links to the other profile's. A link always leads to the real files: if the other profile's skills are themselves a link to the source profile's, the link goes there. What only this profile has joins the other first: its own skills, agents and commands move there; one with a name the other has too, if it differs, its own `CLAUDE.md` and its own plugins go to the backup.
+- Every project of the two profiles becomes a [shared project](projects.md#share-a-project-with-another-profile): the same conversations and memories in both. A project only this profile had moves to the other profile's folder.
+- **Also `settings.json`** shares permissions, hooks, enabled plugins, model and status line too. It also holds the profile's GitHub account and commit identity (see below), which then become the other profile's: the box is ticked by itself when both profiles use the same GitHub account, and the dialog says what changes when they do not.
+
+Projects opened later in one profile only are not shared by themselves: run **Share everything** again. Then to change account, open Claude Code with the other profile's command, or use [Continue in…](conversations.md#continue-in-another-profile) to go on with the same conversation.
+
+The item switches show *shared with …* for an item linked to a profile other than the source; unticking it gives the profile its own copy. A profile whose files others use this way cannot be deleted until they are separated.
+
 ## A GitHub account per profile
 
 Signing in to GitHub is not part of a Claude Code profile: the GitHub CLI (`gh`) keeps its sign-in in a folder, `~/.config/gh`, shared by everything you run. cc-profiles gives **every profile a GitHub CLI folder of its own**, named after it:

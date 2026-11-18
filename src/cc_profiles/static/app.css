@@ -310,6 +310,9 @@ ul.wn { margin: 0 0 6px; padding-left: 18px; } ul.wn li { margin: 3px 0; line-he
 .modal .body { margin: 12px 0 16px; display: grid; gap: 10px; }
 .modal .foot { display: flex; justify-content: flex-end; gap: 8px; }
 .modal .opt { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; }
+/* the rows are --panel-2, the buttons' own colour: on them a button takes the card's colour, a shade apart again */
+.modal .opt .btn { background: var(--panel); }
+.modal .opt .btn:hover { background: var(--btn-hover); }
 .switch { position: relative; width: 38px; height: 22px; flex: none; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; cursor: pointer; transition: background .15s; }

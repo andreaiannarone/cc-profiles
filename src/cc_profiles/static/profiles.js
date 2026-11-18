@@ -157,19 +157,22 @@ function renderSharing() {
         ${p.primary ? "" : `<button class="btn small danger" data-pdel="${p.id}">Delete</button>`}</div></div>`).join("")}</div>
     <div class="section-title">Sharing</div>
     <div class="health">${S.sharing.map(p => `<div class="hcard"><h2>${esc(p.label)} <span class="hint" style="font-weight:400">shares from ${esc(p.source)}</span></h2>
+      <div class="share"><div class="txt"><b>Everything</b><div>Skills, agents, commands, plugins, CLAUDE.md and every project, conversations included: only the account stays different</div></div>
+        <button class="btn small primary" data-pall="${p.id}">Share everything…</button></div>
       ${p.items.map(it => `<div class="share">
-        <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.own ? " · own copy" : " · not present"}
+        <div class="txt"><b>${esc(it.item)}</b><div>${esc(it.desc)}${it.shared ? "" : it.linked ? ` · shared with ${esc(it.linked)}` : it.own ? " · own copy" : " · not present"}
           ${it.only_own.length ? `<br><span class="issue">only here: ${it.only_own.slice(0, 6).map(esc).join(", ")}${it.only_own.length > 6 ? "…" : ""}</span>` : ""}</div></div>
-        <label class="switch" title="${it.shared ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
+        <label class="switch" title="${it.shared || it.linked ? "Shared" : "Separate"}"><input type="checkbox" data-share="${esc(it.item)}" data-prof="${p.id}" ${it.shared || it.linked ? "checked" : ""} aria-label="Share ${esc(it.item)}"><span></span></label>
       </div>`).join("")}</div>`).join("") || `<div class="empty">There is only one profile: create a second one to share.</div>`}</div>
     ${byFolderHtml()}
     ${githubHtml()}`;
   $("#ptemplates").onclick = manageTemplates;
   wireByFolder();
   wireGithub();
+  document.querySelectorAll("[data-pall]").forEach(b => b.onclick = () => shareEverything(b.dataset.pall));
   document.querySelectorAll("[data-share]").forEach(cb => cb.onchange = async () => {
     const p = S.sharing.find(x => x.id === cb.dataset.prof), it = p.items.find(x => x.item === cb.dataset.share);
-    const on = cb.checked;
+    const on = cb.checked && !it.linked;  // a link to another profile: unticking separates it
     const sub = on
       ? `${esc(p.label)} will use <code>${esc(it.item)}</code> from ${esc(p.source)}.` + (it.own ? ` Its current copy goes to the backup${it.only_own.length ? `, including <b>${plural(it.only_own.length, "item", "items")} ${esc(p.source)} does not have</b>: ${it.only_own.slice(0, 8).map(esc).join(", ")}` : ""}.` : "")
       : `${esc(p.label)} gets its own copy of <code>${esc(it.item)}</code>: from then on, changes no longer flow between profiles.`;
@@ -182,6 +185,48 @@ function renderSharing() {
 }
 const SHARE_NEW = ["skills", "plugins", "agents", "commands", "CLAUDE.md", "settings.json"];
 
+// Share everything: the profile keeps only its account. With another profile than the source (any
+// one), and settings.json too when asked: then the GitHub account and commit identity are that profile's.
+async function shareEverything(pid) {
+  const others = S.profiles.filter(x => x.id !== pid);
+  const gh = id => S.github?.profiles?.find(x => x.id === id)?.user || "";
+  const sameGithub = to => !!gh(pid) && gh(pid) === gh(to);
+  let to = others[0].id, settings = sameGithub(to), p;
+  const plan = async () => api(`/api/sharing/everything/preview?${new URLSearchParams({ profile: pid, to, settings: settings ? "1" : "0" })}`);
+  try { p = await plan(); } catch (e) { return toast(e.message, "", true); }
+  const li = x => `<li>${x}</li>`;
+  const says = p => {
+    const items = p.items.filter(i => i.action === "share"), projects = p.projects.filter(r => r.action === "share");
+    const done = p.items.filter(i => i.action === "already").length + p.projects.filter(r => r.action === "already").length;
+    const skipped = p.projects.filter(r => r.action === "skip");
+    if (!items.length && !projects.length) return `<p>${esc(p.profile)} already shares everything it can with ${esc(p.target)}.</p>`;
+    return `${items.length ? `<div class="section-title">Settings and extensions</div><ul>${items.map(i => li(`<b>${esc(i.item)}</b>${i.join.length ? ` · ${plural(i.join.length, "item", "items")} only ${esc(p.profile)} has ${i.join.length === 1 ? "moves" : "move"} to ${esc(p.target)}` : ""}${i.backup.length ? ` · <span class="issue">${i.backup.length === 1 && i.backup[0] === i.item ? "its own copy" : esc(i.backup.join(", ")) + ` (different in ${esc(p.target)})`} goes to the backup</span>` : ""}`)).join("")}</ul>` : ""}
+      ${projects.length ? `<div class="section-title">Projects</div><ul>${projects.map(r => li(`<code>${esc(r.pretty)}</code>${r.joins ? ` · ${plural(r.joins, "conversation", "conversations")} of ${esc(p.profile)} join` : ""}${r.holder !== p.target ? ` · held by ${esc(r.holder)}` : ""}`)).join("")}</ul>` : ""}
+      ${skipped.length ? `<p class="hint">Not shared: ${skipped.map(r => `<code>${esc(r.pretty)}</code> (${esc(r.reason)})`).join(", ")}.</p>` : ""}
+      ${done ? `<p class="hint">${plural(done, "item is", "items are")} shared already.</p>` : ""}
+      ${p.active ? `<div class="danger-box">A Claude Code session is open in ${esc(p.profile)} or ${esc(p.target)}: close it first, so it does not write into files while they move.</div>` : ""}`;
+  };
+  const ghNote = () => settings ? (sameGithub(to) ? `Both use the GitHub account <b>${esc(gh(to))}</b>: nothing changes there.` : `<span class="issue">${esc(label(pid))} will use the GitHub account and commit identity of ${esc(label(to))}${gh(to) ? ` (<b>${esc(gh(to))}</b>)` : ""}.</span>`)
+    : `It keeps its own: permissions, hooks, enabled plugins, model and status line stay separate, with its GitHub account and commit identity.`;
+  const resP = modal({ title: `Share everything: ${label(pid)}`, sub: `${esc(label(pid))} will use the same files as the profile you pick: what changes in one, the other sees too. Only the Claude account stays different.`,
+    body: `<label class="field">With <select id="sea" aria-label="Profile to share everything with">${others.map(o => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label>
+      <label class="field"><input type="checkbox" id="ses" ${settings ? "checked" : ""}> Also <code>settings.json</code></label>
+      <p class="hint" id="seg">${ghNote()}</p>
+      <div id="seplan">${says(p)}</div>
+      <p class="hint">Projects opened later in one profile only are not shared by themselves: use Share everything again. Do not use one conversation from two profiles at the same time. Everything goes to one backup, so one Restore undoes it.</p>`,
+    actions: [{ label: "Share everything", kind: "primary", value: "ok" }] });
+  const redraw = async () => {  // the dialog may be gone when the answer comes
+    try { p = await plan(); } catch (e) { const el = $("#seplan"); if (el) el.innerHTML = `<div class="danger-box">${esc(e.message)}</div>`; return; }
+    const el = $("#seplan"), g = $("#seg"); if (el) el.innerHTML = says(p); if (g) g.innerHTML = ghNote();
+  };
+  $("#sea").onchange = e => { to = e.target.value; settings = sameGithub(to); $("#ses").checked = settings; redraw(); };
+  $("#ses").onchange = e => { settings = e.target.checked; redraw(); };
+  const res = await resP;
+  if (!res) return;
+  try { await run(() => api("/api/sharing/everything", { profile: pid, to, settings })); } catch { return; }
+  loadSharing();
+}
+
 // ---------- a GitHub account per profile ----------
 // Every profile has its own GitHub CLI folder; the menu picks which signed-in account is active there.
 // The table is a draft, as in Settings: changes are marked and saved together with Save changes.
@@ -193,7 +238,7 @@ function githubHtml() {
   if (!g) return "";
   const src = esc(S.profiles[0].label);
   const account = p => {
-    if (p.shared) return `<span class="hint">the account of ${src}: its <code>settings.json</code> is shared</span>`;
+    if (p.shared) return `<span class="hint">the account of the profile its <code>settings.json</code> is shared with</span>`;
     if (!p.set_up) return `<button class="btn small" data-ghsetup="${p.id}">Give it its own folder</button>`;
     const cur = ghVal(p, "user");
     const users = [...new Set([...(p.user ? [p.user] : []), ...g.accounts])];

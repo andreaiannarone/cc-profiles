@@ -33,7 +33,7 @@ function renderProjects() {
         return `<tr>
           <td class="path mono">${esc(r.pretty)}</td>
           <td>${badge(r.expected)}</td>
-          ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem` : "—"}</td>`; }).join("")}
+          ${ids.map(id => { const s = r.in[id]; return `<td class="nums${s ? "" : " none"}" data-label="${esc(label(id))}">${s ? `${s.conv} conv · ${s.mem} mem${shareNote(r, id)}` : "—"}</td>`; }).join("")}
           <td>${r.issues.length ? r.issues.map(i => `<div class="issue ${i.kind === "orphan" ? "err" : i.kind === "unclassified" ? "note" : ""}">${esc(i.text)}</div>`).join("") : `<span class="okmark">✓ all good</span>`}</td>
           <td class="acts">${main ? `<button class="btn small${main.a === "rule" ? "" : " primary"}" data-act="${main.a}" data-name="${esc(r.name)}">${esc(main.l)}</button>` : ""}
             ${main?.a === "relink" ? `<button class="btn small" data-act="merge" data-name="${esc(r.name)}" title="Put its history into a project you already have, instead of a folder">Merge into…</button>` : ""}
@@ -44,6 +44,13 @@ function renderProjects() {
   $("#q").oninput = e => { S.q = e.target.value; const pos = e.target.selectionStart; renderProjects(); const i = $("#q"); i.focus(); i.setSelectionRange(pos, pos); };
 }
 const byName = n => S.projects.find(r => r.name === n);
+// A shared project: one profile holds the folder, the others link to it (same conversations and memories)
+const sharersOf = (r, pid) => Object.keys(r.in).filter(id => r.in[id].from === pid);
+function shareNote(r, id) {
+  const s = r.in[id], users = sharersOf(r, id);
+  if (s.from) return `<div><span class="shared-note">shared from ${esc(label(s.from))}</span></div>`;
+  return users.length ? `<div><span class="shared-note">shared with ${users.map(u => esc(label(u))).join(", ")}</span></div>` : "";
+}
 
 const PLAN = { move: to => `moves to ${to}`, merge: to => `is merged into the index of ${to}`, conflict: to => `${to} already has it: the original goes to the backup` };
 // The other previews (delete a profile, share, separate) use the same items plus a few actions of their own.
@@ -216,11 +223,17 @@ async function doManage(r) {
   const ids = S.profiles.map(p => p.id);
   const opts = [];
   for (const pid of Object.keys(r.in)) {
-    const s = r.in[pid];
-    for (const to of ids.filter(x => x !== pid)) opts.push({ label: `Move from ${label(pid)} to ${label(to)}`, info: `${s.conv} conv · ${s.mem} mem`, v: ["move", pid, to] });
-    if (!r.exists) opts.push({ label: `Relink to a folder (${label(pid)})`, info: "", v: ["relink", pid] });
+    const s = r.in[pid], users = sharersOf(r, pid);
+    if (!s.from && !users.length) {
+      for (const to of ids.filter(x => x !== pid)) opts.push({ label: `Move from ${label(pid)} to ${label(to)}`, info: `${s.conv} conv · ${s.mem} mem`, v: ["move", pid, to] });
+      if (!r.exists) opts.push({ label: `Relink to a folder (${label(pid)})`, info: "", v: ["relink", pid] });
+    }
+    if (!s.from) for (const to of ids.filter(x => x !== pid && !users.includes(x) && !r.in[x]?.from && !sharersOf(r, x).length))
+      opts.push({ label: `Share with ${label(to)}`, info: `the same conversations and memories in both, live`, v: ["share", pid, to] });
+    if (s.from) opts.push({ label: `Stop sharing in ${label(pid)}`, info: `it gets its own copy`, v: ["separate", pid] });
     if (r.exists && S.term?.supported) opts.push({ label: `Open in ${S.term.terminal} with Claude Code in ${label(pid)}`, info: "", v: ["term", pid] });
-    opts.push({ label: `Delete from ${label(pid)}`, info: "goes to the backup", v: ["delete", pid], danger: true });
+    opts.push(s.from ? { label: `Remove from ${label(pid)}`, info: `the conversations stay in ${label(s.from)}`, v: ["delete", pid], danger: true }
+      : { label: `Delete from ${label(pid)}`, info: users.length ? `stop sharing it first` : "goes to the backup", v: ["delete", pid], danger: true });
   }
   opts.push({ label: "Assign to a profile (rule)", info: r.expected ? "now: " + label(r.expected) : "unassigned", v: ["rule"] });
   const res = await modal({ title: "Manage project", sub: `<code>${esc(r.pretty)}</code>`,
@@ -234,6 +247,27 @@ async function doManage(r) {
   if (a === "delete") return doDelete(r, p1);
   if (a === "rule") return doRule(r);
   if (a === "term") return doTerminal(r, p1);
+  if (a === "share") return doShareProject(r, p1, p2);
+  if (a === "separate") return doSeparateProject(r, p1);
+}
+
+// ---------- shared project ----------
+// `to` links its projects/<name> to `holder`'s folder: both profiles see the same conversations and
+// memories, and /resume in one finds those started in the other.
+async function doShareProject(r, holder, to) {
+  let p;
+  try { p = await api(`/api/projects/share-plan?profile=${to}&project=${encodeURIComponent(r.name)}&from=${holder}`); }
+  catch (e) { return toast(e.message, "", true); }
+  let t = `${esc(p.profile)} will use the folder of this project in ${esc(p.from)}: the same ${plural(p.theirs, "conversation", "conversations")} and memories in both, and the new ones too. <code>/resume</code> in one profile finds the conversations of the other.`;
+  if (p.conversations || p.memories) t += ` What ${esc(p.profile)} has there joins them: ${plural(p.conversations, "conversation", "conversations")}, ${plural(p.memories, "memory", "memories")}.`;
+  if (p.conflicts.length) t += ` ${p.conflicts.length} already there (${p.conflicts.map(esc).join(", ")}) ${p.conflicts.length === 1 ? "goes" : "go"} to the backup.`;
+  t += ` The prompt history and the project's settings stay in each profile. Do not use one conversation from two profiles at the same time.`;
+  if (!(await confirmBox(`Share with ${label(to)}?`, `<code>${esc(r.pretty)}</code><br>${t}${openWarning([holder, to])}`, "Share"))) return;
+  try { await run(() => api("/api/projects/share", { profile: to, project: r.name, from: holder, shared: true })); } catch {}
+}
+async function doSeparateProject(r, pid) {
+  if (!(await confirmBox(`Stop sharing in ${label(pid)}?`, `<code>${esc(r.pretty)}</code><br>${esc(label(pid))} gets its own copy of the conversations and memories: from now on, new ones in one profile no longer reach the other.`, "Stop sharing"))) return;
+  try { await run(() => api("/api/projects/share", { profile: pid, project: r.name, shared: false })); } catch {}
 }
 
 // ---------- open a project in a terminal (macOS and Linux) ----------
@@ -445,7 +479,7 @@ function renderConversations() {
           <div class="convview">${c.view.messages.map(m => `<div class="msg ${m.role}"><div class="who">${{ user: "You", assistant: "Claude", tool: "Tool" }[m.role]}${m.time ? `<time>${esc(new Date(m.time).toLocaleString())}</time>` : ""}</div>
             <div class="txt">${esc(m.text)}</div></div>`).join("") || `<div class="empty">No messages to show.</div>`}</div>`}
         <div class="row"><span class="grow">Read-only. Moving takes the conversation and its file snapshots; the prompt history stays.</span>
-          <button class="btn danger" id="cdel">Delete</button><button class="btn" id="cmove">Move to…</button></div></div>` : ""}`}
+          <button class="btn danger" id="cdel">Delete</button><button class="btn" id="cmove">Move to…</button>${S.term?.supported && S.profiles.length > 1 ? `<button class="btn primary" id="ccont" title="Open it in ${esc(S.term.terminal)} with Claude Code in another profile, to go on with that account">Continue in…</button>` : ""}</div></div>` : ""}`}
     </section></div>`;
   $("#cq").oninput = e => { c.q = e.target.value; const pos = e.target.selectionStart; renderConversations(); const i = $("#cq"); i.focus(); i.setSelectionRange(pos, pos); };
   document.querySelectorAll("[data-cprof]").forEach(b => b.onclick = async () => {
@@ -466,6 +500,19 @@ function renderConversations() {
     if (S.profiles.find(p => p.id === to)?.active && !(await confirmBox("A session is open there", openWarning([to]) + "Move anyway?", "Move"))) return;
     try { await run(() => api("/api/conversations/move", { ...ctx, to })); } catch { return; }
     after();
+  };
+  const cont = $("#ccont");
+  if (cont) cont.onclick = async () => {
+    const to = await pickProfile("Continue in another profile", `<b>${esc(cur.title || cur.session)}</b> opens in ${esc(S.term.terminal)}, in the project's folder, with Claude Code in the profile you pick: the same conversation, with that profile's account.`, c.profile, "Continue");
+    if (!to) return;
+    let p;
+    try { p = await api(`/api/conversations/continue-plan?${new URLSearchParams({ ...ctx, to })}`); } catch (e) { return toast(e.message, "", true); }
+    const warn = p.recent ? `<div class="danger-box" style="margin-top:10px">It was written in the last 2 minutes: if it is still open in ${esc(label(c.profile))}, close it there first, so the two sessions do not write into it at once.</div>` : "";
+    if (!p.shared && !(await confirmBox(`Share the project with ${label(to)}?`,
+        `To find this conversation, ${esc(label(to))} must share the project with ${esc(p.holder_label)}: the same conversations and memories in both, live. What ${esc(label(to))} has there joins them; every change goes to the backup, and you can stop sharing in Projects → Manage.${warn}`, "Share and continue"))) return;
+    if (p.shared && p.recent && !(await confirmBox("Written a moment ago", warn, "Continue"))) return;
+    try { await run(() => api("/api/conversations/continue", { ...ctx, to, share: !p.shared })); } catch { return; }
+    refresh();
   };
   $("#cdel").onclick = async () => {
     if (!(await confirmBox("Delete this conversation?", `<b>${esc(cur.title || cur.session)}</b> and its file snapshots go to the backup, not erased.${openWarning([c.profile])}`, "Delete", "danger"))) return;
