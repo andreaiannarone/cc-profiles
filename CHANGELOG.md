@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-18
+
 ### Added
 - **Edit → Folder**: rename a profile's folder (`~/.claude-noa` → `~/.claude-clienti`). The paths Claude Code wrote into its files, its launcher or alias, `config.json` and the links of other profiles into it follow, and the dialog lists them while you type. Refused while a session is open in the profile; log in again with `/login` afterwards. One backup undoes it.
 
@@ -519,7 +521,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.8...v0.7.9
