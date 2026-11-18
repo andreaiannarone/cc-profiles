@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - **Shared projects**: Projects → Manage → **Share with …** lets two profiles use the same folder of a project, so they see the same conversations and memories, live, and `/resume` in one finds those started in the other. Work on one project with two accounts. **Stop sharing** gives a profile its own copy again; moving, relinking and merging are refused while a project is shared.
 - **Continue in…** in Conversations: the same conversation, in a terminal, with Claude Code in another profile (another account) and `--resume`, for when one account reaches its limits. It shares the project first if needed, and links the conversation's file snapshots for `/rewind`.
-- **Share everything…** in Profiles → Sharing: a profile uses the source profile's skills, agents, commands, plugins, `CLAUDE.md` and every project, so only its account differs. What only it has joins the source first; `settings.json` stays its own (GitHub account and commit identity). One backup undoes all of it.
+- **Share everything…** in Profiles → Sharing: a profile uses another profile's skills, agents, commands, plugins, `CLAUDE.md` and every project, so only its Claude account differs. The other profile can be the source or any one. What only it has joins the other first. **Also settings.json** shares permissions, hooks, plugins and model too, with the GitHub account: ticked by itself when both profiles use the same GitHub account. One backup undoes all of it.
 
 ## [0.8.0] - 2026-11-17
 

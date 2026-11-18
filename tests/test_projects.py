@@ -617,6 +617,9 @@ def test_share_everything_leaves_only_the_account_different(home, app_factory):
     home.write(".claude-work/CLAUDE.md", "Work's instructions\n")
     home.write(".claude-work/settings.json", '{"env": {"GH_CONFIG_DIR": "/x"}}\n')
     home.conversation("work", "code/work/cli", "s-cli")
+    home.profile("client")
+    home.write(".claude-client/settings.json", '{"model": "haiku"}\n')
+    home.conversation("client", "code/client/site", "s-site")
     before = home.snapshot()
     app = app_factory()
     api, cli, blog = (san(home.path(p)) for p in ("code/work/api", "code/work/cli", "code/personal/blog"))
@@ -624,7 +627,7 @@ def test_share_everything_leaves_only_the_account_different(home, app_factory):
     assert "source profile" in app.post_error("/api/sharing/everything", {"profile": "default"})
     p = app.get("/api/sharing/everything/preview?profile=work")
     items = {i["item"]: i for i in p["items"]}
-    assert "settings.json" not in items and items["skills"]["join"] == ["deploy"] and items["skills"]["backup"] == ["review"]
+    assert items["settings.json"]["action"] == "skip" and items["skills"]["join"] == ["deploy"] and items["skills"]["backup"] == ["review"]
     assert items["CLAUDE.md"]["backup"] == ["CLAUDE.md"]
     projects = {r["name"]: r for r in p["projects"]}
     assert {n: r["action"] for n, r in projects.items() if n in (api, cli, blog)} == {api: "share", cli: "share", blog: "share"}
@@ -642,6 +645,22 @@ def test_share_everything_leaves_only_the_account_different(home, app_factory):
         assert (w / "projects" / name).is_symlink() and home.path(f".claude/projects/{name}").is_dir()
     assert (home.path(f".claude/projects/{cli}") / "s-cli.jsonl").exists()
     assert "already shares everything" in app.post_error("/api/sharing/everything", {"profile": "work"})
+
+    # with another profile than the source, settings.json too: links lead to the real files, never to a link
+    p = app.get("/api/sharing/everything/preview?profile=client&to=work&settings=1")
+    assert p["target"] == "Work" and {i["item"]: i["action"] for i in p["items"]}["settings.json"] == "share"
+    app.post("/api/sharing/everything", {"profile": "client", "to": "work", "settings": True})
+    c = home.path(".claude-client")
+    assert os.path.realpath(c / "skills") == os.path.realpath(home.path(".claude/skills"))  # Work's is a link to Default's
+    assert os.readlink(c / "skills") == "../.claude/skills"
+    assert os.path.realpath(c / "settings.json") == os.path.realpath(w / "settings.json") and not (w / "settings.json").is_symlink()
+    site = san(home.path("code/client/site"))
+    assert (c / "projects" / site).is_symlink() and home.path(f".claude-work/projects/{site}/s-site.jsonl").exists()
+    sharing = {x["id"]: {i["item"]: i for i in x["items"]} for x in app.get("/api/sharing")}
+    assert sharing["client"]["settings.json"]["linked"] == "Work" and sharing["client"]["skills"]["shared"]
+    assert "Client uses settings.json of Work" in app.post_error("/api/profiles/delete", {"id": "work"})
+    app.post("/api/sharing", {"profile": "client", "item": "settings.json", "shared": False})  # separating: a copy of Work's
+    assert not (c / "settings.json").is_symlink() and "GH_CONFIG_DIR" in (c / "settings.json").read_text()
 
     app.restore_all()
     assert home.snapshot() == before

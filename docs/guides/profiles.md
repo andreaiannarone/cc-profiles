@@ -98,13 +98,15 @@ Both confirmations have **Show the files and folders it touches**: the own copy 
 
 ### Share everything
 
-**Share everything…**, at the top of each profile's card, makes the profile differ from the source profile only by its account. One confirmation lists what happens, and one backup holds all of it, so one **Restore** undoes it:
+**Share everything…**, at the top of each profile's card, makes the profile differ from another one only by its Claude account. Pick the other profile in **With**: the source profile, or any other one. One confirmation lists what happens, and one backup holds all of it, so one **Restore** undoes it:
 
-- `skills`, `plugins`, `agents`, `commands` and `CLAUDE.md` become links to the source profile's. What only this profile has joins the source first: its own skills, agents and commands move there; one with a name the source has too, its own `CLAUDE.md` and its own plugins go to the backup.
-- Every project of the two profiles becomes a [shared project](projects.md#share-a-project-with-another-profile): the same conversations and memories in both. A project only this profile had moves to the source profile's folder.
-- `settings.json` stays the profile's own: it holds its GitHub account and commit identity (see below). Share it with its switch if you want the same permissions and hooks too, and the same GitHub account.
+- `skills`, `plugins`, `agents`, `commands` and `CLAUDE.md` become links to the other profile's. A link always leads to the real files: if the other profile's skills are themselves a link to the source profile's, the link goes there. What only this profile has joins the other first: its own skills, agents and commands move there; one with a name the other has too, if it differs, its own `CLAUDE.md` and its own plugins go to the backup.
+- Every project of the two profiles becomes a [shared project](projects.md#share-a-project-with-another-profile): the same conversations and memories in both. A project only this profile had moves to the other profile's folder.
+- **Also `settings.json`** shares permissions, hooks, enabled plugins, model and status line too. It also holds the profile's GitHub account and commit identity (see below), which then become the other profile's: the box is ticked by itself when both profiles use the same GitHub account, and the dialog says what changes when they do not.
 
 Projects opened later in one profile only are not shared by themselves: run **Share everything** again. Then to change account, open Claude Code with the other profile's command, or use [Continue in…](conversations.md#continue-in-another-profile) to go on with the same conversation.
+
+The item switches show *shared with …* for an item linked to a profile other than the source; unticking it gives the profile its own copy. A profile whose files others use this way cannot be deleted until they are separated.
 
 ## A GitHub account per profile
 

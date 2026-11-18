@@ -6,7 +6,7 @@ import filecmp
 import os
 import shutil
 
-from .core import ApiError, Backup, active_session, pretty, profile, profiles, write_text
+from .core import ApiError, Backup, active_session, pretty, profile, profiles, session_hint, write_text
 from .paths import memory_sharers, path_index, project_folders, project_holder, project_sharers
 from .projects import share_project_into
 
@@ -53,12 +53,17 @@ def share_state(prof, item, kind):
     t = os.path.join(prof["dir_abs"], item)
     s = os.path.join(primary()["dir_abs"], item)
     shared = os.path.islink(t) and os.path.realpath(t) == os.path.realpath(s)
-    own = os.path.lexists(t) and not shared
+    linked = None  # the profile a link to elsewhere leads into (Share everything with another profile)
+    if os.path.islink(t) and not shared:
+        real = os.path.realpath(t)
+        linked = next((p["label"] for p in profiles() if p["id"] != prof["id"]
+                       and (real + os.sep).startswith(os.path.realpath(p["dir_abs"]) + os.sep)), "another folder")
+    own = os.path.lexists(t) and not shared and not linked
     only_own = []
     if own and kind == "dir" and os.path.isdir(t):
         theirs = set(os.listdir(s)) if os.path.isdir(s) else set()
         only_own = sorted(n for n in os.listdir(t) if n not in theirs and not n.startswith("."))
-    return {"shared": shared, "own": own, "only_own": only_own, "source_exists": os.path.lexists(s)}
+    return {"shared": shared, "linked": linked, "own": own, "only_own": only_own, "source_exists": os.path.lexists(s)}
 
 
 def list_sharing():
@@ -103,8 +108,9 @@ def share_plan(pid, item, on):
                               "to": "backup"})
         items.append({"action": "link", "item": item, "from": pretty(t), "to": pretty(s)})
     else:
-        if not st["shared"]:
+        if not st["shared"] and not st["linked"]:
             raise ApiError("Not shared")
+        s = os.path.realpath(t)
         items.append({"action": "stash", "item": f"{item} (the link)", "from": pretty(t), "to": "backup"})
         n = sum(len(fs) for _, _, fs in os.walk(s)) if kind == "dir" else 1
         items.append({"action": "copy", "item": item, "from": pretty(s), "to": pretty(t), "files": n})
@@ -133,8 +139,9 @@ def op_share(pid, item, on):
             bk.note(f"the own copy of {prof['label']} is kept in the backup")
         msg = f"{item}: {prof['label']} now uses the one from {src['label']}."
     else:
-        if not st["shared"]:
+        if not st["shared"] and not st["linked"]:
             raise ApiError("Not shared")
+        s = os.path.realpath(t)
         bk.stash(t, f"{item}-link")  # the link itself: restoring puts it back
         if kind == "dir":
             shutil.copytree(s, t, symlinks=True)
@@ -146,14 +153,16 @@ def op_share(pid, item, on):
 
 
 # ---------------------------------------------------------------------------
-# Share everything: a profile that differs from the source profile only by its account
+# Share everything: a profile that differs from another one only by its account
 # ---------------------------------------------------------------------------
-# Every item of SHARE_ITEMS but settings.json (it holds the profile's GitHub account and commit
-# identity, see github.py), and every project of the two profiles (shared project). What the
-# profile has only for itself joins the source's first: skills, agents and commands it alone has
-# move there, its conversations and memories join the project's; the rest (a clash, its own
-# CLAUDE.md or plugins) goes to the backup. One backup for all of it.
-EVERYTHING_ITEMS = [(i, k, d) for i, k, d in SHARE_ITEMS if i != "settings.json"]
+# The profile's items of SHARE_ITEMS become links to the other profile's (to the source profile by
+# default, or to any profile), and every project of the two becomes a shared project. A link
+# always points to the real folder or file: when the other profile's item is itself a link (to the
+# source, usually), the profile links where that one leads, never to the link. settings.json goes
+# only when asked: it holds the profile's GitHub account and commit identity (github.py), which
+# then become the other profile's. What the profile has only for itself joins the other first:
+# skills, agents and commands it alone has move there, its conversations and memories join the
+# project's; the rest (a clash that differs, its own CLAUDE.md or plugins) goes to the backup.
 MERGED_ITEMS = ("skills", "agents", "commands")
 
 
@@ -170,78 +179,87 @@ def same_tree(a, b):
     return False
 
 
-def everything_plan(pid):
+def everything_target(pid, to=None):
+    prof = profile(pid)
+    target = profile(to) if to else primary()
+    if prof["id"] == target["id"]:
+        raise ApiError(f"Pick another profile than {prof['label']} to share everything with"
+                       if to else f"{prof['label']} is the source profile: share everything from another profile")
+    return prof, target
+
+
+def everything_plan(pid, to=None, settings=False):
     """What Share everything would do for the profile, without doing it."""
-    prof, src = profile(pid), primary()
-    if prof["id"] == src["id"]:
-        raise ApiError(f"{src['label']} is the source profile: share everything from another profile")
+    prof, target = everything_target(pid, to)
     items = []
-    for item, kind, desc in EVERYTHING_ITEMS:
-        st = share_state(prof, item, kind)
-        if st["shared"]:
+    for item, kind, desc in SHARE_ITEMS:
+        if item == "settings.json" and not settings:
+            items.append({"item": item, "desc": desc, "action": "skip"})
+            continue
+        t, s = os.path.join(prof["dir_abs"], item), os.path.join(target["dir_abs"], item)
+        dest = os.path.realpath(s)
+        if os.path.islink(t) and os.path.realpath(t) == dest:
             items.append({"item": item, "desc": desc, "action": "already"})
             continue
         row = {"item": item, "desc": desc, "action": "share", "join": [], "backup": []}
-        t = os.path.join(prof["dir_abs"], item)
-        if st["own"] and os.path.islink(t):  # a link to a folder elsewhere: never move files out of it
+        if os.path.islink(t):  # a link to somewhere else: only the link goes, never files out of it
             row["backup"] = [item]
-        elif st["own"] and kind == "dir" and item in MERGED_ITEMS:
-            row["join"] = st["only_own"]
-            theirs = os.path.join(src["dir_abs"], item)
-            row["backup"] = sorted(n for n in os.listdir(t) if not n.startswith(".") and n not in st["only_own"]
-                                   and os.path.lexists(os.path.join(theirs, n))
-                                   and not same_tree(os.path.join(t, n), os.path.join(theirs, n)))
-        elif st["own"]:
-            s_path = os.path.join(src["dir_abs"], item)
-            row["backup"] = [] if same_tree(t, s_path) or (kind == "dir" and not os.listdir(t)) else [item]
+        elif kind == "dir" and os.path.isdir(t) and item in MERGED_ITEMS:
+            theirs = set(os.listdir(dest)) if os.path.isdir(dest) else set()
+            mine = [n for n in sorted(os.listdir(t)) if not n.startswith(".")]
+            row["join"] = [n for n in mine if n not in theirs]
+            row["backup"] = [n for n in mine if n in theirs and not same_tree(os.path.join(t, n), os.path.join(dest, n))]
+        elif os.path.lexists(t) and not same_tree(t, dest) and not (kind == "dir" and os.path.isdir(t) and not os.listdir(t)):
+            row["backup"] = [item]
         items.append(row)
     projects = []
     idx = path_index()
-    names = sorted({n for n, _, _ in project_folders(src, conversations=False)}
+    names = sorted({n for n, _, _ in project_folders(target, conversations=False)}
                    | {n for n, _, _ in project_folders(prof, conversations=False)})
     for name in names:
         row = {"name": name, "pretty": pretty(idx.get(name)) or name}
         mine = os.path.join(prof["dir_abs"], "projects", name)
-        theirs = os.path.join(src["dir_abs"], "projects", name)
-        holder = project_holder(src, name) or src
+        theirs = os.path.join(target["dir_abs"], "projects", name)
+        holder = project_holder(target, name) or target
         if os.path.islink(mine):
             same = os.path.realpath(mine) == os.path.realpath(theirs)
             row.update(action="already" if same else "skip",
                        reason="" if same else "it uses this project from another profile")
-        elif project_sharers(prof, name) or memory_sharers(prof, name):
-            row.update(action="skip", reason="other profiles use it, or its memory, from here")
         elif holder["id"] == prof["id"]:
             row.update(action="already")
+        elif project_sharers(prof, name) or memory_sharers(prof, name):
+            row.update(action="skip", reason="other profiles use it, or its memory, from here")
         elif os.path.lexists(mine) and not os.path.isdir(mine):
             row.update(action="skip", reason="not a folder")
         else:
             convs = [e for e in os.listdir(mine) if e.endswith(".jsonl")] if os.path.isdir(mine) else []
-            row.update(action="share", holder=holder["label"], joins=len(convs), new=not os.path.lexists(theirs)
-                       and holder["id"] == src["id"])
+            row.update(action="share", holder=holder["label"], joins=len(convs), new=not os.path.lexists(theirs))
         projects.append(row)
-    return {"profile": prof["label"], "source": src["label"], "items": items, "projects": projects,
-            "active": bool(active_session(prof) or active_session(src))}
+    return {"profile": prof["label"], "to": target["id"], "target": target["label"], "source": target["label"],
+            "items": items, "projects": projects, "settings": settings,
+            "active": bool(active_session(prof) or active_session(target))}
 
 
-def op_share_everything(pid):
-    plan = everything_plan(pid)
-    prof, src = profile(pid), primary()
+def op_share_everything(pid, to=None, settings=False):
+    plan = everything_plan(pid, to, settings)
+    prof, target = everything_target(pid, to)
     todo_items = [r for r in plan["items"] if r["action"] == "share"]
     todo_projects = [r for r in plan["projects"] if r["action"] == "share"]
     if not todo_items and not todo_projects:
-        raise ApiError(f"{prof['label']} already shares everything it can with {src['label']}")
-    bk = Backup("share-everything", f"{prof['label']} shares everything with {src['label']}")
+        raise ApiError(f"{prof['label']} already shares everything it can with {target['label']}")
+    bk = Backup("share-everything", f"{prof['label']} shares everything with {target['label']}")
     kinds = {i: k for i, k, _ in SHARE_ITEMS}
     for r in todo_items:
         item, kind = r["item"], kinds[r["item"]]
-        t, s = os.path.join(prof["dir_abs"], item), os.path.join(src["dir_abs"], item)
-        if not os.path.lexists(s):
+        t = os.path.join(prof["dir_abs"], item)
+        s = os.path.realpath(os.path.join(target["dir_abs"], item))  # the real one, never a link
+        if not os.path.lexists(s):  # the other profile does not have it yet: create it there, empty
             if kind == "dir":
                 bk.mkdir(s)
             else:
                 bk.copy(s)
-                write_text(s, "")
-        for n in r["join"]:  # what only this profile has moves to the source
+                write_text(s, "{}\n" if item.endswith(".json") else "")
+        for n in r["join"]:  # what only this profile has moves to the other
             a, b = os.path.join(t, n), os.path.join(s, n)
             shutil.move(a, b)
             bk.moved(a, b)
@@ -249,13 +267,13 @@ def op_share_everything(pid):
         os.symlink(os.path.relpath(s, os.path.dirname(t)), t)
         bk.created(t)
         if r["join"]:
-            bk.note(f"{item}: {len(r['join'])} of {prof['label']} joined {src['label']}'s")
+            bk.note(f"{item}: {len(r['join'])} of {prof['label']} joined {target['label']}'s")
     joined = 0
     for r in todo_projects:
         name = r["name"]
-        holder = project_holder(src, name) or src
+        holder = project_holder(target, name) or target
         hd = os.path.join(holder["dir_abs"], "projects", name)
-        if not os.path.lexists(hd):  # only this profile has it: the source holds it from now on
+        if not os.path.lexists(hd):  # only this profile has it: the other holds it from now on
             bk.mkdir(hd)
         joined += share_project_into(prof, holder, name, bk)
     parts = []
@@ -263,9 +281,24 @@ def op_share_everything(pid):
         parts.append(", ".join(r["item"] for r in todo_items))
     if todo_projects:
         parts.append(f"{len(todo_projects)} project{'s' if len(todo_projects) != 1 else ''}")
-    msg = f"{prof['label']} now shares {' and '.join(parts)} with {src['label']}."
+    msg = f"{prof['label']} now shares {' and '.join(parts)} with {target['label']}."
     if joined:
         msg += f" {joined} of its conversations joined them."
-    msg += (" settings.json stays its own (GitHub account and commit identity). Projects opened later in one"
-            " profile only: run Share everything again.")
+    if not settings:
+        msg += " settings.json stays its own (GitHub account and commit identity)."
+    msg += " Projects opened later in one profile only: run Share everything again." + session_hint(prof)
     return {"message": msg, "backup": bk.close()}
+
+
+def item_users(prof):
+    """Other profiles whose shared items lead into this profile's folder (deleting it breaks them)."""
+    root = os.path.realpath(prof["dir_abs"]) + os.sep
+    out = {}
+    for p in profiles():
+        if p["id"] == prof["id"]:
+            continue
+        for item, _, _ in SHARE_ITEMS:
+            t = os.path.join(p["dir_abs"], item)
+            if os.path.islink(t) and os.path.realpath(t).startswith(root):
+                out.setdefault(p["label"], []).append(item)
+    return out
