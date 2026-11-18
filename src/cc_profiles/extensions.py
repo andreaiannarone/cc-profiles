@@ -721,21 +721,49 @@ def op_connector(pid, name, enabled):
 
 
 def op_connector_forget(pid, name):
-    """Take a connector off the profile's list, for one removed or renamed on claude.ai.
-    If it still exists, Claude Code adds it back at its next session."""
+    """Take a connector off the profile, for one removed or renamed on claude.ai: off the list of
+    .claude.json and, when the last check found it gone from the account, its deny rules too (they
+    block nothing any more). If it still exists, Claude Code adds it back at its next session."""
     prof = profile(pid)
     cfg = load_claude_json(prof)
-    if name not in seen_connectors(cfg):
-        raise ApiError(f"Unknown connector: {name}", 404)
     rules = connector_rules(name)
-    if any(r in deny_list(d) for d, _ in settings_pair(prof).values() for r in rules):
-        raise ApiError(f"{name} is blocked in {prof['label']}: turn it on first, so no deny rule is left behind")
+    files = settings_pair(prof)
+    blocked = [which for which, (d, _) in files.items() if any(r in deny_list(d) for r in rules)]
+    if name not in seen_connectors(cfg) and not blocked:
+        raise ApiError(f"Unknown connector: {name}", 404)
+    if blocked:
+        live = live_connectors(prof)
+        if live is None or name in live:
+            raise ApiError(f"{name} is blocked in {prof['label']}" + (
+                ": check the account's connectors first (Check now), or turn it on first" if live is None else
+                " and still on your claude.ai account: turn it on first, so no deny rule is left behind"))
+        shared = [w for w in blocked if os.path.islink(settings_files(prof)[w])]
+        if shared:
+            raise ApiError(f"The deny rule of {name} is in {os.path.basename(settings_files(prof)[shared[0]])}, shared "
+                           f"with another profile, whose account may have it: turn it on there, or separate the file first")
+        files = settings_pair(prof, writing=True)
     bk = Backup("connector-forget", f"Forget claude.ai connector {name} ({prof['label']})")
-    bk.copy(prof["config_abs"], "claude.json")
-    cfg[CONNECTORS_SEEN] = [n for n in cfg[CONNECTORS_SEEN] if n != CONNECTOR_PREFIX + name]
-    write_json(prof["config_abs"], cfg)
-    return {"message": f"{name} forgotten in {prof['label']}. If it is still connected on claude.ai, "
-                       f"it comes back at the next Claude Code session.", "backup": bk.close()}
+    for which in blocked:
+        data = files[which][0]
+        perms = dict(data["permissions"])
+        deny = [r for r in deny_list(data) if r not in rules]
+        if deny:
+            perms["deny"] = deny
+        else:
+            perms.pop("deny", None)
+        if perms:
+            data["permissions"] = perms
+        else:
+            data.pop("permissions", None)
+        save_settings_file(prof, which, data, bk)
+        bk.note(f"removed deny {rules[0]} in {os.path.basename(settings_files(prof)[which])}")
+    if name in seen_connectors(cfg):
+        bk.copy(prof["config_abs"], "claude.json")
+        cfg[CONNECTORS_SEEN] = [n for n in cfg[CONNECTORS_SEEN] if n != CONNECTOR_PREFIX + name]
+        write_json(prof["config_abs"], cfg)
+    return {"message": f"{name} forgotten in {prof['label']}" + (", with its deny rule" if blocked else "")
+                       + ". If it is still connected on claude.ai, it comes back at the next Claude Code session.",
+            "backup": bk.close()}
 
 
 def op_connectors_all(pid, enabled):

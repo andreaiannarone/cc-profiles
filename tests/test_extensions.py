@@ -235,11 +235,16 @@ cat "$HOME/mcp-list.txt"
     assert sorted(listed) == ["Gmail", "Google Drive", "Linear", "Old Blocked"]  # Linear: new, not seen yet
     assert listed["Linear"]["on_account"] and not listed["Linear"]["seen"]
     assert listed["Old Blocked"]["on_account"] is False and listed["Old Blocked"]["blocked"]
-    # turned on, its rule goes; the next sync takes it off the list
-    app.post("/api/connectors/set", {"profile": "default", "name": "Old Blocked", "enabled": True})
-    assert app.get("/api/connectors/check?profile=default")["gone"] == ["Old Blocked"]
-    app.post("/api/connectors/sync", {"profile": "default"})
+    # blocked and gone from the account: Forget takes it off the list with its deny rule, in one step
+    msg = app.post("/api/connectors/forget", {"profile": "default", "name": "Old Blocked"})["message"]
+    assert "with its deny rule" in msg
+    assert "mcp__claude_ai_Old_Blocked" not in home.path(".claude/settings.json").read_text()
+    assert "claude.ai Old Blocked" not in json.loads(home.path(".claude.json").read_text())["claudeAiMcpEverConnected"]
+    assert "Old Blocked" not in [c["name"] for c in app.get("/api/connectors?profile=default")["connectors"]]
     assert "up to date" in app.post("/api/connectors/sync", {"profile": "default"})["message"]
+    # one still on the account keeps its rule until it is turned on
+    app.post("/api/connectors/set", {"profile": "default", "name": "Gmail", "enabled": False})
+    assert "still on your claude.ai account" in app.post_error("/api/connectors/forget", {"profile": "default", "name": "Gmail"})
 
     # once an hour, unless asked again; the default profile runs without CLAUDE_CONFIG_DIR
     app.get("/api/connectors/check?profile=default")
