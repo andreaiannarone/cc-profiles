@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Share everything…** in Profiles → Sharing: a profile uses another profile's skills, agents, commands, plugins, `CLAUDE.md` and every project, so only its Claude account differs. The other profile can be the source or any one. What only it has joins the other first. **Also settings.json** shares permissions, hooks, plugins and model too, with the GitHub account: ticked by itself when both profiles use the same GitHub account. One backup undoes all of it.
 
 ### Fixed
+- Projects → Manage: the **Choose** buttons had the same colour as their rows in the dark theme, so they barely showed. They now take the card's colour, a shade apart, in both themes.
 - MCP → claude.ai connectors: a blocked connector the account no longer has (removed on claude.ai, or come with a copied `settings.json`) stayed listed, and taking it off needed two steps (turn it on, then Forget). **Forget** now does it in one, deny rule included, once Check now has confirmed it is gone from the account.
 
 ## [0.8.0] - 2026-11-17
