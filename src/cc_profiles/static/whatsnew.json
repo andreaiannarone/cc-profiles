@@ -1,6 +1,18 @@
 {
  "releases": [
   {
+   "version": "0.8.2",
+   "date": "2026-11-18",
+   "sections": [
+    {
+     "title": "Added",
+     "items": [
+      "**Edit → Folder**: rename a profile's folder (`~/.claude-noa` → `~/.claude-clienti`). The paths Claude Code wrote into its files, its launcher or alias, `config.json` and the links of other profiles into it follow, and the dialog lists them while you type. Refused while a session is open in the profile; log in again with `/login` afterwards. One backup undoes it."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.8.1",
    "date": "2026-11-18",
    "sections": [
@@ -151,24 +163,6 @@
      "title": "Changed",
      "items": [
       "The plugin's `/cc-profiles:open` has Claude run `cc-profiles open` with its Bash tool, which asks for permission the first time, instead of running it by itself: the Claude plugin directory accepts commands that run by themselves only from Verified organizations. `/cc-profiles`, added by the app, still opens it at once."
-     ]
-    }
-   ]
-  },
-  {
-   "version": "0.7.2",
-   "date": "2026-11-08",
-   "sections": [
-    {
-     "title": "Added",
-     "items": [
-      "A **Privacy** page in the documentation: what cc-profiles reads, what it keeps on your computer, and the services it talks to. The plugin links it (`privacyPolicyUrl`)."
-     ]
-    },
-    {
-     "title": "Fixed",
-     "items": [
-      "The README and the Health guide said cc-profiles reaches only PyPI and the Claude Code installer: they now also list Anthropic (the plan limits, with each profile's own sign-in) and GitHub's public API (commit identities)."
      ]
     }
    ]
