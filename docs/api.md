@@ -55,6 +55,7 @@ The UI talks to the server through a small JSON API. It is an internal API, made
 | `GET /api/settings` | `profile` | settings fields (value, source, options, other profiles), permissions, `CLAUDE.md`, raw files, global info |
 | `GET /api/projects/merge/preview` | `project`, `profile`, `into` (another project of the same profile, on disk) | `{from, into, conversations, memories, prompts, conflicts}`: what merging would move, and the files the target already has. Changes nothing |
 | `GET /api/projects/move/preview` | `project`, `from`, `to` | `{items: [{action, item, from, to}], prompts, settings, history, config}`: what a move would do; `action` is `move`, `merge` or `conflict`. Changes nothing |
+| `GET /api/profiles/rename-folder/preview` | `id`, `name` | `{profile, from, to, command, files, links, link_count}`: what renaming the folder would rewrite. Changes nothing |
 | `GET /api/profiles/delete/preview` | `id`, `merge_into` (optional) | `{items: [{action, item, from, to}], projects, conversations, memories, prompts, settings, active, folder, config, into}`: what deleting would do; `action` is `move`, `merge`, `conflict`, `stash` (goes to the backup) or `edit` (a line or entry removed from a file). Changes nothing |
 | `GET /api/sharing/everything/preview` | `profile`, `to` (default: the source profile), `settings` (`1`: settings.json too) | `{profile, source, items: [{item, action, join, backup}], projects: [{name, pretty, action, reason, holder, joins, new}], active}`; `action` is `share`, `already` or `skip`. Changes nothing |
 | `GET /api/sharing/preview` | `profile`, `item`, `shared` (`1` to share, `0` to separate) | `{items: [{action, item, from, to}], source, profile, only_own}`; `action` is `create` (made empty in the source), `stash`, `only-here` (only the own copy has it), `link` or `copy`. Changes nothing |
@@ -172,6 +173,7 @@ Issue kinds in `/api/projects`: `orphan` (folder gone), `profile` (content in a 
 | `POST /api/templates/delete` | `name`: the file goes to the backup |
 | `POST /api/templates/create` | `name`, `label`, `id`, `share` (as in `/api/profiles/create`: those items are linked to the source profile instead of being filled from the template): a new profile from the template, through the import code |
 | `POST /api/profiles/update` | `id`, `label`, `command` |
+| `POST /api/profiles/rename-folder` | `id`, `name` (`clienti` or `.claude-clienti`): the folder, the paths in its files, its launcher or alias, `config.json` and the links of other profiles into it |
 | `POST /api/profiles/delete` | `id`, `merge_into` (optional), `force` (skip the open-session check) |
 | `POST /api/backups/restore` | `name` |
 | `POST /api/backups/delete` | `name` |

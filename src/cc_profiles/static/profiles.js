@@ -519,15 +519,39 @@ async function manageTemplates() {
 }
 async function editProfile(id) {
   const p = S.profiles.find(x => x.id === id);
-  const res = await modal({ title: `Edit ${p.label}`,
-    sub: `The folder <code>${esc(p.dir)}</code> does not change: renaming it would break the paths stored inside the profile.`,
+  const base = p.dir.split("/").pop(), parent = p.dir.slice(0, p.dir.length - base.length);
+  const folder = base.startsWith(".claude-") ? base.slice(8) : base;
+  const resP = modal({ title: `Edit ${p.label}`, sub: `<code>${esc(p.dir)}</code>`,
     body: `<div class="form">
       <label class="f">Name (UI and status line)<input class="text" id="pe-label" value="${esc(p.label)}"></label>
       <label class="f">Command${p.primary ? " (this is Claude Code itself and cannot change)" : " (launcher in ~/.local/bin)"}
-        <input class="text" id="pe-cmd" value="${esc(p.command)}" ${p.primary ? "disabled" : ""}></label></div>`,
+        <input class="text" id="pe-cmd" value="${esc(p.command)}" ${p.primary ? "disabled" : ""}></label>
+      <label class="f">Folder${p.primary ? " (where Claude Code looks by default: it cannot change)" : ` (${esc(parent)}.claude-…)`}
+        <input class="text" id="pe-dir" value="${esc(folder)}" ${p.primary ? "disabled" : ""} autocomplete="off" spellcheck="false"></label>
+      <div class="hint" id="pe-dirplan" aria-live="polite"></div></div>`,
     actions: [{ label: "Save", kind: "primary", value: "ok" }] });
+  const inp = $("#pe-dir"), box = $("#pe-dirplan");
+  let asked = 0;
+  const plan = async () => {
+    const name = inp.value.trim(), n = ++asked;
+    if (p.primary || !name || name === folder) { box.innerHTML = ""; return; }
+    let r;
+    try { r = await api(`/api/profiles/rename-folder/preview?${new URLSearchParams({ id, name })}`); }
+    catch (e) { if (n === asked && box.isConnected) box.innerHTML = `<span class="issue">${esc(e.message)}</span>`; return; }
+    if (n !== asked || !box.isConnected) return;
+    box.innerHTML = `<code>${esc(r.from)}</code> becomes <code>${esc(r.to)}</code>`
+      + (r.files.length ? `; the paths in ${r.files.map(f => `<code>${esc(f)}</code>`).join(", ")} follow` : "")
+      + (r.link_count ? `; ${plural(r.link_count, "link", "links")} of ${esc(r.links.join(", "))} into it ${r.link_count === 1 ? "follows" : "follow"}` : "")
+      + `. <span class="issue">Then log in again with /login in ${esc(r.command || r.profile)}: the login is kept under the folder's old name.</span>`;
+  };
+  if (!p.primary) inp.oninput = plan;
+  const res = await resP;
   if (!res) return;
-  try { await run(() => api("/api/profiles/update", { id, label: $("#pe-label", res.el).value, command: $("#pe-cmd", res.el).value })); } catch { return; }
+  const label = $("#pe-label", res.el).value, command = $("#pe-cmd", res.el).value, name = p.primary ? "" : $("#pe-dir", res.el).value.trim();
+  try {
+    if (label.trim() !== p.label || (!p.primary && command.trim() !== p.command)) await run(() => api("/api/profiles/update", { id, label, command }));
+    if (name && name !== folder) await run(() => api("/api/profiles/rename-folder", { id, name }));
+  } catch {}
   await refresh(); loadSharing();
 }
 async function deleteProfile(id) {

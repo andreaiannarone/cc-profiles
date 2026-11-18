@@ -106,7 +106,7 @@ from .transfer import IMPORT_MAX, export_profile, op_import_profile
 from .autoexport import export_status, op_auto_export, op_restore_export, op_run_export, profiles_with_exports
 from .templates import list_templates, op_create_from_template, op_template_delete, op_template_save
 from .plugins import list_plugins, op_plugin_copy, op_plugin_enable
-from .editprofile import delete_plan, op_delete_profile, op_update_profile
+from .editprofile import delete_plan, op_delete_profile, op_rename_folder, op_update_profile, rename_folder_plan
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
 from .macapp import app_status, op_install_app
@@ -335,6 +335,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/sharing/preview": lambda: share_plan(q["profile"], q["item"], q["shared"] == "1"),
                 "/api/sharing/everything/preview": lambda: everything_plan(q["profile"], q.get("to") or None, q.get("settings") == "1"),
                 "/api/profiles/delete/preview": lambda: delete_plan(q["id"], q.get("merge_into") or None),
+                "/api/profiles/rename-folder/preview": lambda: rename_folder_plan(q["id"], q.get("name")),
                 "/api/settings/field/all/preview": lambda: setting_all_plan(q["profile"], q["key"]),
                 "/api/statusline": lambda: get_statusline(q["profile"]),
                 "/api/statusline/preview": lambda: statusline_preview(q["profile"], q.get("parts", ""), q.get("separator", "space"),
@@ -487,6 +488,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/browser/chrome-off": lambda: op_chrome_off(b["profile"]),
                 "/api/browser/chrome-off/all": lambda: op_chrome_off_all(),
                 "/api/profiles/update": lambda: op_update_profile(b["id"], b.get("label"), b.get("command")),
+                "/api/profiles/rename-folder": lambda: op_rename_folder(b["id"], b.get("name")),
                 "/api/profiles/restore-export": lambda: op_restore_export(b["id"]),
                 "/api/autoexport": lambda: op_auto_export(b.get("every")),
                 "/api/autoexport/run": lambda: op_run_export(),
