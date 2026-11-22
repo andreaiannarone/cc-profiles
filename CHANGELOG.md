@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-11-22
+
 ### Added
 - **Linux app**: on Linux with a desktop, cc-profiles adds itself to the applications menu, with its icon, the first time it starts (or with `cc-profiles install-app`, or **Add to applications menu** in About). Clicking it starts cc-profiles if needed and shows the page in a window of its own, through Chrome, Chromium, Edge, Brave or Vivaldi in app mode, else the default browser. `cc-profiles uninstall` removes it.
 
@@ -524,7 +526,8 @@ First public release.
 - Launcher scripts in `~/.local/bin` for new profiles.
 - End-to-end test suite on a fake home.
 
-[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/andreaiannarone/cc-profiles/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/andreaiannarone/cc-profiles/compare/v0.7.9...v0.8.0
