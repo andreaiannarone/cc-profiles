@@ -19,6 +19,7 @@ from .byfolder import add_parsers, run as run_byfolder
 from .backups import AUTO_PRUNE, auto_prune, list_backups, recent_dir_size
 from .command import ensure_command, install_command, set_command_off
 from .github import ensure_gh_folders, ensure_identities
+from . import linuxapp
 from .macapp import app_for, ensure_app, install_app, set_app_off
 from .projects import list_projects
 from .search import warm_search
@@ -56,6 +57,15 @@ def show_app(port):
         try:
             subprocess.Popen(["/usr/bin/open", app], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"Showing it in the Mac app ({pretty(app)}).")
+            return
+        except OSError:
+            pass
+    window = linuxapp.window_for(port)
+    if window:
+        try:
+            subprocess.Popen(window, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            print("Showing it in a window of its own.")
             return
         except OSError:
             pass
@@ -152,6 +162,13 @@ def serve(port, open_browser):
     except Exception as e:  # never a reason not to start
         core.abort_open_backups(str(e))
         print(f"Could not add or update the Mac app: {e}. Run: cc-profiles install-app")
+    try:  # the same on Linux: an entry in the applications menu
+        lines, backup = linuxapp.ensure_app()
+        if lines:
+            print("Linux app: " + "; ".join(lines) + f" (backup {pretty(backup)})")
+    except Exception as e:  # never a reason not to start
+        core.abort_open_backups(str(e))
+        print(f"Could not add or update the applications menu entry: {e}. Run: cc-profiles install-app")
     cleanup_backups()
     threading.Thread(target=cleanup_daily, daemon=True).start()
     threading.Thread(target=update_daily, daemon=True).start()
@@ -278,6 +295,8 @@ def uninstall_app(port, yes, purge):
           f"{'file' if len(plan['commands']) == 1 else 'files'}) and stops adding it")
     if plan["app"]:
         print(f"- removes the Mac app, {pretty(plan['app'])}")
+    if plan["desktop"]:
+        print(f"- removes cc-profiles from the applications menu, {pretty(plan['desktop'][0])}")
     if plan["shell"]:
         print(f"- removes the profile by folder line from {', '.join(pretty(rc) for rc in plan['shell'])}")
     print(f"- uninstalls the app: {' '.join(plan['command'])}" if plan["command"] else f"- cannot uninstall the app: {plan['why']}")
@@ -341,11 +360,11 @@ def main(argv=None):
     ic = sub.add_parser("install-command", help="add the /cc-profiles command to Claude Code in every profile "
                         "(cc-profiles does it by itself the first time it starts)")
     ic.add_argument("--off", action="store_true", help="stop adding and updating /cc-profiles in your profiles")
-    ia = sub.add_parser("install-app", help="add cc-profiles to Applications as a Mac app, "
-                        "with its own window (macOS only)")
+    ia = sub.add_parser("install-app", help="add cc-profiles as an app with its own window: in Applications "
+                        "on macOS, in the applications menu on Linux")
     ia.add_argument("--port", type=int, default=argparse.SUPPRESS, help="port the app's server listens on")
     ia.add_argument("--off", action="store_true", help="never add the app by itself (cc-profiles does it the "
-                    "first time it starts on macOS)")
+                    "first time it starts on macOS and Linux)")
     op = sub.add_parser("open", help="start in the background if needed, open the browser and return")
     # The /cc-profiles command passes its arguments here: /cc-profiles restart, /cc-profiles stop
     op.add_argument("action", nargs="?", default="", metavar="restart|stop",
@@ -388,6 +407,13 @@ def main(argv=None):
             print(f"Backup: {backup} (undo it from the Backups tab)")
         print("Restart Claude Code sessions that are already open to see /cc-profiles.")
         return
+    if args.cmd == "install-app" and args.off and linuxapp.supported():
+        backup = linuxapp.set_app_off()
+        print("cc-profiles will not add itself to the applications menu. An entry already there stays: "
+              f"delete {pretty(linuxapp.DESKTOP_PATH)} to remove it, or add it any time with cc-profiles install-app.")
+        if backup:
+            print(f"Backup: {backup} (undo it from the Backups tab)")
+        return
     if args.cmd == "install-app" and args.off:
         backup = set_app_off()
         print("cc-profiles will not add the Mac app by itself. One already there stays: "
@@ -397,7 +423,7 @@ def main(argv=None):
         return
     if args.cmd == "install-app":
         try:
-            lines, backup = install_app(args.port)
+            lines, backup = (linuxapp.install_app if linuxapp.supported() else install_app)(args.port)
         except core.ApiError as e:
             print(e)
             sys.exit(1)

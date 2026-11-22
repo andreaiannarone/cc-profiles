@@ -100,12 +100,13 @@ async function loadAutoExport(dr) {
   };
   if (x.running) setTimeout(() => loadAutoExport(dr), 1500);
 }
-// The Mac app (macOS only): added or brought up to date with a click, like an update
+// The app (macOS, and Linux with a desktop): added or brought up to date with a click, like an update
 async function loadMacApp(dr, m) {
   const box = $("#mac-app", dr);
   if (!box) return;
   try { m = m || await api("/api/macapp"); } catch { return; }
   if (!m.supported) return;
+  if (m.kind === "linux") return linuxApp(dr, box, m);
   const how = `<a href="https://cc-profiles.andreaia.com/mac-app.html" target="_blank" rel="noopener">How it works</a>`;
   const text = {
     missing: `cc-profiles in a window of its own, in Applications, with its icon in the Dock. ${how}`,
@@ -114,6 +115,26 @@ async function loadMacApp(dr, m) {
     foreign: `<code>${esc(m.path)}</code> exists and was not created by cc-profiles: move it away to add the Mac app. ${how}`,
   }[m.state] || "";
   const label = { missing: "Add Mac app", outdated: "Update Mac app" }[m.state];
+  box.innerHTML = `${label ? `<button class="btn small" id="mac-app-add">${label}</button>` : ""}<span class="hint">${text}</span>`;
+  box.hidden = false;
+  const btn = $("#mac-app-add", box);
+  if (btn) btn.onclick = async () => {
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${label}`;
+    let r;
+    try { r = await run(() => api("/api/macapp", {})); } catch { btn.disabled = false; btn.textContent = label; return; }
+    loadMacApp(dr, r);
+  };
+}
+function linuxApp(dr, box, m) {
+  const how = `<a href="https://cc-profiles.andreaia.com/linux-app.html" target="_blank" rel="noopener">How it works</a>`;
+  const win = m.window ? "in a window of its own" : "in your browser (a window of its own needs Chrome, Chromium, Edge or Brave)";
+  const text = {
+    missing: `cc-profiles in your applications menu, with its icon, opening ${win}. ${how}`,
+    outdated: `The menu entry is from another version${m.port && m.port !== Number(location.port) ? ` or uses port ${esc(m.port)}` : ""}. ${how}`,
+    current: `<span class="okmark">✓ In your applications menu</span>: it opens ${win}. ${how}`,
+    foreign: `<code>${esc(m.path)}</code> exists and was not created by cc-profiles: move it away to add cc-profiles to the menu. ${how}`,
+  }[m.state] || "";
+  const label = { missing: "Add to applications menu", outdated: "Update menu entry" }[m.state];
   box.innerHTML = `${label ? `<button class="btn small" id="mac-app-add">${label}</button>` : ""}<span class="hint">${text}</span>`;
   box.hidden = false;
   const btn = $("#mac-app-add", box);
