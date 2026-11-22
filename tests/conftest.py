@@ -24,6 +24,7 @@ SRC = ROOT / "src"
 # nothing they start may write there on its own (the /cc-profiles command, the update check).
 os.environ["CC_PROFILES_AUTO_COMMAND"] = "0"
 os.environ["CC_PROFILES_AUTO_APP"] = "0"
+os.environ["CC_PROFILES_LINUX_APP"] = "0"  # code run inside pytest, on Linux CI: no applications menu entry
 os.environ["CC_PROFILES_UPDATE_CHECK"] = "0"
 os.environ["CC_PROFILES_AUTO_GITHUB"] = "0"
 os.environ["CC_PROFILES_PICKER"] = "none"
