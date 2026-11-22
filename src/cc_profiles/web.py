@@ -109,6 +109,7 @@ from .plugins import list_plugins, op_plugin_copy, op_plugin_enable
 from .editprofile import delete_plan, op_delete_profile, op_rename_folder, op_update_profile, rename_folder_plan
 from .installer import claude_status, op_install
 from .launchers import op_shell, shell_state, shell_which
+from . import linuxapp
 from .macapp import app_status, op_install_app
 from .terminal import continue_plan, op_conversation_continue, op_open_terminal, op_set_terminal, terminal_status
 from .updater import check_update, op_update, op_update_check, unexpected_error, update_status, whats_new
@@ -356,7 +357,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/shell/which": lambda: shell_which(q.get("path", "")),
                 "/api/claude/status": lambda: claude_status(),
                 "/api/update": lambda: check_update(),
-                "/api/macapp": lambda: app_status(),
+                "/api/macapp": lambda: linuxapp.app_status() if linuxapp.supported() else app_status(),
                 "/api/terminal": lambda: terminal_status(),
                 "/api/update/auto": lambda: update_status(),
                 "/api/whatsnew": lambda: whats_new(),
@@ -442,7 +443,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/claude/install": lambda: op_install(b.get("method", "")),
                 "/api/shell": lambda: op_shell(bool(b["install"])),
                 "/api/update": lambda: op_update(),
-                "/api/macapp": lambda: op_install_app(),
+                "/api/macapp": lambda: linuxapp.op_install_app() if linuxapp.supported() else op_install_app(),
                 "/api/terminal": lambda: op_set_terminal(b.get("terminal", "")),
                 "/api/terminal/open": lambda: op_open_terminal(b.get("project"), b.get("profile"), b.get("path")),
                 "/api/update/auto": lambda: op_update_check(b.get("enabled")),

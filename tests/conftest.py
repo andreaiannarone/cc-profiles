@@ -61,6 +61,7 @@ def child_env(env):
     env.setdefault("CC_PROFILES_UPDATE_CHECK", "0")  # a test server never asks PyPI on its own
     env.setdefault("CC_PROFILES_PICKER", "none")  # never a real folder dialog on the screen
     env.setdefault("CC_PROFILES_AUTO_APP", "0")  # no Mac app added at start: tests compare the fake home
+    env.setdefault("CC_PROFILES_LINUX_APP", "0")  # the Linux app only in tests that ask for it (1), on any system
     env.setdefault("CC_PROFILES_GITHUB_API", "http://127.0.0.1:9")  # never GitHub's API: offline, refused at once
     env.setdefault("CC_PROFILES_GH_CHECK", "0")  # never the real gh: it would ask GitHub with the real keychain
     if os.environ.get("COVERAGE_PROCESS_START"):

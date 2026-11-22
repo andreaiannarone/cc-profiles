@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Linux app**: on Linux with a desktop, cc-profiles adds itself to the applications menu, with its icon, the first time it starts (or with `cc-profiles install-app`, or **Add to applications menu** in About). Clicking it starts cc-profiles if needed and shows the page in a window of its own, through Chrome, Chromium, Edge, Brave or Vivaldi in app mode, else the default browser. `cc-profiles uninstall` removes it.
+
 ## [0.8.2] - 2026-11-18
 
 ### Added
